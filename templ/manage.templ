@@ -1,0 +1,16 @@
+{% block head %}{% end %}
+<div class="g-lg-2">
+    <ul class="nav-stack">
+	<li{% if page == 'dash' %} class="active"{% end %}><a href="/oj/manage/dash/">Dashboard</a></li>
+	<li{% if page == 'pro' %} class="active"{% end %}><a href="/oj/manage/pro/">Problem</a></li>
+	<li{% if page == 'contest' %} class="active"{% end %}><a href="/oj/manage/contest/">Contest</a></li>
+	<li{% if page == 'acct' %} class="active"{% end %}><a href="/oj/manage/acct/">Account</a></li>
+	<li{% if page == 'question' %} class="active"{% end %}><a href="/oj/manage/question/">Question</a></li>
+	<li{% if page == 'inform' %} class="active"{% end %}><a href="/oj/manage/inform/">Inform</a></li>
+	<li{% if page == 'proclass' %} class="active"{% end %}><a href="/oj/manage/proclass/">ProClass</a></li>
+	<li{% if page == 'group' %} class="active"{% end %}><a href="/oj/manage/group/">Group</a></li>
+    </ul>
+</div>
+<div class="g-lg-10">
+{% block content %}{% end %}
+</div>

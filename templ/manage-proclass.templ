@@ -1,0 +1,97 @@
+{% extends 'manage.templ' %}
+{% block head %}
+<script>
+    function init(){
+	var j_form = $('#form');
+	j_form.find('select.pclas_name').on('change',function(e){
+	    var pclas_name = j_form.find('select.pclas_name').val();
+	    if(pclas_name == 'None'){
+		index.go('/oj/manage/proclass/');
+	    }else{
+		index.go('/oj/manage/proclass/?pclas_name='+pclas_name);
+	    }
+	});
+	j_form.find('button.submit').on('click',function(e){
+	    var pclas_name = j_form.find('input.pclas_name').val();
+	    var p_list = j_form.find('input.p_list').val();
+	    $.post('/oj/be/manage/proclass',{
+		'reqtype':'add',
+		'pclas_name':pclas_name,
+		'p_list':p_list,
+	    },function(res){
+		msg = 'Unknown';
+		if(res[0] == 'E'){
+		    msg = res;
+		    j_form.find('div.print').print(msg);
+		}else{
+		    j_form.find('div.print').print('done',true);
+		    setTimeout(function(){index.reload();},1000);
+		}
+	    });
+	});
+	j_form.find('button.delete').on('click',function(e){
+	    var pclas_name = j_form.find('select.pclas_name').val();
+	    $.post('/oj/be/manage/proclass',{
+		'reqtype':'remove',
+		'pclas_name':pclas_name,
+	    },function(res){
+		msg = 'Unknown';
+		if(res[0] == 'E'){
+		    msg = res;
+		    j_form.find('div.print').print(msg);
+		}else{
+		    j_form.find('div.print').print('Done',true);
+		    setTimeout(function(){index.go('/oj/manage/proclass/');},1000);
+		}
+	    });
+	});
+	j_form.find('button.edit').on('click',function(e){
+	    var pclas_name = j_form.find('select.pclas_name').val();
+	    var p_list = j_form.find('input.p_list').val();
+	    $.post('/oj/be/manage/proclass',{
+		'reqtype':'edit',
+		'pclas_name':pclas_name,
+		'p_list':p_list,
+	    },function(res){
+		msg = 'Unknown';
+		if(res[0] == 'E'){
+		    msg = res;
+		    j_form.find('div.print').print(msg);
+		}else{
+		    j_form.find('div.print').print('Done',true);
+		    setTimeout(function(){index.reload();},1000)
+		}
+	    });
+	});
+    }
+</script>
+{% end %}
+{% block content %}
+<div class="g-lg-6">
+    <div id="form" class="blk-cont">
+	<div><label>problem class</label></div>
+	<select class="pclas_name">
+	    <option value="None" {% if pclas_name == None %}selected{% end %}>Add problem class</option>
+	    {% for clas in clas_list %}
+	    <option value="{{clas}}" {% if clas == pclas_name %}selected{% end %}>{{clas}}</option>
+	    {% end %}
+	</select>
+	{% if pclas_name ==None %}
+	<label>Problem Class Name</label>
+	<input type="text" class="pclas_name"></input>
+	{% end %}
+	<label>Problem List</label>
+	<input type="text" class="p_list" value="{% if pclas_name != None %}{{str(p_list)[1:-1]}}{% end %}"></input>
+	{% if pclas_name == None %}
+	<button class="btn-con submit">Submit</button>
+	{% else %}
+	<button class="btn-con edit">Edit</button>
+	{% end %}
+	{% if pclas_name != None %}
+	<button class="btn-def delete">Delete</button>
+	{% end %}
+	<button class="btn-def cancel">Cancel</button>
+	<div class="print"></div>
+    </div>
+</div>
+{% end %}

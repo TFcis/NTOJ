@@ -1,0 +1,6 @@
+code/
+tmp/
+problem/
+*.swp
+__pycache__/
+ojtmp.tar.gz
