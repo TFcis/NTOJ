@@ -24,6 +24,7 @@ from acct import SignHandler
 from pro import ProService
 from pro import ProsetHandler
 from pro import ProStaticHandler
+from pro import ProTagsHandler
 from pro import ProHandler
 from pro import SubmitHandler
 from pro import ChalHandler
@@ -100,7 +101,7 @@ class SignHandler(RequestHandler):
                 return
 
             self.set_secure_cookie('id',str(acct_id),
-                    path = '/oj',httponly = True) 
+                    path = '/oj',httponly = True)
             self.finish('S')
             return
 
@@ -115,7 +116,7 @@ class SignHandler(RequestHandler):
                 return
 
             self.set_secure_cookie('id',str(acct_id),
-                    path = '/oj',httponly = True) 
+                    path = '/oj',httponly = True)
             self.finish('S')
             return
 
@@ -171,17 +172,18 @@ if __name__ == '__main__':
         ('/manage/(.+)',ManageHandler,args),
         ('/manage',ManageHandler,args),
         ('/pack',PackHandler,args),
-	('/about',AboutHandler,args),
+    ('/about',AboutHandler,args),
         ('/question',QuestionHandler,args),
         ('/api',ApiHandler,args),
         ('/informsub',InformSub,args),
         ('/code',CodeHandler,args),
         ('/rank/(\d+)',RankHandler,args),
         ('/auto',AutoHandler,args),
-        ('/moodle/(.+)',MoodleHandler,args)
+        ('/moodle/(.+)',MoodleHandler,args),
+        ('/set-tags',ProTagsHandler,args),
     ],cookie_secret = config.COOKIE_SEC,autoescape = 'xhtml_escape')
 
     httpsrv = tornado.httpserver.HTTPServer(app)
     httpsrv.add_sockets(httpsock)
-    
+
     tornado.ioloop.IOLoop.instance().start()

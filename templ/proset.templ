@@ -4,94 +4,94 @@
 <link rel="stylesheet" type="text/css" href="/oj/proset.css">
 
 <script type="text/javascript">
-	function init(){
-		var j_filter = $('#filter');
-		j_filter.find('select.pclass').on('change',function(e){
-			var pclas = $(this).val();
-			var clas = j_filter.find('select.class').val();
+    function init(){
+        var j_filter = $('#filter');
+        j_filter.find('select.pclass').on('change',function(e){
+            var pclas = $(this).val();
+            var clas = j_filter.find('select.class').val();
 
-			if(pclas == 'None'){
-			if(clas == -1){
-				index.go('/oj/proset/');
-			}else{
-				index.go('/oj/proset/?class='+clas);
-			}
-			}else{
-			if(clas == -1){
-				index.go('/oj/proset/?pclas_name='+pclas);
-			}else{
-				index.go('/oj/proset/?class='+clas+'&pclas_name='+pclas);
-			}
-			}
-		});
-		j_filter.find('select.class').on('change',function(e){
-			var clas = $(this).val();		
-			var off = location.href.match(/off=(\d+)/);
-			var pclas = j_filter.find('select.pclass').val();
-			if(off == null){
-				off = 0;
-			}else{
-				off = parseInt(off[1]);	
-			}
-			
-			if(clas == -1){
-				if(pclas == 'None'){
-					index.go('/oj/proset/?off=' + off);
-				}else{
-					index.go('/oj/proset/?off='+off+'&pclas_name='+pclas);
-				}
-			}else{
-				if(pclas == 'None'){
-					index.go('/oj/proset/?off=' + off + '&class=' + clas);
-				}else{
-					index.go('/oj/proset/?off='+off+'&class='+clas+'&pclas_name='+pclas);
-				}
-			}
-		});
-		var select_prob = j_filter.find('input.select_prob');
-		select_prob.on('keypress',function(e){
-			if(e.keyCode==13)
-				$(location).attr('href',"/oj/pro/"+select_prob.val()+"/");
-		});
-	}
+            if(pclas == 'None'){
+            if(clas == -1){
+                index.go('/oj/proset/');
+            }else{
+                index.go('/oj/proset/?class='+clas);
+            }
+            }else{
+            if(clas == -1){
+                index.go('/oj/proset/?pclas_name='+pclas);
+            }else{
+                index.go('/oj/proset/?class='+clas+'&pclas_name='+pclas);
+            }
+            }
+        });
+        j_filter.find('select.class').on('change',function(e){
+            var clas = $(this).val();
+            var off = location.href.match(/off=(\d+)/);
+            var pclas = j_filter.find('select.pclass').val();
+            if(off == null){
+                off = 0;
+            }else{
+                off = parseInt(off[1]);
+            }
+
+            if(clas == -1){
+                if(pclas == 'None'){
+                    index.go('/oj/proset/?off=' + off);
+                }else{
+                    index.go('/oj/proset/?off='+off+'&pclas_name='+pclas);
+                }
+            }else{
+                if(pclas == 'None'){
+                    index.go('/oj/proset/?off=' + off + '&class=' + clas);
+                }else{
+                    index.go('/oj/proset/?off='+off+'&class='+clas+'&pclas_name='+pclas);
+                }
+            }
+        });
+        var select_prob = j_filter.find('input.select_prob');
+        select_prob.on('keypress',function(e){
+            if(e.keyCode==13)
+                $(location).attr('href',"/oj/pro/"+select_prob.val()+"/");
+        });
+    }
 </script>
 
 <div class="g-lg-2">
-	<table id="filter">
-		<thead>
-			<tr>
-				<th colspan=2>過濾器</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr>
-				<td colspan=2><select class="class">
-					<option value=-1{% if clas == None%} selected{% end %}>All</option>
-					<option value=1{% if clas == 1%} selected{% end %}>Normal</option>
-					<option value=2{% if clas == 2%} selected{% end %}>Contest</option>
-				</select></td>
-			</tr>
-		<tr>
-		<td colspan=2>Class</td>
-		</tr>
-		<tr>
-		<td colspan=2><select class="pclass">
-			<option value="None" {% if pclas_name == None %}selected{% end %}>None</option>
-			{% for pclas in pclist %}
-			<option value="{{pclas}}" {% if pclas == pclas_name %}selected{% end %}>{{pclas}}</option>
-			{% end %}
-		</select></td>
-		</tr>
-		<tr>
-		<td colspan=2>Problem</td>
-		</tr>
-		<tr>
-		<td colspan=2>
-			<input type="text" class="select_prob" placeholder="problem number">
-		</td>
-		</tr>
-		</tbody>
-	</table>
+    <table id="filter">
+        <thead>
+            <tr>
+                <th colspan=2>過濾器</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan=2><select class="class">
+                    <option value=-1{% if clas == None%} selected{% end %}>All</option>
+                    <option value=1{% if clas == 1%} selected{% end %}>Normal</option>
+                    <option value=2{% if clas == 2%} selected{% end %}>Contest</option>
+                </select></td>
+            </tr>
+        <tr>
+        <td colspan=2>Class</td>
+        </tr>
+        <tr>
+        <td colspan=2><select class="pclass">
+            <option value="None" {% if pclas_name == None %}selected{% end %}>None</option>
+            {% for pclas in pclist %}
+            <option value="{{pclas}}" {% if pclas == pclas_name %}selected{% end %}>{{pclas}}</option>
+            {% end %}
+        </select></td>
+        </tr>
+        <tr>
+        <td colspan=2>Problem</td>
+        </tr>
+        <tr>
+        <td colspan=2>
+            <input type="text" class="select_prob" placeholder="problem number">
+        </td>
+        </tr>
+        </tbody>
+    </table>
     <ul class="pagin">
     {% set postfix = '' %}
     {% if clas != None %}
@@ -111,25 +111,25 @@
     </ul>
 </div>
 <div id="prolist" class="g-lg-10">
-	<div class="g-r head">
-		<div class="g-sm-1">#</div>
-		<div class="g-sm-3">State</div>
-		<div class="g-sm-4">Problem Name</div>
-		<div class="g-sm-4">Score</div>
-	</div>
+    <div class="g-r head">
+        <div class="g-sm-1">#</div>
+        <div class="g-sm-3">State</div>
+        <div class="g-sm-4">Problem Name</div>
+        <div class="g-sm-4">Tags</div>
+    </div>
 {% for pro in prolist %}
-	<div class="g-r item">
-		<div class="g-sm-1 id">{{ pro['pro_id'] }}</div>
-		{% if pro['state'] == None %}
-			<div class="g-sm-3 light">Todo</div>
-		{% else %}
-			<div class="g-sm-3 state-{{ pro['state'] }}">{{ ChalService.STATE_STR[pro['state']] }}</div>
-		{% end %}
-	<div class="g-sm-4 name">
-		<a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['name'] }}</a>
-	</div>
-		<div class="g-sm-1 rate">{{ pro['rate'] }}</div>
-	</div>
+    <div class="g-r item">
+        <div class="g-sm-1 id">{{ pro['pro_id'] }}</div>
+        {% if pro['state'] == None %}
+            <div class="g-sm-3 light">Todo</div>
+        {% else %}
+            <div class="g-sm-3 state-{{ pro['state'] }}">{{ ChalService.STATE_STR[pro['state']] }}</div>
+        {% end %}
+        <div class="g-sm-4 name">
+            <a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['name'] }}</a>
+        </div>
+        <div class="g-sm-4 name">{{ pro.get('tags', '') or '' }}</div>
+    </div>
 {% end %}
     <ul class="pagin">
     {% set postfix = '' %}

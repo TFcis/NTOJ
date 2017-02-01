@@ -1,7 +1,29 @@
 <link rel="stylesheet" type="text/css" href="/oj/pro.css"/>
 <script type="text/javascript">
     function init(){
-	var j_cont = $('#cont');
+        $('#tags').keydown(function(event) {
+            if (event.which == 13) // return
+                $('#tags').focusout();
+        });
+        $('#tags').focusout(function(event) {
+            var tags = event.target.value;
+            if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1) {
+                // valid
+                $('#tags-invalid').hide();
+                $.post('/oj/be/set-tags', {
+                    'pro_id': {{ pro['pro_id'] }},
+                    'tags': tags,
+                },function() {
+                    $('#tags-done').show();
+                });
+            } else {
+                // invalid
+                event.target.focus();
+                $('#tags-invalid').show();
+            }
+        });
+
+        var j_cont = $('#cont');
 
         function _load_html(){
             j_cont.load('/oj/pro/{{ pro['pro_id'] }}/cont.html',function(res,status,xhr){
@@ -10,11 +32,11 @@
                     _load_pdf();
                 }else{
                     MathJax.Hub.Queue(["Typeset",MathJax.Hub,j_cont[0]]);
-		    j_cont.find('pre > code').each(function(i,e){
+                    j_cont.find('pre > code').each(function(i,e){
                         $(e).addClass('html');
                         hljs.highlightBlock(e);
                     });
-                }      
+                }
             });
         }
         function _load_pdf(){
@@ -35,7 +57,7 @@
                         offset = j_canvas.offset();
                         viewport = page.getViewport(
                             j_canvas.width() / page.getViewport(1.0).width);
-                        
+
                         j_canvas.attr('width',viewport.width);
                         j_canvas.attr('height',viewport.height);
 
@@ -75,41 +97,49 @@
     <a class="btn-con" href="/oj/rank/{{pro['pro_id']}}/">&nbsp;Rank&nbsp;</a>
     <a class="btn-def" href="/oj/chal/?proid={{pro['pro_id']}}">Status</a>
     <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf','_blank');" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
+    <div></div>
+    {% if add_tags == True %}
+        <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="add tags here">
+    {% else %}
+        <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="no tags" disabled>
+    {% end %}
+    <div></div>
+    <span id="tags-invalid" style="color:red; display:none">TAGS INVALID!</span>
+    <span id="tags-done" style="color:green; display:none">SET TAGS SUCCESS</span>
     <table>
-	<thead>
-	    <tr>
-		<th>Key</th>
-		<th>Value</th>
-	    </tr>
-	</thead>
-	<tbody>
-	    <tr>
-		<td>time</td>
+        <thead>
+            <tr>
+                <th>Key</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>time</td>
                 <td>{{ testl[0]['timelimit'] }} &nbsp;ms</td>
-	    </tr>
-	    <tr>
-		<td>mem</td>
-		<td>{{ round(testl[0]['memlimit'] / 1024) }} Kb</td>
-	    </tr>
-	</tbody>
+            </tr>
+            <tr>
+                <td>mem</td>
+                <td>{{ round(testl[0]['memlimit'] / 1024) }} Kb</td>
+            </tr>
+        </tbody>
     </table>
     <table>
-	<thead>
-	    <tr>
-		<th>Test</th>
-		<th>Weight</th>
-	    </tr>
-	</thead>
-	<tbody>
-        {% for test in testl %}
-	    <tr>
-                <td>{{ '%04d'%(test['test_idx'] + 1) }}</td>
-                <td>{{ test['weight'] }}</td>
-	    </tr>
-        {% end %}
-	</tbody>
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th>Weight</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test in testl %}
+                <tr>
+                    <td>{{ '%04d'%(test['test_idx'] + 1) }}</td>
+                    <td>{{ test['weight'] }}</td>
+                </tr>
+            {% end %}
+        </tbody>
     </table>
-
 </div>
 <div id="cont" class="g-lg-10">
     <strong>Loading...</strong>

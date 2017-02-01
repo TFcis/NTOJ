@@ -9,6 +9,7 @@ import tornado.web
 import tornado.gen
 import time
 import random
+import re
 from collections import OrderedDict
 
 from req import RequestHandler
@@ -43,7 +44,7 @@ class ProService:
         self.rs = rs
 
         ProService.inst = self
-    
+
     def get_pclass_list(self,pro_clas):
         clas = self.rs.get(str(pro_clas)+'_pro_list')
         if clas == None:
@@ -81,14 +82,14 @@ class ProService:
         max_status = self._get_acct_limit(acct,special)
 
         cur = yield self.db.cursor()
-        yield cur.execute(('SELECT "name","status","class","expire" '
+        yield cur.execute(('SELECT "name","status","class","expire","tags" '
             'FROM "problem" WHERE "pro_id" = %s AND "status" <= %s;'),
             (pro_id,max_status))
 
         if cur.rowcount != 1:
             return ('Enoext',None)
 
-        name,status,clas,expire = cur.fetchone()
+        name,status,clas,expire,tags = cur.fetchone()
         clas = clas[0]
         if expire == datetime.datetime.max:
             expire = None
@@ -117,7 +118,8 @@ class ProService:
             'status':status,
             'expire':expire,
             'class':clas,
-            'testm_conf':testm_conf
+            'testm_conf':testm_conf,
+            'tags':tags,
         })
 
     def list_pro(self,acct = None,state = False,clas = None):
@@ -158,7 +160,7 @@ class ProService:
 
             for pro_id,state in cur:
                 statemap[pro_id] = state
-        
+
         field = '%d|%s'%(max_status,str(clas))
         prolist = self.rs.hget('prolist',field)
         if prolist != None:
@@ -179,6 +181,7 @@ class ProService:
                 '"problem"."status",'
                 '"problem"."expire",'
                 '"problem"."class",'
+                '"problem"."tags",'
                 'sum("test_valid_rate"."rate") as "rate" '
                 'from "problem" '
                 'inner join "test_valid_rate" '
@@ -189,7 +192,7 @@ class ProService:
                 (max_status,clas))
 
             prolist = list()
-            for pro_id,name,status,expire,clas,rate in cur:
+            for pro_id,name,status,expire,clas,tags,rate in cur:
                 if expire == datetime.datetime.max:
                     expire = None
 
@@ -199,6 +202,7 @@ class ProService:
                     'status':status,
                     'expire':expire,
                     'class':clas[0],
+                    'tags':tags,
                     'rate':rate,
                 })
 
@@ -252,7 +256,7 @@ class ProService:
 
         if cur.rowcount != 1:
             return ('Eunk',None)
-        
+
         pro_id = cur.fetchone()[0]
 
         err,ret = yield from self._unpack_pro(pro_id,ProService.PACKTYPE_FULL,pack_token)
@@ -267,7 +271,7 @@ class ProService:
         return (None,pro_id)
 
     def update_pro(self,pro_id,name,status,clas,expire,
-            pack_type,pack_token = None):
+            pack_type,pack_token = None, tags=''):
         if len(name) < ProService.NAME_MIN:
             return ('Enamemin',None)
         if len(name) > ProService.NAME_MAX:
@@ -277,15 +281,17 @@ class ProService:
             return ('Eparam',None)
         if clas not in [1,2]:
             return ('Eparam',None)
+        if not re.match(r'^[a-zA-Z0-9-_, ]+$', tags):
+            return ('Etags',None)
 
         if expire == None:
             expire = datetime.datetime(2099,12,31,0,0,0,0,
                     tzinfo = datetime.timezone.utc)
         cur = yield self.db.cursor()
         yield cur.execute(('UPDATE "problem" '
-            'SET "name" = %s,"status" = %s,"class" = %s,"expire" = %s '
+            'SET "name" = %s,"status" = %s,"class" = %s,"expire" = %s,"tags" = %s '
             'WHERE "pro_id" = %s;'),
-            (name,status,[clas],expire,pro_id))
+            (name,status,[clas],expire,tags,pro_id))
 
         if cur.rowcount != 1:
             return ('Enoext',None)
@@ -319,7 +325,7 @@ class ProService:
 
             except OSError:
                 pass
-            
+
             try:
                 os.remove(prefix + 'cont.pdf')
 
@@ -376,7 +382,7 @@ class ProService:
             for test_idx,test_conf in enumerate(conf['test']):
                 metadata = {
                     'data':test_conf['data']
-                } 
+                }
                 yield cur.execute(('insert into "test_config" '
                     '("pro_id","test_idx",'
                     '"compile_type","score_type","check_type",'
@@ -435,12 +441,12 @@ class ProStaticHandler(RequestHandler):
     @reqenv
     def get(self,pro_id,path):
         pro_id = int(pro_id)
-        
+
         err,pro = yield from ProService.inst.get_pro(pro_id,self.acct)
         if err:
             self.finish(err)
             return
-        
+
         if pro['status'] == ProService.STATUS_OFFLINE:
             self.finish('Eacces')
             return
@@ -466,7 +472,7 @@ class ProHandler(RequestHandler):
         if err:
             self.finish(err)
             return
-        
+
         if pro['status'] == ProService.STATUS_OFFLINE:
             self.finish('Eacces')
             return
@@ -486,7 +492,7 @@ class ProHandler(RequestHandler):
         yield cur.execute(('SELECT "test_idx","rate" FROM "test_valid_rate" '
             'WHERE "pro_id" = %s ORDER BY "test_idx" ASC;'),
             (pro_id,))
-        
+
         countmap = {}
         for test_idx,count in cur:
             countmap[test_idx] = count
@@ -495,11 +501,42 @@ class ProHandler(RequestHandler):
             if test['test_idx'] in countmap:
                 test['rate'] = math.floor(countmap[test['test_idx']])
 
+        add_tags = (self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL)
+
         self.render('pro',pro = {
             'pro_id':pro['pro_id'],
             'name':pro['name'],
-            'status':pro['status']
-        },testl = testl)
+            'status':pro['status'],
+            'tags':pro['tags'],
+        },testl = testl, add_tags=add_tags)
+        return
+
+class ProTagsHandler(RequestHandler):
+    @reqenv
+    def post(self):
+        if self.acct['acct_id'] == UserService.ACCTID_GUEST:
+            self.finish('Esign')
+            return
+
+        tags = self.get_argument('tags')
+        pro_id = int(self.get_argument('pro_id'))
+        if tags and self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL:
+            err,pro = yield from ProService.inst.get_pro(pro_id,self.acct)
+            if err:
+                self.finish(err)
+                return
+
+            err,ret = yield from ProService.inst.update_pro(
+                pro_id,pro['name'],pro['status'],pro['class'],pro['expire'],'',None,tags)
+            if err:
+                self.finish(err)
+                return
+
+        else:
+            self.finish('Eaccess')
+            return
+
+        self.finish('setting tags done')
         return
 
 class SubmitHandler(RequestHandler):
@@ -514,7 +551,7 @@ class SubmitHandler(RequestHandler):
         if err:
             self.finish(err)
             return
-        
+
         if pro['status'] == ProService.STATUS_OFFLINE:
             self.finish('Eacces')
             return
@@ -626,7 +663,7 @@ class ChalListHandler(RequestHandler):
         except tornado.web.HTTPError:
             acct_id = None
             pacct_id = ''
-        
+
         try:
             state = int(self.get_argument('state'))
         except tornado.web.HTTPError:
