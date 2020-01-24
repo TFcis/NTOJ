@@ -4,3 +4,8 @@ problem/
 *.swp
 __pycache__/
 ojtmp.tar.gz
+
+# 敏感文件
+config.py
+pgoj.sql
+sql
