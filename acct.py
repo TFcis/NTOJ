@@ -128,6 +128,10 @@ class AcctHandler(RequestHandler):
                 rate2 = ratemap[acct_id][pro_id]
                 tmp['score'] = rate2['rate']
             prolist2.append(tmp)
+        # force https, add by xiplus, 2018.08.24
+        acct['photo'] = re.sub(r'^http://', 'https://', acct['photo'])
+        acct['cover'] = re.sub(r'^http://', 'https://', acct['cover'])
+
         self.render('acct',
                 acct = acct,
                 rate = math.floor(rate),
