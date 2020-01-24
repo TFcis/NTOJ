@@ -14,6 +14,7 @@
             <th>#</th>
             <th>Name</th>
             <th>Mail</th>
+            <th>Last IP</th>
             <th>Level</th>
             <th>Class</th>
             <th></th>
@@ -25,6 +26,7 @@
             <td>{{ acct['acct_id'] }}</td>
             <td><a href="/oj/acct/{{ acct['acct_id'] }}/">{{ acct['name'] }}</a></td>
             <td>{{ acct['mail'] }}</td>
+            <td>{{ acct['lastip'] }}</td>
             <td>
             {% if acct['acct_type'] == 0 %}
                 Kernel

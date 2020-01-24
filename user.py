@@ -4,6 +4,7 @@ import bcrypt
 import psycopg2
 from group import GroupConst
 import config
+from log import LogService
 
 class UserConst:
     MAIL_MAX = 1024
@@ -88,21 +89,49 @@ class UserService:
 
     def info_sign(self,req):
         acct_id = req.get_secure_cookie('id')
+        try:
+            ip = req.request.remote_ip
+        except Exception as e:
+            print(e)
+            ip = ''
         if acct_id == None:
-            return ('Esign',None)
+            return ('Esign',None,ip)
 
         acct_id = int(acct_id)
 
         acct = self.rs.exists('account@%d'%acct_id)
         if acct == None:
             cur = yield self.db.cursor()
-            yield cur.execute('SELECT 1 FROM "account" WHERE "acct_id" = %s;',
+            yield cur.execute('SELECT "acct_id","lastip" FROM "account" WHERE "acct_id" = %s;',
                     (acct_id,))
 
             if cur.rowcount != 1:
-                return ('Esign',None)
+                return ('Esign',None,ip)
+            tmpid,lastip = cur.fetchone()
+            #print("%s %s"%(lastip,ip))
+            if lastip != ip and ip != '':
+                yield from LogService.inst.add_log("Update acct {} lastip from {} to {} ".format(acct_id, lastip, ip))
+                yield cur.execute('UPDATE "account" SET "lastip" = %s WHERE "acct_id" = %s;', (ip, acct_id))
+                self.rs.delete('account@%d'%acct_id)
+                self.rs.delete('acctlist')
+        else:
+            try:
+                acct2 = self.rs.get('account@%d'%acct_id)
+                acct2 = msgpack.unpackb(acct2,encoding = 'utf-8')
+                lastip = ''
+                if 'lastip' in acct2:
+                    lastip = acct2['lastip']
+                if ip != '' and lastip != ip:
+                    yield from LogService.inst.add_log("Update acct {} lastip from {} to {} ".format(acct_id, lastip, ip))
+                    cur = yield self.db.cursor()
+                    yield cur.execute('UPDATE "account" SET "lastip" = %s WHERE "acct_id" = %s;', (ip, acct_id))
+                    self.rs.delete('account@%d'%acct_id)
+                    self.rs.delete('acctlist')
+            except Exception as e:
+                print(e)
 
-        return (None,acct_id)
+
+        return (None,acct_id,ip)
 
     def info_acct(self,acct_id):
         if acct_id == None:
@@ -112,7 +141,8 @@ class UserService:
                 'class':0,
                 'name':'',
                 'photo':'',
-                'cover':''
+                'cover':'',
+                'lastip':''
             })
 
         acct = self.rs.get('account@%d'%acct_id)
@@ -122,13 +152,13 @@ class UserService:
         else:
             cur = yield self.db.cursor()
             yield cur.execute(('SELECT "mail","name","acct_type",'
-                '"class","photo","cover" '
+                '"class","photo","cover","lastip" '
                 'FROM "account" WHERE "acct_id" = %s;'),
                 (acct_id,))
             if cur.rowcount != 1:
                 return ('Enoext',None)
 
-            mail,name,acct_type,clas,photo,cover = cur.fetchone()
+            mail,name,acct_type,clas,photo,cover,lastip = cur.fetchone()
             acct = {
                 'acct_id':acct_id,
                 'acct_type':acct_type,
@@ -136,7 +166,8 @@ class UserService:
                 'mail':mail,
                 'name':name,
                 'photo':photo,
-                'cover':cover
+                'cover':cover,
+                'lastip':lastip
             }
 
             self.rs.setnx('account@%d'%acct_id,msgpack.packb(acct))
@@ -212,18 +243,19 @@ class UserService:
         else:
             cur = yield self.db.cursor()
             yield cur.execute(('SELECT "acct_id","acct_type",'
-                '"name","mail",''"class" '
+                '"name","mail","class","lastip" '
                 'FROM "account" WHERE "acct_type" >= %s '
                 'ORDER BY "acct_id" ASC;'),
                 (min_type,))
 
             acctlist = []
-            for acct_id,acct_type,name,mail,clas in cur:
+            for acct_id,acct_type,name,mail,clas,lastip in cur:
                 acct = {
                     'acct_id':acct_id,
                     'acct_type':acct_type,
                     'name':name,
-                    'class':clas[0]
+                    'class':clas[0],
+                    'lastip':lastip
                 }
 
                 if private == True:

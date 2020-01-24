@@ -81,7 +81,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 def reqenv(func):
     @tornado.gen.coroutine
     def wrap(self,*args,**kwargs):
-        err,acct_id = yield from Service.Acct.info_sign(self)
+        err,acct_id,ip = yield from Service.Acct.info_sign(self)
         err,self.acct = yield from Service.Acct.info_acct(acct_id)
 
         ret = func(self,*args,**kwargs)
