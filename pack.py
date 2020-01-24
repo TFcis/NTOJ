@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import tornado.concurrent
+import config
 
 from req import WebSocketHandler
 

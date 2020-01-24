@@ -9,6 +9,7 @@ from pygments.formatters import HtmlFormatter
 import config
 from user import UserConst
 from req import Service
+import config
 
 class ChalConst:
     STATE_AC = 1
