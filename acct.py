@@ -4,10 +4,12 @@ import re
 from req import RequestHandler
 from req import reqenv
 from user import UserService
+from user import UserConst
 from pro import ProService
 from chal import ChalService
 from pack import PackService
 from req import Service
+from log import LogService
 
 class AcctHandler(RequestHandler):
     @reqenv
@@ -129,6 +131,8 @@ class AcctHandler(RequestHandler):
                 rate2 = ratemap[acct_id][pro_id]
                 tmp['score'] = rate2['rate']
             prolist2.append(tmp)
+        isadmin = (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
+
         # force https, add by xiplus, 2018.08.24
         acct['photo'] = re.sub(r'^http://', 'https://', acct['photo'])
         acct['cover'] = re.sub(r'^http://', 'https://', acct['cover'])
@@ -137,7 +141,8 @@ class AcctHandler(RequestHandler):
                 acct = acct,
                 rate = math.floor(rate),
                 extrate = math.floor(extrate),
-                prolist = prolist2)
+                prolist = prolist2,
+                isadmin = isadmin)
 
         return
 
@@ -166,9 +171,11 @@ class AcctHandler(RequestHandler):
         elif reqtype == 'reset':
             old = self.get_argument('old')
             pw = self.get_argument('pw')
-
+            acct_id = self.get_argument('acct_id')
+            if acct_id != self.acct['acct_id']:
+                yield from LogService.inst.add_log((self.acct['name']+" was changing the password of user #"+str(acct_id)+"."))
             err,ret = yield from UserService.inst.update_pw(
-                    self.acct['acct_id'],old,pw)
+                    acct_id,old,pw,(self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL))
             if err:
                 self.finish(err)
                 return

@@ -210,7 +210,7 @@ class UserService:
 
         return (None,None)
 
-    def update_pw(self,acct_id,old,pw):
+    def update_pw(self,acct_id,old,pw,isadmin):
         if len(pw) < UserConst.PW_MIN:
             return ('Epwmin',None)
         if len(pw) > UserConst.PW_MAX:
@@ -224,7 +224,7 @@ class UserService:
             return ('Eacct',None)
 
         hpw = base64.b64decode(cur.fetchone()[0].encode('utf-8'))
-        if bcrypt.hashpw(old.encode('utf-8'),hpw) != hpw:
+        if (bcrypt.hashpw(old.encode('utf-8'),hpw) != hpw) and isadmin==False:
             return ('Epwold',None)
 
         hpw = bcrypt.hashpw(pw.encode('utf-8'),bcrypt.gensalt(12))

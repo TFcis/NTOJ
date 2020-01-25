@@ -101,16 +101,18 @@
 
 <div class="g-r">
     <div class="g-lg-3">
-    {% if acct['acct_id'] == acct_id %}
+    {% if (acct['acct_id'] == acct_id) %}
         <div id="profile" class="blk-cont">
             <h1>人物簡介</h1>
             <h3>基本情報</h3>
             <input class="name" type="text" value="{{ acct['name'] }}" placeholder="name">
-            <input class="photo" type="text" value="{{ acct['photo'] }}" placeholder="photo">
+            <input class="photo" type="t/xt" value="{{ acct['photo'] }}" placeholder="photo">
             <input class="cover" type="text" value="{{ acct['cover'] }}" placeholder="cover">
             <button class="btn-con submit">更新</button>
             <div class="print"></div>
         </div>
+    {% end %}
+    {% if (acct['acct_id'] == acct_id) or (isadmin) %}
         <div id="reset" class="blk-cont">
             <h3>更改密碼</h3>
             <input class="old" type="password" placeholder="previous">
