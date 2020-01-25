@@ -13,6 +13,7 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import HtmlFormatter
 from req import Service
+from chal import ChalService
 
 class CodeService:
     def __init__(self,db,rs):
@@ -28,9 +29,11 @@ class CodeHandler(RequestHandler):
     @reqenv
     def post(self):
         chal_id = self.get_argument('chal_id')
-        fcode = open('/srv/oj/backend/code/'+str(chal_id)+'/main.cpp')
-        code = fcode.read()
-        fcode.close()
+        chal_id = int(chal_id)
+        err, chal = yield from ChalService.inst.get_chal(chal_id, self.acct)
+        code = chal['code']
+        if code is None:
+            self.finish("")
         lexer = get_lexer_by_name('c++',encoding = 'utf-8',stripall = True)
         formatter = HtmlFormatter(linenos = True,
                     encoding = 'utf-8')
