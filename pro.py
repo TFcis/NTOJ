@@ -282,7 +282,7 @@ class ProService:
             return ('Eparam',None)
         if clas not in [1,2]:
             return ('Eparam',None)
-        if not re.match(r'^[a-zA-Z0-9-_, ]+$', tags):
+        if tags and not re.match(r'^[a-zA-Z0-9-_, ]+$', tags):
             return ('Etags',None)
 
         if expire == None:

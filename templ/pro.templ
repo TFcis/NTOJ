@@ -7,7 +7,7 @@
         });
         $('#tags').focusout(function(event) {
             var tags = event.target.value;
-            if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1) {
+            if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1 || tags.length==0) {
                 // valid
                 $('#tags-invalid').hide();
                 $.post('/oj/be/set-tags', {
