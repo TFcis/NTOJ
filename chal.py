@@ -188,12 +188,14 @@ class ChalService:
         code_f = open('code/%d/main.cpp'%chal_id,'rb')
         code = code_f.read().decode('utf-8')
         code_f.close()
+        chalmeta = test_conf['chalmeta'];
         self.ws.write_message(json.dumps({
             'chal_id':chal_id,
             'testl':testl,
             'code_path':code_path,
             'res_path':res_path,
-            'code':code
+            'code':code,
+            'metadata':chalmeta,
         }))
         
         '''tmp_ws.write_message(json.dumps({

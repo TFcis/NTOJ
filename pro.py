@@ -96,13 +96,13 @@ class ProService:
             expire = None
 
         yield cur.execute(('SELECT "test_idx","compile_type","score_type",'
-            '"check_type","timelimit","memlimit","weight","metadata" '
+            '"check_type","timelimit","memlimit","weight","metadata","chalmeta" '
             'FROM "test_config" WHERE "pro_id" = %s ORDER BY "test_idx" ASC;'),
             (pro_id,))
 
         testm_conf = OrderedDict()
         for (test_idx,comp_type,score_type,check_type,timelimit,memlimit,weight,
-                metadata) in cur:
+                metadata, chalmeta) in cur:
             testm_conf[test_idx] = {
                 'comp_type':comp_type,
                 'score_type':score_type,
@@ -110,6 +110,7 @@ class ProService:
                 'timelimit':timelimit,
                 'memlimit':memlimit,
                 'weight':weight,
+                'chalmeta':json.loads(chalmeta,'utf-8'),
                 'metadata':json.loads(metadata,'utf-8')
             }
 
@@ -375,6 +376,7 @@ class ProService:
             check_type = conf['check']
             timelimit = conf['timelimit']
             memlimit = conf['memlimit'] * 1024
+            chalmeta = conf['metadata']
 
             cur = yield self.db.cursor()
             yield cur.execute('DELETE FROM "test_config" WHERE "pro_id" = %s;',
@@ -387,11 +389,11 @@ class ProService:
                 yield cur.execute(('insert into "test_config" '
                     '("pro_id","test_idx",'
                     '"compile_type","score_type","check_type",'
-                    '"timelimit","memlimit","weight","metadata") '
-                    'values (%s,%s,%s,%s,%s,%s,%s,%s,%s);'),
+                    '"timelimit","memlimit","weight","metadata","chalmeta") '
+                    'values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);'),
                     (pro_id,test_idx,comp_type,score_type,check_type,
                         timelimit,memlimit,test_conf['weight'],
-                        json.dumps(metadata)))
+                        json.dumps(metadata), json.dumps(chalmeta)))
 
         return (None,None)
 
