@@ -4,6 +4,7 @@ problem/
 *.swp
 __pycache__/
 ojtmp.tar.gz
+templ/*_board.templ
 
 # 敏感文件
 config.py
