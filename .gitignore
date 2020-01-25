@@ -5,6 +5,7 @@ problem/
 __pycache__/
 ojtmp.tar.gz
 templ/*_board.templ
+templ/pboard.templ
 
 # 敏感文件
 config.py
