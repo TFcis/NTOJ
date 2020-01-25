@@ -139,14 +139,11 @@ class BoardHandler(RequestHandler):
             return
         delta = meta['end']-datetime.datetime.now().replace(tzinfo = datetime.timezone(datetime.timedelta(hours = 8)))
         deltasecond = delta.days*24*60*60+delta.seconds
-        cont_list = Service.Contest.get_list() 
-        if deltasecond > 0 and deltasecond < 3600 and self.acct['acct_type'] != UserConst.ACCTTYPE_KERNEL and cont_name != 'default':
-            if os.path.exists('/srv/oj/backend/templ/'+cont_name+'_board.templ'):
-                self.render(cont_name+'_board',cont_name = cont_name, cont_list = cont_list)
-                return
-            #else:
-                #self.render('tmp_board',cont_name = cont_name, cont_list = cont_list)
-                #return
+        cont_list = Service.Contest.get_list()
+        boardtempl = 'board'
+        if self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL and cont_name != 'default':
+            if os.path.exists('/srv/oj/backend/templ/' + cont_name + '_board.templ'):
+                boardtempl = cont_name + '_board'
 
         if meta['status'] == ContestConst.STATUS_OFFLINE:
             self.error('Eacces')
@@ -260,7 +257,7 @@ class BoardHandler(RequestHandler):
                     acctlist2.append(acct)
                     submit_count.update({acct_id:(acct['rate'],count)})
             acctlist2.sort(key = lambda acct:submit_count[acct['acct_id']],reverse = True)
-            
+
             rank = 0
             last_sc = None
             last_sb = None
@@ -290,7 +287,7 @@ class BoardHandler(RequestHandler):
                         sc += rate['rate']
                         sub += rate['count']
                 pro_sc_sub.update({pro_id:(sc,sub)})
-            self.render('board',
+            self.render(boardtempl,
                 prolist = prolist2,
                 acctlist = acctlist2,
                 ratemap = ratemap,
