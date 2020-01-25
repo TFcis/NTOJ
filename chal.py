@@ -168,8 +168,6 @@ class ChalService:
         for test_idx,test_conf in testm_conf.items():
             testl.append({
                 'test_idx':test_idx,
-                'comp_type':test_conf['comp_type'],
-                'check_type':test_conf['check_type'],
                 'timelimit':test_conf['timelimit'],
                 'memlimit':test_conf['memlimit'],
                 'metadata':test_conf['metadata']
@@ -191,11 +189,13 @@ class ChalService:
         chalmeta = test_conf['chalmeta'];
         self.ws.write_message(json.dumps({
             'chal_id':chal_id,
-            'testl':testl,
+            'test':testl,
             'code_path':code_path,
             'res_path':res_path,
             'code':code,
             'metadata':chalmeta,
+            'comp_type':test_conf['comp_type'],
+            'check_type':test_conf['check_type'],
         }))
         
         '''tmp_ws.write_message(json.dumps({
