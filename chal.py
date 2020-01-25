@@ -276,13 +276,13 @@ class ChalService:
             'total_chal':total_chal    
         })
 
-    def update_test(self,chal_id,test_idx,state,runtime,memory):
+    def update_test(self,chal_id,test_idx,state,runtime,memory,response):
         cur = yield self.db.cursor()
 
         yield cur.execute(('UPDATE "test" '
-            'SET "state" = %s,"runtime" = %s,"memory" = %s '
+            'SET "state" = %s,"runtime" = %s,"memory" = %s,"response" = %s '
             'WHERE "chal_id" = %s AND "test_idx" = %s;'),
-            (state,runtime,memory,chal_id,test_idx))
+            (state,runtime,memory,response,chal_id,test_idx))
 
         if cur.rowcount != 1:
             return ('Enoext',None)
@@ -328,9 +328,13 @@ class ChalService:
                 break
 
             res = json.loads(ret,'utf-8')
-            err,ret = yield from self.update_test(
-                    res['chal_id'],
-                    res['test_idx'],
-                    res['state'],
-                    res['runtime'],
-                    res['memory'])
+            if res['result'] is not None:
+                for result in res['result']:
+                    err,ret = yield from self.update_test(
+                        res['chal_id'],
+                        result['test_idx'],
+                        result['state'],
+                        result['runtime'],
+                        result['peakmem'],
+                        ret)
+
