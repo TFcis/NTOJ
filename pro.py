@@ -626,7 +626,7 @@ class SubmitHandler(RequestHandler):
                 pro_id,
                 pro['testm_conf'],
                 '/nfs/code/%d/main.cpp'%chal_id,
-                '/judge/problem/%d/res'%pro_id)
+                '/nfs/problem/%d/res'%pro_id)
         if err:
             self.finish(err)
             return

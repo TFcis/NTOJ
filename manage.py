@@ -218,7 +218,7 @@ class ManageHandler(RequestHandler):
                             pro_id,
                             pro['testm_conf'],
                             '/nfs/code/%d/main.cpp'%chal_id,
-                            '/judge/problem/%d/res'%pro_id)
+                            '/nfs/problem/%d/res'%pro_id)
 
                 self.finish('S')
                 return
