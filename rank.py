@@ -20,7 +20,10 @@ class RankHandler(RequestHandler):
     def get(self,pro_id):
         pro_id = int(pro_id)
         cur = yield self.db.cursor()
-        yield cur.execute(('SELECT '
+        # show best socre in rank
+        yield cur.execute(('SELECT *'
+            'FROM ('
+            'SELECT DISTINCT ON ("challenge"."acct_id")'
             '"challenge"."chal_id",'
             '"challenge"."acct_id",'
             '"challenge"."timestamp",'
@@ -34,8 +37,12 @@ class RankHandler(RequestHandler):
             'ON "challenge"."chal_id"="challenge_state"."chal_id" '
             'WHERE "account"."acct_type">=%s AND "challenge"."pro_id"=%s '
             'AND "challenge_state"."state"=1 '
-            'ORDER BY "challenge_state"."runtime" ASC,"challenge_state"."memory" ASC,'
-            '"challenge"."timestamp" ASC,"account"."acct_id" ASC;'),
+            'ORDER BY "challenge"."acct_id" ASC, '
+            '"challenge_state"."runtime" ASC, "challenge_state"."memory" ASC,'
+            '"challenge"."timestamp" ASC, "challenge"."acct_id" ASC'
+            ') temp '
+            'ORDER BY "runtime" ASC, "memory" ASC,'
+            '"timestamp" ASC, "acct_id" ASC;'),
             (self.acct['acct_type'],pro_id,))
         chal_list = list()
         for chal_id,acct_id,timestamp,acct_name,runtime,memory in cur:
