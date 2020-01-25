@@ -91,8 +91,7 @@ class ChalService:
         yield cur.execute('DELETE FROM "test" WHERE "chal_id" = %s;',
                 (chal_id,))
 
-        yield cur.execute('REFRESH MATERIALIZED VIEW challenge_state;')
-        yield cur.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
+        self.rs.publish('materialized_view_req', self.rs.get('materialized_view_counter'))
         self.rs.delete('rate@kernel_True')
         self.rs.delete('rate@kernel_False')
 
@@ -180,7 +179,7 @@ class ChalService:
                 (chal_id,acct_id,pro_id,test_idx,
                     ChalService.STATE_JUDGE,timestamp))
 
-        yield cur.execute('REFRESH MATERIALIZED VIEW challenge_state;')
+        self.rs.publish('materialized_view_req', self.rs.get('materialized_view_counter'))
        # tmp_ws = yield websocket_connect(config.PATH_JUDGE)
         if self.ws == None:
             self.ws = yield websocket_connect(config.PATH_JUDGE)
@@ -284,8 +283,7 @@ class ChalService:
         if cur.rowcount != 1:
             return ('Enoext',None)
 
-        yield cur.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
-        yield cur.execute('REFRESH MATERIALIZED VIEW challenge_state;')
+        self.rs.publish('materialized_view_req', self.rs.get('materialized_view_counter'))
         self.rs.delete('prolist')
         self.rs.delete('rate@kernel_True')
         self.rs.delete('rate@kernel_False')

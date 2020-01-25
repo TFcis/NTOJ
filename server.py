@@ -12,6 +12,9 @@ import tornado.web
 import os
 from tornado.gen import coroutine
 
+from multiprocessing import Process
+import psycopg2
+
 import config
 from inform import InformSub
 from inform import InformService
@@ -128,7 +131,41 @@ class SignHandler(RequestHandler):
             return
 
 
+def materialized_view_task():
+    dbconn = psycopg2.connect(database=config.DBNAME_OJ,
+                              user=config.DBUSER_OJ,
+                              password=config.DBPW_OJ,
+                              options=(
+                                  '-c search_path=%s '
+                                  '-c timezone=%s'
+                              ) % ('public', '+8'))
+    rs = redis.StrictRedis(host='localhost', port=6379, db=1)
+    p = rs.pubsub()
+    p.subscribe('materialized_view_req')
+
+    def _update():
+        ret = rs.incr('materialized_view_counter') - 1
+        cur = dbconn.cursor()
+        cur.execute('REFRESH MATERIALIZED VIEW challenge_state;')
+        dbconn.commit()
+        cur.close()
+        return ret
+
+    counter = _update()
+    for msg in p.listen():
+        if msg['type'] != 'message':
+            continue
+
+        ind = int(msg['data'])
+        if ind <= counter:
+            continue
+
+        counter = _update()
+
+
 if __name__ == '__main__':
+    Process(target=materialized_view_task).start()
+
     httpsock = tornado.netutil.bind_sockets(6000)
     tornado.process.fork_processes(4)
 
