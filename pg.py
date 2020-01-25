@@ -107,8 +107,7 @@ class WrapCursor:
         self.statusmessage = ''
 
 class AsyncPG:
-    def __init__(self,dbname,dbuser,dbpasswd,
-            dbschema = 'public',dbtz = '+0'):
+    def __init__(self,dbname,dbuser,dbpasswd,dbtz = '+0'):
 
         self.INITCONN_SHARE = 4
         self.INITCONN_FREE = 16
@@ -119,7 +118,7 @@ class AsyncPG:
         self._dbname = dbname
         self._dbuser = dbuser
         self._dbpasswd = dbpasswd
-        self._dbschema = dbschema
+        self._dbschema = 'public'
         self._dbtz = dbtz
         self._share_connpool = []
         self._free_connpool = []
