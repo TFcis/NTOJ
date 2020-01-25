@@ -8,8 +8,6 @@ import tornado.gen
 import tornado.web
 import tornado.websocket
 
-from user import UserConst
-
 class Service:
     pass
 
@@ -31,8 +29,10 @@ class RequestHandler(tornado.web.RequestHandler):
     def error(self,err):
         self.finish(err)
         return
-        
+
     def render(self,templ,**kwargs):
+        from user import UserConst
+
         class _encoder(json.JSONEncoder):
             def default(self,obj):
                 if isinstance(obj,datetime.datetime):
@@ -49,7 +49,7 @@ class RequestHandler(tornado.web.RequestHandler):
 
         if self.acct['acct_id'] != UserConst.ACCTID_GUEST:
             kwargs['acct_id'] = self.acct['acct_id']
-        
+
         else:
             kwargs['acct_id'] = ''
 
