@@ -10,6 +10,7 @@ import tornado.process
 import tornado.httpserver
 import tornado.web
 import os
+import logging
 from tornado.gen import coroutine
 
 from multiprocessing import Process
@@ -224,7 +225,22 @@ if __name__ == '__main__':
         ('/log',LogHandler,args),
     ],cookie_secret = config.COOKIE_SEC,autoescape = 'xhtml_escape')
 
-    httpsrv = tornado.httpserver.HTTPServer(app)
+    # LogService.add_log('server start')
+    # print(log_id)
+    access_log = logging.getLogger("tornado.access")
+    tornado.log.enable_pretty_logging(logger=access_log)
+    # tornado.options.define('log_file_prefix', default='/var/log/toj/access.log')
+
+    tornado.options.define('log_rotate_mode', default='time')
+    tornado.options.define('log_rotate_when', default='W')
+    tornado.options.define('log_rotate_interval', default=0)
+
+    # tornado.options.define('log_to_stderr', default=True)
+
+    tornado.options.parse_command_line()
+
+
+    httpsrv = tornado.httpserver.HTTPServer(app,xheaders=True)
     httpsrv.add_sockets(httpsock)
 
     tornado.ioloop.IOLoop.instance().start()
