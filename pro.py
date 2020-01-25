@@ -18,6 +18,7 @@ from user import UserService
 from user import UserConst
 from chal import ChalService
 from pack import PackService
+from log import LogService
 
 class ProConst:
     NAME_MIN = 1
@@ -525,7 +526,7 @@ class ProTagsHandler(RequestHandler):
             if err:
                 self.finish(err)
                 return
-
+            yield from LogService.inst.add_log((self.acct['name']+" updated the tag of problem #"+str(pro_id)+" to: \""+str(tags)+"\"."))
             err,ret = yield from ProService.inst.update_pro(
                 pro_id,pro['name'],pro['status'],pro['class'],pro['expire'],'',None,tags)
             if err:

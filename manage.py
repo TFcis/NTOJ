@@ -4,6 +4,7 @@ import json
 import datetime
 import tornado.web
 import config
+from log import LogService
 from user import UserConst
 from req import RequestHandler
 from req import reqenv
@@ -167,6 +168,7 @@ class ManageHandler(RequestHandler):
                 
                 err,pro_id = yield from Service.Pro.add_pro(
                         name,status,clas,expire,pack_token)
+                yield from LogService.inst.add_log((self.acct['name']+" had been send a request to add the problem #"+str(pro_id)))
                 if err:
                     self.finish(err)
                     return
@@ -188,6 +190,7 @@ class ManageHandler(RequestHandler):
 
                 err,ret = yield from Service.Pro.update_pro(
                         pro_id,name,status,clas,expire,pack_type,pack_token)
+                yield from LogService.inst.add_log((self.acct['name']+" had been send a request to update the problem #"+str(pro_id)))
                 if err:
                     self.finish(err)
                     return
@@ -202,7 +205,7 @@ class ManageHandler(RequestHandler):
                 if err:
                     self.finish(err)
                     return
-
+                yield from LogService.inst.add_log((self.acct['name']+" made a request to rejudge the problem #"+str(pro_id)))
                 cur = yield self.db.cursor()
                 yield cur.execute(('SELECT "chal_id" FROM "challenge" '
                     'WHERE "pro_id" = %s'),
@@ -249,7 +252,7 @@ class ManageHandler(RequestHandler):
                 status = int(self.get_argument('status'))
                 start = self.get_argument('start')
                 end = self.get_argument('end')
-
+                yield from LogService.inst.add_log((self.acct['name']+" was setting the contest \""+str(cont_name)+"\"."))
                 err,start = self.trantime(start)
                 if err:
                     self.finish(err)
@@ -271,6 +274,7 @@ class ManageHandler(RequestHandler):
                 cont_name = self.get_argument('cont_name')
                 Service.Contest.remove_cont(cont_name)
                 self.finish('S')
+                yield from LogService.inst.add_log((self.acct['name']+" was removing the contest \""+str(cont_name)+"\"."))
                 return
         elif page == 'acct':
             reqtype = self.get_argument('reqtype')
@@ -280,6 +284,7 @@ class ManageHandler(RequestHandler):
                 acct_type = int(self.get_argument('acct_type'))
                 clas = int(self.get_argument('class'))
                 group = str(self.get_argument('group'))
+                yield from LogService.inst.add_log((self.acct['name']+" had been send a request to update the account #"+str(acct_id)))
                 #if group == GroupConst.KERNEL_GROUP:
                 #    self.finish('Ekernel')
                 #    return
@@ -299,6 +304,7 @@ class ManageHandler(RequestHandler):
         elif page == 'rquestion':
             reqtype = self.get_argument('reqtype')
             if reqtype == 'rpl':
+                yield from LogService.inst.add_log((self.acct['name']+" replyed a question from user #"+str(self.get_argument('qacct_id'))+":\""+str(self.get_argument('rtext'))+"\"."))
                 index = self.get_argument('index')
                 rtext = self.get_argument('rtext')
                 qacct_id = int(self.get_argument('qacct_id'))
@@ -306,6 +312,7 @@ class ManageHandler(RequestHandler):
                 self.finish('S')
                 return
             if reqtype == 'rrpl':
+                yield from LogService.inst.add_log((self.acct['name']+" re-replyed a question from user #"+str(self.get_argument('qacct_id'))+":\""+str(self.get_argument('rtext'))+"\"."))
                 index = self.get_argument('index')
                 rtext = self.get_argument('rtext')
                 qacct_id = int(self.get_argument('qacct_id'))
@@ -314,17 +321,21 @@ class ManageHandler(RequestHandler):
                 return
         elif page == 'inform':
             reqtype = str(self.get_argument('reqtype'))
+
             if reqtype == 'set':
                 text = self.get_argument('text')
                 Service.Inform.set_inform(text)
+                yield from LogService.inst.add_log((self.acct['name']+" added a line on bulletin: \""+text+"\"."))
                 return
             elif reqtype == 'edit':
                 index = self.get_argument('index')
                 text = self.get_argument('text')
+                yield from LogService.inst.add_log((self.acct['name']+" changed a line on bulletin to: \""+text+"\" which it used to be the #"+str(int(index)+1)+"th row."))
                 Service.Inform.edit_inform(index,text)
                 return
             elif reqtype == 'del':
                 index = self.get_argument('index')
+                yield from LogService.inst.add_log((self.acct['name']+" removed a line on bulletin which it used to be the #"+str(int(index)+1)+"th row."))
                 Service.Inform.del_inform(index)
                 return
             return

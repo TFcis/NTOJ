@@ -50,6 +50,8 @@ from auto import AutoHandler
 from group import GroupService
 from moodle import MoodleService
 from moodle import MoodleHandler
+from log import LogService
+from log import LogHandler
 
 class IndexHandler(RequestHandler):
     @reqenv
@@ -149,6 +151,7 @@ if __name__ == '__main__':
     Service.Auto = AutoService(db,rs)
     Service.Group = GroupService(db,rs)
     Service.Moodle = MoodleService(db,rs)
+    Service.Log = LogService(db,rs)
     args = {
         'db':db,
         'rs':rs,
@@ -181,6 +184,7 @@ if __name__ == '__main__':
         ('/auto',AutoHandler,args),
         ('/moodle/(.+)',MoodleHandler,args),
         ('/set-tags',ProTagsHandler,args),
+        ('/log',LogHandler,args),
     ],cookie_secret = config.COOKIE_SEC,autoescape = 'xhtml_escape')
 
     httpsrv = tornado.httpserver.HTTPServer(app)

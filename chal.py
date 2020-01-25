@@ -9,6 +9,7 @@ from pygments.formatters import HtmlFormatter
 import config
 from user import UserConst
 from req import Service
+from log import LogService
 import config
 
 class ChalConst:
@@ -112,6 +113,8 @@ class ChalService:
 
         if cur.rowcount != 1:
             return ('Enoext',None)
+
+        #LogService.inst.add_log('get chal')
 
         pro_id,acct_id,timestamp,acct_name = cur.fetchone()
 
