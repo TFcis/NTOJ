@@ -34,6 +34,7 @@
 	});
 	j_form.find('button.submit').on('click',function(e){
 	    var name = j_form.find('input.name').val();
+	    var tags = j_form.find('input.tags').val();
 	    var status = j_form.find('select.status').val();
             var clas = j_form.find('select.class').val();
             var pack_type = j_form.find('select.packtype').val();
@@ -44,6 +45,7 @@
 		    'reqtype':'updatepro',
 		    'pro_id':{{ pro['pro_id'] }},
 		    'name':name,
+		    'tags':tags,
 		    'status':status,
                     'class':clas,
                     'pack_type':pack_type,
@@ -59,7 +61,7 @@
                         }else if(res == 'Eparam'){
                             msg = 'Paramater Error';
                         }else if(res == 'Econf'){
-                            msg = 'Syntex error';  
+                            msg = 'Syntex error';
                         }else{
                             msg = res;
                         }
@@ -107,6 +109,7 @@
 	<label style="color:red;">Lock!!</label>
 	{% end %}
 	<input type="text" class="name" placeholder="Problem Name" value="{{ pro['name'] }}">
+	<input type="text" class="tags" placeholder="Tags" value="{{ pro.get('tags', '') or '' }}">
 
 	<select class="status">
 	    <option value=0{% if pro['status'] == 0 %} selected{% end %}>Online</option>

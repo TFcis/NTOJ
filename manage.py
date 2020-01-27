@@ -47,7 +47,7 @@ class ManageHandler(RequestHandler):
         elif page == 'contest':
             try:
                 cont_name = str(self.get_argument('cont'))
-                if cont_name != 'Add_cont': 
+                if cont_name != 'Add_cont':
                     err,cont_meta = Service.Contest.get(cont_name)
                     if err:
                         self.finish('Eexist')
@@ -158,14 +158,14 @@ class ManageHandler(RequestHandler):
 
         elif page == 'pro':
             reqtype = self.get_argument('reqtype')
-            
+
             if reqtype == 'addpro':
                 name = self.get_argument('name')
                 status = int(self.get_argument('status'))
                 clas = int(self.get_argument('class'))
                 expire = None
                 pack_token = self.get_argument('pack_token')
-                
+
                 err,pro_id = yield from Service.Pro.add_pro(
                         name,status,clas,expire,pack_token)
                 yield from LogService.inst.add_log((self.acct['name']+" had been send a request to add the problem #"+str(pro_id)))
@@ -184,12 +184,13 @@ class ManageHandler(RequestHandler):
                 expire = None
                 pack_type = int(self.get_argument('pack_type'))
                 pack_token = self.get_argument('pack_token')
+                tags = self.get_argument('tags')
 
                 if pack_token == '':
                     pack_token = None
 
                 err,ret = yield from Service.Pro.update_pro(
-                        pro_id,name,status,clas,expire,pack_type,pack_token)
+                    pro_id, name, status, clas, expire, pack_type, pack_token, tags)
                 yield from LogService.inst.add_log((self.acct['name']+" had been send a request to update the problem #"+str(pro_id)))
                 if err:
                     self.finish(err)
@@ -395,7 +396,7 @@ class ManageHandler(RequestHandler):
                 if gname in [GroupConst.KERNEL_GROUP,GroupConst.DEFAULT_GROUP]:
                     self.finish('Ekernel')
                     return
-                err = yield from Service.Group.del_group(gname) 
+                err = yield from Service.Group.del_group(gname)
                 self.finish('S')
                 return
         self.finish('Eunk')
@@ -410,7 +411,7 @@ class ManageHandler(RequestHandler):
                 time = datetime.datetime.strptime(time,
                         '%Y-%m-%dT%H:%M:%S.%fZ')
                 time = time.replace(tzinfo = datetime.timezone.utc)
-            
+
             except ValueError:
                 return ('Eparam',None)
 
