@@ -10,7 +10,6 @@ import config
 from user import UserConst
 from req import Service
 from log import LogService
-import config
 
 class ChalConst:
     STATE_AC = 1
@@ -67,7 +66,7 @@ class ChalService:
         if Service.Contest.running()[1] == False:
             return ('Eacces',None)
         os.mkdir('code/tmp')
-        os.rmdir('code/tmp') 
+        os.rmdir('code/tmp')
         cur = yield self.db.cursor()
         yield cur.execute(('INSERT INTO "challenge" '
             '("pro_id","acct_id") '
@@ -197,7 +196,7 @@ class ChalService:
             'comp_type':test_conf['comp_type'],
             'check_type':test_conf['check_type'],
         }))
-        
+
         '''tmp_ws.write_message(json.dumps({
             'chal_id':chal_id,
             'testl':testl,
@@ -210,7 +209,7 @@ class ChalService:
             flt = {'pro_id':None,'acct_id':None,'state':0}):
         fltquery,fltarg = self._get_fltquery(flt)
         cur = yield self.db.cursor()
-        
+
         yield cur.execute(('SELECT '
             '"challenge"."chal_id",'
             '"challenge"."pro_id",'
@@ -258,7 +257,7 @@ class ChalService:
 
     def get_stat(self,min_accttype = UserConst.ACCTTYPE_USER,flt = None):
         fltquery,fltarg = self._get_fltquery(flt)
-        
+
         cur = yield self.db.cursor()
         yield cur.execute(('SELECT COUNT(1) FROM "challenge" '
             'INNER JOIN "account" '
@@ -273,7 +272,7 @@ class ChalService:
 
         total_chal = cur.fetchone()[0]
         return (None,{
-            'total_chal':total_chal    
+            'total_chal':total_chal
         })
 
     def update_test(self,chal_id,test_idx,state,runtime,memory,response):
@@ -310,7 +309,7 @@ class ChalService:
                 query += ' OR "challenge"."acct_id" = %s '
                 arg.append(acct_id)
             query += ')'
-        
+
         if flt['state'] != 0:
             query += ' AND "challenge_state"."state"=%s'
             arg.append(flt['state'])
