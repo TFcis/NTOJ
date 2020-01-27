@@ -50,7 +50,7 @@ class AutoHandler(RequestHandler):
                             return
                         if pro['status'] == Service.Pro.STATUS_ONLINE:
                             continue
-                        err,ret = yield from Service.Pro.update_pro(pro['pro_id'],pro['name'],Service.Pro.STATUS_ONLINE,pro['class'],pro['expire'],None)
+                        err, ret = yield from Service.Pro.update_pro(pro['pro_id'], pro['name'], Service.Pro.STATUS_ONLINE, pro['class'], pro['expire'], None, None, pro['tags'])
                 elif endtime <= nowtime:
 
                     cont = msgpack.unpackb(self.rs.get(contn+'_contest'),encoding = 'utf-8')
@@ -61,7 +61,7 @@ class AutoHandler(RequestHandler):
                             return
                         if pro['status'] == Service.Pro.STATUS_HIDDEN:
                             continue
-                        err,ret = yield from Service.Pro.update_pro(pro['pro_id'],pro['name'],Service.Pro.STATUS_HIDDEN,pro['class'],pro['expire'],None)
+                        err, ret = yield from Service.Pro.update_pro(pro['pro_id'], pro['name'], Service.Pro.STATUS_HIDDEN, pro['class'], pro['expire'], None, None, pro['tags'])
                         err,pro = yield from Service.Pro.get_pro(pro_id,None,True)
                     auto_list.remove(contn)
             self.rs.set('auto_list',msgpack.packb(auto_list))
