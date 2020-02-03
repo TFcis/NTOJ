@@ -98,7 +98,7 @@
     <a class="btn-def" href="/oj/chal/?proid={{pro['pro_id']}}">Status</a>
     <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf','_blank');" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
     <div></div>
-    {% if add_tags == True %}
+    {% if (isadmin) %}
         <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="add tags here">
     {% else %}
         <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="no tags" disabled>
@@ -140,6 +140,9 @@
             {% end %}
         </tbody>
     </table>
+    {% if (isadmin) %}
+        <a class="btn-wrn" href="/oj/manage/updatepro/?proid={{pro['pro_id']}}">Manage</a>
+    {% end %}
 </div>
 <div id="cont" class="g-lg-10">
     <strong>Loading...</strong>

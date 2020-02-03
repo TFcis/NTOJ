@@ -524,14 +524,14 @@ class ProHandler(RequestHandler):
             if test['test_idx'] in countmap:
                 test['rate'] = math.floor(countmap[test['test_idx']])
 
-        add_tags = (self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL)
+        isadmin = (self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL)
 
         self.render('pro',pro = {
             'pro_id':pro['pro_id'],
             'name':pro['name'],
             'status':pro['status'],
             'tags':pro['tags'],
-        },testl = testl, add_tags=add_tags)
+        }, testl=testl, isadmin=isadmin)
         return
 
 class ProTagsHandler(RequestHandler):
