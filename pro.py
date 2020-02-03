@@ -311,6 +311,26 @@ class ProService:
 
         return (None,None)
 
+    def update_limit(self, pro_id, timelimit, memlimit):
+        if timelimit <= 0:
+            return ('Etimelimitmin', None)
+        if memlimit <= 0:
+            return ('Ememlimitmin', None)
+
+        memlimit = memlimit * 1024
+
+        cur = yield self.db.cursor()
+        yield cur.execute(
+            ('UPDATE "test_config" '
+             'SET "timelimit" = %s, "memlimit" = %s '
+             'WHERE "pro_id" = %s;'),
+            (timelimit, memlimit, pro_id))
+
+        if cur.rowcount == 0:
+            return ('Enoext',None)
+
+        return (None,None)
+
     def _get_acct_limit(self,acct,special = None):
         if special == True:
             return ProService.STATUS_OFFLINE

@@ -41,7 +41,18 @@ class ManageHandler(RequestHandler):
                 self.error(err)
                 return
             lock = self.rs.get(str(pro['pro_id'])+'_owner')
-            self.render('manage-pro-update',page = page,pro = pro,lock = lock)
+
+            testl = list()
+            for test_idx, test_conf in pro['testm_conf'].items():
+                testl.append({
+                    'test_idx': test_idx,
+                    'timelimit': test_conf['timelimit'],
+                    'memlimit': test_conf['memlimit'],
+                    'weight': test_conf['weight'],
+                    'rate': 2000
+                })
+
+            self.render('manage-pro-update', page=page, pro=pro, lock=lock, testl=testl)
             return
 
         elif page == 'contest':
@@ -192,6 +203,20 @@ class ManageHandler(RequestHandler):
                 err,ret = yield from Service.Pro.update_pro(
                     pro_id, name, status, clas, expire, pack_type, pack_token, tags)
                 yield from LogService.inst.add_log((self.acct['name']+" had been send a request to update the problem #"+str(pro_id)))
+                if err:
+                    self.finish(err)
+                    return
+
+                self.finish('S')
+                return
+
+            elif reqtype == 'updatelimit':
+                pro_id = int(self.get_argument('pro_id'))
+                timelimit = int(self.get_argument('timelimit'))
+                memlimit = int(self.get_argument('memlimit'))
+
+                err, ret = yield from Service.Pro.update_limit(pro_id, timelimit, memlimit)
+                yield from LogService.inst.add_log(('{} had been send a request to update the problem #{}'.format(self.acct['name'], pro_id)))
                 if err:
                     self.finish(err)
                     return
