@@ -43,4 +43,4 @@ class InformSub(WebSocketHandler):
             self.write_message(str(int(msg.body)))
 
     def on_close(self):
-        pass
+        self.ars.disconnect()
