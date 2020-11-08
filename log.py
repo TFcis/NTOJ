@@ -20,12 +20,14 @@ class LogService:
         self.db = db
         self.rs = rs
         LogService.inst = self
-    def add_log(self,message):
+    def add_log(self,message, log_type=None, params=None):
+        if isinstance(params, dict):
+            params = json.dumps(params, ensure_ascii=False)
         message = str(message)
         cur = yield self.db.cursor()
         yield cur.execute(('INSERT INTO "log" '
-            '("message") '
-            'VALUES (%s) RETURNING "log_id";'),[message])
+            '("message", "type", "params") '
+            'VALUES (%s, %s, %s) RETURNING "log_id";'),[message, log_type, params])
         log_id = cur.fetchone()[0]
         return (None,log_id)
     def list_log(self,off,num):
