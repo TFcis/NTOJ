@@ -8,13 +8,13 @@
 <div id="prolist" class="g-lg-12">
     <div class="g-r head">
         <div class="g-sm-1">#</div>
-        <div class="g-sm-6">Message</div>
+        <div class="g-sm-8">Message</div>
         <div class="g-sm-3">Timestamp</div>
     </div>
 {% for log in loglist %}
     <div class="g-r item">
         <div class="g-sm-1 id">{{ log['log_id'] }}</div>
-        <div class="g-sm-6">{% raw log['message'] %}</div>
+        <div class="g-sm-8">{% raw log['message'] %}</div>
         <div class="g-sm-3 time">{{ log['timestamp'] }}</div>
     </div>
 {% end %}
