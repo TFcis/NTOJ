@@ -184,7 +184,7 @@ class ChalService:
                     ChalService.STATE_JUDGE,timestamp))
 
         self.rs.publish('materialized_view_req', self.rs.get('materialized_view_counter'))
-       # tmp_ws = yield websocket_connect(config.PATH_JUDGE)
+        # tmp_ws = yield websocket_connect(config.PATH_JUDGE)
         if self.ws == None:
             self.ws = yield websocket_connect(config.PATH_JUDGE)
         try:
@@ -192,8 +192,18 @@ class ChalService:
             code = code_f.read().decode('utf-8')
             code_f.close()
         except FileNotFoundError:
-            code = ''
-        chalmeta = test_conf['chalmeta'];
+            for test in testl:
+                err, ret = yield from self.update_test(
+                    chal_id,
+                    test['test_idx'],
+                    ChalService.STATE_ERR,
+                    0,
+                    0,
+                    ''
+                )
+            return (None, None)
+
+        chalmeta = test_conf['chalmeta']
         self.ws.write_message(json.dumps({
             'chal_id':chal_id,
             'test':testl,
