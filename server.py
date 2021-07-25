@@ -103,9 +103,11 @@ class SignHandler(RequestHandler):
             pw = self.get_argument('pw')
             err,acct_id = yield from UserService.inst.sign_in(mail,pw)
             if err:
+                yield from LogService.inst.add_log('{} try to sign in but failed: {}'.format(mail, err), 'signin.failure', {'type': 'signin.failure', 'mail': mail, 'err': err})
                 self.finish(err)
                 return
 
+            yield from LogService.inst.add_log('#{} sign in successfully'.format(acct_id), 'signin.success', {'type': 'signin.success', 'acct_id': acct_id})
             self.set_secure_cookie('id',str(acct_id),
                     path = '/oj',httponly = True)
             self.finish('S')
@@ -127,6 +129,7 @@ class SignHandler(RequestHandler):
             return
 
         elif reqtype == 'signout':
+            yield from LogService.inst.add_log('{}(#{}) sign out'.format(self.acct['name'], self.acct['acct_id']), 'signout', {'type': 'signout', 'name': self.acct['name'], 'acct_id': self.acct['acct_id']})
             self.clear_cookie('id',path = '/oj')
             self.finish('S')
             return
@@ -228,7 +231,8 @@ if __name__ == '__main__':
     # LogService.add_log('server start')
     # print(log_id)
     access_log = logging.getLogger("tornado.access")
-    tornado.log.enable_pretty_logging(logger=access_log)
+    # tornado.log.enable_pretty_logging(logger=access_log)
+    tornado.log.enable_pretty_logging()
     # tornado.options.define('log_file_prefix', default='/var/log/toj/access.log')
 
     tornado.options.define('log_rotate_mode', default='time')

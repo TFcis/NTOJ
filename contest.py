@@ -231,7 +231,8 @@ class BoardHandler(RequestHandler):
                     acct_submit = acct_submit,
                     cont_name = cont_name,
                     cont_list = cont_list,
-                    end = str(meta['end']).split('+')[0].replace('-','/'))
+                    end = str(meta['end']).split('+')[0].replace('-','/'),
+                    timestamp = int(time.time()))
         else:
             err,prolist = yield from Service.Pro.list_pro(acct = self.acct)
             err,acctlist = yield from Service.Rate.list_rate(acct = self.acct)
@@ -295,6 +296,7 @@ class BoardHandler(RequestHandler):
                 acct_submit = acct_submit,
                 cont_name = cont_name,
                 cont_list= cont_list,
-                end = str(meta['end']).split('+')[0].replace('-','/'))
+                end = str(meta['end']).split('+')[0].replace('-','/'),
+                timestamp = int(time.time()))
 
         return
