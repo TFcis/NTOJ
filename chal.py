@@ -187,9 +187,12 @@ class ChalService:
        # tmp_ws = yield websocket_connect(config.PATH_JUDGE)
         if self.ws == None:
             self.ws = yield websocket_connect(config.PATH_JUDGE)
-        code_f = open('code/%d/main.cpp'%chal_id,'rb')
-        code = code_f.read().decode('utf-8')
-        code_f.close()
+        try:
+            code_f = open('code/%d/main.cpp'%chal_id,'rb')
+            code = code_f.read().decode('utf-8')
+            code_f.close()
+        except FileNotFoundError:
+            code = ''
         chalmeta = test_conf['chalmeta'];
         self.ws.write_message(json.dumps({
             'chal_id':chal_id,
