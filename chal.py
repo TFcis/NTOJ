@@ -311,8 +311,12 @@ class ChalService:
             query += ')'
 
         if flt['state'] != 0:
-            query += ' AND "challenge_state"."state"=%s'
-            arg.append(flt['state'])
+            if flt['state'] == ChalService.STATE_JUDGE:
+                query += ' AND ("challenge_state"."state"=%s OR "challenge_state"."state" IS NULL)'
+                arg.append(flt['state'])
+            else:
+                query += ' AND "challenge_state"."state"=%s'
+                arg.append(flt['state'])
 
         return (query,arg)
 
