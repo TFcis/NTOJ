@@ -126,7 +126,7 @@
                 <button class="btn-con btn-sm submit">go</button><br>
             </td>
         </tr>
-        {% if flt['state'] == 101 and isadmin %}
+        {% if (flt['state'] == 100 or flt['state'] == 101) and isadmin %}
 	    <tr>
             <td colspan=2>
                 <button id="rechalall" class="btn-wrn btn-sm">Rechallenge all</button>
