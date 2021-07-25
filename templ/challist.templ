@@ -67,6 +67,17 @@
             j_chalsub.find('a').text(chalsub_count + ' new challenges');
             j_chalsub.show();
         };
+
+        var chalids = {{ chalids }};
+        $('#rechalall').on('click',function(e){
+            chalids.forEach((chalid)=>{
+                $.post('/oj/be/submit', {
+                    'reqtype':'rechal',
+                    'chal_id': chalid,
+                });
+            });
+            index.reload();
+        });
     }
     function destroy(){
         ws.close();
@@ -110,9 +121,18 @@
 	    </tr>
             </tr>
 	    </td></tr>
-	    <tr><td colspan=2>
-                <button class="btn-con btn-sm submit">go</button>
-            </td></tr>
+	    <tr>
+            <td colspan=2>
+                <button class="btn-con btn-sm submit">go</button><br>
+            </td>
+        </tr>
+        {% if flt['state'] == 101 and isadmin %}
+	    <tr>
+            <td colspan=2>
+                <button id="rechalall" class="btn-wrn btn-sm">Rechallenge all</button>
+            </td>
+        </tr>
+        {% end %}
 
         </tbody>
     </table>

@@ -701,6 +701,11 @@ class ChalListHandler(RequestHandler):
                 min(self.acct['acct_type'],UserService.ACCTTYPE_USER),flt)
         err,challist = yield from ChalService.inst.list_chal(off,20,
                 min(self.acct['acct_type'],UserService.ACCTTYPE_USER),flt)
+        isadmin = (self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL)
+        chalids = []
+        for chal in challist:
+            chalids.append(chal['chal_id'])
+
         self.render('challist',
                 chalstat = chalstat,
                 challist = challist,
@@ -708,7 +713,9 @@ class ChalListHandler(RequestHandler):
                 pageoff = off,
                 ppro_id = ppro_id,
                 pacct_id = pacct_id,
-                acct = self.acct)
+                acct = self.acct,
+                chalids = json.dumps(chalids),
+                isadmin = isadmin)
         return
 
     @reqenv
