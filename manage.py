@@ -310,14 +310,16 @@ class ManageHandler(RequestHandler):
                 acct_type = int(self.get_argument('acct_type'))
                 clas = int(self.get_argument('class'))
                 group = str(self.get_argument('group'))
-                yield from LogService.inst.add_log((self.acct['name']+" had been send a request to update the account #"+str(acct_id)))
                 #if group == GroupConst.KERNEL_GROUP:
                 #    self.finish('Ekernel')
                 #    return
                 err,acct = yield from Service.Acct.info_acct(acct_id)
                 if err:
+                    yield from LogService.inst.add_log(("{}(#{}) had been send a request to update the account #{} but not found".format(self.acct['name'], self.acct['acct_id'], acct_id)))
                     self.finish(err)
                     return
+
+                yield from LogService.inst.add_log(("{}(#{}) had been send a request to update the account {}(#{})".format(self.acct['name'], self.acct['acct_id'], acct['name'], acct_id)))
 
                 err,ret = yield from Service.Acct.update_acct(acct_id,
                         acct_type,clas,acct['name'],acct['photo'],acct['cover'])
