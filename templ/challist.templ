@@ -57,10 +57,10 @@
         });
 
         chalsub_count = 0;
-               
+
         ws = new WebSocket('wss://toj.tfcis.org/oj/be/chalsub');
 	ws.onopen = function(e){
-        
+
 	};
 	ws.onmessage = function(e){
             chalsub_count += 1;
@@ -103,6 +103,7 @@
 			<option value=5 {% if flt['state'] == 5 %}selected{% end %}>MLE</option>
 			<option value=6 {% if flt['state'] == 6 %}selected{% end %}>CE</option>
 			<option value=7 {% if flt['state'] == 7 %}selected{% end %}>IE</option>
+			<option value=100 {% if flt['state'] == 100 %}selected{% end %}>Challenging</option>
 		    </select>
 		</td>
 	    </tr>
