@@ -41,6 +41,7 @@ class ChalService:
     STATE_CE = 6
     STATE_ERR = 7
     STATE_JUDGE = 100
+    STATE_NOTSTARTED = 101
 
     STATE_STR = {
         STATE_AC:'Accepted',
@@ -51,6 +52,7 @@ class ChalService:
         STATE_CE:'Compile Error',
         STATE_ERR:'Internal Error',
         STATE_JUDGE:'Challenging',
+        STATE_NOTSTARTED:'Not Started',
     }
 
     def __init__(self,db,rs):
@@ -311,9 +313,8 @@ class ChalService:
             query += ')'
 
         if flt['state'] != 0:
-            if flt['state'] == ChalService.STATE_JUDGE:
-                query += ' AND ("challenge_state"."state"=%s OR "challenge_state"."state" IS NULL)'
-                arg.append(flt['state'])
+            if flt['state'] == ChalService.STATE_NOTSTARTED:
+                query += ' AND "challenge_state"."state" IS NULL '
             else:
                 query += ' AND "challenge_state"."state"=%s'
                 arg.append(flt['state'])
