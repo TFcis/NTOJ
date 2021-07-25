@@ -670,7 +670,12 @@ class ChalListHandler(RequestHandler):
             tmp_pro_id = ppro_id.replace(' ','').split(',')
             pro_id = list()
             for p in tmp_pro_id:
-                pro_id.append(int(p))
+                try:
+                    pro_id.append(int(p))
+                except ValueError:
+                    pass
+            if len(pro_id) == 0:
+                pro_id = None
 
         except tornado.web.HTTPError:
             pro_id = None
@@ -689,7 +694,7 @@ class ChalListHandler(RequestHandler):
 
         try:
             state = int(self.get_argument('state'))
-        except tornado.web.HTTPError:
+        except (tornado.web.HTTPError, ValueError):
             state = 0
         flt = {
             'pro_id':pro_id,
