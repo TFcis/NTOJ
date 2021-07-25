@@ -233,7 +233,7 @@ class ChalService:
         for (chal_id,pro_id,acct_id,timestamp,acct_name,
                 state,runtime,memory) in cur:
             if state == None:
-                state = ChalService.STATE_JUDGE
+                state = ChalService.STATE_NOTSTARTED
 
             if runtime == None:
                 runtime = 0
