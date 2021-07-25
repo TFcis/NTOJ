@@ -136,11 +136,14 @@ class ChalService:
         if (acct['acct_id'] == acct_id or
                 (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL and
                     (owner == None or acct['acct_id'] in config.lock_user_list) and (acct['acct_id'] in config.can_see_code_user))):
-            code_f = open('code/%d/main.cpp'%chal_id,'rb')
-            code = code_f.read().decode('utf-8')
-            code_f.close()
             if (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL) and (acct['acct_id'] != acct_id):
                 yield from LogService.inst.add_log((acct['name'] + " view the challenge " + str(chal_id)))
+            try:
+                code_f = open('code/%d/main.cpp'%chal_id,'rb')
+                code = code_f.read().decode('utf-8')
+                code_f.close()
+            except FileNotFoundError:
+                code = 'ERROR: The code is lost on server.'
         else:
             code = None
 
