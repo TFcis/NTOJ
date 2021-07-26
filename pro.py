@@ -543,7 +543,7 @@ class ProTagsHandler(RequestHandler):
 
         tags = self.get_argument('tags')
         pro_id = int(self.get_argument('pro_id'))
-        if tags and self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL:
+        if isinstance(tags, str) and self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL:
             err,pro = yield from ProService.inst.get_pro(pro_id,self.acct)
             if err:
                 self.finish(err)
