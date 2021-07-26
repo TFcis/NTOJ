@@ -478,11 +478,8 @@ class ProStaticHandler(RequestHandler):
             self.set_header('Pragma','public')
             self.set_header('Expires','0')
             self.set_header('Cache-Control','must-revalidate, post-check=0, pre-check=0')
-            self.set_header('Content-Type','application/force-download')
-            self.set_header('Content-Type','application/octet-stream')
-            self.set_header('Content-Type','application/download')
-            self.set_header('Content-Disposition','attachment; filename="pro%s.pdf"'%(pro_id))
-            self.set_header('Content-Transfer-Encoding','binary')
+            self.add_header('Content-Type', 'application/pdf')
+            self.set_header('Content-Disposition', 'inline')
         self.set_header('X-Accel-Redirect','/oj/problem/%d/%s'%(pro_id,path))
         return
 

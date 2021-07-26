@@ -22,6 +22,16 @@
                 $('#tags-invalid').show();
             }
         });
+        var viewer = 1;
+        $('#switchviewer').on('click', function() {
+            if (viewer == 1) {
+                _load_pdf2();
+                viewer = 2;
+            } else {
+                _load_pdf();
+                viewer = 1;
+            }
+        });
 
         var j_cont = $('#cont');
 
@@ -29,6 +39,7 @@
             j_cont.load('/oj/pro/{{ pro['pro_id'] }}/cont.html',function(res,status,xhr){
                 if(status == 'error'){
                     $('#pdfbtn').show();
+                    $('#switchviewer').show();
                     _load_pdf();
                 }else{
                     MathJax.Hub.Queue(["Typeset",MathJax.Hub,j_cont[0]]);
@@ -87,6 +98,11 @@
                 }
             });
         }
+        function _load_pdf2() {
+            j_cont.empty();
+            var embed = $('<embed width="100%" height="100%" src="/oj/pro/{{ pro['pro_id'] }}/cont.pdf">');
+            j_cont.append(embed);
+        }
         _load_html();
     }
 </script>
@@ -97,6 +113,7 @@
     <a class="btn-con" href="/oj/rank/{{pro['pro_id']}}/">&nbsp;Rank&nbsp;</a>
     <a class="btn-def" href="/oj/chal/?proid={{pro['pro_id']}}">Status</a>
     <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf','_blank');" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
+    <a id="switchviewer" class="btn-wrn" style="display:none; width:156px; text-align:center;">Switch Viewer</a>
     <div></div>
     {% if (isadmin) %}
         <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="add tags here">
