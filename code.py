@@ -34,10 +34,11 @@ class CodeHandler(RequestHandler):
         code = chal['code']
         if code is None:
             self.finish("")
+            return
         lexer = get_lexer_by_name('c++',encoding = 'utf-8',stripall = True)
         formatter = HtmlFormatter(linenos = True,
                     encoding = 'utf-8')
         code = highlight(code,lexer,formatter).decode('utf-8')
         code = code.replace('\t','    ')
-        self.finish(code) 
+        self.finish(code)
         return
