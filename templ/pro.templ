@@ -112,7 +112,7 @@
     <a class="btn-pri btn-lg" href="/oj/submit/{{ pro['pro_id'] }}/">Submit</a><br />
     <a class="btn-con" href="/oj/rank/{{pro['pro_id']}}/">&nbsp;Rank&nbsp;</a>
     <a class="btn-def" href="/oj/chal/?proid={{pro['pro_id']}}">Status</a>
-    <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf','_blank');" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
+    <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf?download=1','_blank');" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
     <a id="switchviewer" class="btn-wrn" style="display:none; width:156px; text-align:center;">Switch Viewer</a>
     <div></div>
     {% if (isadmin) %}
