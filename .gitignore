@@ -1,13 +1,16 @@
-code/
-tmp/
-problem/
-*.swp
 __pycache__/
-ojtmp.tar.gz
+code/
+problem/
 templ/*_board.templ
 templ/pboard.templ
+tmp/
+trash/
+*.swp
+.htpasswd
+ojtmp.tar.gz
 
 # 敏感文件
 config.py
 pgoj.sql
 sql
+*.sql
