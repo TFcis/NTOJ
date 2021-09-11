@@ -18,9 +18,9 @@
             }
             }else{
             if(clas == -1){
-                index.go('/oj/proset/?pclas_name='+pclas);
+                index.go('/oj/proset/?pclas_key='+pclas);
             }else{
-                index.go('/oj/proset/?class='+clas+'&pclas_name='+pclas);
+                index.go('/oj/proset/?class='+clas+'&pclas_key='+pclas);
             }
             }
         });
@@ -38,13 +38,13 @@
                 if(pclas == 'None'){
                     index.go('/oj/proset/?off=' + off);
                 }else{
-                    index.go('/oj/proset/?off='+off+'&pclas_name='+pclas);
+                    index.go('/oj/proset/?off='+off+'&pclas_key='+pclas);
                 }
             }else{
                 if(pclas == 'None'){
                     index.go('/oj/proset/?off=' + off + '&class=' + clas);
                 }else{
-                    index.go('/oj/proset/?off='+off+'&class='+clas+'&pclas_name='+pclas);
+                    index.go('/oj/proset/?off='+off+'&class='+clas+'&pclas_key='+pclas);
                 }
             }
         });
@@ -76,9 +76,9 @@
         </tr>
         <tr>
         <td colspan=2><select class="pclass">
-            <option value="None" {% if pclas_name == None %}selected{% end %}>None</option>
+            <option value="None" {% if pclas_key == None %}selected{% end %}>None</option>
             {% for pclas in pclist %}
-            <option value="{{pclas}}" {% if pclas == pclas_name %}selected{% end %}>{{pclas}}</option>
+            <option value="{{pclas['key']}}" {% if pclas['key'] == pclas_key %}selected{% end %}>{{pclas['name']}}</option>
             {% end %}
         </select></td>
         </tr>
@@ -97,8 +97,8 @@
     {% if clas != None %}
     {% set postfix = postfix + '&class=%s'%clas %}
     {% end %}
-    {% if pclas_name != None %}
-    {% set postfix = postfix + '&pclas_name=%s'%pclas_name %}
+    {% if pclas_key != None %}
+    {% set postfix = postfix + '&pclas_key=%s'%pclas_key %}
     {% end %}
 
     {% set ct = math.floor(pageoff / 40) %}
@@ -135,8 +135,8 @@
     {% if clas != None %}
     {% set postfix = postfix + '&class=%s'%clas %}
     {% end %}
-    {% if pclas_name != None %}
-    {% set postfix = postfix + '&pclas_name=%s'%pclas_name %}
+    {% if pclas_key != None %}
+    {% set postfix = postfix + '&pclas_key=%s'%pclas_key %}
     {% end %}
 
         <li><a href="?off=0{{ postfix }}">&#x21e4;</a></li>

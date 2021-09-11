@@ -116,18 +116,22 @@ class ManageHandler(RequestHandler):
             return
         elif page == 'proclass':
             try:
-                pclas_name = str(self.get_argument('pclas_name'))
+                pclas_key = str(self.get_argument('pclas_key'))
             except:
-                pclas_name = None
-            if pclas_name == None:
-                self.render('manage-proclass',page = page,pclas_name = pclas_name,clas_list = Service.Pro.get_class_list(),p_list = None)
+                pclas_key = None
+            if pclas_key == None:
+                self.render('manage-proclass', page=page, pclas_key=pclas_key, pclas_name='', clas_list=Service.Pro.get_class_list(), p_list=None)
                 return
             else:
-                err,p_list = Service.Pro.get_pclass_list(pclas_name)
+                pclas_name = Service.Pro.get_pclass_name_by_key(pclas_key)
+                if pclas_name is None:
+                    self.finish('Eexist')
+                    return
+                err, p_list = Service.Pro.get_pclass_list(pclas_key)
                 if err:
                     self.finish(err)
                     return
-                self.render('manage-proclass',page = page,pclas_name = pclas_name,clas_list = Service.Pro.get_class_list(),p_list = p_list)
+                self.render('manage-proclass', page=page, pclas_key=pclas_key, pclas_name=pclas_name, clas_list=Service.Pro.get_class_list(), p_list=p_list)
             return
         elif page == 'group':
             try:
@@ -370,30 +374,48 @@ class ManageHandler(RequestHandler):
         elif page == 'proclass':
             reqtype = str(self.get_argument('reqtype'))
             if reqtype == 'add':
+                pclas_key = str(self.get_argument('pclas_key'))
                 pclas_name = str(self.get_argument('pclas_name'))
                 p_list = str(self.get_argument('p_list'))
-                p_list = p_list.replace(' ','').split(',')
-                p_list2 =[]
+                p_list = p_list.replace(' ', '').split(',')
+                p_list2 = []
                 for p in p_list:
-                    p_list2.append(int(p))
+                    try:
+                        p_list2.append(int(p))
+                    except ValueError:
+                        pass
                 p_list = p_list2
-                Service.Pro.add_pclass(pclas_name,p_list)
+                yield from LogService.inst.add_log('{} add proclass key={} name={} list={}'.format(self.acct['name'], pclas_key, pclas_name, p_list))
+                err = Service.Pro.add_pclass(pclas_key, pclas_name, p_list)
+                if err:
+                    self.finish(err)
                 self.finish('S')
                 return
             elif reqtype == 'remove':
-                pclas_name = str(self.get_argument('pclas_name'))
-                Service.Pro.remove_pclass(pclas_name)
+                pclas_key = str(self.get_argument('pclas_key'))
+                yield from LogService.inst.add_log('{} remove proclass key={}'.format(self.acct['name'], pclas_key))
+                err = Service.Pro.remove_pclass(pclas_key)
+                if err:
+                    self.finish(err)
                 self.finish('S')
                 return
             elif reqtype == 'edit':
+                pclas_key = str(self.get_argument('pclas_key'))
+                new_pclas_key = str(self.get_argument('new_pclas_key'))
                 pclas_name = str(self.get_argument('pclas_name'))
                 p_list = str(self.get_argument('p_list'))
-                p_list = p_list.replace(' ','').split(',')
+                p_list = p_list.replace(' ', '').split(',')
                 p_list2 = []
                 for p in p_list:
-                    p_list2.append(int(p))
+                    try:
+                        p_list2.append(int(p))
+                    except ValueError:
+                        pass
                 p_list = p_list2
-                Service.Pro.edit_pclass(pclas_name,p_list)
+                yield from LogService.inst.add_log('{} update proclass key={} newkey={} name={} list={}'.format(self.acct['name'], pclas_key, new_pclas_key, pclas_name, p_list))
+                err = Service.Pro.edit_pclass(pclas_key, new_pclas_key, pclas_name, p_list)
+                if err:
+                    self.finish(err)
                 self.finish('S')
                 return
         elif page == 'group':

@@ -19,6 +19,8 @@ from user import UserConst
 from chal import ChalService
 from pack import PackService
 from log import LogService
+from req import Service
+
 
 class ProConst:
     NAME_MIN = 1
@@ -46,38 +48,90 @@ class ProService:
 
         ProService.inst = self
 
-    def get_pclass_list(self,pro_clas):
-        clas = self.rs.get(str(pro_clas)+'_pro_list')
+    def get_pclass_list(self, pro_clas):
+        clas = self.rs.get(str(pro_clas) + '_pro_list')
         if clas == None:
-            return ('Eexist',None)
-        return (None,msgpack.unpackb(clas,encoding = 'utf-8'))
-    def get_class_list(self):
+            return ('Eexist', None)
+        return (None, msgpack.unpackb(clas, encoding='utf-8'))
+
+    def get_class_list_old(self):
         clas_list = self.rs.get('pro_class_list')
         if clas_list == None:
-            self.rs.set('pro_class_list',msgpack.packb([]))
+            self.rs.set('pro_class_list', msgpack.packb([]))
             return []
-        return msgpack.unpackb(clas_list,encoding = 'utf-8')
-    def add_pclass(self,pclas_name,p_list):
+        return msgpack.unpackb(clas_list, encoding='utf-8')
+
+    def get_class_list(self):
+        clas_list = self.rs.get('pro_class_list2')
+        if clas_list == None:
+            res = []
+            for row in self.get_class_list_old():
+                res.append({
+                    'key': row,
+                    'name': row,
+                })
+            self.rs.set('pro_class_list2', msgpack.packb(res))
+            return res
+        return msgpack.unpackb(clas_list, encoding='utf-8')
+
+    def get_pclass_name_by_key(self, pclas_key):
         clas_list = self.get_class_list()
-        if str(pclas_name) in clas_list:
-            return 'Eexist'
-        clas_list.append(pclas_name)
-        self.rs.set('pro_class_list',msgpack.packb(clas_list))
-        self.rs.set(str(pclas_name)+'_pro_list',msgpack.packb(p_list))
+        for row in clas_list:
+            if row['key'] == str(pclas_key):
+                return row['name']
         return None
-    def remove_pclass(self,pclas_name):
+
+    def get_pclass_key_by_name(self, pclas_name):
         clas_list = self.get_class_list()
-        if str(pclas_name) not in clas_list:
-            return 'Eexist'
-        clas_list.remove(pclas_name)
-        self.rs.set('pro_class_list',msgpack.packb(clas_list))
-        self.rs.delete(str(pclas_name)+'_pro_list')
+        for row in clas_list:
+            if row['name'] == str(pclas_name):
+                return row['key']
         return None
-    def edit_pclass(self,pclas_name,p_list):
+
+    def add_pclass(self, pclas_key, pclas_name, p_list):
+        if str(pclas_key) == '':
+            return 'EbadKey'
         clas_list = self.get_class_list()
-        if str(pclas_name) not in clas_list:
+        clas_list_keys = [row['key'] for row in clas_list]
+        if str(pclas_key) in clas_list_keys:
+            return 'Eexist'
+        clas_list.append({
+            'key': pclas_key,
+            'name': pclas_name,
+        })
+        self.rs.set('pro_class_list2', msgpack.packb(clas_list))
+        self.rs.set(str(pclas_key) + '_pro_list', msgpack.packb(p_list))
+        return None
+
+    def remove_pclass(self, pclas_key):
+        clas_list = self.get_class_list()
+        clas_list_keys = [row['key'] for row in clas_list]
+        try:
+            clas_index = clas_list_keys.index(str(pclas_key))
+        except ValueError:
+            return 'Eexist'
+        clas_list.pop(clas_index)
+        self.rs.set('pro_class_list2', msgpack.packb(clas_list))
+        self.rs.delete(str(pclas_key) + '_pro_list')
+        return None
+
+    def edit_pclass(self, pclas_key, new_pclas_key, pclas_name, p_list):
+        if str(new_pclas_key) == '':
+            return 'EbadKey'
+        clas_list = self.get_class_list()
+        clas_list_keys = [row['key'] for row in clas_list]
+        try:
+            clas_index = clas_list_keys.index(str(pclas_key))
+        except ValueError:
             return 'Exist'
-        self.rs.set(str(pclas_name)+'_pro_list',msgpack.packb(p_list))
+
+        clas_list[clas_index]['key'] = str(new_pclas_key)
+        clas_list[clas_index]['name'] = str(pclas_name)
+        self.rs.set('pro_class_list2', msgpack.packb(clas_list))
+
+        if pclas_key != new_pclas_key:
+            self.rs.delete(str(pclas_key) + '_pro_list')
+        self.rs.set(str(new_pclas_key) + '_pro_list', msgpack.packb(p_list))
         return None
     def get_pro(self,pro_id,acct = None,special = None):
         max_status = self._get_acct_limit(acct,special)
@@ -429,18 +483,27 @@ class ProsetHandler(RequestHandler):
         except tornado.web.HTTPError:
             clas = None
         try:
-            pclas_name = str (self.get_argument('pclas_name'))
+            pclas_key = str(self.get_argument('pclas_key'))
         except:
-            pclas_name = None
-        err,prolist = yield from ProService.inst.list_pro(
-                self.acct,state = True,clas = clas)
-        if pclas_name == None:
+            pclas_key = None
+
+        # Backward compatibility
+        if pclas_key is None:
+            try:
+                pclas_name = str(self.get_argument('pclas_name'))
+                pclas_key = Service.Pro.get_pclass_key_by_name(pclas_name)
+            except:
+                pass
+
+        err, prolist = yield from ProService.inst.list_pro(
+            self.acct, state=True, clas=clas)
+        if pclas_key == None:
             pronum = len(prolist)
             prolist = prolist[off:off + 40]
-            self.render('proset',pronum = pronum,prolist = prolist,clas = clas,pclas_name = pclas_name,pclist = ProService.inst.get_class_list(),pageoff = off)
+            self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pclas_key=pclas_key, pclist=ProService.inst.get_class_list(), pageoff=off)
             return
         else:
-            err,p_list = ProService.inst.get_pclass_list(pclas_name)
+            err, p_list = ProService.inst.get_pclass_list(pclas_key)
             if err:
                 self.finish(err)
                 return
@@ -451,7 +514,7 @@ class ProsetHandler(RequestHandler):
             prolist = prolist2
             pronum = len(prolist)
             prolist = prolist[off:off + 40]
-            self.render('proset',pronum = pronum,prolist = prolist,clas = clas, pclas_name = pclas_name,pclist = ProService.inst.get_class_list(),pageoff = off)
+            self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pclas_key=pclas_key, pclist=ProService.inst.get_class_list(), pageoff=off)
             return
 
         return
