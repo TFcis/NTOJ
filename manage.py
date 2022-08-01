@@ -239,11 +239,14 @@ class ManageHandler(RequestHandler):
                 if err:
                     self.finish(err)
                     return
-                yield from LogService.inst.add_log((self.acct['name'] + " made a request to rejudge the problem #" + str(pro_id)))
                 cur = yield self.db.cursor()
-                yield cur.execute(('SELECT "chal_id" FROM "challenge" '
-                                   'WHERE "pro_id" = %s'),
-                                  (pro_id,))
+                yield cur.execute((
+                    'SELECT "challenge"."chal_id" FROM "challenge" '
+                    'LEFT JOIN "challenge_state" '
+                    'ON "challenge"."chal_id" = "challenge_state"."chal_id" '
+                    'WHERE "pro_id" = %s AND "challenge_state"."state" IS NULL'),
+                    (pro_id,))
+                yield from LogService.inst.add_log("{} made a request to rejudge the problem #{} with {} chals".format(self.acct['name'], pro_id, cur.rowcount))
 
                 for chal_id, in cur:
                     err, ret = yield from Service.Chal.reset_chal(chal_id)
