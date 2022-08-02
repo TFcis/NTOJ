@@ -71,7 +71,7 @@
         <tr>
             <td class="_rank">{{ acct['rank'] }}</td>
             <td class="_acct">&nbsp<a href="/oj/acct/{{ acct['acct_id'] }}/">{{ acct['name'] }}</a></td>
-            <td class="_score">{{ acct['rate'] }} / {{acct_submit[acct_id]}}</td>
+            <td class="_score"><a href="/oj/chal/?acctid={{ acct['acct_id'] }}">{{ acct['rate'] }} / {{acct_submit[acct_id]}}</a></td>
         {% for pro in prolist %}
         {% set pro_id = pro['pro_id'] %}
         {% if acct_id in ratemap and pro_id in ratemap[acct_id] %}
