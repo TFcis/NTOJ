@@ -82,6 +82,7 @@ class InfoHandler(RequestHandler):
     @reqenv
     def get(self):
         inform_list = msgpack.unpackb(self.rs.get('inform'),encoding = 'utf-8')
+        inform_list.sort(key=lambda row: row['time'], reverse=True)
         self.render('info',inform_list = inform_list)
 class AboutHandler(RequestHandler):
     @reqenv
