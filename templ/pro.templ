@@ -25,10 +25,10 @@
         var viewer = 1;
         $('#switchviewer').on('click', function() {
             if (viewer == 1) {
-                _load_pdf2();
+                _load_pdf_embed();
                 viewer = 2;
             } else {
-                _load_pdf();
+                _load_pdf_js();
                 viewer = 1;
             }
         });
@@ -40,7 +40,12 @@
                 if(status == 'error'){
                     $('#pdfbtn').show();
                     $('#switchviewer').show();
-                    _load_pdf();
+
+                    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                        _load_pdf_js();
+                    } else {
+                        _load_pdf_embed();
+                    }
                 }else{
                     MathJax.Hub.Queue(["Typeset",MathJax.Hub,j_cont[0]]);
                     j_cont.find('pre > code').each(function(i,e){
@@ -50,7 +55,7 @@
                 }
             });
         }
-        function _load_pdf(){
+        function _load_pdf_js(){
             PDFJS.getDocument('/oj/pro/{{ pro['pro_id'] }}/cont.pdf').then(function(pdf){
                 var i;
                 j_cont.empty();
@@ -103,9 +108,9 @@
                 }
             });
         }
-        function _load_pdf2() {
+        function _load_pdf_embed() {
             j_cont.empty();
-            var embed = $('<embed width="100%" height="100%" src="/oj/pro/{{ pro['pro_id'] }}/cont.pdf">');
+            var embed = $('<embed width="100%" height="100%" src="/oj/pro/{{ pro['pro_id'] }}/cont.pdf" type="application/pdf">');
             j_cont.append(embed);
         }
         _load_html();
