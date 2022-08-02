@@ -10,11 +10,11 @@
                 'chal_id':{{ chal['chal_id'] }},
             },function(res){
                 if(res[0] != 'E'){
-                
+
                 }else{
                     index.reload();
-                }     
-            });        
+                }
+            });
         });
 	$.post('/oj/be/code',{
 	    'chal_id':{{chal['chal_id']}},
@@ -39,15 +39,15 @@
             <tbody>
                 <tr>
                     <td>Challenge</td>
-                    <td><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
+                    <td>{{ chal['chal_id'] }}</td>
                 </tr>
                 <tr>
                     <td>Problem</td>
-                    <td><a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }}</a></td>
+                    <td><a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }}</a> (<a href="/oj/chal/?proid={{ pro['pro_id'] }}">chals</a>)</td>
                 </tr>
                 <tr>
                     <td>Account</td>
-                    <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a></td>
+                    <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a> (<a href="/oj/chal/?acctid={{ chal['acct_id'] }}">chals</a>)</td>
                 </tr>
                 <tr>
                     <td>Timestamp</td>
