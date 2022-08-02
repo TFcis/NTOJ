@@ -45,6 +45,7 @@
                         _load_pdf_js();
                     } else {
                         _load_pdf_embed();
+                        viewer = 2;
                     }
                 }else{
                     MathJax.Hub.Queue(["Typeset",MathJax.Hub,j_cont[0]]);
