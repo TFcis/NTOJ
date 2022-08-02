@@ -669,6 +669,9 @@ class SubmitHandler(RequestHandler):
             pro_id = int(self.get_argument('pro_id'))
             code = self.get_argument('code')
 
+            if len(code.strip()) == 0:
+                self.finish('Eempty')
+                return
             if len(code) > ProService.CODE_MAX:
                 self.finish('Ecodemax')
                 return

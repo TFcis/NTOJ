@@ -20,15 +20,17 @@
                 'pro_id':{{ pro['pro_id'] }},
                 'code':code
             },function(res){
-                if(res[0] == 'E'){
-		    if(res[1] == 'i'){
-			j_submit.find('div.print').print('interval < 30 sec');
-		    }else{
-		        j_submit.find('div.print').print('Submit failed');
-		    }
-                }else{
+                if (res[0] == 'E') {
+                    if (res[1] == 'Einternal') {
+                        j_submit.find('div.print').print('interval < 30 sec');
+                    } else if (res == 'Eempty') {
+                        j_submit.find('div.print').print('Do not submit empty code');
+                    } else {
+                        j_submit.find('div.print').print('Submit failed');
+                    }
+                } else {
                     index.go('/oj/chal/' + JSON.parse(res) + '/');
-                } 
+                }
             });
         });
     }
