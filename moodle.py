@@ -232,7 +232,7 @@ class MoodleHandler(RequestHandler):
                 info = yield from Service.Moodle.info_moodle(mname)
                 acctlist = info['acct']
                 prolist = info['pro']
-            
+
             self.render('moodle-manage',page = page,manage = manage,moodlelist = moodlelist,mname = mname,acctlist = acctlist,prolist = prolist)
             return
         self.finish('Eunk')

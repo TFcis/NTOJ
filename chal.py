@@ -12,50 +12,51 @@ from req import Service
 from log import LogService
 
 class ChalConst:
-    STATE_AC = 1
-    STATE_WA = 2
-    STATE_RE = 3
-    STATE_TLE = 4
-    STATE_MLE = 5
-    STATE_CE = 6
-    STATE_ERR = 7
-    STATE_JUDGE = 100
-
-    STATE_STR = {
-        STATE_AC:'AC',
-        STATE_WA:'WA',
-        STATE_RE:'RE',
-        STATE_TLE:'TLE',
-        STATE_MLE:'MLE',
-        STATE_CE:'CE',
-        STATE_ERR:'IE',
-        STATE_JUDGE:'JDG',
-    }
-
-class ChalService:
-    STATE_AC = 1
-    STATE_WA = 2
-    STATE_RE = 3
-    STATE_TLE = 4
-    STATE_MLE = 5
-    STATE_CE = 6
-    STATE_ERR = 7
-    STATE_JUDGE = 100
+    STATE_AC         = 1
+    STATE_WA         = 2
+    STATE_RE         = 3
+    STATE_TLE        = 4
+    STATE_MLE        = 5
+    STATE_CE         = 6
+    STATE_ERR        = 7
+    STATE_JUDGE      = 100
     STATE_NOTSTARTED = 101
 
     STATE_STR = {
-        STATE_AC:'Accepted',
-        STATE_WA:'Wrong Answer',
-        STATE_RE:'Runtime Error',
-        STATE_TLE:'Time Limit Exceed',
-        STATE_MLE:'Memory Limit Exceed',
-        STATE_CE:'Compile Error',
-        STATE_ERR:'Internal Error',
-        STATE_JUDGE:'Challenging',
-        STATE_NOTSTARTED:'Not Started',
+        STATE_AC    :'AC',
+        STATE_WA    :'WA',
+        STATE_RE    :'RE',
+        STATE_TLE   :'TLE',
+        STATE_MLE   :'MLE',
+        STATE_CE    :'CE',
+        STATE_ERR   :'IE',
+        STATE_JUDGE :'JDG',
     }
 
-    def __init__(self,db,rs):
+class ChalService:
+    STATE_AC         = 1
+    STATE_WA         = 2
+    STATE_RE         = 3
+    STATE_TLE        = 4
+    STATE_MLE        = 5
+    STATE_CE         = 6
+    STATE_ERR        = 7
+    STATE_JUDGE      = 100
+    STATE_NOTSTARTED = 101
+
+    STATE_STR = {
+        STATE_AC         :'Accepted',
+        STATE_WA         :'Wrong Answer',
+        STATE_RE         :'Runtime Error',
+        STATE_TLE        :'Time Limit Exceed',
+        STATE_MLE        :'Memory Limit Exceed',
+        STATE_CE         :'Compile Error',
+        STATE_ERR        :'Internal Error',
+        STATE_JUDGE      :'Challenging',
+        STATE_NOTSTARTED :'Not Started',
+    }
+
+    def __init__(self, db, rs):
         self.db = db
         self.rs = rs
         self.ws = None
@@ -64,39 +65,40 @@ class ChalService:
 
         ChalService.inst = self
 
-    def add_chal(self,pro_id,acct_id,code):
+    def add_chal(self, pro_id, acct_id, code):
         if Service.Contest.running()[1] == False:
-            return ('Eacces',None)
+            return ('Eacces', None)
+
         os.mkdir('code/tmp')
         os.rmdir('code/tmp')
         cur = yield self.db.cursor()
         yield cur.execute(('INSERT INTO "challenge" '
             '("pro_id","acct_id") '
             'VALUES (%s,%s) RETURNING "chal_id";'),
-            (pro_id,acct_id))
+            (pro_id, acct_id))
 
         if cur.rowcount != 1:
-            return ('Eunk',None)
+            return ('Eunk', None)
 
         chal_id = cur.fetchone()[0]
 
-        os.mkdir('code/%d'%chal_id)
-        code_f = open('code/%d/main.cpp'%chal_id,'wb')
+        os.mkdir('code/%d' % chal_id)
+        code_f = open('code/%d/main.cpp' % chal_id, 'wb')
         code_f.write(code.encode('utf-8'))
         code_f.close()
 
-        return (None,chal_id)
+        return (None, chal_id)
 
-    def reset_chal(self,chal_id):
+    def reset_chal(self, chal_id):
         cur = yield self.db.cursor()
         yield cur.execute('DELETE FROM "test" WHERE "chal_id" = %s;',
-                (chal_id,))
+                (chal_id, ))
 
         self.rs.publish('materialized_view_req', self.rs.get('materialized_view_counter'))
         self.rs.delete('rate@kernel_True')
         self.rs.delete('rate@kernel_False')
 
-        return (None,None)
+        return (None, None)
 
     def get_chal(self,chal_id,acct):
         cur = yield self.db.cursor()
@@ -109,88 +111,94 @@ class ChalService:
             'INNER JOIN "account" '
             'ON "challenge"."acct_id" = "account"."acct_id" '
             'WHERE "chal_id" = %s;'),
-            (chal_id,))
+            (chal_id, ))
 
         if cur.rowcount != 1:
-            return ('Enoext',None)
+            return ('Enoext', None)
 
         #LogService.inst.add_log('get chal')
 
-        pro_id,acct_id,timestamp,acct_name = cur.fetchone()
+        pro_id, acct_id, timestamp, acct_name = cur.fetchone()
 
         yield cur.execute(('SELECT "test_idx","state","runtime","memory" '
             'FROM "test" '
             'WHERE "chal_id" = %s ORDER BY "test_idx" ASC;'),
-            (chal_id,))
+            (chal_id, ))
 
         testl = list()
-        for test_idx,state,runtime,memory in cur:
+        for test_idx, state, runtime, memory in cur:
             testl.append({
-                'test_idx':test_idx,
-                'state':state,
-                'runtime':int(runtime),
-                'memory':int(memory),
+                'test_idx' :test_idx,
+                'state'    :state,
+                'runtime'  :int(runtime),
+                'memory'   :int(memory),
             })
-        owner =  self.rs.get(str(pro_id)+'_owner')
+        owner =  self.rs.get(str(pro_id) + '_owner')
         unlock = [1]
         if (acct['acct_id'] == acct_id or
                 (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL and
                     (owner == None or acct['acct_id'] in config.lock_user_list) and (acct['acct_id'] in config.can_see_code_user))):
+
             if (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL) and (acct['acct_id'] != acct_id):
                 yield from LogService.inst.add_log((acct['name'] + " view the challenge " + str(chal_id)))
+
             try:
-                code_f = open('code/%d/main.cpp'%chal_id,'rb')
+                code_f = open('code/%d/main.cpp' % chal_id, 'rb')
                 code = code_f.read().decode('utf-8')
                 code_f.close()
+
             except FileNotFoundError:
                 code = 'ERROR: The code is lost on server.'
         else:
             code = None
 
-        return (None,{
-            'chal_id':chal_id,
-            'pro_id':pro_id,
-            'acct_id':acct_id,
-            'acct_name':acct_name,
-            'timestamp':timestamp,
-            'testl':testl,
-            'code':code
+        return (None, {
+            'chal_id'   :chal_id,
+            'pro_id'    :pro_id,
+            'acct_id'   :acct_id,
+            'acct_name' :acct_name,
+            'timestamp' :timestamp,
+            'testl'     :testl,
+            'code'      :code
         })
 
-    def emit_chal(self,chal_id,pro_id,testm_conf,code_path,res_path):
+    def emit_chal(self, chal_id, pro_id, testm_conf, code_path, res_path):
         cur = yield self.db.cursor()
 
         yield cur.execute(('SELECT "acct_id","timestamp" FROM "challenge" '
             'WHERE "chal_id" = %s;'),
-            (chal_id,))
-        if cur.rowcount != 1:
-            return ('Enoext',None)
+            (chal_id, ))
 
-        acct_id,timestamp = cur.fetchone()
+        if cur.rowcount != 1:
+            return ('Enoext', None)
+
+        acct_id, timestamp = cur.fetchone()
 
         testl = list()
-        for test_idx,test_conf in testm_conf.items():
+        for test_idx, test_conf in testm_conf.items():
             testl.append({
-                'test_idx':test_idx,
-                'timelimit':test_conf['timelimit'],
-                'memlimit':test_conf['memlimit'],
-                'metadata':test_conf['metadata']
+                'test_idx'  :test_idx,
+                'timelimit' :test_conf['timelimit'],
+                'memlimit'  :test_conf['memlimit'],
+                'metadata'  :test_conf['metadata']
             })
 
             yield cur.execute(('INSERT INTO "test" '
                 '("chal_id","acct_id","pro_id","test_idx","state","timestamp") '
                 'VALUES (%s,%s,%s,%s,%s,%s);'),
-                (chal_id,acct_id,pro_id,test_idx,
-                    ChalService.STATE_JUDGE,timestamp))
+                (chal_id, acct_id, pro_id, test_idx,
+                    ChalService.STATE_JUDGE, timestamp))
 
         self.rs.publish('materialized_view_req', self.rs.get('materialized_view_counter'))
         # tmp_ws = yield websocket_connect(config.PATH_JUDGE)
         if self.ws == None:
             self.ws = yield websocket_connect(config.PATH_JUDGE)
+
         try:
-            code_f = open('code/%d/main.cpp'%chal_id,'rb')
+            code_f = open('code/%d/main.cpp' % chal_id, 'rb')
             code = code_f.read().decode('utf-8')
             code_f.close()
+
         except FileNotFoundError:
             for test in testl:
                 err, ret = yield from self.update_test(
@@ -205,14 +213,14 @@ class ChalService:
 
         chalmeta = test_conf['chalmeta']
         self.ws.write_message(json.dumps({
-            'chal_id':chal_id,
-            'test':testl,
-            'code_path':code_path,
-            'res_path':res_path,
-            'code':code,
-            'metadata':chalmeta,
-            'comp_type':test_conf['comp_type'],
-            'check_type':test_conf['check_type'],
+            'chal_id'    :chal_id,
+            'test'       :testl,
+            'code_path'  :code_path,
+            'res_path'   :res_path,
+            'code'       :code,
+            'metadata'   :chalmeta,
+            'comp_type'  :test_conf['comp_type'],
+            'check_type' :test_conf['check_type'],
         }))
 
         '''tmp_ws.write_message(json.dumps({
@@ -221,11 +229,11 @@ class ChalService:
             'code_path':code_path,
             'res_path':res_path
         }))'''
-        return (None,None)
+        return (None, None)
 
-    def list_chal(self,off,num,min_accttype = UserConst.ACCTTYPE_USER,
-            flt = {'pro_id':None,'acct_id':None,'state':0}):
-        fltquery,fltarg = self._get_fltquery(flt)
+    def list_chal(self, off, num, min_accttype=UserConst.ACCTTYPE_USER,
+            flt = {'pro_id': None, 'acct_id': None, 'state': 0}):
+        fltquery, fltarg = self._get_fltquery(flt)
         cur = yield self.db.cursor()
 
         yield cur.execute(('SELECT '
@@ -242,12 +250,12 @@ class ChalService:
             'ON "challenge"."acct_id" = "account"."acct_id" '
             'LEFT JOIN "challenge_state" '
             'ON "challenge"."chal_id" = "challenge_state"."chal_id" '
-            'WHERE "account"."acct_type" >= %s' +  fltquery +
+            'WHERE "account"."acct_type" >= %s' + fltquery +
             'ORDER BY "challenge"."timestamp" DESC OFFSET %s LIMIT %s;'),
-            [min_accttype] + fltarg + [off,num])
+            [min_accttype] + fltarg + [off, num])
         challist = list()
-        for (chal_id,pro_id,acct_id,timestamp,acct_name,
-                state,runtime,memory) in cur:
+        for (chal_id, pro_id, acct_id, timestamp, acct_name,
+                state, runtime, memory) in cur:
             if state == None:
                 state = ChalService.STATE_NOTSTARTED
 
@@ -262,19 +270,19 @@ class ChalService:
                 memory = int(memory)
 
             challist.append({
-                'chal_id':chal_id,
-                'pro_id':pro_id,
-                'acct_id':acct_id,
-                'timestamp':timestamp,
-                'acct_name':acct_name,
-                'state':state,
-                'runtime':runtime,
-                'memory':memory
+                'chal_id'   : chal_id,
+                'pro_id'    : pro_id,
+                'acct_id'   : acct_id,
+                'timestamp' : timestamp,
+                'acct_name' : acct_name,
+                'state'     : state,
+                'runtime'   : runtime,
+                'memory'    : memory
             })
-        return (None,challist)
+        return (None, challist)
 
-    def get_stat(self,min_accttype = UserConst.ACCTTYPE_USER,flt = None):
-        fltquery,fltarg = self._get_fltquery(flt)
+    def get_stat(self, min_accttype=UserConst.ACCTTYPE_USER, flt=None):
+        fltquery, fltarg = self._get_fltquery(flt)
 
         cur = yield self.db.cursor()
         yield cur.execute(('SELECT COUNT(1) FROM "challenge" '
@@ -286,32 +294,32 @@ class ChalService:
             [min_accttype] + fltarg)
 
         if cur.rowcount != 1:
-            return ('Eunk',None)
+            return ('Eunk', None)
 
         total_chal = cur.fetchone()[0]
-        return (None,{
-            'total_chal':total_chal
+        return (None, {
+            'total_chal': total_chal
         })
 
-    def update_test(self,chal_id,test_idx,state,runtime,memory,response):
+    def update_test(self, chal_id, test_idx, state, runtime, memory, response):
         cur = yield self.db.cursor()
 
         yield cur.execute(('UPDATE "test" '
             'SET "state" = %s,"runtime" = %s,"memory" = %s,"response" = %s '
             'WHERE "chal_id" = %s AND "test_idx" = %s;'),
-            (state,runtime,memory,response,chal_id,test_idx))
+            (state, runtime, memory, response, chal_id, test_idx))
 
         if cur.rowcount != 1:
-            return ('Enoext',None)
+            return ('Enoext', None)
 
         self.rs.publish('materialized_view_req', self.rs.get('materialized_view_counter'))
         self.rs.delete('prolist')
         self.rs.delete('rate@kernel_True')
         self.rs.delete('rate@kernel_False')
 
-        return (None,None)
+        return (None, None)
 
-    def _get_fltquery(self,flt):
+    def _get_fltquery(self, flt):
         query = ' '
         arg = []
         if flt['pro_id'] != None:
@@ -335,7 +343,7 @@ class ChalService:
                 query += ' AND "challenge_state"."state"=%s'
                 arg.append(flt['state'])
 
-        return (query,arg)
+        return (query, arg)
 
     @coroutine
     def _collect_judge(self):
@@ -347,10 +355,10 @@ class ChalService:
             if ret == None:
                 break
 
-            res = json.loads(ret,'utf-8')
+            res = json.loads(ret, 'utf-8')
             if res['result'] is not None:
                 for result in res['result']:
-                    err,ret = yield from self.update_test(
+                    err, ret = yield from self.update_test(
                         res['chal_id'],
                         result['test_idx'],
                         result['state'],

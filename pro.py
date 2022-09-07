@@ -21,7 +21,6 @@ from pack import PackService
 from log import LogService
 from req import Service
 
-
 class ProConst:
     NAME_MIN = 1
     NAME_MAX = 64
@@ -46,7 +45,6 @@ class ProService:
     def __init__(self, db, rs):
         self.db = db
         self.rs = rs
-
         ProService.inst = self
 
     def get_pclass_list(self, pro_clas):
@@ -68,8 +66,8 @@ class ProService:
             res = []
             for row in self.get_class_list_old():
                 res.append({
-                    'key': row,
-                    'name': row,
+                    'key'  : row,
+                    'name' : row,
                 })
             self.rs.set('pro_class_list2', msgpack.packb(res))
             return res
@@ -96,9 +94,10 @@ class ProService:
         clas_list_keys = [row['key'] for row in clas_list]
         if str(pclas_key) in clas_list_keys:
             return 'Eexist'
+
         clas_list.append({
-            'key': pclas_key,
-            'name': pclas_name,
+            'key'  : pclas_key,
+            'name' : pclas_name,
         })
         self.rs.set('pro_class_list2', msgpack.packb(clas_list))
         self.rs.set(str(pclas_key) + '_pro_list', msgpack.packb(p_list))
@@ -111,6 +110,7 @@ class ProService:
             clas_index = clas_list_keys.index(str(pclas_key))
         except ValueError:
             return 'Eexist'
+
         clas_list.pop(clas_index)
         self.rs.set('pro_class_list2', msgpack.packb(clas_list))
         self.rs.delete(str(pclas_key) + '_pro_list')
@@ -154,30 +154,30 @@ class ProService:
         yield cur.execute(('SELECT "test_idx","compile_type","score_type",'
                            '"check_type","timelimit","memlimit","weight","metadata","chalmeta" '
                            'FROM "test_config" WHERE "pro_id" = %s ORDER BY "test_idx" ASC;'),
-                          (pro_id,))
+                          (pro_id, ))
 
         testm_conf = OrderedDict()
         for (test_idx, comp_type, score_type, check_type, timelimit, memlimit, weight,
                 metadata, chalmeta) in cur:
             testm_conf[test_idx] = {
-                'comp_type': comp_type,
-                'score_type': score_type,
-                'check_type': check_type,
-                'timelimit': timelimit,
-                'memlimit': memlimit,
-                'weight': weight,
-                'chalmeta': json.loads(chalmeta, 'utf-8'),
-                'metadata': json.loads(metadata, 'utf-8')
+                'comp_type'  : comp_type,
+                'score_type' : score_type,
+                'check_type' : check_type,
+                'timelimit'  : timelimit,
+                'memlimit'   : memlimit,
+                'weight'     : weight,
+                'chalmeta'   : json.loads(chalmeta, 'utf-8'),
+                'metadata'   : json.loads(metadata, 'utf-8')
             }
 
         return (None, {
-            'pro_id': pro_id,
-            'name': name,
-            'status': status,
-            'expire': expire,
-            'class': clas,
-            'testm_conf': testm_conf,
-            'tags': tags,
+            'pro_id'     : pro_id,
+            'name'       : name,
+            'status'     : status,
+            'expire'     : expire,
+            'class'      : clas,
+            'testm_conf' : testm_conf,
+            'tags'       : tags,
         })
 
     def list_pro(self, acct=None, state=False, clas=None):
@@ -255,13 +255,13 @@ class ProService:
                     expire = None
 
                 prolist.append({
-                    'pro_id': pro_id,
-                    'name': name,
-                    'status': status,
-                    'expire': expire,
-                    'class': clas[0],
-                    'tags': tags,
-                    'rate': rate,
+                    'pro_id' : pro_id,
+                    'name'   : name,
+                    'status' : status,
+                    'expire' : expire,
+                    'class'  : clas[0],
+                    'tags'   : tags,
+                    'rate'   : rate,
                 })
 
             self.rs.hset('prolist', field, msgpack.packb(prolist,
@@ -390,9 +390,9 @@ class ProService:
     def _get_acct_limit(self, acct, special=None):
         if special == True:
             return ProService.STATUS_OFFLINE
+
         if acct['acct_type'] == UserService.ACCTTYPE_KERNEL:
             return ProService.STATUS_OFFLINE
-
         else:
             return ProService.STATUS_ONLINE
 
@@ -447,16 +447,16 @@ class ProService:
             except Exception:
                 return ('Econf', None)
 
-            comp_type = conf['compile']
+            comp_type  = conf['compile']
             score_type = conf['score']
             check_type = conf['check']
-            timelimit = conf['timelimit']
-            memlimit = conf['memlimit'] * 1024
-            chalmeta = conf['metadata']
+            timelimit  = conf['timelimit']
+            memlimit   = conf['memlimit'] * 1024
+            chalmeta   = conf['metadata']
 
             cur = yield self.db.cursor()
             yield cur.execute('DELETE FROM "test_config" WHERE "pro_id" = %s;',
-                              (pro_id,))
+                              (pro_id, ))
 
             for test_idx, test_conf in enumerate(conf['test']):
                 metadata = {
@@ -481,10 +481,12 @@ class ProsetHandler(RequestHandler):
             off = int(self.get_argument('off'))
         except tornado.web.HTTPError:
             off = 0
+
         try:
             clas = int(self.get_argument('class'))
         except tornado.web.HTTPError:
             clas = None
+
         try:
             pclas_key = str(self.get_argument('pclas_key'))
         except:
@@ -505,6 +507,7 @@ class ProsetHandler(RequestHandler):
             prolist = prolist[off:off + 40]
             self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pclas_key=pclas_key, pclist=ProService.inst.get_class_list(), pageoff=off)
             return
+
         else:
             err, p_list = ProService.inst.get_pclass_list(pclas_key)
             if err:
@@ -551,6 +554,7 @@ class ProStaticHandler(RequestHandler):
                 download = self.get_argument('download')
             except tornado.web.HTTPError:
                 download = None
+
             if download:
                 self.set_header('Content-Disposition', 'attachment; filename="pro%s.pdf"' % (pro_id))
             else:
@@ -577,18 +581,18 @@ class ProHandler(RequestHandler):
         testl = list()
         for test_idx, test_conf in pro['testm_conf'].items():
             testl.append({
-                'test_idx': test_idx,
-                'timelimit': test_conf['timelimit'],
-                'memlimit': test_conf['memlimit'],
-                'weight': test_conf['weight'],
-                'rate': 2000
+                'test_idx'  : test_idx,
+                'timelimit' : test_conf['timelimit'],
+                'memlimit'  : test_conf['memlimit'],
+                'weight'    : test_conf['weight'],
+                'rate'      : 2000
             })
 
         cur = yield self.db.cursor()
 
         yield cur.execute(('SELECT "test_idx","rate" FROM "test_valid_rate" '
                            'WHERE "pro_id" = %s ORDER BY "test_idx" ASC;'),
-                          (pro_id,))
+                          (pro_id, ))
 
         countmap = {}
         for test_idx, count in cur:
@@ -601,10 +605,10 @@ class ProHandler(RequestHandler):
         isadmin = (self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL)
 
         self.render('pro', pro={
-            'pro_id': pro['pro_id'],
-            'name': pro['name'],
-            'status': pro['status'],
-            'tags': pro['tags'],
+            'pro_id' : pro['pro_id'],
+            'name'   : pro['name'],
+            'status' : pro['status'],
+            'tags'   : pro['tags'],
         }, testl=testl, isadmin=isadmin)
         return
 
@@ -626,6 +630,7 @@ class ProTagsHandler(RequestHandler):
             yield from LogService.inst.add_log((self.acct['name'] + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."))
             err, ret = yield from ProService.inst.update_pro(
                 pro_id, pro['name'], pro['status'], pro['class'], pro['expire'], '', None, tags)
+
             if err:
                 self.finish(err)
                 return
@@ -672,9 +677,11 @@ class SubmitHandler(RequestHandler):
             if len(code.strip()) == 0:
                 self.finish('Eempty')
                 return
+
             if len(code) > ProService.CODE_MAX:
                 self.finish('Ecodemax')
                 return
+
             if self.acct['acct_type'] != UserConst.ACCTTYPE_KERNEL:
                 last_submit_name = 'last_submit_time_%s' % self.acct['acct_id']
                 if self.rs.get(last_submit_name) == None:
@@ -698,6 +705,7 @@ class SubmitHandler(RequestHandler):
             #code = code.replace('bits/stdc++.h','DontUseMe.h')
             err, chal_id = yield from ChalService.inst.add_chal(
                 pro_id, self.acct['acct_id'], code)
+
             if err:
                 self.finish(err)
                 return
@@ -745,6 +753,7 @@ class ChalListHandler(RequestHandler):
 
         except tornado.web.HTTPError:
             off = 0
+
         try:
             ppro_id = str(self.get_argument('proid'))
             tmp_pro_id = ppro_id.replace(' ', '').split(',')
@@ -754,6 +763,7 @@ class ChalListHandler(RequestHandler):
                     pro_id.append(int(p))
                 except ValueError:
                     pass
+
             if len(pro_id) == 0:
                 pro_id = None
 
@@ -777,9 +787,9 @@ class ChalListHandler(RequestHandler):
         except (tornado.web.HTTPError, ValueError):
             state = 0
         flt = {
-            'pro_id': pro_id,
+            'pro_id' : pro_id,
             'acct_id': acct_id,
-            'state': state
+            'state'  : state
         }
 
         err, chalstat = yield from ChalService.inst.get_stat(

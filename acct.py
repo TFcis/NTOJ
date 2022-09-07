@@ -13,10 +13,10 @@ from log import LogService
 
 class AcctHandler(RequestHandler):
     @reqenv
-    def get(self,acct_id):
+    def get(self, acct_id):
         acct_id = int(acct_id)
 
-        err,acct = yield from UserService.inst.info_acct(acct_id)
+        err, acct = yield from UserService.inst.info_acct(acct_id)
         if err:
             self.finish(err)
             return
@@ -73,7 +73,7 @@ class AcctHandler(RequestHandler):
                     ') AS "valid_test" '
                     'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
                     'AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";'),
-                    (acct_id,ChalService.STATE_AC,[2]))
+                    (acct_id, ChalService.STATE_AC, [2]))
             if cur.rowcount != 1:
                 self.finish('Unknown')
                 return
@@ -119,8 +119,8 @@ class AcctHandler(RequestHandler):
                 bonus += pro['rate'] * weightmap[pro_id]
         '''
 
-        err,prolist = yield from Service.Pro.list_pro(acct = self.acct,clas = None)
-        err,ratemap = yield from Service.Rate.map_rate(clas = None)
+        err, prolist = yield from Service.Pro.list_pro(acct=self.acct, clas=None)
+        err, ratemap = yield from Service.Rate.map_rate(clas=None)
 
         prolist2 = []
         acct_id = acct['acct_id']
@@ -130,6 +130,7 @@ class AcctHandler(RequestHandler):
             if acct_id in ratemap and pro_id in ratemap[acct_id]:
                 rate2 = ratemap[acct_id][pro_id]
                 tmp['score'] = rate2['rate']
+
             prolist2.append(tmp)
         isadmin = (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
@@ -138,11 +139,11 @@ class AcctHandler(RequestHandler):
         acct['cover'] = re.sub(r'^http://', 'https://', acct['cover'])
 
         self.render('acct',
-                acct = acct,
-                rate = math.floor(rate),
-                extrate = math.floor(extrate),
-                prolist = prolist2,
-                isadmin = isadmin)
+                acct=acct,
+                rate=math.floor(rate),
+                extrate=math.floor(extrate),
+                prolist=prolist2,
+                isadmin=isadmin)
 
         return
 
@@ -154,7 +155,7 @@ class AcctHandler(RequestHandler):
             photo = self.get_argument('photo')
             cover = self.get_argument('cover')
 
-            err,ret = yield from UserService.inst.update_acct(
+            err, ret = yield from UserService.inst.update_acct(
                     self.acct['acct_id'],
                     self.acct['acct_type'],
                     self.acct['class'],
@@ -173,9 +174,9 @@ class AcctHandler(RequestHandler):
             pw = self.get_argument('pw')
             acct_id = self.get_argument('acct_id')
             if acct_id != self.acct['acct_id']:
-                yield from LogService.inst.add_log((self.acct['name']+" was changing the password of user #"+str(acct_id)+"."))
-            err,ret = yield from UserService.inst.update_pw(
-                    acct_id,old,pw,(self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL))
+                yield from LogService.inst.add_log((self.acct['name'] + " was changing the password of user #" + str(acct_id) + "."))
+            err, ret = yield from UserService.inst.update_pw(
+                    acct_id, old, pw, (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL))
             if err:
                 self.finish(err)
                 return
@@ -199,13 +200,13 @@ class SignHandler(RequestHandler):
             mail = self.get_argument('mail')
             pw = self.get_argument('pw')
 
-            err,sign = yield from UserService.inst.sign_in(mail,pw)
+            err, sign = yield from UserService.inst.sign_in(mail, pw)
             if err:
                 self.finish(err)
                 return
 
-            self.set_secure_cookie('sign',sign,
-                    path = '/oj',httponly = True)
+            self.set_secure_cookie('sign', sign,
+                    path='/oj', httponly=True)
             self.finish('S')
             return
 
@@ -213,17 +214,17 @@ class SignHandler(RequestHandler):
             mail = self.get_argument('mail')
             pw = self.get_argument('pw')
             name = self.get_argument('name')
-            err,sign = yield from UserService.inst.sign_up(mail,pw,name)
+            err, sign = yield from UserService.inst.sign_up(mail, pw, name)
             if err:
                 self.finish(err)
                 return
 
-            self.set_secure_cookie('sign',sign,
-                    path = '/oj',httponly = True)
+            self.set_secure_cookie('sign', sign,
+                    path='/oj', httponly=True)
             self.finish('S')
             return
 
         elif reqtype == 'signout':
-            self.clear_cookie('sign',path = '/oj')
+            self.clear_cookie('sign', path='/oj')
             self.finish('S')
             return

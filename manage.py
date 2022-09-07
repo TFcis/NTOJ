@@ -13,7 +13,6 @@ from group import GroupConst
 import msgpack
 import base64
 
-
 class ManageHandler(RequestHandler):
     @reqenv
     def get(self, page='dash'):
@@ -42,16 +41,17 @@ class ManageHandler(RequestHandler):
             if err:
                 self.error(err)
                 return
+
             lock = self.rs.get(str(pro['pro_id']) + '_owner')
 
             testl = list()
             for test_idx, test_conf in pro['testm_conf'].items():
                 testl.append({
-                    'test_idx': test_idx,
+                    'test_idx' : test_idx,
                     'timelimit': test_conf['timelimit'],
-                    'memlimit': test_conf['memlimit'],
-                    'weight': test_conf['weight'],
-                    'rate': 2000
+                    'memlimit' : test_conf['memlimit'],
+                    'weight'   : test_conf['weight'],
+                    'rate'     : 2000
                 })
 
             self.render('manage-pro-update', page=page, pro=pro, lock=lock, testl=testl)
@@ -97,6 +97,7 @@ class ManageHandler(RequestHandler):
             group = yield from Service.Group.group_of_acct(acct_id)
             self.render('manage-acct-update', page=page, acct=acct, glist=glist, group=group)
             return
+
         elif page == 'question':
             err, acctlist = yield from Service.Acct.list_acct(UserConst.ACCTTYPE_KERNEL, True)
             asklist = {}
@@ -108,35 +109,44 @@ class ManageHandler(RequestHandler):
                     asklist.update({acct['acct_id']: msgpack.unpackb(self.rs.get(str(acct['acct_id']) + '_msg_ask'), encoding='utf-8')})
             self.render('manage-question', page=page, acctlist=acctlist, asklist=asklist)
             return
+
         elif page == 'rquestion':
             qacct_id = int(self.get_argument('qacct'))
             err, ques_list = Service.Question.get_queslist(acct=None, acctid=qacct_id)
             self.rs.set(str(qacct_id) + '_msg_ask', msgpack.packb(False))
             self.render('manage-rquestion', page=page, qacct_id=qacct_id, ques_list=ques_list)
             return
+
         elif page == 'inform':
             inform_list = msgpack.unpackb(self.rs.get('inform'), encoding='utf-8')
             self.render('manage-inform', page=page, inform_list=inform_list)
             return
+
         elif page == 'proclass':
             try:
                 pclas_key = str(self.get_argument('pclas_key'))
+
             except:
                 pclas_key = None
+
             if pclas_key == None:
                 self.render('manage-proclass', page=page, pclas_key=pclas_key, pclas_name='', clas_list=Service.Pro.get_class_list(), p_list=None)
                 return
+
             else:
                 pclas_name = Service.Pro.get_pclass_name_by_key(pclas_key)
                 if pclas_name is None:
                     self.finish('Eexist')
                     return
+
                 err, p_list = Service.Pro.get_pclass_list(pclas_key)
                 if err:
                     self.finish(err)
                     return
+
                 self.render('manage-proclass', page=page, pclas_key=pclas_key, pclas_name=pclas_name, clas_list=Service.Pro.get_class_list(), p_list=p_list)
             return
+
         elif page == 'group':
             try:
                 gname = str(self.get_argument('gname'))
@@ -148,17 +158,18 @@ class ManageHandler(RequestHandler):
                 (gtype, gclas) = cur.fetchone()
                 gtype = int(gtype)
                 gclas = int(gclas)
+
             except:
                 gname = None
                 gtype = None
                 gclas = None
+
             glist = yield from Service.Group.list_group()
             if gname != None:
                 gacct = yield from Service.Group.list_acct_in_group(gname)
             else:
                 gacct = None
             self.render('manage-group', page=page, gname=gname, glist=glist, gacct=gacct, gtype=gtype, gclas=gclas)
-
             return
 
     @reqenv
@@ -259,6 +270,7 @@ class ManageHandler(RequestHandler):
 
                 self.finish('S')
                 return
+
             elif reqtype == 'pro-lock':
                 pro_id = self.get_argument('pro_id')
                 self.rs.set(str(pro_id) + '_owner', msgpack.packb(1))
@@ -268,12 +280,14 @@ class ManageHandler(RequestHandler):
                 self.rs.set('lock_list', msgpack.packb(lock_list))
                 self.finish('S')
                 return
+
             elif reqtype == 'pro-unlock':
                 pro_id = self.get_argument('pro_id')
                 pwd = str(self.get_argument('pwd'))
                 if config.unlock_pwd != base64.encodestring(msgpack.packb(pwd)):
                     self.finish('Eacces')
                     return
+
                 lock_list = msgpack.unpackb(self.rs.get('lock_list'), encoding='utf-8')
                 lock_list.remove(int(pro_id))
                 self.rs.set('lock_list', msgpack.packb(lock_list))
@@ -299,20 +313,24 @@ class ManageHandler(RequestHandler):
                 if err:
                     self.finish(err)
                     return
+
                 if cont_name == 'default':
                     yield from Service.Contest.set('default', clas, status, start, end)
+
                 else:
                     pro_list = str(self.get_argument('pro_list'))
                     acct_list = str(self.get_argument('acct_list'))
                     yield from Service.Contest.set(cont_name=cont_name, clas=None, status=status, start=start, end=end, pro_list=pro_list, acct_list=acct_list)
                 self.finish('S')
                 return
+
             elif reqtype == 'del':
                 cont_name = self.get_argument('cont_name')
                 Service.Contest.remove_cont(cont_name)
                 self.finish('S')
                 yield from LogService.inst.add_log((self.acct['name'] + " was removing the contest \"" + str(cont_name) + "\"."))
                 return
+
         elif page == 'acct':
             reqtype = self.get_argument('reqtype')
 
@@ -337,9 +355,11 @@ class ManageHandler(RequestHandler):
                 if err:
                     self.finish(err)
                     return
+
                 err = yield from Service.Group.set_acct_group(acct_id, group)
                 self.finish('S')
                 return
+
         elif page == 'rquestion':
             reqtype = self.get_argument('reqtype')
             if reqtype == 'rpl':
@@ -350,6 +370,7 @@ class ManageHandler(RequestHandler):
                 Service.Question.reply(self.acct, qacct_id, index, rtext)
                 self.finish('S')
                 return
+
             if reqtype == 'rrpl':
                 yield from LogService.inst.add_log((self.acct['name'] + " re-replyed a question from user #" + str(self.get_argument('qacct_id')) + ":\"" + str(self.get_argument('rtext')) + "\"."))
                 index = self.get_argument('index')
@@ -358,6 +379,7 @@ class ManageHandler(RequestHandler):
                 Service.Question.reply(self.acct, qacct_id, index, rtext)
                 self.finish('S')
                 return
+
         elif page == 'inform':
             reqtype = str(self.get_argument('reqtype'))
 
@@ -366,18 +388,21 @@ class ManageHandler(RequestHandler):
                 Service.Inform.set_inform(text)
                 yield from LogService.inst.add_log((self.acct['name'] + " added a line on bulletin: \"" + text + "\"."))
                 return
+
             elif reqtype == 'edit':
                 index = self.get_argument('index')
                 text = self.get_argument('text')
                 yield from LogService.inst.add_log((self.acct['name'] + " changed a line on bulletin to: \"" + text + "\" which it used to be the #" + str(int(index) + 1) + "th row."))
                 Service.Inform.edit_inform(index, text)
                 return
+
             elif reqtype == 'del':
                 index = self.get_argument('index')
                 yield from LogService.inst.add_log((self.acct['name'] + " removed a line on bulletin which it used to be the #" + str(int(index) + 1) + "th row."))
                 Service.Inform.del_inform(index)
                 return
             return
+
         elif page == 'proclass':
             reqtype = str(self.get_argument('reqtype'))
             if reqtype == 'add':
@@ -396,16 +421,20 @@ class ManageHandler(RequestHandler):
                 err = Service.Pro.add_pclass(pclas_key, pclas_name, p_list)
                 if err:
                     self.finish(err)
+
                 self.finish('S')
                 return
+
             elif reqtype == 'remove':
                 pclas_key = str(self.get_argument('pclas_key'))
                 yield from LogService.inst.add_log('{} remove proclass key={}'.format(self.acct['name'], pclas_key))
                 err = Service.Pro.remove_pclass(pclas_key)
                 if err:
                     self.finish(err)
+
                 self.finish('S')
                 return
+
             elif reqtype == 'edit':
                 pclas_key = str(self.get_argument('pclas_key'))
                 new_pclas_key = str(self.get_argument('new_pclas_key'))
@@ -423,6 +452,7 @@ class ManageHandler(RequestHandler):
                 err = Service.Pro.edit_pclass(pclas_key, new_pclas_key, pclas_name, p_list)
                 if err:
                     self.finish(err)
+
                 self.finish('S')
                 return
         elif page == 'group':
@@ -434,12 +464,15 @@ class ManageHandler(RequestHandler):
                 if gname == GroupConst.KERNEL_GROUP:
                     self.finish('Ekernel')
                     return
+
                 err = yield from Service.Group.update_group(gname, gtype, gclas)
                 if err:
                     self.finish(err)
                     return
+
                 self.finish('S')
                 return
+
             elif reqtype == 'add_group':
                 gname = str(self.get_argument('gname'))
                 gtype = int(self.get_argument('gtype'))
@@ -447,6 +480,7 @@ class ManageHandler(RequestHandler):
                 err = yield from Service.Group.add_group(gname, gtype, gclas)
                 self.finish('S')
                 return
+
             elif reqtype == 'del_group':
                 gname = str(self.get_argument('gname'))
                 if gname in [GroupConst.KERNEL_GROUP, GroupConst.DEFAULT_GROUP]:
@@ -455,6 +489,7 @@ class ManageHandler(RequestHandler):
                 err = yield from Service.Group.del_group(gname)
                 self.finish('S')
                 return
+
         self.finish('Eunk')
         return
 

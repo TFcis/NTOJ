@@ -46,7 +46,7 @@ class RateService:
 
         else:
             kernel = False
-        
+
         key = 'rate@kernel_' + str(kernel)
         data = self.rs.hgetall(key)
         if len(data) > 0:
@@ -63,7 +63,7 @@ class RateService:
         else:
             min_type = UserConst.ACCTTYPE_USER
             max_status = ProConst.STATUS_ONLINE
-        
+
         if clas != None:
             qclas = [clas]
 
@@ -127,7 +127,7 @@ class RateService:
         for acct_id,pro_id,weight in cur:
             ratemap[acct_id] += promap[pro_id] * float(weight)
         '''
-     
+
         err,prolist = yield from Service.Pro.list_pro(acct = acct)
         promap = {}
         for pro in prolist:
@@ -169,11 +169,11 @@ class RateService:
         for acct_id,pro_id,state in cur:
             if acct_id not in statemap:
                 statemap[acct_id] = {}
-            
+
             statemap[acct_id][pro_id] = state
-        
+
         return (None,statemap)
-    
+
     def map_rate(self,clas = None,
             starttime = '1970-01-01 00:00:00.000',endtime = '2100-01-01 00:00:00.000'):
         if clas != None:
@@ -200,12 +200,12 @@ class RateService:
         for acct_id,pro_id,rate,count in cur:
             if acct_id not in statemap:
                 statemap[acct_id] = {}
-            
+
             statemap[acct_id][pro_id] = {
                 'rate':rate,
                 'count':count
             }
-        
+
         return (None,statemap)
 
 

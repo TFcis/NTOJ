@@ -4,10 +4,10 @@ from req import reqenv
 import tornado.web
 import json
 class ApiService:
-    def __init__(self,db,rs):
+    def __init__(self, db, rs):
         self.db = db
         self.rs = rs
-        self.inst = self
+        ApiService.inst = self
 
     def gen_json(self,_list):
         return json.dumps(_list)
@@ -17,13 +17,14 @@ class ApiHandler(RequestHandler):
     def get(self):
         self.render('api')
         return
+
     @reqenv
     def post(self):
         reqtype = str(self.get_argument('reqtype'))
         if reqtype == 'AC':
             acct_id = int(self.get_argument('acct_id'))
-            err,prolist = yield from Service.Pro.list_pro(acct = None,clas = 1)
-            err,ratemap = yield from Service.Rate.map_rate(clas = 1)
+            err, prolist = yield from Service.Pro.list_pro(acct=None, clas=1)
+            err, ratemap = yield from Service.Rate.map_rate(clas=1)
             prolist2 = []
             for pro in prolist:
                 pro_id = pro['pro_id']
@@ -31,12 +32,13 @@ class ApiHandler(RequestHandler):
                     rate = ratemap[acct_id][pro_id]
                     if rate['rate'] >= 100:
                         prolist2.append(pro_id)
-            self.finish(str(Service.Api.gen_json({'ac':prolist2})))
+            self.finish(str(Service.Api.gen_json({'ac': prolist2})))
             return
+
         elif reqtype == 'NA':
             acct_id = int(self.get_argument('acct_id'))
-            err,prolist = yield from Service.Pro.list_pro(acct = None,clas = 1)
-            err,ratemap = yield from Service.Rate.map_rate(clas = 1)
+            err, prolist = yield from Service.Pro.list_pro(acct=None, clas=1)
+            err, ratemap = yield from Service.Rate.map_rate(clas=1)
             prolist2 = []
             for pro in prolist:
                 pro_id = pro['pro_id']
@@ -44,15 +46,16 @@ class ApiHandler(RequestHandler):
                     rate = ratemap[acct_id][pro_id]
                     if rate['rate'] < 100:
                         prolist2.append(pro_id)
-            self.finish(str(Service.Api.gen_json({'na':prolist2})))
+            self.finish(str(Service.Api.gen_json({'na': prolist2})))
             return
+
         elif reqtype == 'INFO':
             acct_id = int(self.get_argument('acct_id'))
-            err,acct = yield from Service.Acct.info_acct(acct_id)
+            err, acct = yield from Service.Acct.info_acct(acct_id)
             if err:
                 self.finish(err)
                 return
-            
+
             cur = yield self.db.cursor()
             yield cur.execute(('SELECT '
                     'SUM("test_valid_rate"."rate" * '
@@ -78,13 +81,13 @@ class ApiHandler(RequestHandler):
                     ') AS "valid_test" '
                     'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
                     'AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";'),
-                    (acct_id,Service.Chal.STATE_AC))
+                    (acct_id, Service.Chal.STATE_AC))
             if cur.rowcount != 1:
                 self.finish('Unknown')
                 return
             rate = cur.fetchone()[0]
             if rate == None:
                 rate = 0
-            self.finish(str(Service.Api.gen_json({'nick':acct['name'],'score':rate})))
+            self.finish(str(Service.Api.gen_json({'nick': acct['name'], 'score': rate})))
             return
 

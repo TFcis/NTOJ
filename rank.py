@@ -10,14 +10,14 @@ from user import UserConst
 from user import UserService
 
 class RankService:
-    def __init__(self,db,rs):
+    def __init__(self, db, rs):
         self.db = db
         self.rs = rs
         RankService.inst = self
 
 class RankHandler(RequestHandler):
     @reqenv
-    def get(self,pro_id):
+    def get(self, pro_id):
         pro_id = int(pro_id)
         cur = yield self.db.cursor()
         # show best socre in rank
@@ -43,21 +43,22 @@ class RankHandler(RequestHandler):
             ') temp '
             'ORDER BY "runtime" ASC, "memory" ASC,'
             '"timestamp" ASC, "acct_id" ASC;'),
-            (self.acct['acct_type'],pro_id,))
+            (self.acct['acct_type'], pro_id, ))
         chal_list = list()
-        for chal_id,acct_id,timestamp,acct_name,runtime,memory in cur:
+        for chal_id, acct_id, timestamp, acct_name, runtime, memory in cur:
             runtime = int(runtime)
             memory = int(memory)
             chal_list.append({
-                'chal_id':chal_id,
-                'acct_id':acct_id,
-                'acct_name':acct_name,
-                'runtime':runtime,
-                'memory':memory,
-                'timestamp':timestamp,
+                'chal_id'   : chal_id,
+                'acct_id'   : acct_id,
+                'acct_name' : acct_name,
+                'runtime'   : runtime,
+                'memory'    : memory,
+                'timestamp' : timestamp,
             })
-        self.render('rank',pro_id = pro_id,chal_list = chal_list)
+        self.render('rank', pro_id=pro_id, chal_list=chal_list)
         return
+
     @reqenv
     def post(self):
         return

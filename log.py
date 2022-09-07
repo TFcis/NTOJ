@@ -16,21 +16,23 @@ from req import Service
 # from chal import ChalService
 
 class LogService:
-    def __init__(self,db,rs):
+    def __init__(self, db, rs):
         self.db = db
         self.rs = rs
         LogService.inst = self
-    def add_log(self,message, log_type=None, params=None):
+
+    def add_log(self, message, log_type=None, params=None):
         if isinstance(params, dict):
             params = json.dumps(params, ensure_ascii=False)
         message = str(message)
         cur = yield self.db.cursor()
         yield cur.execute(('INSERT INTO "log" '
             '("message", "type", "params") '
-            'VALUES (%s, %s, %s) RETURNING "log_id";'),[message, log_type, params])
+            'VALUES (%s, %s, %s) RETURNING "log_id";'), [message, log_type, params])
         log_id = cur.fetchone()[0]
-        return (None,log_id)
-    def list_log(self,off,num):
+        return (None, log_id)
+
+    def list_log(self, off, num):
         #self.add_log('list log')
         cur = yield self.db.cursor()
         yield cur.execute(('SELECT '
@@ -39,19 +41,19 @@ class LogService:
             '"log"."timestamp"'
             'FROM "log" '
             'ORDER BY "log"."timestamp" DESC OFFSET %s LIMIT %s;'),
-            [off,num])
+            [off, num])
         loglist = list()
-        for (log_id,message,timestamp) in cur:
-           loglist.append({
-                'log_id':log_id,
-                'message':message,
-                'timestamp':timestamp
-           })
+        for (log_id, message, timestamp) in cur:
+            loglist.append({
+                'log_id'    : log_id,
+                'message'   : message,
+                'timestamp' : timestamp
+            })
 
         yield cur.execute('SELECT COUNT(*) FROM "log" ;')
         lognum = cur.fetchone()[0]
 #        lognum = 0
-        return (None,{'loglist':loglist,'lognum':lognum})
+        return (None, {'loglist': loglist,'lognum': lognum})
 
 class LogHandler(RequestHandler):
     @reqenv
@@ -61,19 +63,21 @@ class LogHandler(RequestHandler):
         if self.acct['acct_type'] != UserConst.ACCTTYPE_KERNEL:
             self.finish('Eacces')
             return
+
         try:
             off = int(self.get_argument('off'))
 
         except tornado.web.HTTPError:
             off = 0
 
-        err,log = yield from LogService.inst.list_log(off,50)
+        err, log = yield from LogService.inst.list_log(off, 50)
         if err:
             self.finish(err)
             return
+
         self.render('loglist',
                 pageoff = off,
-                lognum = log['lognum'],
+                lognum  = log['lognum'],
                 loglist = log['loglist'])
         return
 
