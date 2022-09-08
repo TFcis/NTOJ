@@ -1,6 +1,9 @@
 import random
 import datetime
 import psycopg2
+# add by tobiichi3227, 2022/9/8
+from psycopg2 import extensions as psycopg2_extensions
+# end
 from collections import deque
 from tornado.stack_context import wrap
 from tornado.ioloop import IOLoop
@@ -133,10 +136,17 @@ class AsyncPG:
                 elif self.wrapped == datetime.datetime.min:
                     return b"'-infinity'::date"
                 else:
-                    return psycopg2.extensions.TimestampFromPy(
-                            self.wrapped).getquoted()
+                    # modify by tobiichi3227, 2022/9/8
+                    return psycopg2_extensions.TimestampFromPy(self.wrapped).getquoted()
 
-        psycopg2.extensions.register_adapter(datetime.datetime, _InfDateAdapter)
+                    # return psycopg2.extensions.TimestampFromPy(
+                    #         self.wrapped).getquoted()
+                    # end
+
+        # modify by tobiichi3227, 2022/9/8
+        # psycopg2.extensions.register_adapter(datetime.datetime, _InfDateAdapter)
+        psycopg2_extensions.register_adapter(datetime.datetime, _InfDateAdapter)
+        # end
 
         for i in range(self.INITCONN_SHARE):
             conn = self._create_conn()
@@ -169,7 +179,7 @@ class AsyncPG:
     def _cursor(self, conn=None, callback=None):
         def _cb(err=None):
             if err != None:
-                callback(None,err)
+                callback(None, err)
 
             callback(conn[4].cursor())
 
@@ -212,14 +222,20 @@ class AsyncPG:
             self._close_conn(conn)
 
     def _create_conn(self):
-        dbconn = psycopg2.connect(database=self._dbname,
-                                user=self._dbuser,
-                                password=self._dbpasswd,
-                                async=1,
-                                options=(
-                                    '-c search_path=%s '
-                                    '-c timezone=%s'
-                                ) % (self._dbschema,self._dbtz))
+        # modify by tobiichi3227, 2022/9/8
+        # dbconn = psycopg2.connect(database=self._dbname,
+        #                         user=self._dbuser,
+        #                         password=self._dbpasswd,
+        #                         async=1,
+        #                         options=(
+        #                             '-c search_path=%s '
+        #                             '-c timezone=%s'
+        #                         ) % (self._dbschema,self._dbtz))
+
+        dbconn = psycopg2.connect(dbname=self._dbname, user=self._dbuser, password=self._dbpasswd, async_=True,
+                options=('-c search_path=%s '
+                         '-c timezone=%s') % (self._dbschema, self._dbtz))
+        # end
 
         conn = [dbconn.fileno(), deque(), False, None, dbconn]
         self._conn_fdmap[conn[0]] = conn
@@ -247,16 +263,30 @@ class AsyncPG:
         except Exception as e:
             err = e
 
-        if err != None or stat == psycopg2.extensions.POLL_OK:
-            self._ioloop.update_handler(fd,IOLoop.ERROR)
+        # modify by tobiichi3227, 2022/9/8
 
-        elif stat == psycopg2.extensions.POLL_READ:
-            self._ioloop.update_handler(fd,IOLoop.READ | IOLoop.ERROR)
+        if err != None or stat == psycopg2_extensions.POLL_OK:
+            self._ioloop.update_handler(fd, IOLoop.ERROR)
+
+        elif stat == psycopg2_extensions.POLL_READ:
+            self._ioloop.update_handler(fd, IOLoop.READ | IOLoop.ERROR)
             return
 
-        elif stat == psycopg2.extensions.POLL_WRITE:
-            self._ioloop.update_handler(fd,IOLoop.WRITE | IOLoop.ERROR)
+        elif stat == psycopg2_extensions.POLL_WRITE:
+            self._ioloop.update_handler(fd, IOLoop.WRITE | IOLoop.ERROR)
             return
+
+        # if err != None or stat == psycopg2.extensions.POLL_OK:
+        #     self._ioloop.update_handler(fd,IOLoop.ERROR)
+        #
+        # elif stat == psycopg2.extensions.POLL_READ:
+        #     self._ioloop.update_handler(fd,IOLoop.READ | IOLoop.ERROR)
+        #     return
+        #
+        # elif stat == psycopg2.extensions.POLL_WRITE:
+        #     self._ioloop.update_handler(fd,IOLoop.WRITE | IOLoop.ERROR)
+        #     return
+        # end
 
         cb = conn[3]
         if cb != None:
