@@ -1,0 +1,26 @@
+'Eunk' stands for unknown
+'Enoext' stands for value did't exist
+'Eexist' stands for value has existed
+'Esign' stands for didn't sign in, you should sign in your acct
+'Eparam\d+' stands for param(\d+) fault
+'Eacct' stands for acct has existed
+'Epwold' stands for new password equal to old password
+'Eacces' stands for this page can't access
+'Ekernel' stands for this group is KERNEL_GROUP
+'EbadKey' stands for this pro_class key is null
+'Ebackend' stands for backend server didn't connect or maybe some error
+'Eempty' stands for submit code is empty
+'Einternal' stands for submit times too freq
+'Echunk'
+
+'Emailmin'
+'Emailmax'
+'Epwmin'
+'Epwmax'
+'Enamemin'
+'Enamemax'
+'Etags'
+'Econf' stands for didn't find problem conf.json
+'Ecodemax' stands for submit code length too long
+'Etimelimitmin' stands for problem timelimit too short
+'Ememlimitmin' stands for problem memlimit too small

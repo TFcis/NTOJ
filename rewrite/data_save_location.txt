@@ -1,0 +1,21 @@
+account: sql
+test: sql
+test_config: sql
+problem: sql
+challenge: sql
+group: sql
+log: sql
+
+proclass: redis
+autolist: redis
+question: redis
+contest_list: redis
+default_contest_list: redis
+
+problem_detail_and_tests: file
+user_submit_code: file
+
+can_see_code_list: config.py
+judge_server_ip: config.py
+db_name, db_user, db_password: config.py
+unlock_password: config.py

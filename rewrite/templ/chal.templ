@@ -1,0 +1,103 @@
+{% from chal import ChalService %}
+
+<link rel="stylesheet" type="text/css" href="/oj/chal.css">
+<link rel="stylesheet" type="text/css" href="/oj/pygments.css">
+<script type="text/javascript">
+    function init(){
+        $('#rechal').on('click',function(e){
+            $.post('/oj/be/submit',{
+                'reqtype':'rechal',
+                'chal_id':{{ chal['chal_id'] }},
+            },function(res){
+                if(res[0] != 'E'){
+
+                }else{
+                    index.reload();
+                }
+            });
+        });
+	$.post('/oj/be/code',{
+	    'chal_id':{{chal['chal_id']}},
+	},function(res){
+	    var _code = document.getElementById('_code');
+	    _code.innerHTML = res;
+//	alert(res);
+//	$('#_code').text(res);
+	});
+    }
+</script>
+
+<div class="g-r">
+    <div class="g-lg-4 blk-cont">
+        <table id="info">
+            <thead>
+                <tr>
+                    <th>Key</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Challenge</td>
+                    <td>{{ chal['chal_id'] }}</td>
+                </tr>
+                <tr>
+                    <td>Problem</td>
+                    <td><a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }} / {{ pro['name'] }}</a> (<a href="/oj/chal/?proid={{ pro['pro_id'] }}">chals</a>)</td>
+                </tr>
+                <tr>
+                    <td>Account</td>
+                    <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a> (<a href="/oj/chal/?acctid={{ chal['acct_id'] }}">chals</a>)</td>
+                </tr>
+                <tr>
+                    <td>Timestamp</td>
+                    <td class="time">{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                </tr>
+            </tbody>
+        </table>
+    {% if rechal == True %}
+        <button id="rechal" class="btn-wrn">Rechallenge</button>
+    {% end %}
+    </div>
+    <div class="g-lg-8 blk-cont">
+        <table id="test">
+            <thead>
+                <tr>
+                    <th>Test</th>
+                    <th>State</th>
+                    <th>Runtime</th>
+                    <th>Memory</th>
+                </tr>
+            </thead>
+            <tbody>
+	    {% set refresh = 0 %}
+            {% for test in chal['testl'] %}
+		{% if ChalService.STATE_STR[test['state']] == 'Challenging' %}
+		    {% set refresh = 1 %}
+		{% end %}
+                <tr>
+                    <td>{{ '%04d'%(test['test_idx'] + 1) }}</td>
+                    <td class="state-{{ test['state'] }}">{{ ChalService.STATE_STR[test['state']] }}</td>
+                    <td>{{ test['runtime'] }}</td>
+                    <td>{{ round(test['memory'] / 1024) }}</td>
+                </tr>
+            {% end %}
+            </tbody>
+        </table>
+	{% if refresh == 1 %}
+	    <script>
+		setTimeout(function(){index.reload();},3000);
+	    </script>
+	{% end %}
+    </div>
+</div>
+{% if chal['code'] != None %}
+<div class="g-r" style="margin-top:32px;">
+    <div id="_code"></div>
+    <!--
+    <div class="g-lg-12">
+	<pre id="code"><code>{{ chal['code'] }}</code></pre>
+    </div>
+    -->
+</div>
+{% end %}

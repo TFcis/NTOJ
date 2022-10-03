@@ -1,0 +1,5 @@
+table#prolist tbody td{padding-top:8px}
+table#prolist tbody td.status-online{color:#5dac81}
+table#prolist tbody td.status-hidden{color:#ed784a}
+table#prolist tbody td.status-offline{color:#bdc0ba}
+div#upload>div.prog{margin-top:8px}

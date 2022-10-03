@@ -1,0 +1,152 @@
+div#index-cont {
+  font-family: "Consolas";
+  font-size: 120%;
+}
+
+div#header {
+  background-image: url("/oj/img/header.png");
+  background-size: cover;
+}
+div#header > h1 {
+  color: #FFFFFF;
+  text-shadow: 0px 0px 2px rgba(0, 0, 0, 0.6);
+  padding: 48px 0px 32px 16px;
+}
+
+div#board {
+  position: relative;
+  padding-bottom: 256px;
+}
+div#board > div.head, div#board > div.item {
+  min-width: 100%;
+  white-space: nowrap;
+  float: left;
+}
+div#board > div.head > span, div#board > div.item > span {
+  padding-left: 16px;
+}
+div#board > div.head > span.rank, div#board > div.item > span.rank {
+  width: 64px;
+}
+div#board > div.head > span.name, div#board > div.item > span.name {
+  width: 128px;
+}
+div#board > div.head > span.score, div#board > div.item > span.score {
+  width: 96px;
+}
+div#board > div.head > span.pro, div#board > div.item > span.pro {
+  width: 96px;
+}
+div#board > div.head {
+  background-color: #787878;
+  color: #FCFAF2;
+  position: absolute;
+  top: auto;
+}
+div#board > div.head a {
+  color: #FCFAF2;
+}
+div#board > div.head > span {
+  height: 48px;
+  display: inline-block;
+  line-height: 50px;
+  font-weight: bold;
+}
+div#board > div.head span.pro:nth-child(2n) {
+  background-color: #5f5f5f;
+}
+div#board > div.item {
+  border-top: solid 1px #d7d8d5;
+}
+div#board > div.item:nth-child(2) {
+  margin-top: 48px;
+}
+div#board > div.item > span {
+  height: 36px;
+  display: inline-block;
+  line-height: 38px;
+}
+div#board > div.item span.pro:nth-child(2n) {
+  background-color: #5E5E5E;
+}
+
+table td {
+  border-bottom: solid 1px white;
+}
+table th._rank {
+  text-align: center;
+  width: 64px;
+}
+table th._acct {
+  text-align: center;
+  width: 150px;
+}
+table th._score {
+  text-align: center;
+  width: 112px;
+}
+table th._pro {
+  text-align: center;
+  width: 96px;
+}
+table th._state:nth-child(2n) {
+  background-color: #1d2c33;
+}
+table td._rank {
+  width: 64px;
+  text-align: center;
+  padding: 0 0;
+}
+table td._acct {
+  width: 150px;
+  padding: 0 0;
+}
+table td._score {
+  text-align: center;
+  width: 112px;
+  padding: 0 0;
+}
+table td._pro {
+  text-align: center;
+  padding: 0 0;
+  width: 96px;
+}
+table td._state-0 a {
+  color: #DC0000;
+}
+table td._state-1 a {
+  color: #DC2000;
+}
+table td._state-2 a {
+  color: #DC5800;
+}
+table td._state-3 a {
+  color: #DC8400;
+}
+table td._state-4 a {
+  color: #DEB000;
+}
+table td._state-5 a {
+  color: #DCDC00;
+}
+table td._state-6 a {
+  color: #CADC00;
+}
+table td._state-7 a {
+  color: #C0DC00;
+}
+table td._state-8 a {
+  color: #B0DC00;
+}
+table td._state-9 a {
+  color: #8DDC00;
+}
+table td._state-10 a {
+  color: #00dc00;
+  font-weight: bolder;
+}
+table td._state:nth-child(2n) {
+  background-color: #1d2c33;
+}
+
+/*# sourceMappingURL=board.css.map */

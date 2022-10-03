@@ -1,0 +1,6 @@
+#filter>tbody td>select{width:100%;border-radius: 10px;}
+#prolist>div.head{margin-bottom:16px;height:48px;color:#bdc0ba;font-weight:bold;line-height:48px;border-bottom:#bdc0ba 1px solid}
+#prolist>div.item{height:32px;margin-top:8px}#prolist>div.item>div{height:100%;line-height:32px}
+#prolist>div.item>div.state{color:#bdc0ba}
+#prolist>div.item>div.outdate{color:#ed784a}
+#prolist>div.item .light{color:#bdc0ba}

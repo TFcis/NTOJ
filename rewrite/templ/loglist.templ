@@ -1,0 +1,31 @@
+{% import math %}
+
+<link rel="stylesheet" type="text/css" href="/oj/proset.css">
+
+<script type="text/javascript">
+</script>
+
+<div id="prolist" class="g-lg-12">
+    <div class="g-r head">
+        <div class="g-sm-1">#</div>
+        <div class="g-sm-8">Message</div>
+        <div class="g-sm-3">Timestamp</div>
+    </div>
+{% for log in loglist %}
+    <div class="g-r item">
+        <div class="g-sm-1 id">{{ log['log_id'] }}</div>
+        <div class="g-sm-8">{% raw log['message'] %}</div>
+        <div class="g-sm-3 time">{{ log['timestamp'] }}</div>
+    </div>
+{% end %}
+    <ul class="pagin">
+        <li><a href="?off=0">&#x21e4;</a></li>
+    {% set ct = math.floor(pageoff / 50) %}
+    {% set st = min(max(0,ct - 9),
+        max(0,math.ceil(lognum / 50) - 19))%}
+    {% for i,off in enumerate(range(st * 50,
+        min(lognum,st * 50 + 950),50)) %}
+        <li{% if ct == (i + st) %} class="active"{% end %}><a href="?off={{str(off)}}">{{ i + 1 + st }}</a></li>
+    {% end %}
+    </ul>
+</div>

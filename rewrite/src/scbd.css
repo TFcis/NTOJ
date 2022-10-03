@@ -1,0 +1,4 @@
+table th.pro,table td.state{text-align:center}
+table td{border-bottom:solid 1px #d7d8d5}
+table td.state:nth-child(2n+1){background-color:#fcfaf2}
+table tr.level>td{padding-top:0 !important;padding-left:8px;background-color:#787878;color:#fcfaf2;font-weight:bold}

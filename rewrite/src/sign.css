@@ -1,0 +1,7 @@
+body.dark{background-color:#141e23}
+h3{color:#fcfaf2}
+#intro{height:691px;background-image:url('/oj/img/signin.png');background-size:contain;background-repeat:no-repeat}
+#signin{margin-top:64px}
+#signup{margin-top:64px}
+#warning{display:none}#warning img{width:80%;height:auto;margin:0 auto 0 auto}
+#warning div.text{margin-top:16px;margin-left:108px}#warning div.text span{color:#ed784a}

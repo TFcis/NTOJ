@@ -1,0 +1,23 @@
+@import "blk-inc.less";
+
+table{
+    th.pro,td.state{
+        text-align:center;
+    }
+    td{
+        border-bottom:solid 1px lighten(@gray,10%);
+    }
+    td.state:nth-child(2n+1){
+        background-color:@white;
+    }
+
+    tr.level{
+        & > td{
+            padding-top:0px !important;
+            padding-left:8px;
+            background-color:@darkgray;
+            color:@white;
+            font-weight:bold;
+        }
+    }
+}

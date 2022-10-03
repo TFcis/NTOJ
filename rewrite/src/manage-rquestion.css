@@ -1,0 +1,96 @@
+<!DOCTYPE>
+<html>
+<head>
+<title>TNFSH Online Judge</title>
+
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<!--<link href='http://fonts.googleapis.com/css?family=Consolas:400' rel='stylesheet' type='text/css'>-->
+<!--<link rel="stylesheet" type="text/css" href="/oj/third/highlight/styles/monokai.css">-->
+<link rel="stylesheet" type="text/css" href="/oj/third/normalize.css">
+<link rel="stylesheet" type="text/css" href="/oj/blk.css">
+<link rel="stylesheet" type="text/css" href="/oj/index.css">
+
+<script src="/oj/third/jquery-2.1.0.min.js"></script>
+<!--<script src="/oj/third/highlight/highlight.pack.js"></script>-->
+<script src="/oj/third/pdf.js"></script>
+<script src="/oj/third/pdf_find_bar.js"></script>
+<script src="/oj/third/pdf_find_controller.js"></script>
+<script src="/oj/third/ui_utils.js"></script>
+<script src="/oj/third/text_layer_builder.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax:{
+            inlineMath:[['$','$'],['\\(','\\)']]
+        }
+    });
+</script>
+<script src="/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script src="/oj/index.js"></script>
+<script src="/oj/pack.js"></script>
+<script id="indexjs" type="text/javascript" acct_id="7375">
+    $(document).ready(function(){
+
+	$.post('/oj/be/auto',{
+	    'reqtype':'auto'
+	},function(res){
+	});
+        index.init();
+	var j_index = $('#index-navlist');
+	var msg_ws = new WebSocket('wss://toj.tfcis.org/oj/be/informsub'); // 210.70.137.215
+	var inform_count = 0;
+	var on = false;
+	msg_ws.onopen = function(e){
+	};
+	msg_ws.onmessage = function(e){
+	    inform_count += 1;
+	    j_index.find('a.message').text('公告 *'+inform_count);
+	    j_index.find('a.message').show();
+	    on = true;
+	    setInterval(function(){if(on == true){j_index.find('a.message').fadeOut(500).fadeIn(500);}},1000);
+	};
+	j_index.find('a.message').on('click',function(e){
+	    j_index.find('a.message').hide();
+	    inform_count = 0;
+	    on = false;
+	    index.go('/oj/info/');
+	});
+    });
+</script>
+</head>
+<body class="dark">
+<nav class="nav" role="navigation">
+    <div id="index-navlist" class="container">
+        <a href="/oj/info/">TNFSHOJ</a>
+        <ul>
+            <li class="info"><a href="/oj/info/">Info</a></li>
+            <li class="board"><a href="/oj/board/">Board</a></li>
+            <li class="chal"><a href="/oj/chal/">Challenges</a></li>
+            <li class="proset"><a href="/oj/proset/">ProblemSet</a></li>
+
+            <li class="manage"><a href="/oj/manage/dash/">Manage</a></li>
+
+            <li class="about"><a href="/oj/about/">About</a></li>
+
+
+	    <li class="ask"><a style="color:red;" href="/oj/manage/question/">ask</a></li>
+
+
+
+	    <li><a style="display:none;" href="" class="message"></a></li>
+	    <li><a href="http://forum.tfcis.org/forum.php?mod=forumdisplay&fid=40" target="_new">Discuss</a></li>
+        </ul>
+        <ul class="pull-r">
+            <li class="sign" style="display:none;"><a href="/oj/sign/">Reg | Log</a></li>
+            <li class="leave" style="display:none;"><a href="#">Leave</a></li>
+        </ul>
+        <a class="pull-r" href="/oj/acct/7375/">T24admin</a>
+    </div>
+</nav>
+<div class="container" style="min-height:100%;"><div id="index-cont" class="g-r">
+</div></div>
+<div id="footer"><div class="container">
+    <small><code>TNFSH Online Judge 12 - HypeXky</code></small>
+</div></div>
+</body>
+</html>
+

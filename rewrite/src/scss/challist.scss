@@ -1,0 +1,16 @@
+select {
+    width: 100%;
+    border-radius: 10px;
+
+    & > option {
+        border-radius: 10px;
+    }
+
+    :active {
+        border-radius: 10px;
+    }
+}
+
+.btn-con.btn-sm.submit {
+    border-radius: 8px;
+}

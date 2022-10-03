@@ -1,0 +1,62 @@
+@import "blk-inc.less";
+body.dark{
+    background-color:lighten(@black,5%);
+}
+html,body{
+    height:100%;
+}
+pre > code{
+    border-radius:2px;
+}
+
+#index-cont{
+    margin-top:16px;
+}
+#footer{
+    width:100%;
+    height:32px;
+    margin-top:32px;
+
+    small{
+        color:@gray;
+        float:right;
+    }
+}
+
+.print{
+    margin:0px 8px 0px 8px;
+    font-size:@fs-sm;
+    display:inline-block;
+    opacity:0;
+    transition:opacity 200ms;
+
+    &.print-succ{
+	color:@green;
+    }
+    &.print-fail{
+	color:@red;
+    }
+}
+.time{
+    font-size:@fs-sm;
+    color:@gray;
+}
+
+.state-1{
+    color:#00FF00;
+}
+.state-2{
+    color:@orange;
+}
+.state-3{
+    color:#27FFF6;
+}
+.state-4{
+    color:@purple;
+}
+.state-5{
+    color:@red;
+}
+.state-6{
+    color:#FFEB00;
+}

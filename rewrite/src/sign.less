@@ -1,0 +1,37 @@
+@import "blk-inc.less";
+
+body.dark{
+    background-color:lighten(@black,5%);
+}
+h3{
+    color:@white;
+}
+#intro{
+    height: 691px;
+    background-image:url('/oj/img/signin.png');
+    background-size:contain;
+    background-repeat:no-repeat;
+}
+#signin{
+    margin-top:64px;
+}
+#signup{
+    margin-top:64px;
+}
+#warning{
+    display:none;
+
+    img{
+        width:80%;
+        height:auto;
+        margin:0px auto 0px auto;
+    }
+    div.text{
+        margin-top:16px;
+        margin-left:108px;
+
+        span{
+            color:@orange;
+        }
+    }
+}

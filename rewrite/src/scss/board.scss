@@ -1,0 +1,160 @@
+@import "./color.scss";
+
+div#index-cont{
+    font-family:'Consolas';
+    font-size:120%;
+}
+div#header{
+    background-image:url("/oj/img/header.png");
+    background-size:cover;
+
+    & > h1{
+        color:#FFFFFF;
+        text-shadow:0px 0px 2px rgba(0,0,0,0.6);
+        padding:48px 0px 32px 16px;
+    }
+}
+
+div#board{
+    position:relative;
+    padding-bottom:256px;
+
+    & > div.head,& > div.item{
+        min-width:100%;
+        white-space:nowrap;
+        float:left;
+
+        & > span{
+            padding-left:16px;
+        }
+        & > span.rank{
+            width:64px;
+        }
+        & > span.name{
+            width:128px;
+        }
+        & > span.score{
+            width:96px;
+        }
+        & > span.pro{
+            width:96px;
+        }
+    }
+
+    & > div.head{
+        background-color: $darkgray;
+        color: $white;
+        position: absolute;
+        top: auto;
+
+        a{
+            color: $white;
+        }
+
+        & > span{
+            height:48px;
+            display:inline-block;
+            line-height:50px;
+            font-weight:bold;
+        }
+        & span.pro:nth-child(2n){
+            background-color:darken($darkgray,10%);
+        }
+    }
+    & > div.item{
+        border-top:solid 1px lighten($gray,10%);
+
+        &:nth-child(2){
+            margin-top:48px;
+        }
+
+        & > span{
+            height:36px;
+            display:inline-block;
+            line-height:38px;
+        }
+        & span.pro:nth-child(2n){
+            background-color:#5E5E5E;
+        }
+    }
+}
+table{
+    td{
+        border-bottom:solid 1px lighten($white,100%);
+    }
+    th._rank{
+	text-align:center;
+	width:64px;
+    }
+    th._acct{
+	text-align:center;
+	width:150px;
+    }
+    th._score{
+	text-align:center;
+	width:112px;
+    }
+    th._pro{
+	text-align:center;
+	width:96px;
+    }
+    th._state:nth-child(2n){
+	background-color:lighten(#141e23,5%);
+    }
+    td._rank{
+	width:64px;
+	text-align:center;
+	padding:0 0;
+    }
+    td._acct{
+	width:150px;
+	padding:0 0;
+    }
+    td._score{
+	text-align:center;
+	width:112px;
+	padding:0 0;
+    }
+    td._pro{
+	text-align:center;
+	padding:0 0;
+	width:96px;
+    }
+    td._state-0 a{
+	color:#DC0000;
+    }
+    td._state-1 a{
+	color:#DC2000;
+    }
+    td._state-2 a{
+	color:#DC5800;
+    }
+    td._state-3 a{
+	color:#DC8400;
+    }
+    td._state-4 a{
+	color:#DEB000;
+    }
+    td._state-5 a{
+	color:#DCDC00;
+    }
+    td._state-6 a{
+	color:#CADC00;
+    }
+    td._state-7 a{
+	color:#C0DC00;
+    }
+    td._state-8 a{
+	color:#B0DC00;
+    }
+    td._state-9 a{
+	color:#8DDC00;
+    }
+    td._state-10 a{
+	color:#00dc00;
+	font-weight:bolder;
+    }
+    td._state:nth-child(2n){
+	background-color:lighten(#141e23,5%);
+    }
+}

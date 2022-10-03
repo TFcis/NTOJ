@@ -1,0 +1,44 @@
+<link rel="stylesheet" type="text/css" href="/oj/rank.css">
+<link rel="stylesheet" type="text/css" href="/oj/blk.css">
+
+<style type="text/css">
+#ligr{
+    background:linear-gradient(#332F8D,#141E23);
+    background:-moz-linear-gradient(#332F8D,#141E23);
+    background:-o-linear-gradient(#332F8D,#141E23);
+    background:-webkit-gradient(linear,left top,left bottom,from(#332F8D),to(#141E23));
+}
+</style>
+<script type="text/javascript">
+    function init(){
+    }
+</script>
+<div class="g-lg-12">
+    <h3>RankList of <a style="font-size:26px;" href="/oj/pro/{{pro_id}}/">{{pro_id}}</a></h3>
+    <div id="ligr"><div id="form"><table>
+	<thead>
+	    <tr>
+		<th>Rank</th>
+		<th>#</th>
+		<th>Account</th>
+		<th>Runtime</th>
+		<th>Memory</th>
+		<th>Time</th>
+	    </tr>
+	</thead>
+	<tbody>
+	    {% set rank = 1 %}
+	    {% for chal in chal_list %}
+	    <tr>
+		<td>{{rank}}</td>
+		<td><a href="/oj/chal/{{chal['chal_id']}}/">{{chal['chal_id']}}</a></td>
+		<td><a href="/oj/acct/{{chal['acct_id']}}/">{{chal['acct_name']}}</a></td>
+		<td>{{chal['runtime']}}</td>
+		<td>{{round(chal['memory']/1024)}}</td>
+		<td>{{chal['timestamp'].strftime('%Y-%m-%d %H-%M-%S')}}</td>
+	    </tr>
+	    {% set rank = rank + 1 %}
+	    {% end %}
+	</tbody>
+    </table></div></div>
+</div>

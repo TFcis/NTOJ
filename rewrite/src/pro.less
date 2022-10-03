@@ -1,0 +1,41 @@
+::selection{
+    background:rgba(0,0,255,0.3);
+}
+::-moz-selection{
+    background:rgba(0,0,255,0.3);
+}
+.textlayer{
+    position:absolute;
+    left:0;
+    top:0;
+    right:0;
+    bottom:0;
+    color:#000;
+    font-family:sans-serif;
+    overflow:hidden;
+}
+.textlayer > div{
+    color:transparent;
+    position:absolute;
+    line-height:1;
+    white-space:pre;
+    cursor:text;
+}
+.textlayer .highlight{
+    margin:-1px;
+    padding:1px;
+    background-color:rgba(180,0,170,0.2);
+    border-radius:4px;
+}
+.textlayer .highlight.begin{
+    border-radius:4px 0px 0px 4px;
+}
+.textlayer .highlight.end{
+    border-radius:0px 4px 4px 0px;
+}
+.textlayer .highlight.middle{
+    border-radius:0px;
+}
+.textlayer .highlight.selected{
+    background-color:rgba(0,100,0,0.2);
+}

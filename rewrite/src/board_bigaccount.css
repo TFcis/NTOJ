@@ -1,0 +1,35 @@
+div#index-cont{font-family:'Consolas';font-size:120%}
+div#header{background-image:url("/oj/img/header.png");background-size:cover}div#header>h1{color:#fff;text-shadow:0 0 2px rgba(0,0,0,0.6);padding:48px 0 32px 16px}
+div#board{position:relative;padding-bottom:256px}div#board>div.head,div#board>div.item{min-width:100%;white-space:nowrap;float:left}div#board>div.head>span,div#board>div.item>span{padding-left:16px}
+div#board>div.head>span.rank,div#board>div.item>span.rank{width:64px}
+div#board>div.head>span.name,div#board>div.item>span.name{width:128px}
+div#board>div.head>span.score,div#board>div.item>span.score{width:96px}
+div#board>div.head>span.pro,div#board>div.item>span.pro{width:96px}
+div#board>div.head{background-color:#787878;color:#fcfaf2;position:absolute;top:auto}div#board>div.head a{color:#fcfaf2}
+div#board>div.head>span{height:48px;display:inline-block;line-height:50px;font-weight:bold}
+div#board>div.head span.pro:nth-child(2n){background-color:#5f5f5f}
+div#board>div.item{border-top:solid 1px #d7d8d5}div#board>div.item:nth-child(2){margin-top:48px}
+div#board>div.item>span{height:36px;display:inline-block;line-height:38px}
+div#board>div.item span.pro:nth-child(2n){background-color:#5e5e5e}
+table td{border-bottom:solid 1px #fff}
+table th._rank{text-align:center;width:64px}
+table th._acct{text-align:center;width:300px}
+table th._score{text-align:center;width:112px}
+table th._pro{text-align:center;width:100px}
+table th._state:nth-child(2n){background-color:#1d2c33}
+table td._rank{width:64px;text-align:center;padding:0 0}
+table td._acct{width:300px;padding:0 0}
+table td._score{text-align:center;width:112px;padding:0 0}
+table td._pro{text-align:center;padding:0 0;width:100px}
+table td._state-0{color:#dc0000;background:}
+table td._state-1{color:#dc2000;background:}
+table td._state-2{color:#dc5800;background:}
+table td._state-3{color:#dc8400;background:}
+table td._state-4{color:#deb000;background:}
+table td._state-5{color:#dcdc00;background:}
+table td._state-6{color:#cadc00;background:}
+table td._state-7{color:#c0dc00;background:}
+table td._state-8{color:#b0dc00;background:}
+table td._state-9{color:#8ddc00;background:}
+table td._state-10{color:#00dc00;font-weight:bolder;background:}
+table td._state:nth-child(2n){background-color:#1d2c33}

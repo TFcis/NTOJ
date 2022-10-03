@@ -1,0 +1,16 @@
+select {
+  width: 100%;
+  border-radius: 10px;
+}
+select > option {
+  border-radius: 10px;
+}
+select :active {
+  border-radius: 10px;
+}
+
+.btn-con.btn-sm.submit {
+  border-radius: 8px;
+}
+
+/*# sourceMappingURL=challist.css.map */

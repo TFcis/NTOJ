@@ -1,0 +1,43 @@
+{% extends 'manage.templ' %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="/oj/manage-dash.css">
+
+<script type="text/javascript" id="contjs">
+    function init() {
+	    var j_submit = $('#submit');
+
+	j_submit.find('button.submit').on('click', function(e) {
+            $.post('/oj/be/manage/judge', {
+                'reqtype':'reconnect'
+
+            }, function(res) {
+                var msg = 'Unknown';
+                console.log(res);
+
+                if(res[0] == 'E') {
+                    if (res == 'Ebackend') {
+                        j_submit.find('div.print').print('Cannot connect to judge server');
+                    }
+                } else {
+                    j_submit.find('div.print').print('success');
+                }
+            });
+	    });
+    }
+</script>
+
+
+{% end %}
+{% block content %}
+
+<div id="submit">
+{% if judge_state == True %}
+    <h1 style="color: green;">Judge server is connecting</h1>
+{% else %}
+    <h1 style="color: red;">Judge server isn't connecting</h1>
+    <button class="btn-con submit">Reconnect</button>
+    <div class="print"></div>
+{% end %}
+</div>
+
+{% end %}
