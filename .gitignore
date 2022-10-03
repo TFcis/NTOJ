@@ -5,9 +5,42 @@ templ/*_board.templ
 templ/pboard.templ
 tmp/
 trash/
+rewrite/NTOJ_installer/
+rewrite/sql/
+rewrite/src/third
 *.swp
 .htpasswd
 ojtmp.tar.gz
+
+# add by tobiichi3227
+./error.txt
+./_rank.py
+./acct.py
+./api.py
+./auto.py
+./code.py
+./config.py
+./contest.py
+./contest.py.bak
+./group.py
+./log.py
+./manage.py
+./moodle.py
+./newline.sh
+./pack.py
+./pg.py
+./pg.sql
+./pro.py
+./question.py
+./rank.py
+./rate.py
+./req.py
+./runserver.sh
+./server.py
+./user.py
+./~contest.py
+./~pro.py
+./inform.py
 
 # 敏感文件
 config.py
