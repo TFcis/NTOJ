@@ -929,7 +929,7 @@ class ChalHandler(RequestHandler):
 
         else:
             rechal = False
-        await self.render('chal', pro=pro, chal=chal, rechal=rechal)
+        await self.render('chal', pro=pro, chal=chal, rechal=rechal, acct_id=self.acct['acct_id'])
         return
 
     @reqenv

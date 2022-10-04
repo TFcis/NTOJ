@@ -16,14 +16,29 @@
                 }
             });
         });
-	$.post('/oj/be/code',{
-	    'chal_id':{{chal['chal_id']}},
-	},function(res){
-	    var _code = document.getElementById('_code');
-	    _code.innerHTML = res;
-//	alert(res);
-//	$('#_code').text(res);
-	});
+
+        $('#copycode').on('click', function(e) {
+            $.post('/oj/be/code', {
+                'chal_id': {{ chal['chal_id'] }},
+            }, function(res) {
+                if (!navigator.clipboard) {
+                    return;
+                }
+
+                navigator.clipboard.writeText(res).then(() => {
+                    console.log('copy code to clipboard');
+                }).catch(err => {
+                    console.log('something went wrong', err);
+                })
+            });
+        });
+
+	    $.post('/oj/be/code',{
+	        'chal_id':{{chal['chal_id']}},
+	    },function(res){
+	        var _code = document.getElementById('_code');
+	        _code.innerHTML = res;
+	    });
     }
 </script>
 
@@ -57,7 +72,11 @@
         </table>
     {% if rechal == True %}
         <button id="rechal" class="btn-wrn">Rechallenge</button>
+        <button id="copycode" class="btn-con">Copy Code</button>
+    {% elif acct_id == chal['acct_id'] %}
+        <button id="copycode" class="btn-con">Copy Code</button>
     {% end %}
+
     </div>
     <div class="g-lg-8 blk-cont">
         <table id="test">
