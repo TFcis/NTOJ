@@ -1,7 +1,4 @@
-<!-- <link rel="stylesheet" type="text/css" href="http://192.168.122.157/src/sign.css"> -->
 <link rel="stylesheet" type="text/css" href="/oj/sign.css">
-<!-- <script src="https://toj.tfcis.org/oj/third/jquery-2.1.0.min.js"></script> -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
 
 <script id="signjs" type="text/javascript">
     function init() {
@@ -42,12 +39,8 @@
                 'pw':pw
             }, function(res) {
                 if(res[0] == 'E'){
-                    console.log('Login failed');
                     $('#signin div.print').print('Login failed');
                 } else {
-                    console.log('Success, reloading...')
-		            // location.href = '/oj/info/';
-                    console.log(window.history.state)
                     window.history.go(-1);
 		            $('#signin div.print').print('Success, reloading...', true);
                 }
