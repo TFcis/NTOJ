@@ -8,6 +8,7 @@ trash/
 rewrite/NTOJ_installer/
 rewrite/sql/
 rewrite/src/third
+rewrite/test.py
 *.swp
 .htpasswd
 ojtmp.tar.gz
