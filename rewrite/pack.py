@@ -57,8 +57,9 @@ class PackService:
 
             def __tar_cb(code):
                 if code != 0:
-                    dbg_print('pack.py', 60, res='Eunk')
+                    # dbg_print('pack.py', 60, res='Eunk')
                     # callback(('Eunk', None))
+                    return ('Eunk', None)
 
                 #os.remove('tmp/%s'%pack_token)
 
@@ -71,8 +72,9 @@ class PackService:
                     'judge@' + config.JUDGE_SERVER + '::judge', '--password-file=/etc/rsync-judge.pwd'])
                 sub.set_exit_callback(__rsync_cb)
 
-                dbg_print('pack.py', 74, res='None')
+                # dbg_print('pack.py', 74, res='None')
                 # callback((None, None))
+                return (None, None)
 
             def __rsync_cb(code):
                 print('Rsync finish')

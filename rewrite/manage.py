@@ -212,7 +212,6 @@ class ManageHandler(RequestHandler):
             reqtype = self.get_argument('reqtype')
 
             if reqtype == 'reconnect':
-                dbg_print(__file__, 215, reqtype=reqtype)
                 await Service.Chal.collect_judge()
                 dbg_print(__file__, 217, judge_status=Service.doki.buf[0])
                 if Service.doki.buf[0] == False:

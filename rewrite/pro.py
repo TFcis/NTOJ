@@ -321,7 +321,6 @@ class ProService:
 
     async def add_pro(self, name, status, clas, expire, pack_token):
         name_len = len(name)
-        dbg_print('pro.py', 316, name=name, name_len=name_len)
         if name_len < ProService.NAME_MIN:
             return ('Enamemin', None)
         if name_len > ProService.NAME_MAX:

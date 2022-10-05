@@ -64,7 +64,6 @@ class ContestService:
                 end = datetime.datetime.fromtimestamp(meta['end'])
                 meta['end'] = end.replace(tzinfo=datetime.timezone(
                     datetime.timedelta(hours=8)))
-                dbg_print(__file__, 67, meta=meta)
                 return (None, meta)
 
             else:
@@ -187,9 +186,7 @@ class BoardHandler(RequestHandler):
             clas = meta['class']
             err, prolist = await Service.Pro.list_pro(acct=self.acct, clas=clas)
             err, acctlist = await Service.Rate.list_rate(acct=self.acct, clas=clas)
-            err, ratemap = await Service.Rate.map_rate(clas=clas,
-                starttime=meta['start'],endtime=meta['end'])
-            dbg_print(__file__, 193, acctlist=acctlist)
+            err, ratemap = await Service.Rate.map_rate(clas=clas, starttime=meta['start'], endtime=meta['end'])
 
             #TODO: performance test
             for acct in acctlist:
@@ -319,6 +316,7 @@ class BoardHandler(RequestHandler):
 
                 acct['rank'] = rank
 
+            #INFO: board最下面的score/submit那行
             pro_sc_sub = {}
             for pro in prolist2:
                 pro_id = pro['pro_id']
