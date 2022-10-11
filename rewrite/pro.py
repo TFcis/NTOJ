@@ -151,7 +151,7 @@ class ProService:
 
     async def get_pro(self, pro_id, acct=None, special=None):
         pro_id = int(pro_id)
-        max_status = await self._get_acct_limit(acct, special)
+        max_status = await self.get_acct_limit(acct, special)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -212,7 +212,7 @@ class ProService:
             max_status = ProService.STATUS_ONLINE
 
         else:
-            max_status = await self._get_acct_limit(acct)
+            max_status = await self.get_acct_limit(acct)
 
         if clas == None:
             clas = [1, 2]
@@ -430,7 +430,7 @@ class ProService:
         return (None, None)
 
 
-    async def _get_acct_limit(self, acct, special=None):
+    async def get_acct_limit(self, acct, special=None):
         if special == True:
             return ProService.STATUS_OFFLINE
 

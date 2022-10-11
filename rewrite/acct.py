@@ -15,6 +15,7 @@ class AcctHandler(RequestHandler):
         if err:
             self.error(err)
             return
+
         acct_id = int(acct_id)
 
         async with self.db.acquire() as con:
@@ -80,12 +81,20 @@ class AcctHandler(RequestHandler):
         #     if extrate == None:
         #         extrate = 0
 
-        err, prolist = await Service.Pro.list_pro(acct=self.acct, clas=None)
-        # err, ratemap = await Service.Rate.map_rate(clas=None)
+        max_status = await Service.Pro.get_acct_limit(self.acct)
+        async with self.db.acquire() as con:
+            prolist = await con.fetch(
+                '''
+                    SELECT "pro_id" FROM "problem"
+                    WHERE "status" <= $1
+                    ORDER BY "pro_id" ASC;
+                ''',
+                max_status
+            )
+
         err, ratemap2 = await Service.Rate.map_rate_acct(acct, clas=None)
 
         prolist2 = []
-        # acct_id = acct['acct_id']
 
         for pro in prolist:
             pro_id = pro['pro_id']
