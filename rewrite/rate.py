@@ -17,12 +17,9 @@ class RateService:
 
     #TODO: performance test
     async def list_rate(self, acct=None, clas=None):
-        if acct != None and acct['acct_type'] == UserConst.ACCTTYPE_KERNEL:
-            kernel = True
-        else:
-            kernel = False
+        kernel = (acct != None and acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
-        key = f'rate@kernel_{int(kernel)}'
+        key = f'rate@kernel_{kernel}'
         data = self.rs.hgetall(key)
 
         if len(data) > 0:
@@ -30,7 +27,7 @@ class RateService:
             for acct in data.values():
                 acctlist.append(unpackb(acct))
 
-            acctlist.sort(key = lambda acct : acct['rate'],reverse = True)
+            acctlist.sort(key=lambda acct : acct['rate'], reverse=True)
             return (None, acctlist)
 
         if kernel == True:
@@ -108,25 +105,25 @@ class RateService:
 
         return (None, acctlist)
 
-    async def list_state(self):
-        result = await self.db.fetch(
-            '''
-                SELECT "challenge"."acct_id", "challenge"."pro_id", MIN("challenge_state"."state") AS "state"
-                FROM "challenge"
-                INNER JOIN "challenge_state"
-                ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                GROUP BY "challenge"."acct_id", "challenge"."pro_id";
-            '''
-        )
-
-        statemap = {}
-        for acct_id, pro_id, state in result:
-            if acct_id not in statemap:
-                statemap[acct_id] = {}
-
-            statemap[acct_id][pro_id] = state
-
-        return (None, statemap)
+    # async def list_state(self):
+    #     result = await self.db.fetch(
+    #         '''
+    #             SELECT "challenge"."acct_id", "challenge"."pro_id", MIN("challenge_state"."state") AS "state"
+    #             FROM "challenge"
+    #             INNER JOIN "challenge_state"
+    #             ON "challenge"."chal_id" = "challenge_state"."chal_id"
+    #             GROUP BY "challenge"."acct_id", "challenge"."pro_id";
+    #         '''
+    #     )
+    #
+    #     statemap = {}
+    #     for acct_id, pro_id, state in result:
+    #         if acct_id not in statemap:
+    #             statemap[acct_id] = {}
+    #
+    #         statemap[acct_id][pro_id] = state
+    #
+    #     return (None, statemap)
 
     async def map_rate_acct(self, acct, clas=None,
             starttime='1970-01-01 00:00:00.000', endtime='2100-01-01 00:00:00.000'):
@@ -157,8 +154,6 @@ class RateService:
             ''',
             int(acct['acct_id']), qclas, starttime, endtime
         )
-
-        dbg_print(__file__, 161, result=result)
 
         statemap = {}
         for (pro_id, rate, count) in result:

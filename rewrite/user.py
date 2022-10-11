@@ -106,7 +106,6 @@ class UserService:
             ip = req.request.remote_ip
 
         except Exception as e:
-            dbg_print('user.py', 108, e=e)
             ip = ''
 
         if acct_id == None:

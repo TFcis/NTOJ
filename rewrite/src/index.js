@@ -41,7 +41,6 @@ var index = new function() {
 
         index.prev_url = curr_url;
         curr_url = parts[0];
-        console.log(parts);
 
         parts = curr_url.split('/');
         if (parts[4] == '') {
@@ -56,7 +55,6 @@ var index = new function() {
             }
 
             parts = parts[parts.length - 1].match(/\?([^#]+)/);
-            console.log(parts);
 
             /*
             Prevent from using cache
