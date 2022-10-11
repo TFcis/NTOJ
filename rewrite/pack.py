@@ -17,18 +17,18 @@ class PackService:
 
     async def gen_token(self):
         pack_token = str(uuid.uuid1())
-        self.rs.set(f'PACK_TOKEN@{pack_token}', 0)
+        await self.rs.set(f'PACK_TOKEN@{pack_token}', 0)
 
         return (None, pack_token)
 
-    def direct_copy(self, pack_token, dst):
+    async def direct_copy(self, pack_token, dst):
         pack_token = str(uuid.UUID(pack_token))
 
-        ret = self.rs.get(f'PACK_TOKEN@{pack_token}')
+        ret = await self.rs.get(f'PACK_TOKEN@{pack_token}')
         if ret == None:
             return ('Enoext', None)
 
-        self.rs.delete(f'PACK_TOKEN@{pack_token}')
+        await self.rs.delete(f'PACK_TOKEN@{pack_token}')
 
         inf = open(f'tmp/{pack_token}', 'rb')
         outf = open(dst, 'wb')
@@ -44,7 +44,7 @@ class PackService:
 
         os.remove(f'tmp/{pack_token}')
 
-    def unpack(self, pack_token, dst, clean=False):
+    async def unpack(self, pack_token, dst, clean=False):
         def _unpack():
             def __rm_cb(code):
                 os.makedirs(dst, 0o700)
@@ -89,11 +89,11 @@ class PackService:
 
         pack_token = str(uuid.UUID(pack_token))
 
-        ret = self.rs.get(f'PACK_TOKEN@{pack_token}')
+        ret = await self.rs.get(f'PACK_TOKEN@{pack_token}')
         if ret == None:
             return ('Enoext', None)
 
-        self.rs.delete(f'PACK_TOKEN@{pack_token}')
+        await self.rs.delete(f'PACK_TOKEN@{pack_token}')
 
         ret = _unpack()
         return ret
@@ -103,16 +103,16 @@ class PackHandler(WebSocketHandler):
     STATE_DTAT = 1
     CHUNK_MAX = 65536
 
-    def check_origin(self, origin: str) -> bool:
+    async def check_origin(self, origin: str) -> bool:
         #TODO: secure
         return True
 
-    def open(self):
+    async def open(self):
         self.state = PackHandler.STATE_HDR
         self.output = None
         self.remain = 0
 
-    def on_message(self, msg):
+    async def on_message(self, msg):
         if self.state == PackHandler.STATE_DTAT:
             size = len(msg)
             if size > PackHandler.CHUNK_MAX or size > self.remain:
@@ -142,7 +142,7 @@ class PackHandler(WebSocketHandler):
             self.write_message('S')
             return
 
-    def on_close(self) -> None:
+    async def on_close(self) -> None:
         if self.output != None:
             self.output.close()
 

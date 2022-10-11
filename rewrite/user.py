@@ -97,7 +97,7 @@ class UserService:
         if result.__len__() != 1:
             return ('Eexist', None)
 
-        self.rs.delete('acctlist')
+        await self.rs.delete('acctlist')
         return (None, result[0]['acct_id'])
 
     async def info_sign(self, req):
@@ -113,7 +113,7 @@ class UserService:
 
         acct_id = int(acct_id)
 
-        if (acct := self.rs.exists(f'account@{acct_id}')) == None:
+        if (acct := (await self.rs.exists(f'account@{acct_id}'))) == None:
             result = await self.db.fetch('SELECT "acct_id","lastip" FROM "account" WHERE "acct_id" = $1;', acct_id)
 
             if result.__len__() != 1:
@@ -123,12 +123,12 @@ class UserService:
             if result['lastip'] != ip and ip != '':
                 await LogService.inst.add_log(f"Update acct {acct_id} lastip from {lastip} to {ip} ")
                 await self.db.execute('UPDATE "account" SET "lastip" = $1 WHERE "acct_id" = $2;', ip, acct_id)
-                self.rs.delete(f'account@{acct_id}')
-                self.rs.delete('acctlist')
+                await self.rs.delete(f'account@{acct_id}')
+                await self.rs.delete('acctlist')
 
         else:
             try:
-                acct2 = self.rs.get(f'account@{acct_id}')
+                acct2 = await self.rs.get(f'account@{acct_id}')
                 acct2 = unpackb(acct2)
                 lastip = ''
                 if 'lastip' in acct2:
@@ -138,8 +138,8 @@ class UserService:
                     await LogService.inst.add_log(f"Update acct {acct_id} lastip from {lastip} to {ip} ")
                     await self.db.execute('UPDATE "account" SET "lastip" = $1 WHERE "acct_id" = $2;', ip, acct_id)
 
-                    self.rs.delete(f'account@{acct_id}')
-                    self.rs.delete('acctlist')
+                    await self.rs.delete(f'account@{acct_id}')
+                    await self.rs.delete('acctlist')
 
             except Exception as e:
                 print(e)
@@ -159,7 +159,7 @@ class UserService:
             })
         acct_id = int(acct_id)
 
-        if (acct := self.rs.get(f'account@{acct_id}')) != None:
+        if (acct := (await self.rs.get(f'account@{acct_id}'))) != None:
             acct = unpackb(acct)
 
         else:
@@ -186,7 +186,7 @@ class UserService:
                 'lastip' : result['lastip'],
             }
 
-            self.rs.setnx(f'account@{acct_id}', packb(acct))
+            await self.rs.setnx(f'account@{acct_id}', packb(acct))
 
         return (None, acct)
 
@@ -224,11 +224,11 @@ class UserService:
             return ('Enoext', None)
 
         await self.db.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
-        self.rs.delete(f'account@{acct_id}')
-        self.rs.delete('acctlist')
-        self.rs.delete('prolist')
-        self.rs.delete('rate@kernel_True')
-        self.rs.delete('rate@kernel_False')
+        await self.rs.delete(f'account@{acct_id}')
+        await self.rs.delete('acctlist')
+        await self.rs.delete('prolist')
+        await self.rs.delete('rate@kernel_True')
+        await self.rs.delete('rate@kernel_False')
 
         return (None, None)
 
@@ -257,7 +257,7 @@ class UserService:
 
     async def list_acct(self, min_type=UserConst.ACCTTYPE_USER, private=False, reload=False):
         field = f'{min_type}|{int(private)}'
-        if (acctlist := self.rs.hget('acctlist', field)) != None and reload == False:
+        if (acctlist := (await self.rs.hget('acctlist', field))) != None and reload == False:
             acctlist = unpackb(acctlist)
 
         else:
@@ -285,6 +285,6 @@ class UserService:
 
                 acctlist.append(acct)
 
-            self.rs.hset('acctlist', field, packb(acctlist))
+            await self.rs.hset('acctlist', field, packb(acctlist))
 
         return (None, acctlist)

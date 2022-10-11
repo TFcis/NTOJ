@@ -23,12 +23,12 @@ class ContestService:
         ContestService.inst = self
 
     async def get_list(self):
-        if (contest_list := self.rs.get('contest_list')) != None:
+        if (contest_list := (await self.rs.get('contest_list'))) != None:
             return unpackb(contest_list)
 
     async def get(self, cont_name):
         if cont_name == 'default':
-            data = self.rs.get('contest')
+            data = await self.rs.get('contest')
             if data == None:
                 return (None, {
                     'class'  : 0,
@@ -55,9 +55,9 @@ class ContestService:
             return (None, meta)
 
         else:
-            cont_list = unpackb(self.rs.get('contest_list'))
+            cont_list = unpackb((await self.rs.get('contest_list')))
             if cont_name in cont_list:
-                meta = unpackb(self.rs.get(cont_name + '_contest'))
+                meta = unpackb((await self.rs.get(f"{cont_name}_contest")))
                 start = datetime.datetime.fromtimestamp(meta['start'])
                 meta['start'] = start.replace(tzinfo = datetime.timezone(
                     datetime.timedelta(hours=8)))
@@ -75,8 +75,8 @@ class ContestService:
             return ('Eexist', None)
 
         cont_list.remove(cont_name)
-        self.rs.set('contest_list', packb(cont_list))
-        self.rs.delete(cont_name + '_contest')
+        await self.rs.set('contest_list', packb(cont_list))
+        await self.rs.delete(f"{cont_name}_contest")
 
     async def set(self, cont_name, clas, status, start, end, pro_list=None, acct_list=None):
         def _mp_encoder(obj):
@@ -86,15 +86,15 @@ class ContestService:
             return obj
 
         if cont_name == 'default':
-            self.rs.set('contest', packb({
+            await self.rs.set('contest', packb({
                 'class'  : clas,
                 'status' : status,
                 'start'  : start,
                 'end'    : end
             }, default=_mp_encoder))
 
-            self.rs.delete('rate@kernel_True')
-            self.rs.delete('rate@kernel_False')
+            await self.rs.delete('rate@kernel_True')
+            await self.rs.delete('rate@kernel_False')
 
             return (None, None)
 
@@ -121,9 +121,9 @@ class ContestService:
             cont_list = await self.get_list()
             if not cont_name in cont_list:
                 cont_list.append(cont_name)
-                self.rs.set('contest_list', packb(cont_list))
+                await self.rs.set('contest_list', packb(cont_list))
 
-            self.rs.set(cont_name + '_contest', packb({
+            self.rs.set(f"{cont_name}_contest", packb({
                 'status'    : status,
                 'start'     : start,
                 'end'       : end,
@@ -131,8 +131,8 @@ class ContestService:
                 'acct_list' : acct_list
             }, default=_mp_encoder))
 
-            self.rs.delete('rate@kernel_True')
-            self.rs.delete('rate@kernel_False')
+            await self.rs.delete('rate@kernel_True')
+            await self.rs.delete('rate@kernel_False')
 
             return (None, None)
 

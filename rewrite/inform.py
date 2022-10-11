@@ -12,20 +12,20 @@ class InformService:
     async def set_inform(self, text):
         inform_list = unpackb(self.rs.get('inform'))
         inform_list.append({ 'text': str(text), 'time': str(datetime.datetime.now())[:-7]})
-        self.rs.set('inform', packb(inform_list))
-        self.rs.publish('informsub', 1)
+        await self.rs.set('inform', packb(inform_list))
+        await self.rs.publish('informsub', 1)
         return
 
     async def edit_inform(self, index, text):
-        inform_list = unpackb(self.rs.get('inform'))
-        inform_list.append({ 'text': str(text), 'time': str(datetime.datetime.now())[:-7]})
-        self.rs.set('inform', packb(inform_list))
+        inform_list = unpackb((await self.rs.get('inform')))
+        inform_list[int(index)] = {'text': str(text), 'time': str(datetime.datetime.now())[:-7]}
+        await self.rs.set('inform', packb(inform_list))
         return
 
     async def del_inform(self, index):
-        inform_list = unpackb(self.rs.get('inform'))
+        inform_list = unpackb((await self.rs.get('inform')))
         inform_list.pop(int(index))
-        self.rs.set('inform', packb(inform_list))
+        await self.rs.set('inform', packb(inform_list))
         return
 
 import redis

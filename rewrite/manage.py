@@ -34,7 +34,7 @@ class ManageHandler(RequestHandler):
         elif page == 'pro':
             err, prolist = await Service.Pro.list_pro(self.acct)
 
-            if (lock_list := self.rs.get('lock_list')) != None:
+            if (lock_list := (await self.rs.get('lock_list'))) != None:
                 lock_list = unpackb(lock_list)
             else:
                 lock_list = []
@@ -54,7 +54,7 @@ class ManageHandler(RequestHandler):
                 self.error(err)
                 return
 
-            lock = self.rs.get(str(pro['pro_id']) + '_owner')
+            lock = await self.rs.get(f"{pro['pro_id']}_owner")
 
             testl = []
             for test_idx, test_conf in pro['testm_conf'].items():
@@ -114,24 +114,23 @@ class ManageHandler(RequestHandler):
             err, acctlist = await Service.Acct.list_acct(UserConst.ACCTTYPE_KERNEL, True)
             asklist = {}
             for acct in acctlist:
-                ask = self.rs.get(str(acct['acct_id']) + '_msg_ask')
 
-                if ask == None:
+                if (ask := (await self.rs.get(f"{acct['acct_id']}_msg_ask"))) == None:
                     asklist.update({acct['acct_id']: False})
                 else:
-                    asklist.update({acct['acct_id']: unpackb(self.rs.get(str(acct['acct_id']) + '_msg_ask'))})
+                    asklist.update({acct['acct_id']: unpackb(ask)})
             await self.render('manage-question', page=page, acctlist=acctlist, asklist=asklist)
             return
 
         elif page == 'rquestion':
             qacct_id = int(self.get_argument('qacct'))
             err, ques_list = await Service.Question.get_queslist(acct=None, acctid=qacct_id)
-            self.rs.set(f'{qacct_id}_msg_ask', packb(False))
+            await self.rs.set(f'{qacct_id}_msg_ask', packb(False))
             await self.render('manage-rquestion', page=page, qacct_id=qacct_id, ques_list=ques_list)
             return
 
         elif page == 'inform':
-            if (inform_list := self.rs.get('inform')) != None:
+            if (inform_list := (await self.rs.get('inform'))) != None:
                 inform_list = unpackb(inform_list)
             else:
                 inform_list = []
@@ -178,8 +177,8 @@ class ManageHandler(RequestHandler):
                     ''',
                     gname
                 )
-                gtype = int(result[0]['group_type'])
-                gclas = int(result[0]['group_class'])
+                gtype = int(result['group_type'])
+                gclas = int(result['group_class'])
 
             except:
                 gname = None
@@ -191,6 +190,7 @@ class ManageHandler(RequestHandler):
                 gacct = await Service.Group.list_acct_in_group(gname)
             else:
                 gacct = None
+
             await self.render('manage-group', page=page, gname=gname, glist=glist, gacct=gacct, gtype=gtype, gclas=gclas)
             return
 
@@ -312,9 +312,9 @@ class ManageHandler(RequestHandler):
 
             elif reqtype == 'pro-lock':
                 pro_id = self.get_argument('pro_id')
-                self.rs.set(f'{pro_id}_owner', packb(1))
+                await self.rs.set(f'{pro_id}_owner', packb(1))
 
-                if (lock_list := self.rs.get('lock_list')) != None:
+                if (lock_list := (await self.rs.get('lock_list'))) != None:
                     lock_list = unpackb(lock_list)
                 else:
                     lock_list = []
@@ -322,7 +322,7 @@ class ManageHandler(RequestHandler):
                 if int(pro_id) not in lock_list:
                     lock_list.append(int(pro_id))
 
-                self.rs.set('lock_list', packb(lock_list))
+                await self.rs.set('lock_list', packb(lock_list))
                 self.finish('S')
                 return
 
@@ -334,10 +334,10 @@ class ManageHandler(RequestHandler):
                     self.error('Eacces')
                     return
 
-                lock_list = unpackb(self.rs.get('lock_list'))
+                lock_list = unpackb((await self.rs.get('lock_list')))
                 lock_list.remove(int(pro_id))
-                self.rs.set('lock_list', packb(lock_list))
-                self.rs.delete(str(pro_id) + '_owner')
+                await self.rs.set('lock_list', packb(lock_list))
+                await self.rs.delete(f"{pro_id}_owner")
                 self.finish('S')
                 return
 

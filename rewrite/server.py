@@ -7,7 +7,7 @@ import asyncio
 
 import msgpack
 import asyncpg
-import redis
+from redis import asyncio as aioredis
 import tornado.ioloop
 import tornado.netutil
 import tornado.process
@@ -39,17 +39,17 @@ from index import IndexHandler, AbouotHandler, InfoHandler
 async def materialized_view_task():
     try:
         db = await asyncpg.connect(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password='322752278227', host='localhost')
-        rs = redis.Redis(host='localhost', port=6379, db=1)
+        rs = await aioredis.Redis(host='localhost', port=6379, db=1)
         p = rs.pubsub()
-        p.subscribe('materialized_view_req')
+        await p.subscribe('materialized_view_req')
 
         async def _update():
-            ret = rs.incr('materialized_view_counter') - 1
+            ret = await rs.incr('materialized_view_counter') - 1
             await db.execute('REFRESH MATERIALIZED VIEW challenge_state;')
             return ret
 
         counter = await _update()
-        for msg in p.listen():
+        async for msg in p.listen():
             if msg['type'] != 'message':
                 continue
 
@@ -60,7 +60,7 @@ async def materialized_view_task():
             counter = await _update()
     finally:
         p.close()
-        rs.close()
+        await rs.close()
         await db.close()
 
 if __name__ == "__main__":
@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
         db = asyncio.get_event_loop().run_until_complete(asyncpg.connect(database=config.DBNAME_OJ, user=config.DBUSER_OJ,
             password='322752278227', host='localhost'))
-        rs = redis.StrictRedis(host='localhost', port=6379, db=1)
+        rs = aioredis.Redis(host='localhost', port=6379, db=1)
 
         Service.Acct     = UserService(db, rs)
         Service.Pro      = ProService(db, rs)
@@ -151,7 +151,7 @@ if __name__ == "__main__":
             ('/rank/(\d+)',     RankHandler,args),
             ('/auto',           AutoHandler,args),
             ('/code',           CodeHandler,args),
-            ('/informsub',   InformSub,args),
+            ('/informsub',      InformSub,args),
         ], autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC)
 
         access_log = logging.getLogger('tornado.access')
@@ -166,7 +166,7 @@ if __name__ == "__main__":
         Service.doki.buf[0] = False
         tornado.ioloop.IOLoop.current().run_sync(Service.Chal.collect_judge)
 
-        tornado.process.fork_processes(4)
+        # tornado.process.fork_processes(4)
 
         tornado.ioloop.IOLoop.current().start()
 
@@ -182,4 +182,4 @@ if __name__ == "__main__":
         # tornado.ioloop.IOLoop.current().run_sync(db.close)
         tornado.ioloop.IOLoop.current().stop()
         tornado.ioloop.IOLoop.current().close()
-        rs.close()
+        # rs.close()

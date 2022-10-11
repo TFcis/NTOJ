@@ -26,14 +26,14 @@ class QuestionService:
 
             acct_id = acctid
 
-        if (active := self.rs.get(f'{acct_id}_msg_active')) == None:
-            self.rs.set(f'{acct_id}_msg_active', packb(True))
-            self.rs.set(f'{acct_id}_msg_ask', packb(False))
-            self.rs.set(f'{acct_id}_msg_list', packb([]))
+        if (active := (await self.rs.get(f'{acct_id}_msg_active'))) == None:
+            await self.rs.set(f'{acct_id}_msg_active', packb(True))
+            await self.rs.set(f'{acct_id}_msg_ask', packb(False))
+            await self.rs.set(f'{acct_id}_msg_list', packb([]))
             return (None, [])
 
         else:
-            return (None, unpackb(self.rs.get(f'{acct_id}_msg_list')))
+            return (None, unpackb((await self.rs.get(f'{acct_id}_msg_list'))))
 
     async def set_ques(self, acct, ques_text):
         if acct['acct_id'] == UserConst.ACCTID_GUEST:
@@ -46,16 +46,16 @@ class QuestionService:
         #TODO: redis get msg_active
         # active = self.rs.get(str(acct_id) + '_msg_active')
         active = None
-        if (active := self.rs.get(f'{acct_id}_msg_active')) == None:
-            self.rs.set(f'{acct_id}_msg_active', packb(True))
-            self.rs.set(f'{acct_id}_msg_ask', packb(False))
-            self.rs.set(f'{acct_id}_msg_list', packb([]))
+        if (active := (await self.rs.get(f'{acct_id}_msg_active'))) == None:
+            await self.rs.set(f'{acct_id}_msg_active', packb(True))
+            await self.rs.set(f'{acct_id}_msg_ask', packb(False))
+            await self.rs.set(f'{acct_id}_msg_list', packb([]))
 
         elif active == False:
             return 'Eacces'
 
-        self.rs.set(f'{acct_id}_msg_ask', packb(True))
-        ques_list = unpackb(self.rs.get(f'{acct_id}_msg_list'))
+        await self.rs.set(f'{acct_id}_msg_ask', packb(True))
+        ques_list = unpackb((await self.rs.get(f'{acct_id}_msg_list')))
         ques_list.append({
             'Q' : ques_text,
             'A' : None,
@@ -65,8 +65,8 @@ class QuestionService:
             ques_list.pop(0)
 
         #TODO: someoneask處理
-        self.rs.set('someoneask', packb(True))
-        self.rs.set(f'{acct_id}_msg_list', packb(ques_list))
+        await self.rs.set('someoneask', packb(True))
+        await self.rs.set(f'{acct_id}_msg_list', packb(ques_list))
         return None
 
     async def reply(self, acct, qacct_id, index, rtext):
@@ -78,9 +78,9 @@ class QuestionService:
             return err
 
         ques_list[int(index)]['A'] = rtext
-        self.rs.set('someoneask', packb(False))
-        self.rs.set(f'{qacct_id}_msg_list', packb(ques_list))
-        self.rs.set(f'{qacct_id}_have_reply', packb(True))
+        await self.rs.set('someoneask', packb(False))
+        await self.rs.set(f'{qacct_id}_msg_list', packb(ques_list))
+        await self.rs.set(f'{qacct_id}_have_reply', packb(True))
 
     async def rm_ques(self, acct, index: int):
         if acct['acct_type'] != UserService.ACCTTYPE_USER:
@@ -91,12 +91,12 @@ class QuestionService:
             return err
 
         ques_list.pop(int(index))
-        self.rs.set(str(acct['acct_id']) + '_msg_list', packb(ques_list))
+        await self.rs.set(f"{acct['acct_id']}_msg_list", packb(ques_list))
         return None
 
     async def have_reply(self, acct_id):
-        if (reply := self.rs.get(f'{acct_id}_have_reply')) == None:
-            self.rs.set(f'{acct_id}_have_reply', packb(False))
+        if (reply := (await self.rs.get(f'{acct_id}_have_reply'))) == None:
+            await self.rs.set(f'{acct_id}_have_reply', packb(False))
             return False
 
         return unpackb(reply)
@@ -118,7 +118,7 @@ class QuestionHandler(RequestHandler):
             self.error(err)
             return
 
-        self.rs.set(str(self.acct['acct_id']) + '_have_reply', packb(False))
+        await self.rs.set(f"{self.acct['acct_id']}_have_reply", packb(False))
         await self.render('question', acct=self.acct, ques_list=ques_list)
         return
 

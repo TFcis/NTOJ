@@ -132,9 +132,9 @@ class ChalService:
     async def reset_chal(self, chal_id):
         await self.db.execute('DELETE FROM "test" WHERE "chal_id" = $1;', int(chal_id))
 
-        self.rs.publish('materialized_view_req', self.rs.get('materialized_view_counter'))
-        self.rs.delete('rate@kernel_True')
-        self.rs.delete('rate@kernel_False')
+        await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
+        await self.rs.delete('rate@kernel_True')
+        await self.rs.delete('rate@kernel_False')
 
         return (None, None)
 
@@ -175,7 +175,7 @@ class ChalService:
                 'memory'   : int(memory),
             })
 
-        owner =  self.rs.get(f'{pro_id}_owner')
+        owner = await self.rs.get(f'{pro_id}_owner')
         unlock = [1]
         if (acct['acct_id'] == acct_id or
                 (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL and
@@ -238,7 +238,7 @@ class ChalService:
                 chal_id, int(acct_id), int(pro_id), int(test_idx), ChalService.STATE_JUDGE, timestamp
             )
 
-        self.rs.publish('materialized_view_req', self.rs.get('materialized_view_counter'))
+        await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
         if self.ws == None:
             self.ws = await websocket_connect(config.PATH_JUDGE)
 
@@ -353,10 +353,10 @@ class ChalService:
         )
 
         #TODO: redis publish materialized_view_req
-        self.rs.publish('materialized_view_req', self.rs.get('materialized_view_counter'))
-        self.rs.delete('prolist')
-        self.rs.delete('rate@kernel_True')
-        self.rs.delete('rate@kernel_False')
+        await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
+        await self.rs.delete('prolist')
+        await self.rs.delete('rate@kernel_True')
+        await self.rs.delete('rate@kernel_False')
 
         return (None, None)
 

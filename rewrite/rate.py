@@ -20,7 +20,7 @@ class RateService:
         kernel = (acct != None and acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
         key = f'rate@kernel_{kernel}'
-        data = self.rs.hgetall(key)
+        data = await self.rs.hgetall(key)
 
         if len(data) > 0:
             acctlist = list()
@@ -97,11 +97,11 @@ class RateService:
             acctlist.append(acct)
 
         acctlist.sort(key=lambda acct : acct['rate'], reverse=True)
-        pipe = self.rs.pipeline()
+        pipe = await self.rs.pipeline()
         for acct in acctlist:
-            pipe.hset(key, acct['acct_id'], packb(acct))
+            await pipe.hset(key, acct['acct_id'], packb(acct))
 
-        pipe.execute()
+        await pipe.execute()
 
         return (None, acctlist)
 

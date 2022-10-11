@@ -20,7 +20,7 @@ class AutoHandler(RequestHandler):
     @reqenv
     async def post(self):
         reqtype = str(self.get_argument('reqtype'))
-        if (auto_list := self.rs.get('auto_list')) != None:
+        if (auto_list := (await self.rs.get('auto_list'))) != None:
             auto_list = unpackb(auto_list)
         else:
             auto_list = []
@@ -28,7 +28,7 @@ class AutoHandler(RequestHandler):
         if reqtype == 'auto':
             nowtime = datetime.now()
             for cont in auto_list:
-                time = self.rs.get(f'{cont}_contest')
+                time = await self.rs.get(f'{cont}_contest')
                 time = None
                 if time == None:
                     auto_list.remove(cont)
@@ -44,7 +44,7 @@ class AutoHandler(RequestHandler):
                     pass
 
                 elif starttime <= nowtime and nowtime < endtime:
-                    cont_ = unpackb(self.rs.get(f'{cont}_contest'))
+                    cont_ = unpackb((await self.rs.get(f'{cont}_contest')))
                     pro_list = cont_['pro_list']
 
                     for pro_id in pro_list:
@@ -59,7 +59,7 @@ class AutoHandler(RequestHandler):
                                 pro['class'], pro['expire'], None, None, pro['tags'])
 
                 elif endtime <= nowtime:
-                    cont_ = unpackb(self.rs.get(f'{cont}_contest'))
+                    cont_ = unpackb((await self.rs.get(f'{cont}_contest')))
 
                     pro_list = cont_['pro_list']
 
@@ -77,20 +77,20 @@ class AutoHandler(RequestHandler):
                         err, pro = await Service.Pro.get_pro(pro_id, None, True)
                     auto_list.remove(cont)
 
-            self.rs.set('auto_list', packb(auto_list))
+            await self.rs.set('auto_list', packb(auto_list))
 
         elif reqtype == 'add':
             cont_name = str(self.get_argument('cont_name'))
             if cont_name not in auto_list:
                 auto_list.append(cont_name)
 
-            self.rs.set('auto_list', packb(auto_list))
+            await self.rs.set('auto_list', packb(auto_list))
 
         elif reqtype == 'remove':
             cont_name = str(self.get_argument('cont_name'))
             auto_list.remove(cont_name)
 
-            self.rs.set('auto_list', packb(auto_list))
+            await self.rs.set('auto_list', packb(auto_list))
 
         self.finish('S')
         return

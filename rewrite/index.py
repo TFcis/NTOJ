@@ -20,7 +20,7 @@ class IndexHandler(RequestHandler):
             if self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL:
                 manage = True
 
-                if (tmp := self.rs.get('someoneask')) != None:
+                if (tmp := (await self.rs.get('someoneask'))) != None:
                     if msgpack.unpackb(tmp) == True:
                         ask = True
 
@@ -38,7 +38,7 @@ class AbouotHandler(RequestHandler):
 class InfoHandler(RequestHandler):
     @reqenv
     async def get(self):
-        if (inform_list := self.rs.get('inform')) != None:
+        if (inform_list := (await self.rs.get('inform'))) != None:
             inform_list = msgpack.unpackb(inform_list)
 
             #TODO: Performance test

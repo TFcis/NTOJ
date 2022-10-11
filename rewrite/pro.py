@@ -47,28 +47,28 @@ class ProService:
         ProService.inst = self
 
     async def get_pclass_list(self, pro_clas):
-        if (clas := self.rs.get(f'{pro_clas}_pro_list')) == None:
+        if (clas := (await self.rs.get(f'{pro_clas}_pro_list'))) == None:
             return ('Eexist', None)
 
         return (None, unpackb(clas))
 
     async def get_class_list_old(self):
-        if (clas_list := self.rs.get('pro_class_list')) == None:
-            self.rs.set('pro_class_list', packb([]))
+        if (clas_list := (await self.rs.get('pro_class_list'))) == None:
+            await self.rs.set('pro_class_list', packb([]))
             return []
 
         return unpackb(clas_list)
 
 
     async def get_class_list(self):
-        if (clas_list := self.rs.get('pro_class_list2')) == None:
+        if (clas_list := (await self.rs.get('pro_class_list2'))) == None:
             res = []
             for row in await self.get_class_list_old():
                 res.append({
                     'key'  : row,
                     'name' : row,
                 })
-            self.rs.set('pro_class_list2', packb(res))
+            await self.rs.set('pro_class_list2', packb(res))
             return res
 
         return unpackb(clas_list)
@@ -105,8 +105,8 @@ class ProService:
             'key'  : pclas_key,
             'name' : pclas_name
         })
-        self.rs.set('pro_class_list2', packb(clas_list))
-        self.rs.set(f'{pclas_key}_pro_list', packb(p_list))
+        await self.rs.set('pro_class_list2', packb(clas_list))
+        await self.rs.set(f'{pclas_key}_pro_list', packb(p_list))
         return None
 
     async def remove_pclass(self, pclas_key):
@@ -120,8 +120,8 @@ class ProService:
             return 'Eexist'
 
         clas_list.pop(clas_index)
-        self.rs.set('pro_class_list2', packb(clas_list))
-        self.rs.delete(f'{pclas_key}_pro_list')
+        await self.rs.set('pro_class_list2', packb(clas_list))
+        await self.rs.delete(f'{pclas_key}_pro_list')
         return None
 
 
@@ -141,12 +141,12 @@ class ProService:
 
         clas_list[clas_index]['key'] = new_pclas_key
         clas_list[clas_index]['name'] = str(pclas_name)
-        self.rs.set('pro_class_list2', packb(clas_list))
+        await self.rs.set('pro_class_list2', packb(clas_list))
 
         if pclas_key != new_pclas_key:
-            self.rs.delete(f'{pclas_key}_pro_list')
+            await self.rs.delete(f'{pclas_key}_pro_list')
 
-        self.rs.set(f'{new_pclas_key}_pro_list', packb(p_list))
+        await self.rs.set(f'{new_pclas_key}_pro_list', packb(p_list))
         return None
 
     async def get_pro(self, pro_id, acct=None, special=None):
@@ -245,7 +245,7 @@ class ProService:
                 statemap[pro_id] = state
 
         field = f'{max_status}|{clas}'
-        if (prolist := self.rs.hget('prolist', field)) != None and reload == False:
+        if (prolist := (await self.rs.hget('prolist', field))) != None and reload == False:
             prolist = unpackb(prolist)
 
             for pro in prolist:
@@ -286,7 +286,7 @@ class ProService:
                     'rate'   : rate,
                 })
 
-            self.rs.hset('prolist', field, packb(prolist, default=_mp_encoder))
+            await self.rs.hset('prolist', field, packb(prolist, default=_mp_encoder))
 
 
         now = datetime.datetime.utcnow()
@@ -354,9 +354,9 @@ class ProService:
             return (err, None)
 
         await self.db.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
-        self.rs.delete('prolist')
-        self.rs.delete('rate@kernel_True')
-        self.rs.delete('rate@kernel_False')
+        await self.rs.delete('prolist')
+        await self.rs.delete('rate@kernel_True')
+        await self.rs.delete('rate@kernel_False')
 
         return (None, pro_id)
 
@@ -395,9 +395,9 @@ class ProService:
 
             await self.db.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
 
-        self.rs.delete('prolist')
-        self.rs.delete('rate@kernel_True')
-        self.rs.delete('rate@kernel_False')
+        await self.rs.delete('prolist')
+        await self.rs.delete('rate@kernel_True')
+        await self.rs.delete('rate@kernel_False')
 
         return (None, None)
 
@@ -749,16 +749,17 @@ class SubmitHandler(RequestHandler):
 
             if self.acct['acct_type'] != UserConst.ACCTTYPE_KERNEL:
                 last_submit_name = f"last_submit_time_{self.acct['acct_id']}"
-                if self.rs.get(last_submit_name) == None:
-                    self.rs.set(last_submit_name, int(time.time()))
+                if (last_submit_time := (await self.rs.get(last_submit_name))) == None:
+                    await self.rs.set(last_submit_name, int(time.time()))
 
                 else:
-                    last_submit_time = int(str(self.rs.get(last_submit_name))[2:-1])
+                    last_submit_time = int(str(last_submit_time)[2:-1])
                     if int(time.time()) - last_submit_time < 30:
-                        self.finish('Einternal')
+                        self.error('Einternal')
                         return
+
                     else:
-                        self.rs.set(last_submit_name, int(time.time()))
+                        await self.rs.set(last_submit_name, int(time.time()))
 
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
             if err:
@@ -810,7 +811,7 @@ class SubmitHandler(RequestHandler):
             return
 
         if reqtype == 'submit' and pro['status'] == ProService.STATUS_ONLINE:
-            self.rs.publish('challist_sub', 1)
+            await self.rs.publish('challist_sub', 1)
 
         self.finish(json.dumps(chal_id))
         return

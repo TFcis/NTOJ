@@ -98,11 +98,11 @@ class GroupService:
         )
 
         await self.db.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
-        self.rs.delete(f'account@{acct_id}')
-        self.rs.delete('acctlist')
-        self.rs.delete('prolist')
-        self.rs.delete('rate@kernel_True')
-        self.rs.delete('rate@kernel_False')
+        await self.rs.delete(f'account@{acct_id}')
+        await self.rs.delete('acctlist')
+        await self.rs.delete('prolist')
+        await self.rs.delete('rate@kernel_True')
+        await self.rs.delete('rate@kernel_False')
         return None
 
     async def _update_group(self, gname, gtype, gclas):
