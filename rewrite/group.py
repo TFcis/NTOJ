@@ -16,14 +16,15 @@ class GroupService:
         if gname in glist:
             return 'Eexist'
 
-        await self.db.execute(
-            '''
-                INSERT INTO "group"
-                ("group_name", "group_type", "group_class")
-                VALUES ($1, $2, $3);
-            ''',
-            gname, gtype, gclas
-        )
+        async with self.db.acquire() as con:
+            await con.execute(
+                '''
+                    INSERT INTO "group"
+                    ("group_name", "group_type", "group_class")
+                    VALUES ($1, $2, $3);
+                ''',
+                gname, gtype, gclas
+            )
 
         return None
 
@@ -32,7 +33,8 @@ class GroupService:
         if gname not in glist:
             return 'Eexist'
 
-        await self.db.execute('DELETE FROM "group" WHERE "group"."group_name" = $1;', gname)
+        async with self.db.acquire() as con:
+            await con.execute('DELETE FROM "group" WHERE "group"."group_name" = $1;', gname)
         gacct = await self.list_acct_in_group(gname)
         for acct in gacct:
             err = await self.set_acct_group(acct['acct_id'], self.DEFAULT_GROUP)
@@ -40,7 +42,8 @@ class GroupService:
         return None
 
     async def list_group(self):
-        result = await self.db.fetch('SELECT "group_name" FROM "group";')
+        async with self.db.acquire() as con:
+            result = await con.fetch('SELECT "group_name" FROM "group";')
 
         glist = []
         for gname in result:
@@ -49,14 +52,15 @@ class GroupService:
         return glist
 
     async def list_acct_in_group(self, gname):
-        result = await self.db.fetch(
-            '''
-                SELECT "account"."acct_id", "account"."name" FROM "account"
-                WHERE "account"."group" = $1
-                ORDER BY "account"."acct_id";
-            ''',
-            gname
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "account"."acct_id", "account"."name" FROM "account"
+                    WHERE "account"."group" = $1
+                    ORDER BY "account"."acct_id";
+                ''',
+                gname
+            )
 
         acct_list = []
         for (acct_id, acct_name) in result:
@@ -69,7 +73,8 @@ class GroupService:
 
     async def group_of_acct(self, acct_id):
         acct_id = int(acct_id)
-        result = await self.db.fetch('SELECT "account"."group" FROM "account" WHERE "account"."acct_id" = $1', acct_id)
+        async with self.db.acquire() as con:
+            result = await con.fetch('SELECT "account"."group" FROM "account" WHERE "account"."acct_id" = $1', acct_id)
         if result.__len__() != 1:
             return
 
@@ -81,23 +86,25 @@ class GroupService:
         if gname not in glist:
             return 'Eexist'
 
-        result = await self.db.fetchrow(
-            '''
-                SELECT "group_type", "group_class" FROM "group"
-                WHERE "group_name" = $1;
-            ''',
-            gname
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetchrow(
+                '''
+                    SELECT "group_type", "group_class" FROM "group"
+                    WHERE "group_name" = $1;
+                ''',
+                gname
+            )
 
-        await self.db.execute(
-            '''
-                UPDATE "account" SET "group" = $1, "acct_type" = $2, "class" = $3
-                WHERE "account"."acct_id" = $4;
-            ''',
-            gname, result['group_type'], [result['group_class']], acct_id
-        )
+            await con.execute(
+                '''
+                    UPDATE "account" SET "group" = $1, "acct_type" = $2, "class" = $3
+                    WHERE "account"."acct_id" = $4;
+                ''',
+                gname, result['group_type'], [result['group_class']], acct_id
+            )
 
-        await self.db.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
+            await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
+
         await self.rs.delete(f'account@{acct_id}')
         await self.rs.delete('acctlist')
         await self.rs.delete('prolist')
@@ -106,14 +113,15 @@ class GroupService:
         return None
 
     async def _update_group(self, gname, gtype, gclas):
-        result = await self.db.fetch(
-            '''
-                UPDATE "group"
-                SET "group_type" = $1, "group_class" = $2
-                WHERE "group_name" = $3 RETURNING "group_name";
-            ''',
-            gtype, [gclas], gname
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    UPDATE "group"
+                    SET "group_type" = $1, "group_class" = $2
+                    WHERE "group_name" = $3 RETURNING "group_name";
+                ''',
+                gtype, [gclas], gname
+            )
 
         if result.__len__() != 1:
             return 'Eexist'

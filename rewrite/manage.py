@@ -169,14 +169,15 @@ class ManageHandler(RequestHandler):
             try:
                 gname = str(self.get_argument('gname'))
 
-                result = await self.db.fetchrow(
-                    '''
-                        SELECT "group"."group_type", "group"."group_class"
-                        FROM "group"
-                        WHERE "group"."group_name" = $1
-                    ''',
-                    gname
-                )
+                async with self.db.acquire() as con:
+                    result = await con.fetchrow(
+                        '''
+                            SELECT "group"."group_type", "group"."group_class"
+                            FROM "group"
+                            WHERE "group"."group_name" = $1
+                        ''',
+                        gname
+                    )
                 gtype = int(result['group_type'])
                 gclas = int(result['group_class'])
 
@@ -286,15 +287,16 @@ class ManageHandler(RequestHandler):
                     self.error(err)
                     return
 
-                result = await self.db.fetch(
-                    '''
-                        SELECT "challenge"."chal_id" FROM "challenge"
-                        LEFT JOIN "challenge_state"
-                        ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                        WHERE "pro_id" = $1 AND "challenge_state"."state" IS NULL;
-                    ''',
-                    pro_id
-                )
+                async with self.db.acquire() as con:
+                    result = await con.fetch(
+                        '''
+                            SELECT "challenge"."chal_id" FROM "challenge"
+                            LEFT JOIN "challenge_state"
+                            ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                            WHERE "pro_id" = $1 AND "challenge_state"."state" IS NULL;
+                        ''',
+                        pro_id
+                    )
                 await LogService.inst.add_log(f"{self.acct['name']} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals")
 
                 for chal_id in result:

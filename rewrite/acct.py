@@ -17,31 +17,32 @@ class AcctHandler(RequestHandler):
             return
         acct_id = int(acct_id)
 
-        result = await self.db.fetch(('SELECT '
-                'SUM("test_valid_rate"."rate" * '
-                '    CASE WHEN "valid_test"."timestamp" < "valid_test"."expire" '
-                '    THEN 1 ELSE '
-                '    (1 - (GREATEST(date_part(\'days\',justify_interval('
-                '    age("valid_test"."timestamp","valid_test"."expire") '
-                '    + \'1 days\')),-1)) * 0.15) '
-                '    END) '
-                'AS "rate" FROM "test_valid_rate" '
-                'INNER JOIN ('
-                '    SELECT "test"."pro_id","test"."test_idx",'
-                '    MIN("test"."timestamp") AS "timestamp","problem"."expire" '
-                '    FROM "test" '
-                '    INNER JOIN "account" '
-                '    ON "test"."acct_id" = "account"."acct_id" '
-                '    INNER JOIN "problem" '
-                '    ON "test"."pro_id" = "problem"."pro_id" '
-                '    WHERE "account"."acct_id" = $1 '
-                '    AND "test"."state" = $2 '
-                '    AND "account"."class" && "problem"."class" '
-                '    GROUP BY "test"."pro_id","test"."test_idx","problem"."expire"'
-                ') AS "valid_test" '
-                'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
-                'AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";'),
-                acct_id, int(ChalConst.STATE_AC))
+        async with self.db.acquire() as con:
+            result = await con.fetch(('SELECT '
+                    'SUM("test_valid_rate"."rate" * '
+                    '    CASE WHEN "valid_test"."timestamp" < "valid_test"."expire" '
+                    '    THEN 1 ELSE '
+                    '    (1 - (GREATEST(date_part(\'days\',justify_interval('
+                    '    age("valid_test"."timestamp","valid_test"."expire") '
+                    '    + \'1 days\')),-1)) * 0.15) '
+                    '    END) '
+                    'AS "rate" FROM "test_valid_rate" '
+                    'INNER JOIN ('
+                    '    SELECT "test"."pro_id","test"."test_idx",'
+                    '    MIN("test"."timestamp") AS "timestamp","problem"."expire" '
+                    '    FROM "test" '
+                    '    INNER JOIN "account" '
+                    '    ON "test"."acct_id" = "account"."acct_id" '
+                    '    INNER JOIN "problem" '
+                    '    ON "test"."pro_id" = "problem"."pro_id" '
+                    '    WHERE "account"."acct_id" = $1 '
+                    '    AND "test"."state" = $2 '
+                    '    AND "account"."class" && "problem"."class" '
+                    '    GROUP BY "test"."pro_id","test"."test_idx","problem"."expire"'
+                    ') AS "valid_test" '
+                    'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
+                    'AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";'),
+                    acct_id, int(ChalConst.STATE_AC))
         if result.__len__() != 1:
             self.error('Eunk')
             return
@@ -85,8 +86,6 @@ class AcctHandler(RequestHandler):
 
         prolist2 = []
         # acct_id = acct['acct_id']
-        # dbg_print(__file__, 88, ratemap=ratemap)
-        dbg_print(__file__, 89, ratemap2=ratemap2)
 
         for pro in prolist:
             pro_id = pro['pro_id']

@@ -44,33 +44,34 @@ class RateService:
         else:
             qclas = [1,2]
 
-        result = await self.db.fetch(
-            'select "sum"."acct_id",sum("sum"."rate") from ('
-            '    select "challenge"."acct_id","challenge"."pro_id",'
-            '    max("challenge_state"."rate" * '
-            '        case when "challenge"."timestamp" < "problem"."expire" '
-            '        then 1 else '
-            '        (1 - (greatest(date_part(\'days\',justify_interval('
-            '        age("challenge"."timestamp","problem"."expire") '
-            '        + \'1 days\')),-1)) * 0.15) '
-            '        end) '
-            '    as "rate" '
-            '    from "challenge" '
-            '    inner join "problem" '
-            '    on "challenge"."pro_id" = "problem"."pro_id" '
-            '    inner join "account" '
-            '    on "challenge"."acct_id" = "account"."acct_id" '
-            '    inner join "challenge_state" '
-            '    on "challenge"."chal_id" = "challenge_state"."chal_id" '
-            '    where "problem"."class" && $1 '
-            '    and "account"."class" && "problem"."class" '
-            '    and "account"."acct_type" >= $2 '
-            '    and "problem"."status" <= $3 '
-            '    group by "challenge"."acct_id","challenge"."pro_id"'
-            ') as "sum" '
-            'group by "sum"."acct_id" order by "sum"."acct_id" asc;',
-            qclas, min_type, max_status
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                'select "sum"."acct_id",sum("sum"."rate") from ('
+                '    select "challenge"."acct_id","challenge"."pro_id",'
+                '    max("challenge_state"."rate" * '
+                '        case when "challenge"."timestamp" < "problem"."expire" '
+                '        then 1 else '
+                '        (1 - (greatest(date_part(\'days\',justify_interval('
+                '        age("challenge"."timestamp","problem"."expire") '
+                '        + \'1 days\')),-1)) * 0.15) '
+                '        end) '
+                '    as "rate" '
+                '    from "challenge" '
+                '    inner join "problem" '
+                '    on "challenge"."pro_id" = "problem"."pro_id" '
+                '    inner join "account" '
+                '    on "challenge"."acct_id" = "account"."acct_id" '
+                '    inner join "challenge_state" '
+                '    on "challenge"."chal_id" = "challenge_state"."chal_id" '
+                '    where "problem"."class" && $1 '
+                '    and "account"."class" && "problem"."class" '
+                '    and "account"."acct_type" >= $2 '
+                '    and "problem"."status" <= $3 '
+                '    group by "challenge"."acct_id","challenge"."pro_id"'
+                ') as "sum" '
+                'group by "sum"."acct_id" order by "sum"."acct_id" asc;',
+                qclas, min_type, max_status
+            )
 
         ratemap = {}
         for acct_id, rate in result:
@@ -140,20 +141,21 @@ class RateService:
         if type(endtime) == str:
             endtime = datetime.datetime.fromisoformat(endtime)
 
-        result = await self.db.fetch(
-            '''
-                SELECT "challenge"."pro_id", MAX("challenge_state"."rate") AS "score",
-                COUNT("challenge_state") AS "count"
-                FROM "challenge"
-                INNER JOIN "challenge_state"
-                ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
-                INNER JOIN "problem"
-                ON "challenge"."pro_id" = "problem"."pro_id"
-                WHERE ("problem"."class" && $2) AND ("challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4)
-                GROUP BY "challenge"."pro_id";
-            ''',
-            int(acct['acct_id']), qclas, starttime, endtime
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "challenge"."pro_id", MAX("challenge_state"."rate") AS "score",
+                    COUNT("challenge_state") AS "count"
+                    FROM "challenge"
+                    INNER JOIN "challenge_state"
+                    ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
+                    INNER JOIN "problem"
+                    ON "challenge"."pro_id" = "problem"."pro_id"
+                    WHERE ("problem"."class" && $2) AND ("challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4)
+                    GROUP BY "challenge"."pro_id";
+                ''',
+                int(acct['acct_id']), qclas, starttime, endtime
+            )
 
         statemap = {}
         for (pro_id, rate, count) in result:
@@ -179,20 +181,21 @@ class RateService:
             endtime = datetime.datetime.fromisoformat(endtime)
 
         #TODO: performance test
-        result = await self.db.fetch(
-            '''
-                SELECT "challenge"."acct_id", "challenge"."pro_id", MAX("challenge_state"."rate") AS "score",
-                COUNT("challenge_state") AS "count"
-                FROM "challenge"
-                INNER JOIN "challenge_state"
-                ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                INNER JOIN "problem"
-                ON "challenge"."pro_id" = "problem"."pro_id"
-                WHERE ("problem"."class" && $1) AND ("challenge"."timestamp" >= $2 AND "challenge"."timestamp" <= $3)
-                GROUP BY "challenge"."acct_id", "challenge"."pro_id";
-            ''',
-            qclas, starttime, endtime
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "challenge"."acct_id", "challenge"."pro_id", MAX("challenge_state"."rate") AS "score",
+                    COUNT("challenge_state") AS "count"
+                    FROM "challenge"
+                    INNER JOIN "challenge_state"
+                    ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                    INNER JOIN "problem"
+                    ON "challenge"."pro_id" = "problem"."pro_id"
+                    WHERE ("problem"."class" && $1) AND ("challenge"."timestamp" >= $2 AND "challenge"."timestamp" <= $3)
+                    GROUP BY "challenge"."acct_id", "challenge"."pro_id";
+                ''',
+                qclas, starttime, endtime
+            )
 
         statemap = {}
         for acct_id, pro_id, rate, count in result:

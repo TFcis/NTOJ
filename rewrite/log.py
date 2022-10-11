@@ -18,35 +18,37 @@ class LogService:
 
         message = str(message)
 
-        result = await self.db.fetch(
-            '''
-                INSERT INTO "log"
-                ("message", "type", "params")
-                VALUES ($1, $2, $3) RETURNING "log_id";
-            ''',
-            message, log_type, params
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    INSERT INTO "log"
+                    ("message", "type", "params")
+                    VALUES ($1, $2, $3) RETURNING "log_id";
+                ''',
+                message, log_type, params
+            )
         return (None, result[0]['log_id'])
 
     async def list_log(self, off, num):
-        result = await self.db.fetch(
-            '''
-                SELECT "log"."log_id", "log"."message", "log"."timestamp"
-                FROM "log"
-                ORDER BY "log"."timestamp" DESC OFFSET $1 LIMIT $2;
-            ''',
-            off, num
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "log"."log_id", "log"."message", "log"."timestamp"
+                    FROM "log"
+                    ORDER BY "log"."timestamp" DESC OFFSET $1 LIMIT $2;
+                ''',
+                off, num
+            )
 
-        loglist = []
-        for (log_id, message, timestamp) in result:
-            loglist.append({
-                'log_id'    : log_id,
-                'message'   : message,
-                'timestamp' : timestamp,
-            })
+            loglist = []
+            for (log_id, message, timestamp) in result:
+                loglist.append({
+                    'log_id'    : log_id,
+                    'message'   : message,
+                    'timestamp' : timestamp,
+                })
 
-        result = await self.db.fetch('SELECT COUNT(*) FROM "log"')
+            result = await con.fetch('SELECT COUNT(*) FROM "log"')
 
         return (None, { 'loglist': loglist, 'lognum': result[0]['count'] })
 

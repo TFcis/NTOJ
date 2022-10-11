@@ -66,6 +66,7 @@ async def materialized_view_task():
 if __name__ == "__main__":
     # miyuki is my wife and sister 深雪わ私の妻です
 
+    httpsock = tornado.netutil.bind_sockets(5500)
     try:
         Service.doki = shared_memory.SharedMemory(create=True, size=2, name='doki_share_memory')
         Service.doki.buf[:] = bytearray([False, False])
@@ -99,11 +100,9 @@ if __name__ == "__main__":
         doki_collect_judge_process = Process(target=run_doki_collect_judge)
         doki_collect_judge_process.start()
 
-        httpsock = tornado.netutil.bind_sockets(5500)
-
-
-        db = asyncio.get_event_loop().run_until_complete(asyncpg.connect(database=config.DBNAME_OJ, user=config.DBUSER_OJ,
-            password='322752278227', host='localhost'))
+        # tornado.process.fork_processes(4)
+        db = asyncio.get_event_loop().run_until_complete(asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ,
+                                                                             password='322752278227', host='localhost'))
         rs = aioredis.Redis(host='localhost', port=6379, db=1)
 
         Service.Acct     = UserService(db, rs)
@@ -166,7 +165,6 @@ if __name__ == "__main__":
         Service.doki.buf[0] = False
         tornado.ioloop.IOLoop.current().run_sync(Service.Chal.collect_judge)
 
-        # tornado.process.fork_processes(4)
 
         tornado.ioloop.IOLoop.current().start()
 

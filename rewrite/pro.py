@@ -153,29 +153,30 @@ class ProService:
         pro_id = int(pro_id)
         max_status = await self._get_acct_limit(acct, special)
 
-        result = await self.db.fetch(
-            '''
-                SELECT "name", "status", "class", "expire", "tags"
-                FROM "problem" WHERE "pro_id" = $1 AND "status" <= $2;
-            ''',
-            pro_id, max_status
-        )
-        if result.__len__() != 1:
-            return ('Enoext', None)
-        result = result[0]
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "name", "status", "class", "expire", "tags"
+                    FROM "problem" WHERE "pro_id" = $1 AND "status" <= $2;
+                ''',
+                pro_id, max_status
+            )
+            if result.__len__() != 1:
+                return ('Enoext', None)
+            result = result[0]
 
-        name, status, clas, expire, tags = result['name'], result['status'], result['class'][0], result['expire'], result['tags']
-        if expire == datetime.datetime.max:
-            expire = None
+            name, status, clas, expire, tags = result['name'], result['status'], result['class'][0], result['expire'], result['tags']
+            if expire == datetime.datetime.max:
+                expire = None
 
-        result = await self.db.fetch(
-            '''
-                SELECT "test_idx", "compile_type", "score_type",
-                "check_type", "timelimit", "memlimit", "weight", "metadata", "chalmeta"
-                FROM "test_config" WHERE "pro_id" = $1 ORDER BY "test_idx" ASC;
-            ''',
-            pro_id
-        )
+            result = await con.fetch(
+                '''
+                    SELECT "test_idx", "compile_type", "score_type",
+                    "check_type", "timelimit", "memlimit", "weight", "metadata", "chalmeta"
+                    FROM "test_config" WHERE "pro_id" = $1 ORDER BY "test_idx" ASC;
+                ''',
+                pro_id
+            )
 
         testm_conf = OrderedDict()
         for (test_idx, comp_type, score_type, check_type, timelimit, memlimit, weight, metadata, chalmeta) in result:
@@ -225,21 +226,22 @@ class ProService:
 
         #TODO: decrease sql search times
         if state == True and isguest == False:
-            result = await self.db.fetch(
-                '''
-                    SELECT "problem"."pro_id",
-                    MIN("challenge_state"."state") AS "state"
-                    FROM "challenge"
-                    INNER JOIN "challenge_state"
-                    ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
-                    INNER JOIN "problem"
-                    ON "challenge"."pro_id" = "problem"."pro_id"
-                    WHERE "problem"."status" <= $2 AND "problem"."class" && $3
-                    GROUP BY "problem"."pro_id"
-                    ORDER BY "pro_id" ASC;
-                ''',
-                int(acct['acct_id']), max_status, clas
-            )
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        SELECT "problem"."pro_id",
+                        MIN("challenge_state"."state") AS "state"
+                        FROM "challenge"
+                        INNER JOIN "challenge_state"
+                        ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
+                        INNER JOIN "problem"
+                        ON "challenge"."pro_id" = "problem"."pro_id"
+                        WHERE "problem"."status" <= $2 AND "problem"."class" && $3
+                        GROUP BY "problem"."pro_id"
+                        ORDER BY "pro_id" ASC;
+                    ''',
+                    int(acct['acct_id']), max_status, clas
+                )
 
             for pro_id, state in result:
                 statemap[pro_id] = state
@@ -258,18 +260,19 @@ class ProService:
                 pro['expire'] = expire
 
         else:
-            result = await self.db.fetch(
-                '''
-                    SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."expire",
-                    "problem"."class", "problem"."tags", SUM("test_valid_rate"."rate") AS "rate"
-                    FROM "problem"
-                    INNER JOIN "test_valid_rate" ON "test_valid_rate"."pro_id" = "problem"."pro_id"
-                    WHERE "problem"."status" <= $1 AND "problem"."class" && $2
-                    GROUP BY "problem"."pro_id"
-                    ORDER BY "pro_id" ASC;
-                ''',
-                max_status, clas
-            )
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."expire",
+                        "problem"."class", "problem"."tags", SUM("test_valid_rate"."rate") AS "rate"
+                        FROM "problem"
+                        INNER JOIN "test_valid_rate" ON "test_valid_rate"."pro_id" = "problem"."pro_id"
+                        WHERE "problem"."status" <= $1 AND "problem"."class" && $2
+                        GROUP BY "problem"."pro_id"
+                        ORDER BY "pro_id" ASC;
+                    ''',
+                    max_status, clas
+                )
 
             prolist = []
             for pro_id, name, status, expire, clas, tags, rate in result:
@@ -334,26 +337,28 @@ class ProService:
         if expire == None:
             expire = datetime.datetime(2099, 12, 31, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
-        result = await self.db.fetch(
-            '''
-                INSERT INTO "problem"
-                ("name", "status", "class", "expire")
-                VALUES ($1, $2, $3, $4) RETURNING "pro_id";
-            ''',
-            name, status, [clas], expire
-        )
-        if result.__len__() != 1:
-            return ('Eunk', None)
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    INSERT INTO "problem"
+                    ("name", "status", "class", "expire")
+                    VALUES ($1, $2, $3, $4) RETURNING "pro_id";
+                ''',
+                name, status, [clas], expire
+            )
+            if result.__len__() != 1:
+                return ('Eunk', None)
 
-        pro_id = int(result[0]['pro_id'])
+            pro_id = int(result[0]['pro_id'])
 
-        err, ret = await self._unpack_pro(pro_id, ProService.PACKTYPE_FULL, pack_token)
-        if err:
-            await self.db.execute('DELETE FROM "problem" WHERE "pro_id" = $1', pro_id)
+            err, ret = await self._unpack_pro(pro_id, ProService.PACKTYPE_FULL, pack_token)
+            if err:
+                await con.execute('DELETE FROM "problem" WHERE "pro_id" = $1', pro_id)
 
-            return (err, None)
+                return (err, None)
 
-        await self.db.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
+            await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
+
         await self.rs.delete('prolist')
         await self.rs.delete('rate@kernel_True')
         await self.rs.delete('rate@kernel_False')
@@ -377,23 +382,24 @@ class ProService:
         if expire == None:
             expire = datetime.datetime(2099, 12, 31, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
-        result = await self.db.fetch(
-            '''
-                UPDATE "problem"
-                SET "name" = $1, "status" = $2, "class" = $3, "expire" = $4, "tags" = $5
-                WHERE "pro_id" = $6 RETURNING "pro_id";
-            ''',
-            name, status, [clas], expire, tags, int(pro_id)
-        )
-        if result.__len__() != 1:
-            return ('Enoext', None)
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    UPDATE "problem"
+                    SET "name" = $1, "status" = $2, "class" = $3, "expire" = $4, "tags" = $5
+                    WHERE "pro_id" = $6 RETURNING "pro_id";
+                ''',
+                name, status, [clas], expire, tags, int(pro_id)
+            )
+            if result.__len__() != 1:
+                return ('Enoext', None)
 
-        if pack_token != None:
-            err, ret = await self._unpack_pro(pro_id, pack_type, pack_token)
-            if err:
-                return (err, None)
+            if pack_token != None:
+                err, ret = await self._unpack_pro(pro_id, pack_type, pack_token)
+                if err:
+                    return (err, None)
 
-            await self.db.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
+                await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
 
         await self.rs.delete('prolist')
         await self.rs.delete('rate@kernel_True')
@@ -409,14 +415,15 @@ class ProService:
 
         memlimit = memlimit * 1024
 
-        result = await self.db.fetch(
-            '''
-                UPDATE "test_config"
-                SET "timelimit" = $1, "memlimit" = $2
-                WHERE "pro_id" = $3 RETURNING "pro_id";
-            ''',
-            int(timelimit), int(memlimit), int(pro_id)
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    UPDATE "test_config"
+                    SET "timelimit" = $1, "memlimit" = $2
+                    WHERE "pro_id" = $3 RETURNING "pro_id";
+                ''',
+                int(timelimit), int(memlimit), int(pro_id)
+            )
         if result.__len__() == 0:
             return ('Enoext', None)
 
@@ -493,21 +500,22 @@ class ProService:
             memlimit   = conf['memlimit'] * 1024
             chalmeta   = conf['metadata']
 
-            await self.db.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
+            async with self.db.acquire() as con:
+                await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
 
-            for test_idx, test_conf in enumerate(conf['test']):
-                metadata = { 'data': test_conf['data'] }
+                for test_idx, test_conf in enumerate(conf['test']):
+                    metadata = { 'data': test_conf['data'] }
 
-                await self.db.execute(
-                    '''
-                        INSERT INTO "test_config"
-                        ("pro_id", "test_idx", "compile_type", "score_type", "check_type",
-                        "timelimit", "memlimit", "weight", "metadata", "chalmeta")
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
-                    ''',
-                    int(pro_id), int(test_idx), comp_type, score_type, check_type,
-                    int(timelimit), int(memlimit), int(test_conf['weight']), json.dumps(metadata), json.dumps(chalmeta)
-                )
+                    await con.execute(
+                        '''
+                            INSERT INTO "test_config"
+                            ("pro_id", "test_idx", "compile_type", "score_type", "check_type",
+                            "timelimit", "memlimit", "weight", "metadata", "chalmeta")
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+                        ''',
+                        int(pro_id), int(test_idx), comp_type, score_type, check_type,
+                        int(timelimit), int(memlimit), int(test_conf['weight']), json.dumps(metadata), json.dumps(chalmeta)
+                    )
 
         return (None, None)
 
@@ -615,7 +623,7 @@ class ProHandler(RequestHandler):
             self.error('Eacces')
             return
 
-        testl = list()
+        testl = []
         for test_idx, test_conf in pro['testm_conf'].items():
             testl.append({
                 'test_idx'  : test_idx,
@@ -625,13 +633,14 @@ class ProHandler(RequestHandler):
                 'rate'      : 2000
             })
 
-        result = await self.db.fetch(
-            '''
-                SELECT "test_idx", "rate" FROM "test_valid_rate"
-                WHERE "pro_id" = $1 ORDER BY "test_idx" ASC;
-            ''',
-            pro_id
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "test_idx", "rate" FROM "test_valid_rate"
+                    WHERE "pro_id" = $1 ORDER BY "test_idx" ASC;
+                ''',
+                pro_id
+            )
 
         countmap = {}
         for test_idx, count in result:
@@ -644,19 +653,21 @@ class ProHandler(RequestHandler):
         isadmin = (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
         #TODO: If not accept this problem, don't show problem tags
-        result = await self.db.fetchrow(
-            '''
-                SELECT MIN("challenge_state"."state") AS "state"
-                FROM "challenge"
-                INNER JOIN "challenge_state"
-                ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                AND "challenge"."acct_id" = $1
-                INNER JOIN "problem"
-                ON "challenge"."pro_id" = $3
-                WHERE "problem"."status" <= $2 AND "problem"."pro_id" = $3 AND "problem"."class" && $4;
-            ''',
-            int(self.acct['acct_id']), ChalConst.STATE_AC, int(pro['pro_id']), [1, 2]
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetchrow(
+                '''
+                    SELECT MIN("challenge_state"."state") AS "state"
+                    FROM "challenge"
+                    INNER JOIN "challenge_state"
+                    ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                    AND "challenge"."acct_id" = $1
+                    INNER JOIN "problem"
+                    ON "challenge"."pro_id" = $3
+                    WHERE "problem"."status" <= $2 AND "problem"."pro_id" = $3 AND "problem"."class" && $4;
+                ''',
+                int(self.acct['acct_id']), ChalConst.STATE_AC, int(pro['pro_id']), [1, 2]
+            )
+
         if isadmin:
             pass
         elif result['state'] == None or result['state'] != ChalConst.STATE_AC:

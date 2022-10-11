@@ -108,13 +108,14 @@ class ChalService:
         if (await Service.Contest.running())[1] == False:
             return ('Eacces', None)
 
-        result = await self.db.fetch(
-            '''
-                INSERT INTO "challenge" ("pro_id", "acct_id")
-                VALUES ($1, $2) RETURNING "chal_id";
-            ''',
-            int(pro_id), int(acct_id)
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    INSERT INTO "challenge" ("pro_id", "acct_id")
+                    VALUES ($1, $2) RETURNING "chal_id";
+                ''',
+                int(pro_id), int(acct_id)
+            )
         if result.__len__() != 1:
             return ('Eunk', None)
         result = result[0]
@@ -130,7 +131,8 @@ class ChalService:
         return (None, chal_id)
 
     async def reset_chal(self, chal_id):
-        await self.db.execute('DELETE FROM "test" WHERE "chal_id" = $1;', int(chal_id))
+        async with self.db.acquire() as con:
+            await con.execute('DELETE FROM "test" WHERE "chal_id" = $1;', int(chal_id))
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
         await self.rs.delete('rate@kernel_True')
@@ -140,31 +142,33 @@ class ChalService:
 
     async def get_chal(self, chal_id, acct):
         chal_id = int(chal_id)
-        result = await self.db.fetch(
-            '''
-                SELECT "challenge"."pro_id", "challenge"."acct_id",
-                "challenge"."timestamp", "account"."name" AS "acct_name"
-                FROM "challenge"
-                INNER JOIN "account"
-                ON "challenge"."acct_id" = "account"."acct_id"
-                WHERE "chal_id" = $1;
-            ''',
-            chal_id
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "challenge"."pro_id", "challenge"."acct_id",
+                    "challenge"."timestamp", "account"."name" AS "acct_name"
+                    FROM "challenge"
+                    INNER JOIN "account"
+                    ON "challenge"."acct_id" = "account"."acct_id"
+                    WHERE "chal_id" = $1;
+                ''',
+                chal_id
+            )
         if result.__len__() != 1:
             return ('Enoext', None)
         result = result[0]
 
         pro_id, acct_id, timestamp, acct_name = result['pro_id'], result['acct_id'], result['timestamp'], result['acct_name']
 
-        result = await self.db.fetch(
-            '''
-                SELECT "test_idx", "state", "runtime", "memory"
-                FROM "test"
-                WHERE "chal_id" = $1 ORDER BY "test_idx" ASC;
-            ''',
-            chal_id
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "test_idx", "state", "runtime", "memory"
+                    FROM "test"
+                    WHERE "chal_id" = $1 ORDER BY "test_idx" ASC;
+                ''',
+                chal_id
+            )
 
         testl = []
         for (test_idx, state, runtime, memory) in result:
@@ -207,13 +211,15 @@ class ChalService:
 
     async def emit_chal(self, chal_id, pro_id, testm_conf, code_path, res_path):
         chal_id = int(chal_id)
-        result = await self.db.fetch(
-            '''
-                SELECT "acct_id", "timestamp" FROM "challenge"
-                WHERE "chal_id" = $1;
-            ''',
-            chal_id
-        )
+
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "acct_id", "timestamp" FROM "challenge"
+                    WHERE "chal_id" = $1;
+                ''',
+                chal_id
+            )
         if result.__len__() != 1:
             return ('Enoext', None)
         result = result[0]
@@ -229,14 +235,15 @@ class ChalService:
                 'metadata'  : test_conf['metadata']
             })
 
-            await self.db.execute(
-                '''
-                    INSERT INTO "test"
-                    ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp")
-                    VALUES ($1, $2, $3, $4, $5, $6);
-                ''',
-                chal_id, int(acct_id), int(pro_id), int(test_idx), ChalService.STATE_JUDGE, timestamp
-            )
+            async with self.db.acquire() as con:
+                await self.db.execute(
+                    '''
+                        INSERT INTO "test"
+                        ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp")
+                        VALUES ($1, $2, $3, $4, $5, $6);
+                    ''',
+                    chal_id, int(acct_id), int(pro_id), int(test_idx), ChalService.STATE_JUDGE, timestamp
+                )
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
         if self.ws == None:
@@ -279,22 +286,23 @@ class ChalService:
 
         fltquery = await self._get_fltquery(flt)
 
-        result = await self.db.fetch(
-            f'''
-                SELECT "challenge"."chal_id", "challenge"."pro_id", "challenge"."acct_id",
-                "challenge"."timestamp", "account"."name" AS "acct_name",
-                "challenge_state"."state", "challenge_state"."runtime", "challenge_state"."memory"
-                FROM "challenge"
-                INNER JOIN "account"
-                ON "challenge"."acct_id" = "account"."acct_id"
-                LEFT JOIN "challenge_state"
-                ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                WHERE "account"."acct_type" >= {min_accttype}
-            ''' + fltquery +
-            f'''
-                ORDER BY "challenge"."timestamp" DESC OFFSET {off} LIMIT {num};
-            '''
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                f'''
+                    SELECT "challenge"."chal_id", "challenge"."pro_id", "challenge"."acct_id",
+                    "challenge"."timestamp", "account"."name" AS "acct_name",
+                    "challenge_state"."state", "challenge_state"."runtime", "challenge_state"."memory"
+                    FROM "challenge"
+                    INNER JOIN "account"
+                    ON "challenge"."acct_id" = "account"."acct_id"
+                    LEFT JOIN "challenge_state"
+                    ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                    WHERE "account"."acct_type" >= {min_accttype}
+                ''' + fltquery +
+                f'''
+                    ORDER BY "challenge"."timestamp" DESC OFFSET {off} LIMIT {num};
+                '''
+            )
 
         challist = []
         for (chal_id, pro_id, acct_id, timestamp, acct_name,
@@ -327,12 +335,13 @@ class ChalService:
     async def get_stat(self, min_accttype=UserConst.ACCTTYPE_USER, flt=None):
         fltquery = await self._get_fltquery(flt)
 
-        result = await self.db.fetch(('SELECT COUNT(1) FROM "challenge" '
-            'INNER JOIN "account" '
-            'ON "challenge"."acct_id" = "account"."acct_id" '
-            'LEFT JOIN "challenge_state" '
-            'ON "challenge"."chal_id"="challenge_state"."chal_id" '
-            f'WHERE "account"."acct_type" >= {min_accttype}' + fltquery + ';'))
+        async with self.db.acquire() as con:
+            result = await con.fetch(('SELECT COUNT(1) FROM "challenge" '
+                'INNER JOIN "account" '
+                'ON "challenge"."acct_id" = "account"."acct_id" '
+                'LEFT JOIN "challenge_state" '
+                'ON "challenge"."chal_id"="challenge_state"."chal_id" '
+                f'WHERE "account"."acct_type" >= {min_accttype}' + fltquery + ';'))
 
         if result.__len__() != 1:
             return ('Eunk', None)
@@ -343,14 +352,15 @@ class ChalService:
         })
 
     async def update_test(self, chal_id, test_idx, state, runtime, memory, response):
-        result = await self.db.fetch(
-            '''
-                UPDATE "test"
-                SET "state" = $1, "runtime" = $2, "memory" = $3, "response" = $4
-                WHERE "chal_id" = $5 AND "test_idx" = $6;
-            ''',
-            state, runtime, memory, response, int(chal_id), test_idx
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    UPDATE "test"
+                    SET "state" = $1, "runtime" = $2, "memory" = $3, "response" = $4
+                    WHERE "chal_id" = $5 AND "test_idx" = $6;
+                ''',
+                state, runtime, memory, response, int(chal_id), test_idx
+            )
 
         #TODO: redis publish materialized_view_req
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))

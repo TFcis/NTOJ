@@ -42,13 +42,14 @@ class UserService:
         UserService.inst = self
 
     async def sign_in(self, mail: str, pw: str):
-        result = await self.db.fetch(
-            '''
-                SELECT "acct_id","password" FROM "account"
-                WHERE "mail" = $1;
-            ''',
-            mail
-        )
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "acct_id","password" FROM "account"
+                    WHERE "mail" = $1;
+                ''',
+                mail
+            )
         if result.__len__() != 1:
             return ('Esign', None)
 
@@ -82,14 +83,15 @@ class UserService:
         hpw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
 
         try:
-            result = await self.db.fetch(
-                '''
-                    INSERT INTO "account"
-                    ("mail", "password", "name", "acct_type", "class", "group")
-                    VALUES ($1, $2, $3, $4, $5, $6) RETURNING "acct_id";
-                ''',
-                mail, base64.b64encode(hpw).decode('utf-8'), name, UserConst.ACCTTYPE_USER, [1], GroupConst.DEFAULT_GROUP
-            )
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        INSERT INTO "account"
+                        ("mail", "password", "name", "acct_type", "class", "group")
+                        VALUES ($1, $2, $3, $4, $5, $6) RETURNING "acct_id";
+                    ''',
+                    mail, base64.b64encode(hpw).decode('utf-8'), name, UserConst.ACCTTYPE_USER, [1], GroupConst.DEFAULT_GROUP
+                )
 
         except asyncpg.IntegrityConstraintViolationError:
             return ('Eexist', None)
@@ -114,17 +116,18 @@ class UserService:
         acct_id = int(acct_id)
 
         if (acct := (await self.rs.exists(f'account@{acct_id}'))) == None:
-            result = await self.db.fetch('SELECT "acct_id","lastip" FROM "account" WHERE "acct_id" = $1;', acct_id)
+            async with self.db.acquire() as con:
+                result = await con.fetch('SELECT "acct_id","lastip" FROM "account" WHERE "acct_id" = $1;', acct_id)
 
-            if result.__len__() != 1:
-                return ('Esign', None, ip)
-            result = result[0]
+                if result.__len__() != 1:
+                    return ('Esign', None, ip)
+                result = result[0]
 
-            if result['lastip'] != ip and ip != '':
-                await LogService.inst.add_log(f"Update acct {acct_id} lastip from {lastip} to {ip} ")
-                await self.db.execute('UPDATE "account" SET "lastip" = $1 WHERE "acct_id" = $2;', ip, acct_id)
-                await self.rs.delete(f'account@{acct_id}')
-                await self.rs.delete('acctlist')
+                if result['lastip'] != ip and ip != '':
+                    await LogService.inst.add_log(f"Update acct {acct_id} lastip from {lastip} to {ip} ")
+                    await con.execute('UPDATE "account" SET "lastip" = $1 WHERE "acct_id" = $2;', ip, acct_id)
+                    await self.rs.delete(f'account@{acct_id}')
+                    await self.rs.delete('acctlist')
 
         else:
             try:
@@ -136,7 +139,9 @@ class UserService:
 
                 if lastip != ip and ip != '':
                     await LogService.inst.add_log(f"Update acct {acct_id} lastip from {lastip} to {ip} ")
-                    await self.db.execute('UPDATE "account" SET "lastip" = $1 WHERE "acct_id" = $2;', ip, acct_id)
+
+                    async with self.db.acquire() as con:
+                        await con.execute('UPDATE "account" SET "lastip" = $1 WHERE "acct_id" = $2;', ip, acct_id)
 
                     await self.rs.delete(f'account@{acct_id}')
                     await self.rs.delete('acctlist')
@@ -163,14 +168,15 @@ class UserService:
             acct = unpackb(acct)
 
         else:
-            result = await self.db.fetch(
-                '''
-                    SELECT "name", "acct_type",
-                    "class", "photo", "cover", "lastip"
-                    FROM "account" WHERE "acct_id" = $1;
-                ''',
-                acct_id
-            )
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        SELECT "name", "acct_type",
+                        "class", "photo", "cover", "lastip"
+                        FROM "account" WHERE "acct_id" = $1;
+                    ''',
+                    acct_id
+                )
             if result.__len__() != 1:
                 return ('Enoext', None)
             result = result[0]
@@ -212,18 +218,20 @@ class UserService:
             return ('Enamemax', None)
         acct_id = int(acct_id)
 
-        result = await self.db.fetch(
-            '''
-                UPDATE "account"
-                SET "acct_type" = $1, "name" = $2,
-                "photo" = $3, "cover" = $4, "class" = $5 WHERE "acct_id" = $6 RETURNING "acct_id";
-            ''',
-            acct_type, name, photo, cover, [clas], acct_id
-        )
-        if result.__len__() != 1:
-            return ('Enoext', None)
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    UPDATE "account"
+                    SET "acct_type" = $1, "name" = $2,
+                    "photo" = $3, "cover" = $4, "class" = $5 WHERE "acct_id" = $6 RETURNING "acct_id";
+                ''',
+                acct_type, name, photo, cover, [clas], acct_id
+            )
+            if result.__len__() != 1:
+                return ('Enoext', None)
 
-        await self.db.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
+            await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
+
         await self.rs.delete(f'account@{acct_id}')
         await self.rs.delete('acctlist')
         await self.rs.delete('prolist')
@@ -240,18 +248,19 @@ class UserService:
             return ('Epwmax', None)
         acct_id = int(acct_id)
 
-        result = await self.db.fetch('SELECT "password" FROM "account" WHERE "acct_id" = $1;', acct_id)
-        if result.__len__() != 1:
-            return ('Eacct', None)
-        result = result[0]
+        async with self.db.acquire() as con:
+            result = await con.fetch('SELECT "password" FROM "account" WHERE "acct_id" = $1;', acct_id)
+            if result.__len__() != 1:
+                return ('Eacct', None)
+            result = result[0]
 
-        hpw = base64.b64encode(result['password'].encode('utf-8'))
-        if (bcrypt.hashpw(old.encode('utf-8'), hpw) != hpw) and isadmin == False:
-            return ('Epwold', None)
+            hpw = base64.b64encode(result['password'].encode('utf-8'))
+            if (bcrypt.hashpw(old.encode('utf-8'), hpw) != hpw) and isadmin == False:
+                return ('Epwold', None)
 
-        hpw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
-        await self.db.execute('UPDATE "account" SET "password" = $1 WHERE "acct_id" = $2',
-                (base64.b64encode(hpw).decode('utf-8'), acct_id))
+            hpw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
+            await con.execute('UPDATE "account" SET "password" = $1 WHERE "acct_id" = $2',
+                    (base64.b64encode(hpw).decode('utf-8'), acct_id))
 
         return (None, None)
 
@@ -261,14 +270,16 @@ class UserService:
             acctlist = unpackb(acctlist)
 
         else:
-            result = await self.db.fetch(
-                '''
-                    SELECT "acct_id", "acct_type", "class", "name", "mail", "lastip"
-                    FROM "account" WHERE "acct_type" >= $1
-                    ORDER BY "acct_id" ASC;
-                ''',
-                min_type
-            )
+
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        SELECT "acct_id", "acct_type", "class", "name", "mail", "lastip"
+                        FROM "account" WHERE "acct_type" >= $1
+                        ORDER BY "acct_id" ASC;
+                    ''',
+                    min_type
+                )
 
             acctlist = []
             for (acct_id, acct_type, clas, name, mail, lastip) in result:
