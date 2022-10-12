@@ -3,7 +3,8 @@
 <link rel="stylesheet" type="text/css" href="/oj/chal.css">
 <link rel="stylesheet" type="text/css" href="/oj/pygments.css">
 <script type="text/javascript">
-    function init(){
+    function init() {
+        {% if rechal == True %}
         $('#rechal').on('click',function(e){
             $.post('/oj/be/submit',{
                 'reqtype':'rechal',
@@ -16,29 +17,31 @@
                 }
             });
         });
-
-        $('#copycode').on('click', function(e) {
-            $.post('/oj/be/code', {
-                'chal_id': {{ chal['chal_id'] }},
-            }, function(res) {
-                if (!navigator.clipboard) {
-                    return;
-                }
-
-                navigator.clipboard.writeText(res).then(() => {
-                    console.log('copy code to clipboard');
-                }).catch(err => {
-                    console.log('something went wrong', err);
-                })
-            });
-        });
-
+        {% end %}
+        
+        {% if chal['code'] == True %}
+        let code_txt = '';
 	    $.post('/oj/be/code',{
 	        'chal_id':{{chal['chal_id']}},
-	    },function(res){
+	    },function(res) {
+            code_txt = res;
 	        var _code = document.getElementById('_code');
 	        _code.innerHTML = res;
 	    });
+
+        $('#copycode').on('click', function(e) {
+            if (!navigator.clipboard) {
+                console.log('err');
+                return;
+            }
+
+            navigator.clipboard.writeText(code_txt).then(() => {
+                console.log('copy code to clipboard');
+            }).catch(err => {
+                console.log('something went wrong', err);
+            })
+        });
+        {% end %}
     }
 </script>
 
@@ -70,10 +73,10 @@
                 </tr>
             </tbody>
         </table>
-    {% if rechal == True %}
+    {% if rechal == True and chal['code'] == True %}
         <button id="rechal" class="btn-wrn">Rechallenge</button>
         <button id="copycode" class="btn-con">Copy Code</button>
-    {% elif acct_id == chal['acct_id'] %}
+    {% elif chal['code'] == True %}
         <button id="copycode" class="btn-con">Copy Code</button>
     {% end %}
 
@@ -110,13 +113,8 @@
 	{% end %}
     </div>
 </div>
-{% if chal['code'] != None %}
+{% if chal['code'] == True %}
 <div class="g-r" style="margin-top:32px;">
     <div id="_code"></div>
-    <!--
-    <div class="g-lg-12">
-	<pre id="code"><code>{{ chal['code'] }}</code></pre>
-    </div>
-    -->
 </div>
 {% end %}

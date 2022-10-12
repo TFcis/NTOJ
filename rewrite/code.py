@@ -22,10 +22,12 @@ class CodeHandler(RequestHandler):
     @reqenv
     async def post(self):
         chal_id = int(self.get_argument('chal_id'))
-        err, chal = await ChalService.inst.get_chal(chal_id, self.acct)
-        if (code := chal['code']) == None:
-            self.finish('')
-            return
+        try:
+            with open(f'code/{chal_id}/main.cpp', 'rb') as code_f:
+                code = code_f.read().decode('utf-8')
+
+        except FileNotFoundError:
+            code = 'EROOR: The code is lost on server.'
 
         lexer = get_lexer_by_name('c++', encoding='utf-8', stripall=True)
         formatter = HtmlFormatter(linenos=True, encoding='utf-8')
