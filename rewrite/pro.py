@@ -732,7 +732,11 @@ class SubmitHandler(RequestHandler):
             self.error('Eacces')
             return
 
-        await self.render('submit', pro=pro, can_submit=Service.doki.buf[0])
+        if Service.doki.buf[0] == False:
+            self.finish('Judge Server Offline')
+            return
+
+        await self.render('submit', pro=pro)
         return
 
     @reqenv
@@ -747,7 +751,7 @@ class SubmitHandler(RequestHandler):
             code = self.get_argument('code')
 
             if Service.doki.buf[0] == False:
-                self.error('Ebackend')
+                self.error('Ejudge')
                 return
 
             if len(code.strip()) == 0:
@@ -937,10 +941,10 @@ class ChalHandler(RequestHandler):
 
         if self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL:
             rechal = True
-
         else:
             rechal = False
-        await self.render('chal', pro=pro, chal=chal, rechal=rechal, acct_id=self.acct['acct_id'])
+
+        await self.render('chal', pro=pro, chal=chal, rechal=rechal)
         return
 
     @reqenv

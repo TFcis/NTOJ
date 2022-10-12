@@ -16,16 +16,16 @@
             var code = j_submit.find('textarea.code').val();
 
             $.post('/oj/be/submit',{
-                'reqtype':'submit',
-                'pro_id':{{ pro['pro_id'] }},
-                'code':code
+                'reqtype': 'submit',
+                'pro_id' :{{ pro['pro_id'] }},
+                'code': code
             },function(res){
                 if (res[0] == 'E') {
                     if (res[1] == 'Einternal') {
                         j_submit.find('div.print').print('interval < 30 sec');
                     } else if (res == 'Eempty') {
                         j_submit.find('div.print').print('Do not submit empty code');
-                    } else if (res == 'Ebackend') {
+                    } else if (res == 'Ejudge') {
                         j_submit.find('div.print').print('Judge Server is offline, cannot submit')
                     } else {
                         // j_submit.find('div.print').print('Submit failed');
@@ -43,10 +43,6 @@
     <h3>{{ pro['pro_id']}} / {{ pro['name'] }}</h3>
     <textarea class="code" placeholder="Code"></textarea>
     <input type="file" class="file">
-    {% if can_submit == True %}
-        <button class="btn-con submit">Submit</button>
-    {% else %}
-        <button class="btn-con submit">Cannot Submit</button>
-    {% end %}
+    <button class="btn-con submit">Submit</button>
     <div class="print"></div>
 </div>

@@ -8,7 +8,7 @@
 'Eacces' stands for this page can't access
 'Ekernel' stands for this group is KERNEL_GROUP
 'EbadKey' stands for this pro_class key is null
-'Ebackend' stands for backend server didn't connect or maybe some error
+'Ejudge' stands for judge server didn't connect or maybe some error
 'Eempty' stands for submit code is empty
 'Einternal' stands for submit times too freq
 'Echunk'
