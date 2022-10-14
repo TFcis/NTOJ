@@ -778,13 +778,11 @@ class SubmitHandler(RequestHandler):
 
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
             if err:
-                dbg_print(__file__, 764, err=err)
                 self.error(err)
                 return
 
             if pro['status'] == ProService.STATUS_OFFLINE:
                 self.error('Eacces')
-                dbg_print(__file__, 770, err='Eacces')
                 return
 
             #TODO: code prevent '/dev/random'
@@ -794,7 +792,6 @@ class SubmitHandler(RequestHandler):
 
             if err:
                 self.error(err)
-                dbg_print(__file__, 780, err=err)
                 return
 
         elif (reqtype == 'rechal'
@@ -904,7 +901,6 @@ class ChalListHandler(RequestHandler):
                     isadmin=isadmin)
         return
 
-#TODO: ChalSub
 from redis import asyncio as aioredis
 
 class ChalSubHandler(WebSocketHandler):
@@ -920,16 +916,13 @@ class ChalSubHandler(WebSocketHandler):
 
                 await self.on_message(str(int(msg['data'])))
 
-        self.afd = asyncio.tasks.Task(test())
+        self.task = asyncio.tasks.Task(test())
 
     async def on_message(self, msg):
         self.write_message(msg)
 
     def on_close(self) -> None:
-        dbg_print(__file__, 929, on_close='run')
-        self.afd.cancel()
-        # asyncio.get_running_loop().run_until_complete((self.p.close()))
-        # asyncio.get_running_loop().run_until_complete((self.ars.close()))
+        self.task.cancel()
 
     def check_origin(self, origin):
         #TODO: secure
@@ -963,3 +956,31 @@ class ChalHandler(RequestHandler):
         reqtype = self.get_argument('reqtype')
         self.error('Eunk')
         return
+
+class ChalStateHandler(WebSocketHandler):
+    async def open(self):
+        self.chal_id = -1
+        self.ars = aioredis.Redis(host='localhost', port=6379, db=1)
+        self.p = self.ars.pubsub()
+        await self.p.subscribe('chalstatesub')
+
+        async def listen_chalstate():
+            async for msg in self.p.listen():
+                if msg['type'] != 'message':
+                    continue
+
+                if int(msg['data']) == self.chal_id:
+                    err, chal_states = await ChalService.inst.get_chal_state(self.chal_id)
+                    await self.write_message(json.dumps(chal_states))
+
+        self.task = asyncio.tasks.Task(listen_chalstate())
+
+    async def on_message(self, msg):
+        self.chal_id = int(msg)
+
+    def on_close(self) -> None:
+        self.task.cancel()
+
+    def check_origin(self, origin):
+        #TODO: secure
+        return True

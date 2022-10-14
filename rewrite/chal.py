@@ -72,7 +72,7 @@ class DokiDokiService:
                     self.doki.buf[1] = False
                     self.doki.buf[0] = True
 
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
 
 class ChalService:
     STATE_AC         = 1
@@ -140,6 +140,28 @@ class ChalService:
 
         return (None, None)
 
+    async def get_chal_state(self, chal_id):
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "test_idx", "state", "runtime", "memory"
+                    FROM "test"
+                    WHERE "chal_id" = $1 ORDER BY "test_idx" ASC;
+                ''',
+                chal_id
+            )
+
+        tests = []
+        for (test_idx, state, runtime, memory) in result:
+            tests.append({
+                'test_idx' : test_idx,
+                'state'    : state,
+                'runtime'  : int(runtime),
+                'memory'   : int(memory),
+            })
+
+        return (None, tests)
+
     async def get_chal(self, chal_id, acct):
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
@@ -189,15 +211,10 @@ class ChalService:
             if (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL) and (acct['acct_id'] != acct_id):
                 await LogService.inst.add_log(f"{acct['name']} view the challenge {chal_id}")
 
-            try:
-                with open(f'code/{chal_id}/main.cpp', 'rb') as code_f:
-                    code = code_f.read().decode('utf-8')
-
-            except FileNotFoundError:
-                code = 'EROOR: The code is lost on server.'
+            code = True
 
         else:
-            code = None
+            code = False
 
         return (None, {
             'chal_id'   : chal_id,
@@ -211,6 +228,7 @@ class ChalService:
 
     async def emit_chal(self, chal_id, pro_id, testm_conf, code_path, res_path):
         chal_id = int(chal_id)
+        pro_id = int(pro_id)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -224,41 +242,47 @@ class ChalService:
             return ('Enoext', None)
         result = result[0]
 
-        acct_id, timestamp = result['acct_id'], result['timestamp']
+        acct_id, timestamp = int(result['acct_id']), result['timestamp']
 
-        testl = []
-        for test_idx, test_conf in testm_conf.items():
-            testl.append({
-                'test_idx'  : test_idx,
-                'timelimit' : test_conf['timelimit'],
-                'memlimit'  : test_conf['memlimit'],
-                'metadata'  : test_conf['metadata']
-            })
+        async with self.db.acquire() as con:
+            testl = []
+            for test_idx, test_conf in testm_conf.items():
+                testl.append({
+                    'test_idx'  : test_idx,
+                    'timelimit' : test_conf['timelimit'],
+                    'memlimit'  : test_conf['memlimit'],
+                    'metadata'  : test_conf['metadata']
+                })
 
-            async with self.db.acquire() as con:
-                await self.db.execute(
+                await con.execute(
                     '''
                         INSERT INTO "test"
                         ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp")
                         VALUES ($1, $2, $3, $4, $5, $6);
                     ''',
-                    chal_id, int(acct_id), int(pro_id), int(test_idx), ChalService.STATE_JUDGE, timestamp
+                    chal_id, acct_id, pro_id, int(test_idx), ChalService.STATE_JUDGE, timestamp
                 )
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
-        if self.ws == None:
-            self.ws = await websocket_connect(config.PATH_JUDGE)
 
         try:
-            code_f = open(f'code/{chal_id}/main.cpp', 'rb')
-            code = code_f.read().decode('utf-8')
+            code_f = open(f"code/{chal_id}/main.cpp", 'rb')
             code_f.close()
 
         except FileNotFoundError:
             for test in testl:
-                err, ret = await self.update_test(chal_id, test['test_idx'],
-                        ChalService.STATE_ERR, 0, 0, '')
+                err, ret = await self.update_test(
+                    chal_id,
+                    test['test_idx'],
+                    ChalService.STATE_ERR,
+                    0,
+                    0,
+                    ''
+                )
             return (None, None)
+
+        # if self.ws == None:
+        #     self.ws = await websocket_connect(config.PATH_JUDGE)
 
         chalmeta = test_conf['chalmeta']
         self.ws.write_message(json.dumps({
@@ -266,7 +290,7 @@ class ChalService:
             'test'       : testl,
             'code_path'  : code_path,
             'res_path'   : res_path,
-            'code'       : code,
+            # 'code'       : code,
             'metadata'   : chalmeta,
             'comp_type'  : test_conf['comp_type'],
             'check_type' : test_conf['check_type'],
@@ -330,6 +354,7 @@ class ChalService:
                 'runtime'   : runtime,
                 'memory'    : memory
             })
+
         return (None, challist)
 
     async def get_stat(self, min_accttype=UserConst.ACCTTYPE_USER, flt=None):
@@ -419,6 +444,8 @@ class ChalService:
             res = json.loads(ret)
             if res['result'] != None:
                 for result in res['result']:
+                    #INFO: CE會回傳 result['verdict']
+
                     err, ret = await self.update_test(
                         res['chal_id'],
                         result['test_idx'],
@@ -427,5 +454,6 @@ class ChalService:
                         result['peakmem'],
                         ret)
 
+                # await asyncio.sleep(0.5)
+                await self.rs.publish('chalstatesub', res['chal_id'])
         return
-

@@ -21,7 +21,7 @@ from req import RequestHandler, Service, reqenv
 from user import UserService, UserConst
 from acct import AcctHandler, SignHandler
 from pro import ProService, ProHandler, ProStaticHandler, ProTagsHandler, SubmitHandler, ProsetHandler
-from pro import ChalHandler, ChalListHandler, ChalSubHandler
+from pro import ChalHandler, ChalListHandler, ChalSubHandler, ChalStateHandler
 from chal import ChalService, DokiDokiService
 from rate import RateService
 from contest import ContestService, BoardHandler
@@ -151,6 +151,7 @@ if __name__ == "__main__":
             ('/auto',           AutoHandler,args),
             ('/code',           CodeHandler,args),
             ('/informsub',      InformSub,args),
+            ('/chalstatesub',   ChalStateHandler, args)
         ], autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC)
 
         access_log = logging.getLogger('tornado.access')

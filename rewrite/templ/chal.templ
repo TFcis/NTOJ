@@ -4,15 +4,55 @@
 <link rel="stylesheet" type="text/css" href="/oj/pygments.css">
 <script type="text/javascript">
     function init() {
-        {% if rechal == True %}
-        $('#rechal').on('click',function(e){
-            $.post('/oj/be/submit',{
-                'reqtype':'rechal',
-                'chal_id':{{ chal['chal_id'] }},
-            },function(res){
-                if(res[0] != 'E'){
+        const state_map = {
+            1: 'Accepted',
+            2: 'Wrong Answer',
+            3: 'Runtime Error',
+            4: 'Time Limit Exceed',
+            5: 'Memory Limit Exceed',
+            6: 'Compile Error',
+            7: 'Internal Error',
+            100: 'Challenging',
+            101: 'Not Started'
+        };
 
-                }else{
+	    var ws = new WebSocket('ws://192.168.122.157/oj/be/chalstatesub');
+        var chal_id = {{ chal['chal_id'] }};
+
+        if (!(document.querySelectorAll('td.state-100').length == 0 && document.querySelectorAll('td.state-101') == 0)) {
+
+            function update_state_data(chal_state_data) {
+                console.log('update_state_data function run');
+                var states = document.querySelectorAll('tr.states');
+                states.forEach((element, idx, arr) => {
+                    let state = element.querySelector('td.state');
+                    state.innerHTML = state_map[chal_state_data[idx]['state']];
+                    state.className = `state state-${chal_state_data[idx]['state']}`;
+                    element.querySelector('td.runtime').innerHTML = chal_state_data[idx]['runtime'];
+                    element.querySelector('td.memory').innerHTML = Math.round((chal_state_data[idx]['memory'] / 1024));
+                })
+            };
+
+            ws.onopen = (e) => {
+                ws.send(chal_id);
+            };
+            
+            ws.onmessage = (e) => {
+                var chal_state_data = JSON.parse(e['data']);
+                update_state_data(chal_state_data);
+            };
+        }
+
+
+        {% if rechal == True %}
+        $('#rechal').on('click', function(e){
+            $.post('/oj/be/submit', {
+                'reqtype': 'rechal',
+                'chal_id': {{ chal['chal_id'] }},
+            }, function(res) {
+                if (res[0] == 'E') {
+
+                } else {
                     index.reload();
                 }
             });
@@ -21,9 +61,9 @@
         
         {% if chal['code'] == True %}
         let code_txt = '';
-	    $.post('/oj/be/code',{
-	        'chal_id':{{chal['chal_id']}},
-	    },function(res) {
+	    $.post('/oj/be/code', {
+	        'chal_id': {{chal['chal_id']}},
+	    }, function(res) {
             code_txt = res;
 	        var _code = document.getElementById('_code');
 	        _code.innerHTML = res;
@@ -92,25 +132,16 @@
                 </tr>
             </thead>
             <tbody>
-	    {% set refresh = 0 %}
             {% for test in chal['testl'] %}
-		{% if ChalService.STATE_STR[test['state']] == 'Challenging' %}
-		    {% set refresh = 1 %}
-		{% end %}
-                <tr>
-                    <td>{{ '%04d'%(test['test_idx'] + 1) }}</td>
-                    <td class="state-{{ test['state'] }}">{{ ChalService.STATE_STR[test['state']] }}</td>
-                    <td>{{ test['runtime'] }}</td>
-                    <td>{{ round(test['memory'] / 1024) }}</td>
+                <tr class="states">
+                    <td class="idx">{{ '%04d'%(test['test_idx'] + 1) }}</td>
+                    <td class="state state-{{ test['state'] }}">{{ ChalService.STATE_STR[test['state']] }}</td>
+                    <td class="runtime">{{ test['runtime'] }}</td>
+                    <td class="memory">{{ round(test['memory'] / 1024) }}</td>
                 </tr>
             {% end %}
             </tbody>
         </table>
-	{% if refresh == 1 %}
-	    <script>
-		setTimeout(function(){index.reload();},3000);
-	    </script>
-	{% end %}
     </div>
 </div>
 {% if chal['code'] == True %}
