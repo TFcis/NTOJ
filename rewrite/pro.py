@@ -745,14 +745,14 @@ class SubmitHandler(RequestHandler):
             self.error('Esign')
             return
 
+        if Service.doki.buf[0] == False:
+            self.error('Ejudge')
+            return
+
         reqtype = self.get_argument('reqtype')
         if reqtype == 'submit':
             pro_id = int(self.get_argument('pro_id'))
             code = self.get_argument('code')
-
-            if Service.doki.buf[0] == False:
-                self.error('Ejudge')
-                return
 
             if len(code.strip()) == 0:
                 self.error('Eempty')
@@ -905,24 +905,35 @@ class ChalListHandler(RequestHandler):
         return
 
 #TODO: ChalSub
+from redis import asyncio as aioredis
 
 class ChalSubHandler(WebSocketHandler):
-    def open(self):
-        pass
-    #     self.ars = redis.Redis(host='localhost', port=6379, db=1)
-    #     self.p = self.ars.pubsub()
-    #     self.p.subscribe('challist_sub')
-    #     dbg_print(__file__, 901, run=True)
-    def on_message(self, msg):
-        pass
+    async def open(self):
+        self.ars = aioredis.Redis(host='localhost', port=6379, db=1)
+        self.p = self.ars.pubsub()
+        await self.p.subscribe('challist_sub')
+
+        async def test():
+            async for msg in self.p.listen():
+                if msg['type'] != 'message':
+                    continue
+
+                await self.on_message(str(int(msg['data'])))
+
+        self.afd = asyncio.tasks.Task(test())
+
+    async def on_message(self, msg):
+        self.write_message(msg)
+
     def on_close(self) -> None:
-        pass
+        dbg_print(__file__, 929, on_close='run')
+        self.afd.cancel()
+        # asyncio.get_running_loop().run_until_complete((self.p.close()))
+        # asyncio.get_running_loop().run_until_complete((self.ars.close()))
 
     def check_origin(self, origin):
         #TODO: secure
         return True
-
-    pass
 
 class ChalHandler(RequestHandler):
     @reqenv
