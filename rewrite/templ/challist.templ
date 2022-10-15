@@ -7,52 +7,57 @@
     var ws;
     var chalsub_count;
 
-    function init(){
+    function init() {
         var j_filter = $('#filter');
         var j_chalsub = $('#chalsub');
-	j_filter.find('input, select').keypress(function(e){
-	    if(e.keyCode==13){
-		var proid = j_filter.find('input.proid').val();
-		var acctid = j_filter.find('input.acctid').val();
-		var stat = j_filter.find('select.state').val();
-		var url = '/oj/chal/';
-		if(proid != ''){
-		    url += '?proid=' + proid;
-		    if(acctid != ''){
-			url += '&acctid=' + acctid;
-		    }
-		    url += '&state=' + stat;
-		}else if(acctid != ''){
-		    url += '?acctid=' + acctid;
-		    url += '&state=' + stat;
-		}else{
-		    url += '?state=' + stat;
-		}
-		index.go(url);
-	    }
-	});
-        j_filter.find('button.submit').on('click',function(e){
+	    j_filter.find('input, select').keypress(function(e) {
+
+	        if (e.keyCode == 13) {
+               //KeyCode 13 means Enter
+		     var proid = j_filter.find('input.proid').val();
+		     var acctid = j_filter.find('input.acctid').val();
+		     var stat = j_filter.find('select.state').val();
+		     var url = '/oj/chal/';
+
+		     if(proid != '') {
+		         url += '?proid=' + proid;
+		         if(acctid != '') {
+		     	url += '&acctid=' + acctid;
+		         }
+		         url += '&state=' + stat;
+		     } else if (acctid != '') {
+		         url += '?acctid=' + acctid;
+		         url += '&state=' + stat;
+		     } else {
+		         url += '?state=' + stat;
+		     }
+		     index.go(url);
+	        }
+	    });
+
+        j_filter.find('button.submit').on('click', function(e) {
             var proid = j_filter.find('input.proid').val();
             var acctid = j_filter.find('input.acctid').val();
-	    var stat = j_filter.find('select.state').val();
+	        var stat = j_filter.find('select.state').val();
             var url = '/oj/chal/';
-            if(proid != ''){
+
+            if(proid != '') {
                 url += '?proid=' + proid;
-                if(acctid != ''){
+                if(acctid != '') {
                     url += '&acctid=' + acctid;
                 }
-		url += '&state=' + stat;
-            }else if(acctid != ''){
+		        url += '&state=' + stat;
+            } else if (acctid != '') {
                 url += '?acctid=' + acctid;
-		url += '&state=' + stat;
-	    }else{
-		url += '?state=' + stat;
-	    }
+		        url += '&state=' + stat;
+	        } else {
+		        url += '?state=' + stat;
+	        }
 
             index.go(url);
         });
 
-        j_chalsub.on('click',function(e){
+        j_chalsub.on('click', function(e) {
             index.reload();
         });
 
@@ -63,24 +68,25 @@
 
 	    };
 
-	    ws.onmessage = function(e){
+	    ws.onmessage = function(e) {
             chalsub_count += 1;
             j_chalsub.find('a').text(chalsub_count + ' new challenges');
             j_chalsub.show();
         };
 
         var chalids = {{ chalids }};
-        $('#rechalall').on('click',function(e){
-            chalids.forEach((chalid)=>{
+        $('#rechalall').on('click', function(e) {
+            chalids.forEach((chalid) => {
                 $.post('/oj/be/submit', {
-                    'reqtype':'rechal',
+                    'reqtype': 'rechal',
                     'chal_id': chalid,
                 });
             });
             index.reload();
         });
     }
-    function destroy(){
+
+    function destroy() {
         ws.close();
     }
 </script>

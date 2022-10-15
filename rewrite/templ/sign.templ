@@ -4,7 +4,7 @@
     function init() {
         $('body').addClass('dark');
 
-        $('#warning button.confirm').on('click',function(e){
+        $('#warning button.confirm').on('click', (e) => {
             $('body').addClass('dark');
             $('#intro').show();
             $('#signin').hide();
@@ -13,14 +13,14 @@
             $('#warning').hide();
         });
 
-        $('#warning button.cancel').on('click',function(e){
+        $('#warning button.cancel').on('click', (e) => {
             $('body').addClass('dark');
             $('#intro').show();
             $('#sign').show();
             $('#warning').hide();
         });
 
-        $('#signin button.signup').on('click',function(e){
+        $('#signin button.signup').on('click', (e) => {
             $('#intro').hide();
             $('#sign').hide();
 
@@ -28,17 +28,17 @@
             $('#warning').show();
         });
 
-        $('#signin > button.submit').on('click',function(e){
+        $('#signin > button.submit').on('click', (e) => {
             var j_signin = $('#signin');
             var mail = j_signin.find('input.mail').val();
             var pw = j_signin.find('input.pw').val();
 
             $.post('/oj/be/sign', {
-                'reqtype':'signin',
-                'mail':mail,
-                'pw':pw
-            }, function(res) {
-                if(res[0] == 'E'){
+                'reqtype': 'signin',
+                'mail': mail,
+                'pw': pw,
+            }, (res) => {
+                if (res[0] == 'E') {
                     $('#signin div.print').print('Login failed');
                 } else {
 		            $('#signin div.print').print('Success, reloading...', true);
@@ -51,7 +51,8 @@
                 }
             });
         });
-        $('#signup > button.submit').on('click', function(e) {
+
+        $('#signup > button.submit').on('click', (e) => {
 	        var j_signup = $('#signup');
             var name = j_signup.find('input.name').val();
             var mail = j_signup.find('input.mail').val();
@@ -63,42 +64,43 @@
 		        return;
 	        }
 
-            $.post('/oj/be/sign',{
-                'reqtype':'signup',
-                'mail':mail,
-                'pw':pw,
-                'name':name,
-            }, function(res){
+            $.post('/oj/be/sign', {
+                'reqtype': 'signup',
+                'mail': mail,
+                'pw': pw,
+                'name': name,
+            }, (res) => {
 		        var msg = 'Unknown';
 
                 if(res[0] == 'E') {
 
-		            if(res == 'Eexist'){
+		            if (res == 'Eexist') {
 			            msg = 'Account existed';
-		            } else if(res == 'Emailmin') {
+		            } else if (res == 'Emailmin') {
 			            msg = 'Mail length < min';
-                    } else if(res == 'Emailmax') {
+                    } else if (res == 'Emailmax') {
 			            msg = 'Mail length > max';
-		            } else if(res == 'Epwmin') {
+		            } else if (res == 'Epwmin') {
 			            msg = 'Password length < min';
-		            } else if(res == 'Epwmax') {
+		            } else if (res == 'Epwmax') {
 			            msg = 'Password length > max';
-		            } else if(res == 'Enamemin') {
+		            } else if (res == 'Enamemin') {
 			            msg = 'Name length < min';
-		            } else if(res == 'Enamemax') {
+		            } else if (res == 'Enamemax') {
 			            msg = 'Name length > max';
-		            } else if(res == 'Errmail') {
+		            } else if (res == 'Errmail') {
 			            msg = 'Invalid mail';
 		            }
 
 		            $('#signup div.print').print(msg);
                 } else {
-		            $('#signup div.print').print('Success, reloading...',true);
+		            $('#signup div.print').print('Success, reloading...', true);
 		            index.go('/oj/info/');
                 }
             });
         });
-        $('#signup button.cancel').on('click',function(e){
+
+        $('#signup button.cancel').on('click', (e) => {
             index.reload();
         });
     }

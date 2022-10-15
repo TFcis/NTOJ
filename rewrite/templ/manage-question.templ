@@ -18,8 +18,8 @@
 	<tbody>
 	    {% for acct in acctlist %}
 	    <tr>
-		<td>{{acct['acct_id']}}</td>
-		<td><a {% if asklist[acct['acct_id']] == True %}style="color:red"{% end %}href="/oj/acct/{{acct['acct_id']}}/">{{acct['name']}}</a></td>
+		<td>{{ acct['acct_id'] }}</td>
+		<td><a {% if asklist[acct['acct_id']] == True %}style="color:red"{% end %}href="/oj/acct/{{acct['acct_id']}}/">{{ acct['name'] }}</a></td>
 		<td><a class="btn-def" href="/oj/manage/rquestion/?qacct={{acct['acct_id']}}">&#x2699</a></td>
 	    </tr>
 	    {% end %}

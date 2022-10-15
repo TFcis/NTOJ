@@ -2,24 +2,25 @@
 
 <script type="text/javascript">
     function init(){
-	var j_submit = $('#submit');
+	    var j_submit = $('#submit');
 
-	j_submit.find('input.file').on('change',function(e){
-	    var reader = new FileReader();
+	    j_submit.find('input.file').on('change', (e) => {
+	        var reader = new FileReader();
 
-	    reader.onload = function(e){
-		j_submit.find('textarea.code').val(reader.result);
-	    };
-	    reader.readAsText(this.files[0]);
-	});
-        j_submit.find('button.submit').on('click',function(e){
+	        reader.onload = (e) => {
+	    	    j_submit.find('textarea.code').val(reader.result);
+	        };
+
+	        reader.readAsText(this.files[0]);
+	    });
+        j_submit.find('button.submit').on('click', (e) => {
             var code = j_submit.find('textarea.code').val();
 
-            $.post('/oj/be/submit',{
+            $.post('/oj/be/submit', {
                 'reqtype': 'submit',
-                'pro_id' :{{ pro['pro_id'] }},
+                'pro_id' : {{ pro['pro_id'] }},
                 'code': code
-            },function(res){
+            }, (res) => {
                 if (res[0] == 'E') {
                     if (res == 'Einternal') {
                         j_submit.find('div.print').print('interval < 30 sec');
@@ -28,7 +29,6 @@
                     } else if (res == 'Ejudge') {
                         j_submit.find('div.print').print('Judge Server is offline, cannot submit')
                     } else {
-                        // j_submit.find('div.print').print('Submit failed');
                         j_submit.find('div.print').print(res);
                     }
                 } else {

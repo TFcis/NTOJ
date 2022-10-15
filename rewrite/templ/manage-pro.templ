@@ -3,20 +3,20 @@
 <link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
 
 <script type="text/javascript" id="contjs">
-    function init(){
-	var j_prolist = $('#prolist');
+    function init() {
+		var j_prolist = $('#prolist');
 
-        j_prolist.find('button.rechal').on('click',function(e){
+        j_prolist.find('button.rechal').on('click', (e) => {
             var j_control = $(this).parents('td.control');
             var pro_id = j_control.attr('proid');
 
-            $.post('/oj/be/manage/pro',{
+            $.post('/oj/be/manage/pro', {
                 'reqtype':'rechal',    
                 'pro_id':pro_id
-            },function(res){
-                if(res[0] == 'E'){
+            }, (res) => {
+                if (res[0] == 'E') {
                     $('div.print').print('Unknown');
-                }else{
+                } else {
                     $('div.print').print('Processing...',true);
                 }
             });

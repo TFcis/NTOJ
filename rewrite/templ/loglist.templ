@@ -23,7 +23,7 @@
     {% set ct = math.floor(pageoff / 50) %}
     {% set st = min(max(0,ct - 9),
         max(0,math.ceil(lognum / 50) - 19))%}
-    {% for i,off in enumerate(range(st * 50,
+    {% for i, off in enumerate(range(st * 50,
         min(lognum,st * 50 + 950),50)) %}
         <li{% if ct == (i + st) %} class="active"{% end %}><a href="?off={{str(off)}}">{{ i + 1 + st }}</a></li>
     {% end %}

@@ -3,124 +3,130 @@
 <link rel="stylesheet" type="text/css" href="/oj/manage-acct.css">
 
 <script type="text/javascript" id="contjs">
-    function init(){
-	var j_form = $('#form');
-	var j_formcont = $('#form_cont');
-	j_form.find('button.submit').on('click',function(e){
-            var clas = j_form.find('select.class').val();
-	    var status = j_form.find('select.status').val();
-            var start = j_form.find('input.start').val();
-            var end = j_form.find('input.end').val();
+    function init() {
+		var j_form = $('#form');
+		var j_formcont = $('#form_cont');
 
-            if(start != '' && start != '-1'){
-                start = new Date(start + ' +0800').toISOString();
-	    }else if(start == '-1'){
-		start = new Date('197/01/01 00:00 +0800').toISOString();
-	    }
-            if(end != '' && end != '-1'){
-                end = new Date(end + ' +0800').toISOString();
-	    }else if(end == '-1'){
-		end = new Date('2100/01/01 00:00 +0800').toISOString();
-	    }
+		j_form.find('button.submit').on('click', function(e) {
+ 	           	var clas = j_form.find('select.class').val();
+		    	var status = j_form.find('select.status').val();
+ 	           	var start = j_form.find('input.start').val();
+ 	           	var end = j_form.find('input.end').val();
 
-            $.post('/oj/be/manage/contest',{
-                'reqtype':'set',
-		'cont_name':'default',
-                'class':clas,
-                'status':status,
-                'start':start,
-                'end':end,
-            },function(res){
-                msg = 'Unknown';
+ 	           	if (start != '' && start != '-1') {
+ 	               	start = new Date(start + ' +0800').toISOString();
+		    	} else if (start == '-1') {
+					start = new Date('197/01/01 00:00 +0800').toISOString();
+				}
+ 	           	if (end != '' && end != '-1') {
+ 	            	end = new Date(end + ' +0800').toISOString();
+		    	} else if (end == '-1') {
+					end = new Date('2100/01/01 00:00 +0800').toISOString();
+		    	}
 
-                if(res[0] == 'E'){
-                    if(res == 'Eparam'){
-                        msg = 'Paramater Error';
-                    }
+ 	           $.post('/oj/be/manage/contest', {
+ 	   	            'reqtype': 'set',
+					'cont_name':'default',
+ 	               	'class': clas,
+ 	               	'status': status,
+ 	               	'start': start,
+ 	               	'end': end,
+ 	           	}, function(res) {
+ 	           	    msg = 'Unknown';
 
-                    j_form.find('div.print').print(msg);
-                }else{
+ 	           	    if (res[0] == 'E') {
+ 	           	        if (res == 'Eparam') {
+ 	           	        	msg = 'Paramater Error';
+ 	           	        }
 
-                    j_form.find('div.print').print('Done',true);
-                }
-            });
-        });
-	j_formcont.find('button.submit').on('click',function(e){
-	    var cont_name = j_formcont.find('input.cont_name').val();
-	    var status = j_formcont.find('select.status').val();
-	    var start = j_formcont.find('input.start').val();
-	    var end = j_formcont.find('input.end').val();
-	    var pro_list = j_formcont.find('input.pro_list').val();
-	    var acct_list = j_formcont.find('input.acct_list').val();
-	    if(start != ''){
-		start = new Date(start + ' +0800').toISOString();
-	    }
-	    if(end != ''){
-		end = new Date(end + ' +0800').toISOString();
-	    }
-	    $.post('/oj/be/manage/contest',{
-		'reqtype':'set',
-		'cont_name':cont_name,
-		'class':0,
-		'status':status,
-		'start':start,
-		'end':end,
-		'pro_list':pro_list,
-		'acct_list':acct_list,
-	    },function(res){
-		msg = 'Unknown';
-		if(res[0] == 'E'){
-		    if(res == 'Eparam'){
-			msg = 'Paramater Error';
+ 	           	        j_form.find('div.print').print(msg);
+ 	           	    } else {
+ 	           	        j_form.find('div.print').print('Done',true);
+ 	           	    }
+ 	           	});
+ 	       	});
+
+		j_formcont.find('button.submit').on('click', function(e) {
+		    var cont_name = j_formcont.find('input.cont_name').val();
+		    var status = j_formcont.find('select.status').val();
+		    var start = j_formcont.find('input.start').val();
+		    var end = j_formcont.find('input.end').val();
+		    var pro_list = j_formcont.find('input.pro_list').val();
+		    var acct_list = j_formcont.find('input.acct_list').val();
+
+		    if (start != '') {
+				start = new Date(start + ' +0800').toISOString();
 		    }
-		    j_formcont.find('div.print').print(msg);
-		}else{
-		    j_formcont.find('div.print').print('Done',true);
-		    setTimeout(function(){index.go('/oj/manage/contest/');},1000)
-		}
-	    });
-	});
-	j_formcont.find('button.delete').on('click',function(e){
-	    var cont_name = j_formcont.find('input.cont_name').val();
-	    if(confirm('delete?')){
-		alert('delete');
-	    }else{
-		alert('not delete');
-		return;
-	    }
-	    $.post('/oj/be/manage/contest',{
-		'reqtype':'del',
-		'cont_name':cont_name,
-	    },function(res){
-		msg = 'Unknown';
-		if(res[0] == 'E'){
-		    if(res == 'Eparam'){
-			msg = 'Paramater Error';
+		    if (end != '') {
+				end = new Date(end + ' +0800').toISOString();
 		    }
-		    j_fromcont.find('div.print').print(msg);
-		}else{
-		    j_formcont.find('div.print').print('Done',true);
-		    setTimeout(function(){index.go('/oj/manage/contest/');},1000);
-		}
-	    });
-	});
-	j_formcont.find('select.contest').on('change',function(e){
-	    var cont_name = $(this).val();
-	    index.go('/oj/manage/contest/?cont='+cont_name);
-	});
-	j_formcont.find('button.auto').on('click',function(e){
-	    var cont_name = j_formcont.find('select.contest').val();
-	    $.post('/oj/be/auto',{
-		'reqtype':'add',
-		'cont_name':cont_name,
-	    },function(res){
-		if(res[0] == 'E'){
-		    j_formcont.find('div.print').print(res);
-		}else{
-		    j_formcont.find('div.print').print('Done',true);
-		}
-	    });
-	});
+
+		    $.post('/oj/be/manage/contest', {
+				'reqtype': 'set',
+				'cont_name': cont_name,
+				'class': 0,
+				'status': status,
+				'start': start,
+				'end': end,
+				'pro_list': pro_list,
+				'acct_list': acct_list,
+		    }, function(res) {
+				msg = 'Unknown';
+				if (res[0] == 'E') {
+				    if (res == 'Eparam') {
+						msg = 'Paramater Error';
+				    }
+				    j_formcont.find('div.print').print(msg);
+				} else {
+				    j_formcont.find('div.print').print('Done', true);
+				    setTimeout(function(){index.go('/oj/manage/contest/');}, 1000)
+				}
+		    });
+		});
+		j_formcont.find('button.delete').on('click', function(e) {
+		    var cont_name = j_formcont.find('input.cont_name').val();
+		    if (confirm('delete?')) {
+				alert('delete');
+		    } else {
+				alert('not delete');
+				return;
+		    }
+
+		    $.post('/oj/be/manage/contest', {
+				'reqtype': 'del',
+				'cont_name': cont_name,
+		    }, function(res) {
+				msg = 'Unknown';
+				if (res[0] == 'E') {
+				    if (res == 'Eparam') {
+					msg = 'Paramater Error';
+				    }
+				    j_fromcont.find('div.print').print(msg);
+				} else {
+				    j_formcont.find('div.print').print('Done', true);
+				    setTimeout(function(){index.go('/oj/manage/contest/');}, 1000);
+				}
+		    });
+		});
+
+		j_formcont.find('select.contest').on('change', function(e){
+		    var cont_name = $(this).val();
+		    index.go('/oj/manage/contest/?cont=' + cont_name);
+		});
+
+		j_formcont.find('button.auto').on('click',function(e) {
+		    var cont_name = j_formcont.find('select.contest').val();
+		    $.post('/oj/be/auto', {
+				'reqtype':'add',
+				'cont_name':cont_name,
+		    },function(res) {
+				if (res[0] == 'E') {
+				    j_formcont.find('div.print').print(res);
+				} else {
+				    j_formcont.find('div.print').print('Done', true);
+				}
+		    });
+		});
     }
 </script>
 
@@ -154,7 +160,7 @@
 	<select class="contest">
 	    <option value="Add_cont" {% if cont_name == 'Add_cont' %}selected{% end %}>Add contest</option>
 	    {% for cont in contlist %}
-	    <option value="{{cont}}" {% if cont == cont_name %}selected{% end %}>{{cont}}</option>
+	    <option value="{{ cont }}" {% if cont == cont_name %}selected{% end %}>{{ cont }}</option>
 	    {% end %}
 	</select>
 	{% if cont_name == 'Add_cont' %}
@@ -178,9 +184,9 @@
 
 	{% else %}
 	<label>contest name</label>
-	<input type="text" class="cont_name" value="{{cont_name}}" readonly>
+	<input type="text" class="cont_name" value="{{ cont_name }}" readonly>
 	<select class="status">
-            <option value=0{% if cont_meta['status'] == 0 %} selected{% end %}>Online</option>
+        <option value=0{% if cont_meta['status'] == 0 %} selected{% end %}>Online</option>
 	    <option value=1{% if cont_meta['status'] == 1 %} selected{% end %}>Hidden</option>
 	    <option value=2{% if cont_meta['status'] == 2 %} selected{% end %}>Offline</option>
 	</select>
@@ -189,9 +195,9 @@
         <label>End</label>
         <input type="text" class="end" value="{{ cont_meta['end'].strftime('%Y/%m/%d %H:%M') }}" placeholder="[Year / Month / Day Hour : Minute]">
 	<label>problem list</label>
-	<input type="text" class="pro_list" value="{{str(cont_meta['pro_list'])[1:-1].replace(' ','')}}">
+	<input type="text" class="pro_list" value="{{ str(cont_meta['pro_list'])[1:-1].replace(' ','') }}">
 	<label>account list</label>
-	<input type="text" class="acct_list" value="{{str(cont_meta['acct_list'])[1:-1].replace(' ','')}}">
+	<input type="text" class="acct_list" value="{{ str(cont_meta['acct_list'])[1:-1].replace(' ','') }}">
 	<button class="btn-con submit">Apply</button>
 	<button class="btn-con auto">Auto</button>
 	<button class="btn-def cancel">Cancel</button>

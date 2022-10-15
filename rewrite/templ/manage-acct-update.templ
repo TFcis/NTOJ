@@ -3,32 +3,34 @@
 <link rel="stylesheet" type="text/css" href="/oj/manage-acct.css">
 
 <script type="text/javascript" id="contjs">
-    function init(){
-	var j_form = $('#form');
+    function init() {
+		var j_form = $('#form');
 
-	j_form.find('button.submit').on('click',function(e){
-            var type = j_form.find('select.type').val();
-            var clas = j_form.find('select.class').val();
-	    var group = j_form.find('select.glist').val(); 
-            $.post('/oj/be/manage/acct',{
-                'reqtype':'updateacct',
-                'acct_id':{{ acct['acct_id'] }},
-                'acct_type':type,
-                'class':clas,
-		'group':group
-            },function(res){
-                var msg = 'Unknown';
+		j_form.find('button.submit').on('click', function(e) {
+ 	           	var type = j_form.find('select.type').val();
+ 	    		var clas = j_form.find('select.class').val();
+				var group = j_form.find('select.glist').val(); 
 
-                if(res[0] == 'E'){
+ 	           	$.post('/oj/be/manage/acct', {
+ 	                'reqtype': 'updateacct',
+ 	                'acct_id': {{ acct['acct_id'] }},
+ 	                'acct_type': type,
+ 	                'class': clas,
+					'group': group,
+ 	           	}, function(res) {
+ 	                var msg = 'Unknown';
 
-                }else{
-                    index.go('/oj/manage/acct/');
-                }
-            });
-	});
-	j_form.find('button.cancel').on('click',function(e){
-	    index.go('/oj/manage/acct/');
-	});
+ 	                if(res[0] == 'E') {
+
+ 	                } else {
+ 	                    index.go('/oj/manage/acct/');
+ 	                }
+ 	           });
+		});
+
+		j_form.find('button.cancel').on('click', function(e) {
+		    index.go('/oj/manage/acct/');
+		});
     }
 </script>
 {% end %}

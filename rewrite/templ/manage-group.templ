@@ -1,68 +1,75 @@
 {% extends 'manage.templ' %}
 {% block head %}
 <script>
-    function init(){
+    function init() {
 	var j_form = $('#form');
-	j_form.find('select.glist').on('change',function(e){
+
+	j_form.find('select.glist').on('change', function(e) {
 	    var url = '/oj/manage/group/';
 	    var gname = $(this).val();
-	    if(gname != 'add_group'){
-		url += '?gname='+gname;
+	    if (gname != 'add_group') {
+			url += '?gname=' + gname;
 	    }
 	    index.go(url);
 	});
-	j_form.find('button.submit').on('click',function(e){
+
+	j_form.find('button.submit').on('click', function(e) {
 	    alert('submit');
-	    var gname = '{{gname}}';
+	    var gname = '{{ gname }}';
 	    var gtype = j_form.find('select.gtype').val();
 	    var gclas = j_form.find('select.gclas').val();
-	    $.post('/oj/be/manage/group',{
-		'reqtype':'edit',
-		'gname':gname,
-		'gtype':gtype,
-		'gclas':gclas,
-	    },function(res){
-		if(res[0] == 'E'){
-		    j_form.find('div.print').print(res);
-		}else{
-		    j_form.find('div.print').print('Done',true);
-		}
+
+	    $.post('/oj/be/manage/group', {
+			'reqtype': 'edit',
+			'gname': gname,
+			'gtype': gtype,
+			'gclas': gclas,
+	    }, function(res) {
+			if (res[0] == 'E') {
+			    j_form.find('div.print').print(res);
+			} else {
+			    j_form.find('div.print').print('Done', true);
+			}
 	    });
 	});
-	j_form.find('button.add_group').on('click',function(e){
+
+	j_form.find('button.add_group').on('click', function(e) {
 	    var gname = j_form.find('input.gname').val();
 	    var gtype = j_form.find('select.gtype').val();
 	    var gclas = j_form.find('select.gclas').val();
-	    if(gname == ''){
-		j_form.find('div.print').print('name error');
-		return;
+
+	    if (gname == '') {
+			j_form.find('div.print').print('name error');
+			return;
 	    }
-	    $.post('/oj/be/manage/group',{
-		'reqtype':'add_group',
-		'gname':gname,
-		'gtype':gtype,
-		'gclas':gclas
-	    },function(res){
-		if(res[0] == 'E'){
-		    j_form.find('div.print').print(res);
-		}else{
-		    j_form.find('div.print').print('Done',true);
-		    index.reload();
-		}
+
+	    $.post('/oj/be/manage/group', {
+			'reqtype': 'add_group',
+			'gname': gname,
+			'gtype': gtype,
+			'gclas': gclas
+	    }, function(res) {
+			if (res[0] == 'E') {
+			    j_form.find('div.print').print(res);
+			} else {
+			    j_form.find('div.print').print('Done', true);
+			    index.reload();
+			}
 	    });
 	});
-	j_form.find('button.del_group').on('click',function(e){
-	    var gname = "{{gname}}";
-	    $.post('/oj/be/manage/group',{
-		'reqtype':'del_group',
-		'gname':gname,
-	    },function(res){
-		if(res[0] == 'E'){
-		    j_form.find('div.print').print(res);
-		}else{
-		    j_form.find('div.print').print('Done',true);
-		    index.go('/oj/manage/group/');
-		}
+
+	j_form.find('button.del_group').on('click', function(e) {
+	    var gname = "{{ gname }}";
+	    $.post('/oj/be/manage/group', {
+			'reqtype': 'del_group',
+			'gname': gname,
+	    }, function(res) {
+			if (res[0] == 'E') {
+			    j_form.find('div.print').print(res);
+			} else {
+			    j_form.find('div.print').print('Done', true);
+			    index.go('/oj/manage/group/');
+			}
 	    });
 	});
     }
@@ -74,7 +81,7 @@
 	<select class="glist">
 	    <option value="add_group" {% if gname == None %}selected{% end %}>Add Group</option>
 	    {% for group in glist %}
-	    <option value="{{group}}" {% if gname == group %}selected{% end %}>{{group}}</option>
+	    <option value="{{group}}" {% if gname == group %}selected{% end %}>{{ group }}</option>
 	    {% end %}
 	</select>
 	{% if gname == None %}
@@ -119,8 +126,8 @@
 	    <tbody>
 		{% for acct in gacct %}
 		<tr>
-		    <td>{{acct['acct_id']}}</td>
-		    <td><a href="/oj/acct/{{acct['acct_id']}}/">{{acct['acct_name']}}</a></td>
+		    <td>{{ acct['acct_id'] }}</td>
+		    <td><a href="/oj/acct/{{ acct['acct_id'] }}/">{{ acct['acct_name'] }}</a></td>
 		</tr>
 		{% end %}
 	    </tbody>

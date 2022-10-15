@@ -6,52 +6,56 @@
 <script type="text/javascript">
     function init(){
         var j_filter = $('#filter');
-        j_filter.find('select.pclass').on('change',function(e){
+
+        j_filter.find('select.pclass').on('change', (e) => {
             var pclas = $(this).val();
             var clas = j_filter.find('select.class').val();
 
-            if(pclas == 'None'){
-            if(clas == -1){
-                index.go('/oj/proset/');
-            }else{
-                index.go('/oj/proset/?class='+clas);
-            }
-            }else{
-            if(clas == -1){
-                index.go('/oj/proset/?pclas_key='+pclas);
-            }else{
-                index.go('/oj/proset/?class='+clas+'&pclas_key='+pclas);
-            }
+            if (pclas == 'None') {
+                if (clas == -1) {
+                    index.go('/oj/proset/');
+                } else {
+                    index.go('/oj/proset/?class=' + clas);
+                }
+            } else {
+                if(clas == -1) {
+                    index.go('/oj/proset/?pclas_key=' + pclas);
+                } else {
+                    index.go('/oj/proset/?class=' + clas + '&pclas_key=' + pclas);
+                }
             }
         });
-        j_filter.find('select.class').on('change',function(e){
+
+        j_filter.find('select.class').on('change', (e) => {
             var clas = $(this).val();
             var off = location.href.match(/off=(\d+)/);
             var pclas = j_filter.find('select.pclass').val();
-            if(off == null){
+
+            if (off == null) {
                 off = 0;
-            }else{
+            } else {
                 off = parseInt(off[1]);
             }
 
-            if(clas == -1){
-                if(pclas == 'None'){
+            if (clas == -1) {
+                if (pclas == 'None') {
                     index.go('/oj/proset/?off=' + off);
-                }else{
+                } else {
                     index.go('/oj/proset/?off='+off+'&pclas_key='+pclas);
                 }
-            }else{
-                if(pclas == 'None'){
+            } else {
+                if (pclas == 'None') {
                     index.go('/oj/proset/?off=' + off + '&class=' + clas);
-                }else{
+                } else {
                     index.go('/oj/proset/?off='+off+'&class='+clas+'&pclas_key='+pclas);
                 }
             }
         });
+
         var select_prob = j_filter.find('input.select_prob');
-        select_prob.on('keypress',function(e){
-            if(e.keyCode==13)
-                $(location).attr('href',"/oj/pro/"+select_prob.val()+"/");
+        select_prob.on('keypress', (e) => {
+            if (e.keyCode == 13)
+                $(location).attr('href', "/oj/pro/" + select_prob.val()+ "/");
         });
     }
 </script>
@@ -78,7 +82,7 @@
         <td colspan=2><select class="pclass">
             <option value="None" {% if pclas_key == None %}selected{% end %}>None</option>
             {% for pclas in pclist %}
-            <option value="{{pclas['key']}}" {% if pclas['key'] == pclas_key %}selected{% end %}>{{pclas['name']}}</option>
+            <option value="{{pclas['key']}}" {% if pclas['key'] == pclas_key %}selected{% end %}>{{ pclas['name'] }}</option>
             {% end %}
         </select></td>
         </tr>

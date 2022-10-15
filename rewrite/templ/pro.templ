@@ -13,7 +13,7 @@
                 $.post('/oj/be/set-tags', {
                     'pro_id': {{ pro['pro_id'] }},
                     'tags': tags,
-                },function() {
+                }, function() {
                     $('#tags-done').show();
                 });
             } else {
@@ -22,6 +22,7 @@
                 $('#tags-invalid').show();
             }
         });
+
         var viewer = 1;
         $('#switchviewer').on('click', function() {
             if (viewer == 1) {
@@ -35,9 +36,9 @@
 
         var j_cont = $('#cont');
 
-        function _load_html(){
-            j_cont.load('/oj/pro/{{ pro['pro_id'] }}/cont.html',function(res,status,xhr){
-                if(status == 'error'){
+        function _load_html() {
+            j_cont.load('/oj/pro/{{ pro['pro_id'] }}/cont.html', (res,status,xhr) => {
+                if(status == 'error') {
                     $('#pdfbtn').show();
                     $('#switchviewer').show();
 
@@ -47,17 +48,17 @@
                         _load_pdf_embed();
                         viewer = 2;
                     }
-                }else{
+                } else {
                     MathJax.Hub.Queue(["Typeset",MathJax.Hub,j_cont[0]]);
-                    j_cont.find('pre > code').each(function(i,e){
+                    j_cont.find('pre > code').each((i, e) => {
                         $(e).addClass('html');
                         hljs.highlightBlock(e);
                     });
                 }
             });
         }
-        function _load_pdf_js(){
-            PDFJS.getDocument('/oj/pro/{{ pro['pro_id'] }}/cont.pdf').then(function(pdf){
+        function _load_pdf_js() {
+            PDFJS.getDocument('/oj/pro/{{ pro['pro_id'] }}/cont.pdf').then((pdf) => {
                 var i;
                 j_cont.empty();
                 for(i = 1; i <= pdf.numPages; i++) {
@@ -65,7 +66,7 @@
                     j_cont.append(j_page)
                 }
 
-                for(i = 0;i < pdf.numPages;i++){
+                for(i = 0;i < pdf.numPages; i++){
                     pdf.getPage(i + 1).then(function(idx){return function(page){
                         var j_page = $('#pdf-page-' + idx);
                         var j_canvas = $('<canvas style="width:100%; margin-bottom:16px; display:block;"></canvas>');
@@ -125,8 +126,8 @@
     {% else %}
         <a class="btn-pri btn-lg">Cannot Submit</a><br />
     {% end %}
-    <a class="btn-con" href="/oj/rank/{{pro['pro_id']}}/">&nbsp;Rank&nbsp;</a>
-    <a class="btn-def" href="/oj/chal/?proid={{pro['pro_id']}}">Status</a>
+    <a class="btn-con" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
+    <a class="btn-def" href="/oj/chal/?proid={{ pro['pro_id'] }}">Status</a>
     <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf?download=1','_blank');" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
     <a id="switchviewer" class="btn-wrn" style="display:none; width:156px; text-align:center;">Switch Viewer</a>
     <div></div>

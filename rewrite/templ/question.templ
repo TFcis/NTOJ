@@ -2,47 +2,50 @@
 <link rel="stylesheet" type="text/css" href="/oj/blk.css">
 
 <script type="text/javascript">
-    function init(){
+    function init() {
         var j_form = $('#form');
-        j_form.find('button.submit').on('click',function(e){
-	    var qtext = j_form.find('textarea.ques').val();
-	    $.post('/oj/be/question',{
-		'reqtype':'ask',
-		'acct_id':{{acct['acct_id']}},
-		'qtext':qtext,
-	    },function(res){
-            msg = 'Unknown';
-            if(res[0] == 'E') {
-                msg = res;
-                j_form.find('div.print').print(msg);
-            } else {
-                j_form.find('div.print').print('Done',true)
-                setTimeout(function(){index.reload();},1000);
-            }
-	    });
-	});
+        j_form.find('button.submit').on('click', (e) => {
+	    	var qtext = j_form.find('textarea.ques').val();
+
+	    	$.post('/oj/be/question', {
+				'reqtype': 'ask',
+				'acct_id':{{ acct['acct_id'] }},
+				'qtext': qtext,
+	    	}, (res) => {
+     	       msg = 'Unknown';
+     	       if (res[0] == 'E') {
+     	           msg = res;
+     	           j_form.find('div.print').print(msg);
+     	       } else {
+     	           j_form.find('div.print').print('Done',true)
+     	           setTimeout(function(){index.reload();},1000);
+     	       }
+	    	});
+		});
     }
-    function rm_ques(index){
+
+    function rm_ques(index) {
         var j_form = $('#form');
-        $.post('/oj/be/question',{
-            'reqtype':'rm_ques',
-            'acct_id':{{acct['acct_id']}},
-            'index':index,
-        },function(res){
+
+        $.post('/oj/be/question', {
+            'reqtype': 'rm_ques',
+            'acct_id': {{ acct['acct_id'] }},
+            'index': index,
+        }, (res) => {
             msg = 'Unknown';
-            if(res[0] == 'E') {
+            if (res[0] == 'E') {
                 msg = res;
                 j_form.find('div.print').print(msg);
             } else {
-                j_form.find('div.print').print('Done',true);
-                setTimeout(function(){index.reload();},1000);
+                j_form.find('div.print').print('Done', true);
+                setTimeout(function(){index.reload();}, 1000);
             }
         });
     }
 </script>
 <div class="g-lg-12">
     <div>
-	{{acct['acct_id']}}
+	{{ acct['acct_id'] }}
     </div>
     <div id="form">
 	<table border="2px">
@@ -57,7 +60,7 @@
 	    {% set count = 0 %}
 	    {% for ques in ques_list %}
 	    <tr>
-		<td style="width:8%;"><input type="button" value="remove" onclick="rm_ques({{count}});"></input></td>
+		<td style="width:8%;"><input type="button" value="remove" onclick="rm_ques({{ count }});"></input></td>
 		<td>{{ques['Q']}}</td>
 		{% if ques['A'] == None%}
 		<td style="color:red;">Wait for Reply</td>

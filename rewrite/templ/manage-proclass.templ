@@ -3,70 +3,76 @@
 <script>
     function init(){
 	var j_form = $('#form');
-	j_form.find('select.pclas_key').on('change',function(e){
+	j_form.find('select.pclas_key').on('change', (e) => {
 	    var pclas_key = j_form.find('select.pclas_key').val();
-	    if(pclas_key == 'None'){
-		index.go('/oj/manage/proclass/');
-	    }else{
-		index.go('/oj/manage/proclass/?pclas_key='+pclas_key);
+	    if (pclas_key == 'None') {
+			index.go('/oj/manage/proclass/');
+	    } else {
+			index.go('/oj/manage/proclass/?pclas_key=' + pclas_key);
 	    }
 	});
-	j_form.find('button.submit').on('click',function(e){
+
+	j_form.find('button.submit').on('click', (e) => {
 	    var pclas_key = j_form.find('input.pclas_key').val();
 	    var pclas_name = j_form.find('input.pclas_name').val();
 	    var p_list = j_form.find('input.p_list').val();
-	    $.post('/oj/be/manage/proclass',{
-		'reqtype':'add',
-		'pclas_key':pclas_key,
-		'pclas_name':pclas_name,
-		'p_list':p_list,
-	    },function(res){
-		msg = 'Unknown';
-		if(res[0] == 'E'){
-		    msg = res;
-		    j_form.find('div.print').print(msg);
-		}else{
-		    j_form.find('div.print').print('done',true);
-		    setTimeout(function(){index.reload();},1000);
-		}
+
+	    $.post('/oj/be/manage/proclass', {
+			'reqtype': 'add',
+			'pclas_key': pclas_key,
+			'pclas_name': pclas_name,
+			'p_list': p_list,
+	    }, (res) => {
+			msg = 'Unknown';
+			if (res[0] == 'E') {
+			    msg = res;
+			    j_form.find('div.print').print(msg);
+			} else {
+			    j_form.find('div.print').print('done', true);
+			    setTimeout(function(){index.reload();}, 1000);
+			}
 	    });
 	});
-	j_form.find('button.delete').on('click',function(e){
+
+	j_form.find('button.delete').on('click', (e) => {
 	    var pclas_key = j_form.find('select.pclas_key').val();
-	    $.post('/oj/be/manage/proclass',{
-		'reqtype':'remove',
-		'pclas_key':pclas_key,
-	    },function(res){
-		msg = 'Unknown';
-		if(res[0] == 'E'){
-		    msg = res;
-		    j_form.find('div.print').print(msg);
-		}else{
-		    j_form.find('div.print').print('Done',true);
-		    setTimeout(function(){index.go('/oj/manage/proclass/');},1000);
-		}
+
+	    $.post('/oj/be/manage/proclass', {
+			'reqtype': 'remove',
+			'pclas_key': pclas_key,
+	    }, (res) => {
+			msg = 'Unknown';
+			if (res[0] == 'E') {
+			    msg = res;
+			    j_form.find('div.print').print(msg);
+			} else {
+			    j_form.find('div.print').print('Done', true);
+			    setTimeout(function(){index.go('/oj/manage/proclass/');}, 1000);
+			}
 	    });
 	});
-	j_form.find('button.edit').on('click',function(e){
+	j_form.find('button.edit').on('click', (e) => {
 	    var pclas_key = j_form.find('select.pclas_key').val();
 	    var new_pclas_key = j_form.find('input.pclas_key').val();
 	    var pclas_name = j_form.find('input.pclas_name').val();
 	    var p_list = j_form.find('input.p_list').val();
-	    $.post('/oj/be/manage/proclass',{
-		'reqtype':'edit',
-		'pclas_key':pclas_key,
-		'new_pclas_key':new_pclas_key,
-		'pclas_name':pclas_name,
-		'p_list':p_list,
-	    },function(res){
-		msg = 'Unknown';
-		if(res[0] == 'E'){
-		    msg = res;
-		    j_form.find('div.print').print(msg);
-		}else{
-		    j_form.find('div.print').print('Done',true);
-		    setTimeout(function(){index.go('/oj/manage/proclass/?pclas_key='+new_pclas_key);},1000)
-		}
+
+	    $.post('/oj/be/manage/proclass', {
+			'reqtype': 'edit',
+			'pclas_key': pclas_key,
+			'new_pclas_key': new_pclas_key,
+			'pclas_name': pclas_name,
+			'p_list': p_list,
+	    }, (res) => {
+			msg = 'Unknown';
+			if (res[0] == 'E') {
+			    msg = res;
+			    j_form.find('div.print').print(msg);
+			} else {
+			    j_form.find('div.print').print('Done', true);
+			    setTimeout(function(){index.go('/oj/manage/proclass/?pclas_key=' + new_pclas_key);}
+				,1000)
+			}
 	    });
 	});
     }
@@ -79,7 +85,7 @@
 	<select class="pclas_key">
 	    <option value="None" {% if pclas_key == None %}selected{% end %}>Add problem class</option>
 	    {% for clas in clas_list %}
-	    <option value="{{clas['key']}}" {% if clas['key'] == pclas_key %}selected{% end %}>{{clas['name']}}</option>
+	    <option value="{{clas['key']}}" {% if clas['key'] == pclas_key %}selected{% end %}>{{ clas['name'] }}</option>
 	    {% end %}
 	</select>
 	<label>Problem Class Key（用於網址，建議英文，不可重複）</label>
