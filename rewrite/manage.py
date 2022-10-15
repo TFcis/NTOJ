@@ -445,8 +445,9 @@ class ManageHandler(RequestHandler):
             elif reqtype == 'edit':
                 index = self.get_argument('index')
                 text = self.get_argument('text')
+                color = self.get_argument('color')
                 await LogService.inst.add_log(f"{self.acct['name']} changed a line on bulletin: \"{text}\" which it used to be the #{int(index) + 1}th row.")
-                await Service.Inform.edit_inform(index, text)
+                await Service.Inform.edit_inform(index, text, color)
                 return
 
             elif reqtype == 'del':

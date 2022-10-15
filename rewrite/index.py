@@ -40,10 +40,6 @@ class InfoHandler(RequestHandler):
     async def get(self):
         if (inform_list := (await self.rs.get('inform'))) != None:
             inform_list = msgpack.unpackb(inform_list)
-
-            #TODO: Performance test
-            #TODO: sort轉移到set的時候
-            inform_list.sort(key=lambda row: row['time'], reverse=True)
         else:
             inform_list = []
 

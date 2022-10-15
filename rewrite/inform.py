@@ -11,20 +11,24 @@ class InformService:
 
     async def set_inform(self, text):
         inform_list = unpackb((await self.rs.get('inform')))
-        inform_list.append({ 'text': str(text), 'time': str(datetime.datetime.now())[:-7]})
+        inform_list.append({ 'text': str(text), 'time': str(datetime.datetime.now())[:-7], 'color': 'white' })
+        inform_list.sort(key=lambda row: row['time'], reverse=True)
         await self.rs.set('inform', packb(inform_list))
         await self.rs.publish('informsub', 1)
         return
 
-    async def edit_inform(self, index, text):
+    async def edit_inform(self, index, text, color):
         inform_list = unpackb((await self.rs.get('inform')))
-        inform_list[int(index)] = {'text': str(text), 'time': str(datetime.datetime.now())[:-7]}
+        inform_list[int(index)] = {'text': str(text), 'time': str(datetime.datetime.now())[:-7], 'color': color }
+        inform_list.sort(key=lambda row: row['time'], reverse=True)
         await self.rs.set('inform', packb(inform_list))
+        await self.rs.publish('informsub', 1)
         return
 
     async def del_inform(self, index):
         inform_list = unpackb((await self.rs.get('inform')))
         inform_list.pop(int(index))
+        inform_list.sort(key=lambda row: row['time'], reverse=True)
         await self.rs.set('inform', packb(inform_list))
         return
 
@@ -44,13 +48,13 @@ class InformSub(WebSocketHandler):
 
                 await self.on_message(str(int(msg['data'])))
 
-        self.afd = asyncio.tasks.Task(test())
+        self.task = asyncio.tasks.Task(test())
 
     async def on_message(self, msg):
         self.write_message(msg)
 
     def on_close(self) -> None:
-        self.afd.cancel()
+        self.task.cancel()
 
     def check_origin(self, origin):
         #TODO: secure

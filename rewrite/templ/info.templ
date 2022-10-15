@@ -14,8 +14,8 @@
 	<tbody>
     {% for inform in inform_list%}
 	    <tr>
-		<td ><font size=5>{{inform['text']}}</font></td>
-		<td><font size=3>{{inform['time']}}</font></td>
+		<td style="color: {{ inform['color'] }};"><font size=5>{{inform['text']}}</font></td>
+		<td><font size=3>{{ inform['time'] }}</font></td>
 	    </tr>
     {% end %}
 	</tbody>

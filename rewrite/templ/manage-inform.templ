@@ -4,55 +4,59 @@
 
 <script type="text/javascript">
     var j_form = $('#form');
-    function init(){
-	j_form.find('button.submit').on('click',function(e){
-	    var text = j_form.find('textarea.text').val();
-	    $.post('/oj/be/manage/inform',{
-		'reqtype':'set',
-		'text':text,
-	    },function(res){
-		msg = 'Unknown';
-		if(res[0] == 'E'){
-		    msg = res;
-		    j_form.find('div.print').print(msg);
-		}else{
-		    j_form.find('div.print').print('Done',true);
-		    setTimeout(function(){index.reload();},1000);
-		}
+    function init() {
+	    j_form.find('button.submit').on('click', function(e) {
+	        var text = j_form.find('textarea.text').val();
+	        $.post('/oj/be/manage/inform', {
+	    	    'reqtype': 'set',
+	    	    'text': text,
+				'color': 'white',
+	        }, function(res) {
+	    	    msg = 'Unknown';
+	    	    if (res[0] == 'E') {
+	    	        msg = res;
+	    	        j_form.find('div.print').print(msg);
+	    	    } else {
+	    	        j_form.find('div.print').print('Done',true);
+	    	        setTimeout(function(){index.reload();},1000);
+	    	    }
+	        });
 	    });
-	});
     }
-    function edit(index){
-	var text = j_form.find('input.'+index).val();
-	$.post('/oj/be/manage/inform',{
-	    'reqtype':'edit',
-	    'index':index,
-	    'text':text,
-	},function(res){
-	    msg = 'Unknown';
-	    if(res[0] == 'E'){
-		msg = res;
-		j_form.find('div.print').print(msg);
-	    }else{
-		j_form.find('div.print').print('Done',true);
-		setTimeout(function(){location.href='/oj/manage/inform/';},1000);
-	    }
-	});
+
+    function edit(index) {
+	    var text = j_form.find('input.text-' + index).val();
+		var color = j_form.find('input.color-' + index).val();
+	    $.post('/oj/be/manage/inform', {
+	        'reqtype': 'edit',
+	        'index': index,
+	        'text': text,
+			'color': color,
+	    }, function(res) {
+	        msg = 'Unknown';
+	        if (res[0] == 'E') {
+	    		msg = res;
+	    		j_form.find('div.print').print(msg);
+	        } else {
+	    		j_form.find('div.print').print('Done',true);
+	    		setTimeout(function(){location.href='/oj/manage/inform/';},1000);
+	        }
+	    });
     }
-    function rm(index){
-	$.post('/oj/be/manage/inform',{
-	    'reqtype':'del',
-	    'index':index,
-	},function(res){
-	    msg = 'Unknown';
-	    if(res[0] == 'E'){
-		msg = res;
-		j_form.find('div.print').print(msg);
-	    }else{
-		j_form.find('div.print').print('Done',true);
-		setTimeout(function(){location.href='/oj/manage/inform/';},1000);
-	    }
-	});
+    function rm(index) {
+	    $.post('/oj/be/manage/inform', {
+	        'reqtype': 'del',
+	        'index': index,
+	    }, function(res) {
+	        msg = 'Unknown';
+	        if (res[0] == 'E') {
+	    	    msg = res;
+	    	    j_form.find('div.print').print(msg);
+	        } else {
+	    		j_form.find('div.print').print('Done', true);
+	    		setTimeout(function(){location.href='/oj/manage/inform/';}, 1000);
+	        }
+	    });
     }
 </script>
 {% end %}
@@ -63,7 +67,8 @@
 	<table border=2>
 	    <thead>
 		<tr>
-		<td style="width:64%;">Inform Text</td>
+		<td style="width:56%;">Inform Text</td>
+		<td style="width:8%;">Color</td>
 		<td style="width:20%;">Inform Time</td>
 		<td style="width:8%;"></td>
 		<td style="width:8%;"></td></tr>
@@ -72,10 +77,11 @@
 		{% set count = 0 %}
 		{% for inform in inform_list %}
 		<tr>
-		    <td><input class="{{count}}" type="text" value="{{inform['text']}}"</input></td>
+		    <td><input class="text-{{ count }}" type="text" value="{{ inform['text'] }}"</input></td>
+		    <td><input class="color-{{ count }}" type="text" value="{{ inform['color'] }}"</input></td>
 		    <td>{{inform['time']}}</td>
-		    <td><input type="button" value="edit" onclick="edit('{{count}}');"></input></td>
-		    <td><input type="button" value="remove" onclick="rm({{count}});"></input></td>
+		    <td><input type="button" value="edit" onclick="edit('{{ count }}');"></input></td>
+		    <td><input type="button" value="remove" onclick="rm({{ count }});"></input></td>
 		</tr>
 		{% set count = count + 1 %}
 		{% end %}
