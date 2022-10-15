@@ -1,6 +1,8 @@
 import math
 import re
 
+from msgpack import packb, unpackb
+
 from req import RequestHandler, Service, reqenv
 from user import UserService, UserConst
 from chal import ChalConst
@@ -11,75 +13,16 @@ from dbg import dbg_print
 class AcctHandler(RequestHandler):
     @reqenv
     async def get(self, acct_id):
+        acct_id = int(acct_id)
         err, acct = await UserService.inst.info_acct(acct_id)
         if err:
             self.error(err)
             return
 
-        acct_id = int(acct_id)
-
-        async with self.db.acquire() as con:
-            result = await con.fetch(('SELECT '
-                    'SUM("test_valid_rate"."rate" * '
-                    '    CASE WHEN "valid_test"."timestamp" < "valid_test"."expire" '
-                    '    THEN 1 ELSE '
-                    '    (1 - (GREATEST(date_part(\'days\',justify_interval('
-                    '    age("valid_test"."timestamp","valid_test"."expire") '
-                    '    + \'1 days\')),-1)) * 0.15) '
-                    '    END) '
-                    'AS "rate" FROM "test_valid_rate" '
-                    'INNER JOIN ('
-                    '    SELECT "test"."pro_id","test"."test_idx",'
-                    '    MIN("test"."timestamp") AS "timestamp","problem"."expire" '
-                    '    FROM "test" '
-                    '    INNER JOIN "account" '
-                    '    ON "test"."acct_id" = "account"."acct_id" '
-                    '    INNER JOIN "problem" '
-                    '    ON "test"."pro_id" = "problem"."pro_id" '
-                    '    WHERE "account"."acct_id" = $1 '
-                    '    AND "test"."state" = $2 '
-                    '    AND "account"."class" && "problem"."class" '
-                    '    GROUP BY "test"."pro_id","test"."test_idx","problem"."expire"'
-                    ') AS "valid_test" '
-                    'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
-                    'AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";'),
-                    acct_id, int(ChalConst.STATE_AC))
-        if result.__len__() != 1:
-            self.error('Eunk')
+        err, rate_data = await Service.Rate.get_acct_rate_and_chal_cnt(acct)
+        if err:
+            self.error(err)
             return
-
-        rate = 3227
-        prolist2 = []
-        rate = result[0]['rate']
-        if rate == None:
-            rate = 0
-
-        #INFO: Not Currently in use
-        # extrate = 3227
-        # if acct['class'] == 0:
-        #     result = await self.db.fetch(('SELECT '
-        #             'SUM("test_valid_rate"."rate") '
-        #             'AS "rate" FROM "test_valid_rate" '
-        #             'INNER JOIN ('
-        #             '    SELECT "test"."pro_id","test"."test_idx" '
-        #             '    FROM "test" '
-        #             '    INNER JOIN "problem" '
-        #             '    ON "test"."pro_id" = "problem"."pro_id" '
-        #             '    WHERE "test"."acct_id" = $1 '
-        #             '    AND "test"."state" = $2 '
-        #             '    AND $3 && "problem"."class" '
-        #             '    GROUP BY "test"."pro_id","test"."test_idx"'
-        #             ') AS "valid_test" '
-        #             'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
-        #             'AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";'),
-        #             acct_id, int(ChalConst.STATE_AC), [2])
-        #     if result.__len__() != 1:
-        #         self.error('Eunk')
-        #         return
-        #
-        #     extrate = result[0]['rate']
-        #     if extrate == None:
-        #         extrate = 0
 
         max_status = await Service.Pro.get_acct_limit(self.acct)
         async with self.db.acquire() as con:
@@ -105,12 +48,14 @@ class AcctHandler(RequestHandler):
             prolist2.append(tmp)
 
         isadmin = (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
+        rate_data['rate'] = math.floor(rate_data['rate'])
 
         # force https, add by xiplus, 2018/8/24
         acct['photo'] = re.sub(r'^http://', 'https://', acct['photo'])
         acct['cover'] = re.sub(r'^http://', 'https://', acct['cover'])
 
-        await self.render('acct', acct=acct, rate=math.floor(rate), prolist=prolist2, isadmin=isadmin)
+        # await self.render('acct', acct=acct, rate=math.floor(rate), prolist=prolist2, isadmin=isadmin)
+        await self.render('acct', acct=acct, rate=rate_data, prolist=prolist2, isadmin=isadmin)
 
     @reqenv
     async def post(self):

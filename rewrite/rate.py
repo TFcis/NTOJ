@@ -4,6 +4,7 @@ import datetime
 from msgpack import packb, unpackb
 
 from user import UserConst
+from chal import ChalConst
 from pro import ProConst
 from req import Service
 
@@ -125,6 +126,108 @@ class RateService:
     #         statemap[acct_id][pro_id] = state
     #
     #     return (None, statemap)
+
+    async def get_acct_rate_and_chal_cnt(self, acct):
+        kernel = (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
+        key = f'rate@kernel_{kernel}'
+        acct_id = int(acct['acct_id'])
+
+        async with self.db.acquire() as con:
+            all_chal_cnt = await con.fetchrow('SELECT COUNT(*) FROM "challenge" WHERE "acct_id" = $1', acct_id)
+            all_chal_cnt = all_chal_cnt['count']
+
+            ac_chal_cnt = await con.fetchrow(
+                '''
+                    SELECT COUNT(*) FROM "challenge"
+                    INNER JOIN "challenge_state"
+                    ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                    AND "challenge_state"."state" = $1
+                    WHERE "acct_id" = $2
+                ''',
+                ChalConst.STATE_AC, acct_id
+            )
+            ac_chal_cnt = ac_chal_cnt['count']
+
+            if (rate_data := await self.rs.hget(key, acct_id)) != None:
+                rate_data = unpackb(rate_data)
+
+                if int(rate_data['all_cnt']) != all_chal_cnt:
+                    result = await con.fetch(('SELECT '
+                            'SUM("test_valid_rate"."rate" * '
+                            '    CASE WHEN "valid_test"."timestamp" < "valid_test"."expire" '
+                            '    THEN 1 ELSE '
+                            '    (1 - (GREATEST(date_part(\'days\',justify_interval('
+                            '    age("valid_test"."timestamp","valid_test"."expire") '
+                            '    + \'1 days\')),-1)) * 0.15) '
+                            '    END) '
+                            'AS "rate" FROM "test_valid_rate" '
+                            'INNER JOIN ('
+                            '    SELECT "test"."pro_id","test"."test_idx",'
+                            '    MIN("test"."timestamp") AS "timestamp","problem"."expire" '
+                            '    FROM "test" '
+                            '    INNER JOIN "account" '
+                            '    ON "test"."acct_id" = "account"."acct_id" '
+                            '    INNER JOIN "problem" '
+                            '    ON "test"."pro_id" = "problem"."pro_id" '
+                            '    WHERE "account"."acct_id" = $1 '
+                            '    AND "test"."state" = $2 '
+                            '    AND "account"."class" && "problem"."class" '
+                            '    GROUP BY "test"."pro_id","test"."test_idx","problem"."expire"'
+                            ') AS "valid_test" '
+                            'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
+                            'AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";'),
+                            acct_id, int(ChalConst.STATE_AC))
+                    if result.__len__() != 1:
+                        return ('Eunk', None)
+
+                    if (rate := result[0]['rate']) == None:
+                        rate = 0
+
+                    rate_data['rate'] = rate
+                    rate_data['ac_cnt'] = ac_chal_cnt
+                    rate_data['all_cnt'] = all_chal_cnt
+                    await self.rs.hset(key, acct_id, packb(rate_data))
+
+            else:
+                result = await con.fetch(('SELECT '
+                        'SUM("test_valid_rate"."rate" * '
+                        '    CASE WHEN "valid_test"."timestamp" < "valid_test"."expire" '
+                        '    THEN 1 ELSE '
+                        '    (1 - (GREATEST(date_part(\'days\',justify_interval('
+                        '    age("valid_test"."timestamp","valid_test"."expire") '
+                        '    + \'1 days\')),-1)) * 0.15) '
+                        '    END) '
+                        'AS "rate" FROM "test_valid_rate" '
+                        'INNER JOIN ('
+                        '    SELECT "test"."pro_id","test"."test_idx",'
+                        '    MIN("test"."timestamp") AS "timestamp","problem"."expire" '
+                        '    FROM "test" '
+                        '    INNER JOIN "account" '
+                        '    ON "test"."acct_id" = "account"."acct_id" '
+                        '    INNER JOIN "problem" '
+                        '    ON "test"."pro_id" = "problem"."pro_id" '
+                        '    WHERE "account"."acct_id" = $1 '
+                        '    AND "test"."state" = $2 '
+                        '    AND "account"."class" && "problem"."class" '
+                        '    GROUP BY "test"."pro_id","test"."test_idx","problem"."expire"'
+                        ') AS "valid_test" '
+                        'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
+                        'AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";'),
+                        acct_id, int(ChalConst.STATE_AC))
+                if result.__len__() != 1:
+                    return ('Eunk', None)
+
+                if (rate := result[0]['rate']) == None:
+                    rate = 0
+
+                rate_data = {
+                    'rate': rate,
+                    'ac_cnt': ac_chal_cnt,
+                    'all_cnt': all_chal_cnt,
+                }
+                await self.rs.hset(key, acct_id, packb(rate_data))
+
+        return (None, rate_data)
 
     async def map_rate_acct(self, acct, clas=None,
             starttime='1970-01-01 00:00:00.000', endtime='2100-01-01 00:00:00.000'):
