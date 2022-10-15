@@ -182,10 +182,14 @@ class BoardHandler(RequestHandler):
             self.error('Eacces')
             return
 
+        min_type = UserConst.ACCTTYPE_USER
+        if self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL:
+            min_type = UserConst.ACCTTYPE_KERNEL
+
         if cont_name == 'default':
             clas = meta['class']
             err, prolist = await Service.Pro.list_pro(acct=self.acct, clas=clas)
-            err, acctlist = await Service.Rate.list_rate(acct=self.acct, clas=clas)
+            err, acctlist = await Service.Acct.list_acct(min_type=min_type)
             err, ratemap = await Service.Rate.map_rate(clas=clas, starttime=meta['start'], endtime=meta['end'])
 
             #TODO: performance test
@@ -266,7 +270,7 @@ class BoardHandler(RequestHandler):
         else:
 
             err, prolist = await Service.Pro.list_pro(acct=self.acct)
-            err, acctlist = await Service.Rate.list_rate(acct=self.acct)
+            err, acctlist = await Service.Acct.list_acct(min_type=min_type)
             err, ratemap = await Service.Rate.map_rate(starttime=meta['start'], endtime=meta['end'])
 
             prolist2 = []
