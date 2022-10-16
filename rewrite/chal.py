@@ -49,15 +49,12 @@ class DokiDokiService:
         #INFO: connect fronted to backend
         if self.ws == None:
             try:
-                self.doki.buf[0] = False
+                self.doki.buf[0] = True
                 self.ws = await websocket_connect(config.PATH_JUDGE)
 
             except Exception as e:
                 dbg_print('chal.py', 53, exception=e)
                 self.doki.buf[0] = False
-                return
-
-            self.doki.buf[0] = True
 
         while True:
             try:
@@ -454,6 +451,6 @@ class ChalService:
                         result['peakmem'],
                         ret)
 
-                # await asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
                 await self.rs.publish('chalstatesub', res['chal_id'])
         return

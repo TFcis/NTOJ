@@ -15,11 +15,12 @@
                 console.log(res);
 
                 if(res[0] == 'E') {
-                    if (res == 'Ebackend') {
+                    if (res == 'Ejudge') {
                         j_submit.find('div.print').print('Cannot connect to judge server');
                     }
                 } else {
                     j_submit.find('div.print').print('success');
+                    index.reload();
                 }
             });
 	    });

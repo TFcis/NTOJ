@@ -154,8 +154,14 @@ if __name__ == "__main__":
             ('/chalstatesub',   ChalStateHandler, args)
         ], autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC)
 
-        access_log = logging.getLogger('tornado.access')
+        log_file_handler = logging.FileHandler('toj.log')
         tornado.log.enable_pretty_logging()
+        access_log = logging.getLogger('tornado.access')
+        access_log.addHandler(log_file_handler)
+        application_log = logging.getLogger('tornado.application')
+        application_log.addHandler(log_file_handler)
+        general_log = logging.getLogger('tornado.general')
+        general_log.addHandler(log_file_handler)
 
         tornado.options.parse_command_line()
 

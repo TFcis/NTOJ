@@ -969,9 +969,11 @@ class ChalStateHandler(WebSocketHandler):
                 if msg['type'] != 'message':
                     continue
 
+                dbg_print(__file__, 972, self_chal_id=self.chal_id)
                 if int(msg['data']) == self.chal_id:
                     err, chal_states = await ChalService.inst.get_chal_state(self.chal_id)
                     await self.write_message(json.dumps(chal_states))
+                    dbg_print(__file__, 975, msg=msg)
 
         self.task = asyncio.tasks.Task(listen_chalstate())
 

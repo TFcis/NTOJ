@@ -123,7 +123,7 @@ class ContestService:
                 cont_list.append(cont_name)
                 await self.rs.set('contest_list', packb(cont_list))
 
-            self.rs.set(f"{cont_name}_contest", packb({
+            await self.rs.set(f"{cont_name}_contest", packb({
                 'status'    : status,
                 'start'     : start,
                 'end'       : end,
@@ -269,6 +269,7 @@ class BoardHandler(RequestHandler):
 
         else:
 
+            #TODO: performance test
             err, prolist = await Service.Pro.list_pro(acct=self.acct)
             err, acctlist = await Service.Acct.list_acct(min_type=min_type)
             err, ratemap = await Service.Rate.map_rate(starttime=meta['start'], endtime=meta['end'])
@@ -298,6 +299,8 @@ class BoardHandler(RequestHandler):
                     submit_count.update({acct_id: (acct['rate'], count)})
 
             acctlist2.sort(key = lambda acct: submit_count[acct['acct_id']], reverse=True)
+            # dbg_print(__file__, 301, acctlist2=acctlist2)
+            # dbg_print(__file__, 302, submit_count=submit_count)
 
             rank = 0
             last_sc = None
@@ -320,6 +323,10 @@ class BoardHandler(RequestHandler):
 
                 acct['rank'] = rank
 
+            # dbg_print(__file__, 325, acctlist2=acctlist2)
+            # dbg_print(__file__, 326, acct_submit=acct_submit)
+            # dbg_print(__file__, 327, submit_count=submit_count)
+
             #INFO: board最下面的score/submit那行
             pro_sc_sub = {}
             for pro in prolist2:
@@ -334,6 +341,8 @@ class BoardHandler(RequestHandler):
                         sub += rate['count']
 
                 pro_sc_sub.update({pro_id: (sc, sub)})
+
+            # dbg_print(__file__, 344, pro_sc_sub=pro_sc_sub)
 
             await self.render(boardtempl,
                 prolist     = prolist2,

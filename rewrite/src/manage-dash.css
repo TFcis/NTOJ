@@ -36,7 +36,8 @@
 	}); */
         index.init();
 	var j_index = $('#index-navlist');
-	var msg_ws = new WebSocket('wss://toj.tfcis.org/oj/be/informsub'); // 210.70.137.215
+	// var msg_ws = new WebSocket('wss://toj.tfcis.org/oj/be/informsub'); // 210.70.137.215
+	var msg_ws = new WebSocket(`ws://${location.hostname}/oj/be/informsub`);
 	var inform_count = 0;
 	var on = false;
 	msg_ws.onopen = function(e){

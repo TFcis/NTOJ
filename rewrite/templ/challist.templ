@@ -13,26 +13,26 @@
 	    j_filter.find('input, select').keypress(function(e) {
 
 	        if (e.keyCode == 13) {
-               //KeyCode 13 means Enter
-		     var proid = j_filter.find('input.proid').val();
-		     var acctid = j_filter.find('input.acctid').val();
-		     var stat = j_filter.find('select.state').val();
-		     var url = '/oj/chal/';
+                //KeyCode 13 means Enter
+		        var proid = j_filter.find('input.proid').val();
+		        var acctid = j_filter.find('input.acctid').val();
+		        var stat = j_filter.find('select.state').val();
+		        var url = '/oj/chal/';
 
-		     if(proid != '') {
-		         url += '?proid=' + proid;
-		         if(acctid != '') {
-		     	url += '&acctid=' + acctid;
-		         }
-		         url += '&state=' + stat;
-		     } else if (acctid != '') {
-		         url += '?acctid=' + acctid;
-		         url += '&state=' + stat;
-		     } else {
-		         url += '?state=' + stat;
-		     }
-		     index.go(url);
-	        }
+		        if (proid != '') {
+		            url += '?proid=' + proid;
+		            if (acctid != '') {
+		        	    url += '&acctid=' + acctid;
+		            }
+		            url += '&state=' + stat;
+		        } else if (acctid != '') {
+		            url += '?acctid=' + acctid;
+		            url += '&state=' + stat;
+		        } else {
+		            url += '?state=' + stat;
+		        }
+		        index.go(url);
+            }
 	    });
 
         j_filter.find('button.submit').on('click', function(e) {
@@ -63,7 +63,8 @@
 
         chalsub_count = 0;
 
-        ws = new WebSocket('ws://192.168.122.157/oj/be/chalsub');
+        // ws = new WebSocket('ws://192.168.122.157/oj/be/chalsub');
+	    ws = new WebSocket(`ws://${location.hostname}/oj/be/chalsub`);
 	    ws.onopen = function(e){
 
 	    };

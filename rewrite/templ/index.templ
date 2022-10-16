@@ -36,7 +36,8 @@
 	});
     index.init();
 	var j_index = $('#index-navlist');
-	var msg_ws = new WebSocket('ws://192.168.122.157/oj/be/informsub'); // 210.70.137.215
+	// var msg_ws = new WebSocket('ws://192.168.122.157/oj/be/informsub'); // 210.70.137.215
+	var msg_ws = new WebSocket(`ws://${location.hostname}/oj/be/informsub`);
 	var inform_count = 0;
 	var on = false;
 	msg_ws.onopen = function(e){
@@ -58,6 +59,7 @@
 </script>
 </head>
 <body class="dark">
+<!-- 君の指先を舞ってる電光は、私の一生変わらない信仰であり、このレールガンだけが永遠に生きてる！ -->
 <nav class="nav" role="navigation">
     <div id="index-navlist" class="container">
         <a href="/oj/info/">NTOJ</a>

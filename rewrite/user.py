@@ -41,7 +41,7 @@ class UserService:
         self.rs = rs
         UserService.inst = self
 
-    async def sign_in(self, mail: str, pw: str):
+    async def sign_in(self, mail, pw):
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
@@ -62,7 +62,7 @@ class UserService:
 
         return ('Esign', None)
 
-    async def sign_up(self, mail: str, pw: str, name: str):
+    async def sign_up(self, mail, pw, name):
         tmp_len = len(mail)
         if tmp_len < UserConst.MAIL_MIN:
             return ('Emailmin', None)
@@ -171,7 +171,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "name", "acct_type",
+                        SELECT "name", "acct_type", "mail",
                         "class", "photo", "cover", "lastip"
                         FROM "account" WHERE "acct_id" = $1;
                     ''',
@@ -185,7 +185,7 @@ class UserService:
                 'acct_id' : acct_id,
                 'acct_type' : result['acct_type'],
                 'class': result['class'][0],
-                # 'mail' : result['mail'],
+                'mail' : result['mail'],
                 'name' : result['name'],
                 'photo' : result['photo'],
                 'cover' : result['cover'],
@@ -193,6 +193,7 @@ class UserService:
             }
 
             await self.rs.setnx(f'account@{acct_id}', packb(acct))
+            del acct['mail']
 
         return (None, acct)
 
@@ -237,6 +238,7 @@ class UserService:
         await self.rs.delete('prolist')
         await self.rs.delete('rate@kernel_True')
         await self.rs.delete('rate@kernel_False')
+        dbg_print(__file__, 241, delete_rate=True)
 
         return (None, None)
 
@@ -251,7 +253,7 @@ class UserService:
         async with self.db.acquire() as con:
             result = await con.fetch('SELECT "password" FROM "account" WHERE "acct_id" = $1;', acct_id)
             if result.__len__() != 1:
-                return ('Eacct', None)
+                return ('Eexist', None)
             result = result[0]
 
             hpw = base64.b64encode(result['password'].encode('utf-8'))
