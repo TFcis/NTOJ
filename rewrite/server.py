@@ -1,7 +1,6 @@
 import math
 import os
 import logging
-from multiprocessing import Process, shared_memory
 import subprocess
 import asyncio
 
@@ -22,7 +21,8 @@ from user import UserService, UserConst
 from acct import AcctHandler, SignHandler
 from pro import ProService, ProHandler, ProStaticHandler, ProTagsHandler, SubmitHandler, ProsetHandler
 from pro import ChalHandler, ChalListHandler, ChalSubHandler, ChalStateHandler
-from chal import ChalService, DokiDokiService
+from judge import JudgeServerClusterService
+from chal import ChalService
 from rate import RateService
 from contest import ContestService, BoardHandler
 from manage import ManageHandler
@@ -68,37 +68,19 @@ if __name__ == "__main__":
 
     httpsock = tornado.netutil.bind_sockets(5500)
     try:
-        Service.doki = shared_memory.SharedMemory(create=True, size=2, name='doki_share_memory')
-        Service.doki.buf[:] = bytearray([False, False])
-        judge_doki = DokiDokiService()
-
-        def run_doki_collect_judge():
-            try:
-                loop = asyncio.new_event_loop()
-                loop.run_until_complete(judge_doki.collect_judge())
-                loop.run_forever()
-
-            finally:
-                judge_doki.ws.close()
-                judge_doki.doki.unlink()
-                loop.stop()
-                loop.close()
-
         def run_materialized_view_task():
             try:
                 loop = asyncio.new_event_loop()
-                loop.run_until_complete(materialized_view_task())
+                task = loop.create_task(materialized_view_task())
                 loop.run_forever()
 
             finally:
+                task.cancel()
                 loop.stop()
                 loop.close()
 
         view_task_process = Process(target=run_materialized_view_task)
         view_task_process.start()
-
-        doki_collect_judge_process = Process(target=run_doki_collect_judge)
-        doki_collect_judge_process.start()
 
         # tornado.process.fork_processes(4)
         db = asyncio.get_event_loop().run_until_complete(asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ,
@@ -119,6 +101,7 @@ if __name__ == "__main__":
         Service.Group    = GroupService(db, rs)
         Service.Log      = LogService(db, rs)
         Service.Rate     = RateService(db, rs)
+        Service.Judge    = JudgeServerClusterService(rs, config.JUDGE_SERVER_LIST)
 
         args = {
             'db' : db,
@@ -169,22 +152,16 @@ if __name__ == "__main__":
         httpsrv.add_sockets(httpsock)
 
         #INFO: connect to judge server
-        Service.doki.buf[0] = False
-        tornado.ioloop.IOLoop.current().run_sync(Service.Chal.collect_judge)
-
+        tornado.ioloop.IOLoop.current().run_sync(Service.Judge.start)
 
         tornado.ioloop.IOLoop.current().start()
 
     finally:
-        Service.doki.unlink()
-        Service.Chal.inst.ws.close()
-
         view_task_process.terminate()
         view_task_process.close()
-        doki_collect_judge_process.terminate()
-        doki_collect_judge_process.close()
 
-        # tornado.ioloop.IOLoop.current().run_sync(db.close)
+        asyncio.run(db.close())
+        asyncio.run(rs.close())
+        asyncio.run(Service.Judge.disconnect_all_server())
         tornado.ioloop.IOLoop.current().stop()
         tornado.ioloop.IOLoop.current().close()
-        # rs.close()
