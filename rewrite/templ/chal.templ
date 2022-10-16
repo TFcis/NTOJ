@@ -5,19 +5,19 @@
 <script type="text/javascript">
     var ws;
     const chal_id = {{ chal['chal_id'] }};
+    const state_map = {
+        1: 'Accepted',
+        2: 'Wrong Answer',
+        3: 'Runtime Error',
+        4: 'Time Limit Exceed',
+        5: 'Memory Limit Exceed',
+        6: 'Compile Error',
+        7: 'Internal Error',
+        100: 'Challenging',
+        101: 'Not Started'
+    };
 
     function init() {
-        const state_map = {
-            1: 'Accepted',
-            2: 'Wrong Answer',
-            3: 'Runtime Error',
-            4: 'Time Limit Exceed',
-            5: 'Memory Limit Exceed',
-            6: 'Compile Error',
-            7: 'Internal Error',
-            100: 'Challenging',
-            101: 'Not Started'
-        };
 
 	    // ws = new WebSocket('ws://192.168.122.157/oj/be/chalstatesub');
 	    ws = new WebSocket(`ws://${location.hostname}/oj/be/chalstatesub`);
@@ -37,7 +37,7 @@
             ws.onopen = (e) => {
                 ws.send(chal_id);
             };
-            
+
             ws.onmessage = (e) => {
                 var chal_state_data = JSON.parse(e['data']);
                 update_state_data(chal_state_data);
@@ -52,14 +52,16 @@
                 'chal_id': {{ chal['chal_id'] }},
             }, function(res) {
                 if (res[0] == 'E') {
-
+                    if (res == 'Ejudge') {
+                        $("div.print").print('All Judge Server Offline');
+                    }
                 } else {
                     index.reload();
                 }
             });
         });
         {% end %}
-        
+
         {% if chal['code'] == True %}
         let code_txt = '';
 	    $.post('/oj/be/code', {
@@ -78,7 +80,9 @@
 
             navigator.clipboard.writeText(code_txt).then(() => {
                 console.log('copy code to clipboard');
+                $("div.print").print('Copy Successfully', true);
             }).catch(err => {
+                $("div.print").print('Cannot Copy', true);
                 console.log('something went wrong', err);
             })
         });
@@ -121,8 +125,10 @@
     {% if rechal == True and chal['code'] == True %}
         <button id="rechal" class="btn-wrn">Rechallenge</button>
         <button id="copycode" class="btn-con">Copy Code</button>
+        <div class="print"></div>
     {% elif chal['code'] == True %}
         <button id="copycode" class="btn-con">Copy Code</button>
+        <div class="print"></div>
     {% end %}
 
     </div>
