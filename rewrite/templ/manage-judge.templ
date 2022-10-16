@@ -3,27 +3,50 @@
 <link rel="stylesheet" type="text/css" href="/oj/manage-dash.css">
 
 <script type="text/javascript" id="contjs">
+    var j_form = $('#form');
     function init() {
-	    var j_submit = $('#submit');
+    }
 
-	j_submit.find('button.submit').on('click', function(e) {
-            $.post('/oj/be/manage/judge', {
-                'reqtype':'reconnect'
+    function connect_sever(index) {
+        $.post('/oj/be/manage/judge', {
+            'reqtype': 'connect',
+            'index': index,
+        }, (res) => {
+            var msg = 'Unknown';
 
-            }, function(res) {
-                var msg = 'Unknown';
-                console.log(res);
-
-                if(res[0] == 'E') {
-                    if (res == 'Ejudge') {
-                        j_submit.find('div.print').print('Cannot connect to judge server');
-                    }
+            if (res[0] == 'E') {
+                if (res == 'Ejudge') {
+                    msg = 'cannot connect to server';
+	    	        j_form.find('div.print').print(msg);
                 } else {
-                    j_submit.find('div.print').print('success');
-                    index.reload();
+                    j_form.find('div.print').print(res);
                 }
-            });
-	    });
+            } else {
+	    	    j_form.find('div.print').print('Connect Server Successfully', true);
+	    		setTimeout(function(){location.href='/oj/manage/judge/';}, 1000);
+            }
+        });
+    }
+
+    function disconnect_server(index) {
+        $.post('/oj/be/manage/judge', {
+            'reqtype': 'disconnect',
+            'index': index,
+        }, (res) => {
+            var msg = 'Unknown';
+
+            if (res[0] == 'E') {
+                if (res == 'Ejudge') {
+                    msg = 'server was offline';
+                    j_form.find('div.print').print(msg);
+                } else {
+                    j_form.find('div.print').print(res);
+                }
+            } else {
+	    	    j_form.find('div.print').print('Disconnect Server Successfully', true);
+	    		setTimeout(function(){location.href='/oj/manage/judge/';}, 1000);
+            }
+        });
     }
 </script>
 
@@ -31,14 +54,40 @@
 {% end %}
 {% block content %}
 
-<div id="submit">
-{% if judge_state == True %}
-    <h1 style="color: green;">Judge server is connecting</h1>
-{% else %}
-    <h1 style="color: red;">Judge server isn't connecting</h1>
-    <button class="btn-con submit">Reconnect</button>
-    <div class="print"></div>
-{% end %}
+<div class="g-lg-12">
+    Server Status
+    <div id="form">
+	<table border=2>
+	    <thead>
+		<tr>
+		<td style="width:56%;">Server</td>
+		<td style="width:20%;">Current Challenge Count</td>
+        <td style="width:8%;">Status</td>
+		<td style="width:8%;">Connect</td>
+		<td style="width:8%;">Disconnect</td></tr>
+	    </thead>
+	    <tbody>
+		{% set count = 0 %}
+		{% for judge_status in judge_status_list %}
+		<tr>
+            <td>Server-{{ count }}</td>
+            <td>{{ judge_status[1] }}</td>
+            {% if judge_status[0] == True %}
+                <td style="color: green;">Online</td>
+            {% else %}
+                <td style="color: red;">Offline</td>
+            {% end %}
+		    <td><input class="btn-con" type="button" value="connect" onclick="connect_sever({{ count }});"></input></td>
+		    <td><input class="btn-wrn" type="button" value="disconnect" onclick="disconnect_server({{ count }});"></input></td>
+		</tr>
+		{% set count = count + 1 %}
+		{% end %}
+	    </tbody>
+	</table>
+	<!-- <textarea class="text" style="width:100%;height:100px;"></textarea> -->
+	<!-- <button class="btn-con submit">Submit</button> -->
+	<div class="print"></div>
+    </div>
 </div>
 
 {% end %}

@@ -264,18 +264,16 @@ class ProService:
                 result = await con.fetch(
                     '''
                         SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."expire",
-                        "problem"."class", "problem"."tags", SUM("test_valid_rate"."rate") AS "rate"
+                        "problem"."class", "problem"."tags"
                         FROM "problem"
-                        INNER JOIN "test_valid_rate" ON "test_valid_rate"."pro_id" = "problem"."pro_id"
                         WHERE "problem"."status" <= $1 AND "problem"."class" && $2
-                        GROUP BY "problem"."pro_id"
                         ORDER BY "pro_id" ASC;
                     ''',
                     max_status, clas
                 )
 
             prolist = []
-            for pro_id, name, status, expire, clas, tags, rate in result:
+            for pro_id, name, status, expire, clas, tags in result:
                 if expire == datetime.datetime.max:
                     expire = None
 
@@ -286,11 +284,9 @@ class ProService:
                     'expire' : expire,
                     'class'  : clas[0],
                     'tags'   : tags,
-                    'rate'   : rate,
                 })
 
             await self.rs.hset('prolist', field, packb(prolist, default=_mp_encoder))
-
 
         now = datetime.datetime.utcnow()
         now = now.replace(tzinfo=datetime.timezone.utc)
@@ -673,12 +669,27 @@ class ProHandler(RequestHandler):
         elif result['state'] == None or result['state'] != ChalConst.STATE_AC:
             pro['tags'] = ''
 
+        # await self.render('pro', pro={
+        #     'pro_id' : pro['pro_id'],
+        #     'name'   : pro['name'],
+        #     'status' : pro['status'],
+        #     'tags'   : pro['tags'],
+        # }, testl=testl, isadmin=isadmin, can_submit=Service.doki.buf[0])
+
+        judge_status_list = await Service.Judge.get_servers_status()
+        can_submit = False
+
+        for status, _ in judge_status_list:
+            if status:
+                can_submit = True
+                break
+
         await self.render('pro', pro={
             'pro_id' : pro['pro_id'],
             'name'   : pro['name'],
             'status' : pro['status'],
             'tags'   : pro['tags'],
-        }, testl=testl, isadmin=isadmin, can_submit=Service.doki.buf[0])
+        }, testl=testl, isadmin=isadmin, can_submit=can_submit)
         return
 
 
@@ -732,7 +743,15 @@ class SubmitHandler(RequestHandler):
             self.error('Eacces')
             return
 
-        if Service.doki.buf[0] == False:
+        judge_status_list = await Service.Judge.get_servers_status()
+        can_submit = False
+
+        for status, _ in judge_status_list:
+            if status:
+                can_submit = True
+                break
+
+        if can_submit == False:
             self.finish('Judge Server Offline')
             return
 
@@ -745,7 +764,15 @@ class SubmitHandler(RequestHandler):
             self.error('Esign')
             return
 
-        if Service.doki.buf[0] == False:
+        judge_status_list = await Service.Judge.get_servers_status()
+        can_submit = False
+
+        for status, _ in judge_status_list:
+            if status:
+                can_submit = True
+                break
+
+        if can_submit == False:
             self.error('Ejudge')
             return
 

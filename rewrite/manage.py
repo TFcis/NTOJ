@@ -26,9 +26,8 @@ class ManageHandler(RequestHandler):
             return
 
         elif page == 'judge':
-            judge_status = Service.doki.buf[0]
-            dbg_print(__file__, 30, judge_status=judge_status)
-            await self.render('manage-judge', page=page, judge_state=judge_status)
+            judge_status_list = await Service.Judge.get_servers_status()
+            await self.render('manage-judge', page=page, judge_status_list=judge_status_list)
             return
 
         elif page == 'pro':
@@ -212,15 +211,25 @@ class ManageHandler(RequestHandler):
         elif page == 'judge':
             reqtype = self.get_argument('reqtype')
 
-            if reqtype == 'reconnect':
-                await Service.Chal.collect_judge()
-                dbg_print(__file__, 217, judge_status=Service.doki.buf[0])
-                if Service.doki.buf[0] == False:
-                    self.error('Ejudge')
+            if reqtype == 'connect':
+                index = int(self.get_argument('index'))
+
+                err = await Service.Judge.connect_server(index)
+                if err:
+                    self.error(err)
                     return
 
                 self.finish('S')
-                return
+
+            elif reqtype == 'disconnect':
+                index = int(self.get_argument('index'))
+
+                err = await Service.Judge.disconnect_server(index)
+                if err:
+                    self.error(err)
+                    return
+
+                self.finish('S')
 
         elif page == 'pro':
             reqtype = self.get_argument('reqtype')

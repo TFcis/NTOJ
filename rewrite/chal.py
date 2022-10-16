@@ -39,38 +39,6 @@ class ChalConst:
         STATE_JUDGE : 'JDG',
     }
 
-class DokiDokiService:
-    def __init__(self) -> None:
-        self.ws = None
-        self.doki = shared_memory.SharedMemory(create=False, name='doki_share_memory')
-        DokiDokiService.inst = self
-
-    async def collect_judge(self):
-        #INFO: connect fronted to backend
-        if self.ws == None:
-            try:
-                self.doki.buf[0] = True
-                self.ws = await websocket_connect(config.PATH_JUDGE)
-
-            except Exception as e:
-                dbg_print('chal.py', 53, exception=e)
-                self.doki.buf[0] = False
-
-        while True:
-            try:
-                self.ws.ping()
-                self.doki.buf[1] = False
-            except Exception as e:
-                dbg_print('chal.py', 69, exception=e)
-                self.doki.buf[0] = False
-                dbg_print('chal.py', 72, judge_status=Service.doki.buf[0])
-                if self.doki.buf[1] == True:
-                    self.ws = await websocket_connect(config.PATH_JUDGE)
-                    self.doki.buf[1] = False
-                    self.doki.buf[0] = True
-
-            await asyncio.sleep(1)
-
 class ChalService:
     STATE_AC         = 1
     STATE_WA         = 2
@@ -278,16 +246,13 @@ class ChalService:
                 )
             return (None, None)
 
-        # if self.ws == None:
-        #     self.ws = await websocket_connect(config.PATH_JUDGE)
-
         chalmeta = test_conf['chalmeta']
-        self.ws.write_message(json.dumps({
+
+        await Service.Judge.send(json.dumps({
             'chal_id'    : chal_id,
             'test'       : testl,
             'code_path'  : code_path,
             'res_path'   : res_path,
-            # 'code'       : code,
             'metadata'   : chalmeta,
             'comp_type'  : test_conf['comp_type'],
             'check_type' : test_conf['check_type'],
@@ -387,8 +352,8 @@ class ChalService:
         #TODO: redis publish materialized_view_req
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
         await self.rs.delete('prolist')
-        await self.rs.delete('rate@kernel_True')
-        await self.rs.delete('rate@kernel_False')
+        # await self.rs.delete('rate@kernel_True')
+        # await self.rs.delete('rate@kernel_False')
 
         return (None, None)
 
@@ -413,44 +378,3 @@ class ChalService:
                 query += (' AND "challenge_state"."state" = ' + str(flt['state']) + ' ')
 
         return (query)
-
-    async def collect_judge(self):
-        #INFO: connect fronted to backend
-        dbg_print(__file__, 393, r='r')
-        dbg_print(__file__, 395, doki=Service.doki.buf[0])
-        # if self.ws == None:
-        # if self.doki.buf[0] == False:
-        if Service.doki.buf[0] == False:
-            try:
-                Service.doki.buf[0] = False
-                self.ws = await websocket_connect(config.PATH_JUDGE)
-
-            except Exception as e:
-                dbg_print('chal.py', 394, exception=e)
-                Service.doki.buf[0] = False
-                return
-
-            Service.doki.buf[0] = True
-            Service.doki.buf[1] = True
-
-        while True:
-            ret = await self.ws.read_message()
-            if ret == None:
-                break
-
-            res = json.loads(ret)
-            if res['result'] != None:
-                for result in res['result']:
-                    #INFO: CE會回傳 result['verdict']
-
-                    err, ret = await self.update_test(
-                        res['chal_id'],
-                        result['test_idx'],
-                        result['state'],
-                        result['runtime'],
-                        result['peakmem'],
-                        ret)
-
-                await asyncio.sleep(0.5)
-                await self.rs.publish('chalstatesub', res['chal_id'])
-        return
