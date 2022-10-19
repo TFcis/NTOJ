@@ -118,6 +118,7 @@ class ManageHandler(RequestHandler):
                     asklist.update({acct['acct_id']: False})
                 else:
                     asklist.update({acct['acct_id']: unpackb(ask)})
+
             await self.render('manage-question', page=page, acctlist=acctlist, asklist=asklist)
             return
 
@@ -215,6 +216,7 @@ class ManageHandler(RequestHandler):
                 index = int(self.get_argument('index'))
 
                 err = await Service.Judge.connect_server(index)
+                await LogService.inst.add_log(f"{self.acct['name']} had been connected server-{index} succesfully.")
                 if err:
                     self.error(err)
                     return
@@ -223,8 +225,15 @@ class ManageHandler(RequestHandler):
 
             elif reqtype == 'disconnect':
                 index = int(self.get_argument('index'))
+                pwd = str(self.get_argument('pwd'))
+
+                if config.unlock_pwd != base64.b64encode(packb(pwd)):
+                    await LogService.inst.add_log(f"{self.acct['name']} tryed to disconnect server-{index} but failed.")
+                    self.error('Eacces')
+                    return
 
                 err = await Service.Judge.disconnect_server(index)
+                await LogService.inst.add_log(f"{self.acct['name']} had been disconnected server-{index} succesfully.")
                 if err:
                     self.error(err)
                     return
@@ -291,6 +300,18 @@ class ManageHandler(RequestHandler):
             elif reqtype == 'rechal':
                 pro_id = int(self.get_argument('pro_id'))
 
+                judge_status_list = await Service.Judge.get_servers_status()
+                can_submit = False
+
+                for status, _ in judge_status_list:
+                    if status:
+                        can_submit = True
+                        break
+
+                if can_submit == False:
+                    self.error('Ejudge')
+                    return
+
                 err, pro = await Service.Pro.get_pro(pro_id, self.acct)
                 if err:
                     self.error(err)
@@ -322,7 +343,7 @@ class ManageHandler(RequestHandler):
                 return
 
             elif reqtype == 'pro-lock':
-                pro_id = self.get_argument('pro_id')
+                pro_id = int(self.get_argument('pro_id'))
                 await self.rs.set(f'{pro_id}_owner', packb(1))
 
                 if (lock_list := (await self.rs.get('lock_list'))) != None:
@@ -330,15 +351,15 @@ class ManageHandler(RequestHandler):
                 else:
                     lock_list = []
 
-                if int(pro_id) not in lock_list:
-                    lock_list.append(int(pro_id))
+                if pro_id not in lock_list:
+                    lock_list.append(pro_id)
 
                 await self.rs.set('lock_list', packb(lock_list))
                 self.finish('S')
                 return
 
             elif reqtype == 'pro-unlock':
-                pro_id = self.get_argument('pro_id')
+                pro_id = int(self.get_argument('pro_id'))
                 pwd = str(self.get_argument('pwd'))
 
                 if config.unlock_pwd != base64.b64encode(packb(pwd)):
@@ -346,7 +367,7 @@ class ManageHandler(RequestHandler):
                     return
 
                 lock_list = unpackb((await self.rs.get('lock_list')))
-                lock_list.remove(int(pro_id))
+                lock_list.remove(pro_id)
                 await self.rs.set('lock_list', packb(lock_list))
                 await self.rs.delete(f"{pro_id}_owner")
                 self.finish('S')
@@ -513,7 +534,6 @@ class ManageHandler(RequestHandler):
                     try:
                         p_list2.append(int(p))
                     except ValueError:
-                        #TODO: return error
                         pass
 
                 p_list = p_list2
