@@ -9,6 +9,7 @@ rewrite/NTOJ_installer/
 rewrite/sql/
 rewrite/src/third
 rewrite/test.py
+rewrite/install.py
 *.swp
 .htpasswd
 ojtmp.tar.gz

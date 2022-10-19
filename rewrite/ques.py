@@ -43,8 +43,6 @@ class QuestionService:
             return 'Eacces'
 
         acct_id = acct['acct_id']
-        #TODO: redis get msg_active
-        # active = self.rs.get(str(acct_id) + '_msg_active')
         active = None
         if (active := (await self.rs.get(f'{acct_id}_msg_active'))) == None:
             await self.rs.set(f'{acct_id}_msg_active', packb(True))

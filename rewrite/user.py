@@ -147,7 +147,7 @@ class UserService:
                     await self.rs.delete('acctlist')
 
             except Exception as e:
-                print(e)
+                dbg_print(__file__, 150, e=e)
 
         return (None, acct_id, ip)
 
@@ -162,6 +162,7 @@ class UserService:
                 'cover'     : '',
                 'lastip'    : ''
             })
+
         acct_id = int(acct_id)
 
         if (acct := (await self.rs.get(f'account@{acct_id}'))) != None:
@@ -197,16 +198,6 @@ class UserService:
 
         return (None, acct)
 
-        # return (None, {
-        #     'acct_id'   : acct_id,
-        #     'acct_type' : acct['acct_type'],
-        #     'class'     : acct['class'],
-        #     'name'      : acct['name'],
-        #     'photo'     : acct['photo'],
-        #     'cover'     : acct['cover'],
-        #     'lastip'    : acct['lastip'],
-        # })
-
     async def update_acct(self, acct_id, acct_type, clas, name, photo, cover):
         if (acct_type not in [UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER]):
             return ('Eparam1', None)
@@ -238,7 +229,6 @@ class UserService:
         await self.rs.delete('prolist')
         await self.rs.delete('rate@kernel_True')
         await self.rs.delete('rate@kernel_False')
-        dbg_print(__file__, 241, delete_rate=True)
 
         return (None, None)
 

@@ -57,27 +57,12 @@ class PackService:
 
             def __tar_cb(code):
                 if code != 0:
-                    # dbg_print('pack.py', 60, res='Eunk')
-                    # callback(('Eunk', None))
                     return ('Eunk', None)
 
                 #os.remove('tmp/%s'%pack_token)
 
                 sub = tornado.process.Subprocess(
                         ['/bin/bash', 'newline.sh', f'{dst}/res/testdata'])
-                sub.set_exit_callback(__trans_cb)
-
-            def __trans_cb(code):
-                sub = tornado.process.Subprocess(['rsync', '-qzr', '--delete', '--force', '/srv/oj/backend/problem/',
-                    'judge@' + config.JUDGE_SERVER + '::judge', '--password-file=/etc/rsync-judge.pwd'])
-                sub.set_exit_callback(__rsync_cb)
-
-                # dbg_print('pack.py', 74, res='None')
-                # callback((None, None))
-                return (None, None)
-
-            def __rsync_cb(code):
-                print('Rsync finish')
 
             if clean == False:
                 __tar()

@@ -15,7 +15,6 @@ class RequestHandler(tornado.web.RequestHandler):
     def __init__(self, *args, **kwargs):
         self.db = kwargs.pop('db')
         self.rs = kwargs.pop('rs')
-        # self.ars = kwargs.pop('ars')
         self.tpldr = tornado.template.Loader('templ')
 
         super().__init__(*args, **kwargs)
@@ -78,7 +77,6 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def __init__(self, *args, **kwargs):
         self.db = kwargs.pop('db')
         self.rs = kwargs.pop('rs')
-        # self.ars = kwargs.pop('ars')
 
         super().__init__(*args, **kwargs)
 
@@ -89,9 +87,6 @@ def reqenv(func):
         err, self.acct = await Service.Acct.info_acct(acct_id)
 
         ret = await func(self, *args, **kwargs)
-        # if isinstance(ret, types.GeneratorType):
-        #     ret = yield from ret
-        #
         return ret
 
     return wrap

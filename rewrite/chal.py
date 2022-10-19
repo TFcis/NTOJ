@@ -65,7 +65,6 @@ class ChalService:
     def __init__(self, db, rs):
         self.db = db
         self.rs = rs
-        self.ws = None
 
         ChalService.inst = self
 
@@ -171,7 +170,7 @@ class ChalService:
         if (acct['acct_id'] == acct_id or
                 (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL and
                     (owner == None or acct['acct_id'] in config.lock_user_list) and (acct['acct_id'] in config.can_see_code_user))):
-                # owner is problem uploader. if problem was locked, only problem owner can see submit code about this problem
+                #INFO: owner is problem uploader. if problem was locked, only problem owner can see submit code about this problem
 
             if (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL) and (acct['acct_id'] != acct_id):
                 await LogService.inst.add_log(f"{acct['name']} view the challenge {chal_id}")
@@ -258,12 +257,6 @@ class ChalService:
             'check_type' : test_conf['check_type'],
         }))
 
-        '''tmp_ws.write_message(json.dumps({
-            'chal_id':chal_id,
-            'testl':testl,
-            'code_path':code_path,
-            'res_path':res_path
-        }))'''
         return (None, None)
 
     #TODO: Porformance test
@@ -352,8 +345,6 @@ class ChalService:
         #TODO: redis publish materialized_view_req
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
         await self.rs.delete('prolist')
-        # await self.rs.delete('rate@kernel_True')
-        # await self.rs.delete('rate@kernel_False')
 
         return (None, None)
 

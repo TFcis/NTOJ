@@ -54,7 +54,6 @@ class AcctHandler(RequestHandler):
         acct['photo'] = re.sub(r'^http://', 'https://', acct['photo'])
         acct['cover'] = re.sub(r'^http://', 'https://', acct['cover'])
 
-        # await self.render('acct', acct=acct, rate=math.floor(rate), prolist=prolist2, isadmin=isadmin)
         await self.render('acct', acct=acct, rate=rate_data, prolist=prolist2, isadmin=isadmin)
 
     @reqenv
@@ -125,7 +124,6 @@ class SignHandler(RequestHandler):
                 self.error(err)
                 return
 
-            #TODO: Special Record xiplus
             await LogService.inst.add_log(f'#{acct_id} sign in successfully', 'signin.success', {
                 'type'    : 'signin.success',
                 'acct_id' : acct_id
