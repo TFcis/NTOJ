@@ -81,7 +81,7 @@
             cover = 'https://i.imgur.com/D5IKr7d.jpg';
         }
 
-        $('#photo').attr('src',photo);
+        $('#photo').attr('src', photo);
         $('#cover').css('background-image','url(' + cover + ')');
     }
 </script>
@@ -104,9 +104,11 @@
                     {% else %}
                         <strong>{{ round(((rate['ac_cnt'] / rate['all_cnt']) * 100), 1) }}%</strong>
                     {% end %}
-                    <strong><a href="/oj/chal/?acctid={{ acct['acct_id'] }}&state=1">({{ rate['ac_cnt'] }}</a></strong>
+                    (
+                    <strong><a href="/oj/chal/?acctid={{ acct['acct_id'] }}&state=1">{{ rate['ac_cnt'] }}</a></strong>
                     <strong>/</strong>
-                    <strong><a href="/oj/chal/?acctid={{ acct['acct_id'] }}">{{ rate['all_cnt'] }})</a></strong>
+                    <strong><a href="/oj/chal/?acctid={{ acct['acct_id'] }}">{{ rate['all_cnt'] }}</a></strong>
+                    )
                 </td>
             </tr>
         </tbody>

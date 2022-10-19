@@ -4,14 +4,14 @@
 <script type="text/javascript">
     function init() {
         var j_form = $('#form');
-        j_form.find('button.submit').on('click', (e) => {
+        j_form.find('button.submit').on('click', function(e) {
 	    	var qtext = j_form.find('textarea.ques').val();
 
 	    	$.post('/oj/be/question', {
 				'reqtype': 'ask',
 				'acct_id':{{ acct['acct_id'] }},
 				'qtext': qtext,
-	    	}, (res) => {
+	    	}, function(res) {
      	       msg = 'Unknown';
      	       if (res[0] == 'E') {
      	           msg = res;
@@ -31,7 +31,7 @@
             'reqtype': 'rm_ques',
             'acct_id': {{ acct['acct_id'] }},
             'index': index,
-        }, (res) => {
+        }, function(res) {
             msg = 'Unknown';
             if (res[0] == 'E') {
                 msg = res;

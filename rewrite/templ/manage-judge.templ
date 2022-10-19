@@ -11,7 +11,7 @@
         $.post('/oj/be/manage/judge', {
             'reqtype': 'connect',
             'index': index,
-        }, (res) => {
+        }, function(res) {
             var msg = 'Unknown';
 
             if (res[0] == 'E') {
@@ -29,15 +29,20 @@
     }
 
     function disconnect_server(index) {
+        pwd = prompt('password');
         $.post('/oj/be/manage/judge', {
             'reqtype': 'disconnect',
             'index': index,
-        }, (res) => {
+            'pwd': pwd,
+        }, function(res) {
             var msg = 'Unknown';
 
             if (res[0] == 'E') {
                 if (res == 'Ejudge') {
                     msg = 'server was offline';
+                    j_form.find('div.print').print(msg);
+                } else if (res == 'Eacces') { 
+                    msg = 'password incorrect';
                     j_form.find('div.print').print(msg);
                 } else {
                     j_form.find('div.print').print(res);
@@ -84,8 +89,6 @@
 		{% end %}
 	    </tbody>
 	</table>
-	<!-- <textarea class="text" style="width:100%;height:100px;"></textarea> -->
-	<!-- <button class="btn-con submit">Submit</button> -->
 	<div class="print"></div>
     </div>
 </div>

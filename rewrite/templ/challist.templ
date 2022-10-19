@@ -77,7 +77,7 @@
 
         var chalids = {{ chalids }};
         $('#rechalall').on('click', function(e) {
-            chalids.forEach((chalid) => {
+            chalids.forEach(function(chalid) {
                 $.post('/oj/be/submit', {
                     'reqtype': 'rechal',
                     'chal_id': chalid,

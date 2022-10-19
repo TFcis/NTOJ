@@ -12,7 +12,7 @@
 		    'qacct_id': {{ qacct_id }},
 		    'index': index,
 		    'rtext': rtext,
-		}, (res) => {
+		}, function(res) {
 		    msg = 'Unknown';
 		    if (res[0] == 'E') {
 				msg = res;
@@ -33,7 +33,7 @@
 		    'qacct_id': {{ qacct_id }},
 		    'index': index,
 		    'rtext': rtext,
-		}, (res) => {
+		}, function(res) {
 		    msg = 'Unknown';
 		    if (res[0] == 'E') {
 				msg = res;

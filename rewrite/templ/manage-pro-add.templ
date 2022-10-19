@@ -4,60 +4,60 @@
 
 <script type="text/javascript" id="contjs">
     function init() {
-	var j_form = $('#form');
-	var j_upload = $('#upload');
+	    var j_form = $('#form');
+	    var j_upload = $('#upload');
 
-	j_form.find('button.submit').on('click', function(e) {
-	    var name = j_form.find('input.name').val();
-	    var status = j_form.find('select.status').val();
-        var clas = j_form.find('select.class').val();
-	    var files = j_form.find('input.file')[0].files;
+	    j_form.find('button.submit').on('click', function(e) {
+	        var name = j_form.find('input.name').val();
+	        var status = j_form.find('select.status').val();
+           var clas = j_form.find('select.class').val();
+	        var files = j_form.find('input.file')[0].files;
 
-	    if (files.length == 0) {
-		    j_form.find('div.print').print('No file selected');
-		    return;
-	    }
+	        if (files.length == 0) {
+	    	    j_form.find('div.print').print('No file selected');
+	    	    return;
+	        }
 
-        pack.get_token().done(function(pack_token) {
-		    var j_bar = j_upload.find('div.prog > div.bar');
+           pack.get_token().done(function(pack_token) {
+	    	    var j_bar = j_upload.find('div.prog > div.bar');
 
-            j_form.hide();
-            j_upload.show();
+               j_form.hide();
+               j_upload.show();
 
-            pack.send(pack_token,files[0]).done(() => {
-                $.post('/oj/be/manage/pro', {
-                    'reqtype': 'addpro',
-                    'name': name,
-                    'status': status,
-                    'class': clas,
-                    'pack_token': pack_token
-                }, function(res) {
-                    var msg = 'Unknown';
+               pack.send(pack_token,files[0]).done(function() {
+                   $.post('/oj/be/manage/pro', {
+                       'reqtype': 'addpro',
+                       'name': name,
+                       'status': status,
+                       'class': clas,
+                       'pack_token': pack_token
+                   }, function(res) {
+                       var msg = 'Unknown';
 
-                    if(res[0] == 'E') {
-                        if(res == 'Enamemin') {
-                            msg = 'Name length < min';
-                        } else if (res == 'Enamemax') {
-                            msg = 'Name length > max';
-                        } else if (res == 'Eparam') {
-                            msg = 'Paramater Error';
-                        } else if (res == 'Econf') {
-                            msg = 'Syntax error';
-                        }
+                       if(res[0] == 'E') {
+                           if(res == 'Enamemin') {
+                               msg = 'Name length < min';
+                           } else if (res == 'Enamemax') {
+                               msg = 'Name length > max';
+                           } else if (res == 'Eparam') {
+                               msg = 'Paramater Error';
+                           } else if (res == 'Econf') {
+                               msg = 'Syntax error';
+                           }
 
-                        j_upload.find('div.print').print(msg);
-                    } else {
-                        index.go('/oj/manage/pro/');
-                    }
-                });
-                }).progress(function(prog) {
-                    j_bar.css('width', (prog * 100) + '%');
-                });
-            });
-	});
-	j_form.find('button.cancel').on('click', function(e) {
-	    index.go('/oj/manage/pro/');
-	});
+                           j_upload.find('div.print').print(msg);
+                       } else {
+                           index.go('/oj/manage/pro/');
+                       }
+                   });
+                   }).progress(function(prog) {
+                       j_bar.css('width', (prog * 100) + '%');
+                   });
+               });
+	    });
+	    j_form.find('button.cancel').on('click', function(e) {
+	        index.go('/oj/manage/pro/');
+	    });
     }
 </script>
 {% end %}

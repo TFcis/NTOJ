@@ -25,7 +25,7 @@
         } else {
             function update_state_data(chal_state_data) {
                 var states = document.querySelectorAll('tr.states');
-                states.forEach((element, idx, arr) => {
+                states.forEach(function(element, idx, arr) {
                     let state = element.querySelector('td.state');
                     state.innerHTML = state_map[chal_state_data[idx]['state']];
                     state.className = `state state-${chal_state_data[idx]['state']}`;
@@ -34,19 +34,18 @@
                 })
             };
 
-            ws.onopen = (e) => {
+            ws.onopen = function(e) {
                 ws.send(chal_id);
             };
 
-            ws.onmessage = (e) => {
+            ws.onmessage = function(e) {
                 var chal_state_data = JSON.parse(e['data']);
                 update_state_data(chal_state_data);
             };
         }
 
-
         {% if rechal == True %}
-        $('#rechal').on('click', function(e){
+        $('#rechal').on('click', function(e) {
             $.post('/oj/be/submit', {
                 'reqtype': 'rechal',
                 'chal_id': {{ chal['chal_id'] }},

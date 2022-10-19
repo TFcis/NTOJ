@@ -3,7 +3,7 @@
 <script>
     function init(){
 	var j_form = $('#form');
-	j_form.find('select.pclas_key').on('change', (e) => {
+	j_form.find('select.pclas_key').on('change', function(e) {
 	    var pclas_key = j_form.find('select.pclas_key').val();
 	    if (pclas_key == 'None') {
 			index.go('/oj/manage/proclass/');
@@ -12,7 +12,7 @@
 	    }
 	});
 
-	j_form.find('button.submit').on('click', (e) => {
+	j_form.find('button.submit').on('click', function(e) {
 	    var pclas_key = j_form.find('input.pclas_key').val();
 	    var pclas_name = j_form.find('input.pclas_name').val();
 	    var p_list = j_form.find('input.p_list').val();
@@ -22,7 +22,7 @@
 			'pclas_key': pclas_key,
 			'pclas_name': pclas_name,
 			'p_list': p_list,
-	    }, (res) => {
+	    }, function(res) {
 			msg = 'Unknown';
 			if (res[0] == 'E') {
 			    msg = res;
@@ -34,13 +34,13 @@
 	    });
 	});
 
-	j_form.find('button.delete').on('click', (e) => {
+	j_form.find('button.delete').on('click', function(e) {
 	    var pclas_key = j_form.find('select.pclas_key').val();
 
 	    $.post('/oj/be/manage/proclass', {
 			'reqtype': 'remove',
 			'pclas_key': pclas_key,
-	    }, (res) => {
+	    }, function(res) {
 			msg = 'Unknown';
 			if (res[0] == 'E') {
 			    msg = res;
@@ -51,7 +51,7 @@
 			}
 	    });
 	});
-	j_form.find('button.edit').on('click', (e) => {
+	j_form.find('button.edit').on('click', function(e) {
 	    var pclas_key = j_form.find('select.pclas_key').val();
 	    var new_pclas_key = j_form.find('input.pclas_key').val();
 	    var pclas_name = j_form.find('input.pclas_name').val();
@@ -63,7 +63,7 @@
 			'new_pclas_key': new_pclas_key,
 			'pclas_name': pclas_name,
 			'p_list': p_list,
-	    }, (res) => {
+	    }, function(res) {
 			msg = 'Unknown';
 			if (res[0] == 'E') {
 			    msg = res;

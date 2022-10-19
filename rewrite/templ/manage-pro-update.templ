@@ -3,134 +3,134 @@
 <link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
 
 <script type="text/javascript" id="contjs">
-    function init(){
-	var j_form = $('#form');
-	var j_form2 = $('#form2');
-	var j_upload = $('#upload');
+    function init() {
+		var j_form = $('#form');
+		var j_form2 = $('#form2');
+		var j_upload = $('#upload');
 
-	j_form.find('button.unlock').on('click', function(e) {
-	    pwd = prompt('unlock password');
-	    $.post('/oj/be/manage/pro',{
-			'reqtype': 'pro-unlock',
-			'pro_id': {{ pro['pro_id'] }},
-			'pwd': pwd,
-	    }, function(res) {
-			if (res[0] == 'E') {
-			    j_form.find('div.print').print(res);
-			} else {
-			    index.go('/oj/manage/pro/');
-			}
-	    });
-	});
-
-	j_form.find('button.lock').on('click', (e) => {
-	    $.post('/oj/be/manage/pro', {
-			'reqtype': 'pro-lock',
-			'pro_id': {{ pro['pro_id'] }},
-	    }, function(res) {
-			if (res[0] == 'E') {
-  	            j_form.find('div.print').print(res);
-			} else {
-				index.go('/oj/manage/pro/');
-			}
-	    });
-	});
-
-	j_form.find('button.submit').on('click', function(e) {
-	    var name = j_form.find('input.name').val();
-	    var tags = j_form.find('input.tags').val();
-	    var status = j_form.find('select.status').val();
-        var clas = j_form.find('select.class').val();
-        var pack_type = j_form.find('select.packtype').val();
-	    var files = j_form.find('input.file')[0].files;
-	    var pack_token = '';
-
-	    function _update() {
-			$.post('/oj/be/manage/pro', {
-			    'reqtype': 'updatepro',
-			    'pro_id': {{ pro['pro_id'] }},
-			    'name': name,
-			    'tags': tags,
-			    'status': status,
-  	          	'class': clas,
-  	          	'pack_type': pack_type,
-			    'pack_token': pack_token,
-			}, function(res) {
-  	          	var msg = 'Unknown';
-
-  	          	if (res[0] == 'E') {
-  	          	    if (res == 'Enamemin') {
-						msg = '	Name length < min';
-  	          	    } else if (res == 'Enamemax') {
-  	          	         msg = 'Name length > max';
-  	          	    } else if (res == 'Eparam') {
-  	          	         msg = 'Paramater Error';
-  	          	    } else if (res == 'Econf') {
-  	          	         msg = 'Syntex error';
-  	          	    } else {
-  	          	        msg = res;
-  	          	    }
-
-  	          	    if (pack_token == '') {
-  	          	        j_form.find('div.print').print(msg);
-  	          	    } else {
-  	          	        j_upload.find('div.print').print(msg);
-  	          	    }
-  	          	} else {
-			       index.go('/oj/manage/pro/');
-  	          	}
-			});
-	    }
-
-	    if(files.length == 0) {
-			_update();
-	    } else {
-			pack.get_token().done(function(token) {
-            	var j_bar = j_upload.find('div.prog > div.bar');
-
-		    	j_form.hide();
-				j_form2.hide();
-		    	j_upload.show();
-
-            	pack_token = token;
-		    	pack.send(pack_token,files[0]).done(function() {
-					_update();
-		    	}).progress(function(prog) {
-					j_bar.css('width',(prog * 100) + '%');
-		    	});
-			});
-	    }
-	});
-
-	j_form.find('button.cancel').on('click', function(e) {
-	    index.go('/oj/manage/pro/');
-	});
-
-	j_form2.find('button.submit').on('click', (e) => {
-	    var timelimit = j_form2.find('input.timelimit').val();
-	    var memlimit = j_form2.find('input.memlimit').val();
-
-		$.post('/oj/be/manage/pro', {
-		    'reqtype': 'updatelimit',
-		    'pro_id': {{ pro['pro_id'] }},
-		    'timelimit': timelimit,
-		    'memlimit': memlimit,
-		}, (res) => {
-			var msg = 'Unknown';
-			if (res[0] == 'E') {
-				if (res == 'Etimelimitmin') {
-					msg = 'Time limit is too short';
-				} else if (res == 'Ememlimitmin') {
-					msg = 'Mem limit is too small';
+		j_form.find('button.unlock').on('click', function(e) {
+		    pwd = prompt('unlock password');
+		    $.post('/oj/be/manage/pro', {
+				'reqtype': 'pro-unlock',
+				'pro_id': {{ pro['pro_id'] }},
+				'pwd': pwd,
+		    }, function(res) {
+				if (res[0] == 'E') {
+				    j_form.find('div.print').print(res);
 				} else {
-					msg = res;
+				    index.go('/oj/manage/pro/');
 				}
-				j_form2.find('div.print').print(msg);
-			} else {
-				index.go('/oj/manage/pro/');
-			}
+		    });
 		});
-	});
+
+		j_form.find('button.lock').on('click', function(e) {
+		    $.post('/oj/be/manage/pro', {
+				'reqtype': 'pro-lock',
+				'pro_id': {{ pro['pro_id'] }},
+		    }, function(res) {
+				if (res[0] == 'E') {
+ 	 	            j_form.find('div.print').print(res);
+				} else {
+					index.go('/oj/manage/pro/');
+				}
+		    });
+		});
+
+		j_form.find('button.submit').on('click', function(e) {
+		    var name = j_form.find('input.name').val();
+		    var tags = j_form.find('input.tags').val();
+		    var status = j_form.find('select.status').val();
+ 	       	var clas = j_form.find('select.class').val();
+ 	       	var pack_type = j_form.find('select.packtype').val();
+		    var files = j_form.find('input.file')[0].files;
+		    var pack_token = '';
+
+		    function _update() {
+				$.post('/oj/be/manage/pro', {
+				    'reqtype': 'updatepro',
+				    'pro_id': {{ pro['pro_id'] }},
+				    'name': name,
+				    'tags': tags,
+				    'status': status,
+ 	 	          	'class': clas,
+ 	 	          	'pack_type': pack_type,
+				    'pack_token': pack_token,
+				}, function(res) {
+ 	 	          	var msg = 'Unknown';
+
+ 	 	          	if (res[0] == 'E') {
+ 	 	          	    if (res == 'Enamemin') {
+							msg = '	Name length < min';
+ 	 	          	    } else if (res == 'Enamemax') {
+ 	 	          	         msg = 'Name length > max';
+ 	 	          	    } else if (res == 'Eparam') {
+ 	 	          	         msg = 'Paramater Error';
+ 	 	          	    } else if (res == 'Econf') {
+ 	 	          	         msg = 'Syntex error';
+ 	 	          	    } else {
+ 	 	          	        msg = res;
+ 	 	          	    }
+
+ 	 	          	    if (pack_token == '') {
+ 	 	          	        j_form.find('div.print').print(msg);
+ 	 	          	    } else {
+ 	 	          	        j_upload.find('div.print').print(msg);
+ 	 	          	    }
+ 	 	          	} else {
+				       index.go('/oj/manage/pro/');
+ 	 	          	}
+				});
+		    }
+
+		    if (files.length == 0) {
+				_update();
+		    } else {
+				pack.get_token().done(function(token) {
+ 	           	var j_bar = j_upload.find('div.prog > div.bar');
+
+			    	j_form.hide();
+					j_form2.hide();
+			    	j_upload.show();
+
+ 	           	pack_token = token;
+			    	pack.send(pack_token,files[0]).done(function() {
+						_update();
+			    	}).progress(function(prog) {
+						j_bar.css('width',(prog * 100) + '%');
+			    	});
+				});
+		    }
+		});
+
+		j_form.find('button.cancel').on('click', function(e) {
+		    index.go('/oj/manage/pro/');
+		});
+
+		j_form2.find('button.submit').on('click', function(e) {
+		    var timelimit = j_form2.find('input.timelimit').val();
+		    var memlimit = j_form2.find('input.memlimit').val();
+
+			$.post('/oj/be/manage/pro', {
+			    'reqtype': 'updatelimit',
+			    'pro_id': {{ pro['pro_id'] }},
+			    'timelimit': timelimit,
+			    'memlimit': memlimit,
+			}, function(res) {
+				var msg = 'Unknown';
+				if (res[0] == 'E') {
+					if (res == 'Etimelimitmin') {
+						msg = 'Time limit is too short';
+					} else if (res == 'Ememlimitmin') {
+						msg = 'Mem limit is too small';
+					} else {
+						msg = res;
+					}
+					j_form2.find('div.print').print(msg);
+				} else {
+					index.go('/oj/manage/pro/');
+				}
+			});
+		});
     }
 </script>
 {% end %}

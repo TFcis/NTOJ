@@ -28,33 +28,34 @@
 <script src="/oj/pack.js"></script>
 
 <script id="indexjs" type="text/javascript" acct_id="{{ acct_id }}">
-    $(document).ready(function(){
+    $(document).ready(function() {
 
-	$.post('/oj/be/auto',{
-	    'reqtype':'auto'
-	},function(res){
-	});
-    index.init();
-	var j_index = $('#index-navlist');
-	// var msg_ws = new WebSocket('ws://192.168.122.157/oj/be/informsub'); // 210.70.137.215
-	var msg_ws = new WebSocket(`ws://${location.hostname}/oj/be/informsub`);
-	var inform_count = 0;
-	var on = false;
-	msg_ws.onopen = function(e){
-	};
-	msg_ws.onmessage = function(e){
-	    inform_count += 1;
-	    j_index.find('a.message').text('公告 *'+inform_count);
-	    j_index.find('a.message').show();
-	    on = true;
-	    setInterval(function(){if(on == true){j_index.find('a.message').fadeOut(500).fadeIn(500);}},1000);
-	};
-	j_index.find('a.message').on('click',function(e){
-	    j_index.find('a.message').hide();
-	    inform_count = 0;
-	    on = false;
-	    index.go('/oj/info/');
-	});
+		$.post('/oj/be/auto', {
+		    'reqtype':'auto'
+		},function(res){
+		});
+ 	   	index.init();
+		var j_index = $('#index-navlist');
+		// var msg_ws = new WebSocket('ws://192.168.122.157/oj/be/informsub'); // 210.70.137.215
+		var msg_ws = new WebSocket(`ws://${location.hostname}/oj/be/informsub`);
+		var inform_count = 0;
+		var on = false;
+		msg_ws.onopen = function(e) {
+		};
+
+		msg_ws.onmessage = function(e) {
+		    inform_count += 1;
+		    j_index.find('a.message').text('公告 *'+inform_count);
+		    j_index.find('a.message').show();
+		    on = true;
+		    setInterval(function(){if(on == true){j_index.find('a.message').fadeOut(500).fadeIn(500);}},1000);
+		};
+		j_index.find('a.message').on('click',function(e) {
+		    j_index.find('a.message').hide();
+		    inform_count = 0;
+		    on = false;
+		    index.go('/oj/info/');
+		});
     });
 </script>
 </head>
@@ -84,6 +85,7 @@
 
 	    <li><a style="display:none;" href="" class="message"></a></li>
 	    <li><a href="http://forum.tfcis.org/forum.php?mod=forumdisplay&fid=40" target="_new">Discuss</a></li>
+		<li><a href="https://forms.gle/Y9SQhxorAsWRFRCk9" target="_new">Make A Wish</a></li>
         </ul>
         <ul class="pull-r">
             <li class="sign" style="display:none;"><a href="/oj/sign/">Reg | Log</a></li>
@@ -95,7 +97,7 @@
 <div class="container" style="min-height:100%;"><div id="index-cont" class="g-r">
 </div></div>
 <div id="footer"><div class="container">
-    <small><code>New TNFSH Online Judge 12 - HypeXky</code></small>
+    <small><code>New TNFSH Online Judge 13 - HypeXky</code></small>
 </div></div>
 </body>
 </html>

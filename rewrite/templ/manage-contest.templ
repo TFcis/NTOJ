@@ -109,7 +109,7 @@
 		    });
 		});
 
-		j_formcont.find('select.contest').on('change', function(e){
+		j_formcont.find('select.contest').on('change', function(e) {
 		    var cont_name = $(this).val();
 		    index.go('/oj/manage/contest/?cont=' + cont_name);
 		});
@@ -119,7 +119,7 @@
 		    $.post('/oj/be/auto', {
 				'reqtype':'add',
 				'cont_name':cont_name,
-		    },function(res) {
+		    }, function(res) {
 				if (res[0] == 'E') {
 				    j_formcont.find('div.print').print(res);
 				} else {

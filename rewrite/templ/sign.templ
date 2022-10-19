@@ -4,7 +4,7 @@
     function init() {
         $('body').addClass('dark');
 
-        $('#warning button.confirm').on('click', (e) => {
+        $('#warning button.confirm').on('click', function(e) {
             $('body').addClass('dark');
             $('#intro').show();
             $('#signin').hide();
@@ -13,14 +13,14 @@
             $('#warning').hide();
         });
 
-        $('#warning button.cancel').on('click', (e) => {
+        $('#warning button.cancel').on('click', function(e) {
             $('body').addClass('dark');
             $('#intro').show();
             $('#sign').show();
             $('#warning').hide();
         });
 
-        $('#signin button.signup').on('click', (e) => {
+        $('#signin button.signup').on('click', function(e) {
             $('#intro').hide();
             $('#sign').hide();
 
@@ -28,7 +28,7 @@
             $('#warning').show();
         });
 
-        $('#signin > button.submit').on('click', (e) => {
+        $('#signin > button.submit').on('click', function(e) {
             var j_signin = $('#signin');
             var mail = j_signin.find('input.mail').val();
             var pw = j_signin.find('input.pw').val();
@@ -37,7 +37,7 @@
                 'reqtype': 'signin',
                 'mail': mail,
                 'pw': pw,
-            }, (res) => {
+            }, function(res) {
                 if (res[0] == 'E') {
                     $('#signin div.print').print('Login failed');
                 } else {
@@ -52,7 +52,7 @@
             });
         });
 
-        $('#signup > button.submit').on('click', (e) => {
+        $('#signup > button.submit').on('click', function(e) {
 	        var j_signup = $('#signup');
             var name = j_signup.find('input.name').val();
             var mail = j_signup.find('input.mail').val();
@@ -69,7 +69,7 @@
                 'mail': mail,
                 'pw': pw,
                 'name': name,
-            }, (res) => {
+            }, function(res) {
 		        var msg = 'Unknown';
 
                 if(res[0] == 'E') {
@@ -100,7 +100,7 @@
             });
         });
 
-        $('#signup button.cancel').on('click', (e) => {
+        $('#signup button.cancel').on('click', function(e) {
             index.reload();
         });
     }

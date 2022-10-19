@@ -37,8 +37,8 @@
         var j_cont = $('#cont');
 
         function _load_html() {
-            j_cont.load('/oj/pro/{{ pro['pro_id'] }}/cont.html', (res,status,xhr) => {
-                if(status == 'error') {
+            j_cont.load('/oj/pro/{{ pro['pro_id'] }}/cont.html', function(res, status, xhr) {
+                if (status == 'error') {
                     $('#pdfbtn').show();
                     $('#switchviewer').show();
 
@@ -50,7 +50,7 @@
                     }
                 } else {
                     MathJax.Hub.Queue(["Typeset",MathJax.Hub,j_cont[0]]);
-                    j_cont.find('pre > code').each((i, e) => {
+                    j_cont.find('pre > code').each(function(i, e) {
                         $(e).addClass('html');
                         hljs.highlightBlock(e);
                     });
@@ -58,16 +58,16 @@
             });
         }
         function _load_pdf_js() {
-            PDFJS.getDocument('/oj/pro/{{ pro['pro_id'] }}/cont.pdf').then((pdf) => {
+            PDFJS.getDocument('/oj/pro/{{ pro['pro_id'] }}/cont.pdf').then(function(pdf) {
                 var i;
                 j_cont.empty();
-                for(i = 1; i <= pdf.numPages; i++) {
+                for (i = 1; i <= pdf.numPages; i++) {
                     var j_page = $('<div id="pdf-page-' + i + '"></div>');
                     j_cont.append(j_page)
                 }
 
-                for(i = 0;i < pdf.numPages; i++){
-                    pdf.getPage(i + 1).then(function(idx){return function(page){
+                for (i = 0;i < pdf.numPages; i++) {
+                    pdf.getPage(i + 1).then(function(idx){return function(page) {
                         var j_page = $('#pdf-page-' + idx);
                         var j_canvas = $('<canvas style="width:100%; margin-bottom:16px; display:block;"></canvas>');
                         var j_div = $('<div></div>');
@@ -81,29 +81,29 @@
                         viewport = page.getViewport(
                             j_canvas.width() / page.getViewport(1.0).width);
 
-                        j_canvas.attr('width',viewport.width);
-                        j_canvas.attr('height',viewport.height);
+                        j_canvas.attr('width', viewport.width);
+                        j_canvas.attr('height', viewport.height);
 
                         j_div.addClass('textlayer');
-                        j_div.css('width',viewport.width);
-                        j_div.css('height',viewport.height);
-                        j_div.offset({'top':offset.top,'left':offset.left});
+                        j_div.css('width', viewport.width);
+                        j_div.css('height', viewport.height);
+                        j_div.offset({'top':offset.top, 'left':offset.left});
 
                         j_page.append(j_div);
 
-                        page.getTextContent().then(function(text){
+                        page.getTextContent().then(function(text) {
                             var textlayer = new TextLayerBuilder({
                                 'textLayerDiv': j_div[0],
-                                'viewport':viewport,
-                                'pageIndex':idx
+                                'viewport': viewport,
+                                'pageIndex': idx
                             });
 
                             textlayer.setTextContent(text);
 
                             page.render({
-                                'canvasContext':ctx,
-                                'viewport':viewport,
-                                'textLayer':textlayer
+                                'canvasContext': ctx,
+                                'viewport': viewport,
+                                'textLayer': textlayer
                             });
                         });
                     };}(i + 1));
@@ -128,7 +128,7 @@
     {% end %}
     <a class="btn-con" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
     <a class="btn-def" href="/oj/chal/?proid={{ pro['pro_id'] }}">Status</a>
-    <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf?download=1','_blank');" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
+    <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf?downtimelimitload=1','_blank'?downtimelim?downtimelimii);" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
     <a id="switchviewer" class="btn-wrn" style="display:none; width:156px; text-align:center;">Switch Viewer</a>
     <div></div>
     {% if (isadmin) %}
