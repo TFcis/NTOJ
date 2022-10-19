@@ -3,9 +3,29 @@
 <link rel="stylesheet" type="text/css" href="/oj/proset.css">
 
 <script type="text/javascript">
+    var j_form = $("#form");
+    function init() {
+        j_form.find("select.logtype_list").on('change', function(e) {
+            var url = '/oj/log/';
+            var logtype = $(this).val();
+            if (logtype != 'All Type') {
+                url += '?logtype=' + logtype;
+            }
+            index.go(url);
+        });
+    }
 </script>
 
 <div id="prolist" class="g-lg-12">
+    <div id="form">
+        Type Filter
+        <select class="logtype_list">
+            <option value="All Type" {% if cur_logtype == None %}selected{% end %}>All Type</option>
+            {% for logtype in logtype_list %}
+                <option value="{{ logtype }}" {% if logtype == cur_logtype %}selected{% end %}>{{ logtype }}</option>
+            {% end %}
+        </select>
+    </div>
     <div class="g-r head">
         <div class="g-sm-1">#</div>
         <div class="g-sm-8">Message</div>

@@ -29,16 +29,34 @@ class LogService:
             )
         return (None, result[0]['log_id'])
 
-    async def list_log(self, off, num):
+    async def list_log(self, off, num, log_type=None):
         async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    SELECT "log"."log_id", "log"."message", "log"."timestamp"
-                    FROM "log"
-                    ORDER BY "log"."timestamp" DESC OFFSET $1 LIMIT $2;
-                ''',
-                off, num
-            )
+            if log_type == None:
+                result = await con.fetch(
+                    '''
+                        SELECT "log"."log_id", "log"."message", "log"."timestamp"
+                        FROM "log"
+                        ORDER BY "log"."timestamp" DESC OFFSET $1 LIMIT $2;
+                    ''',
+                    off, num
+                )
+
+                count = await con.fetch('SELECT COUNT(*) FROM "log"')
+                count = count[0]['count']
+
+            else:
+                result = await con.fetch(
+                    '''
+                        SELECT "log"."log_id", "log"."message", "log"."timestamp"
+                        FROM "log"
+                        WHERE "log"."type" = $1
+                        ORDER BY "log"."timestamp" DESC OFFSET $2 LIMIT $3;
+                    ''',
+                    log_type, off, num
+                )
+
+                count = await con.fetch('SELECT COUNT(*) FROM "log" WHERE "log"."type" = $1', log_type)
+                count = count[0]['count']
 
             loglist = []
             for (log_id, message, timestamp) in result:
@@ -48,9 +66,17 @@ class LogService:
                     'timestamp' : timestamp,
                 })
 
-            result = await con.fetch('SELECT COUNT(*) FROM "log"')
+        return (None, { 'loglist': loglist, 'lognum': count })
 
-        return (None, { 'loglist': loglist, 'lognum': result[0]['count'] })
+    async def get_log_type(self):
+        async with self.db.acquire() as con:
+            result = await con.fetch('SELECT DISTINCT "type" FROM "log"')
+
+            log_type = []
+            for type in result:
+                log_type.append(type['type'])
+
+        return (None, log_type)
 
 class LogHandler(RequestHandler):
     @reqenv
@@ -65,11 +91,18 @@ class LogHandler(RequestHandler):
         except tornado.web.HTTPError:
             off = 0
 
-        err, log = await LogService.inst.list_log(off, 50)
+        try:
+            logtype = str(self.get_argument('logtype'))
+        except tornado.web.HTTPError:
+            logtype = None
+
+        err, logtype_list = await LogService.inst.get_log_type()
+
+        err, log = await LogService.inst.list_log(off, 50, logtype)
         if err:
             self.error(err)
             return
 
-        await self.render('loglist', pageoff=off, lognum=log['lognum'], loglist=log['loglist'])
+        await self.render('loglist', pageoff=off, lognum=log['lognum'], loglist=log['loglist'], logtype_list=logtype_list, cur_logtype=logtype)
         return
 
