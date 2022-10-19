@@ -173,7 +173,7 @@ class ChalService:
                 #INFO: owner is problem uploader. if problem was locked, only problem owner can see submit code about this problem
 
             if (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL) and (acct['acct_id'] != acct_id):
-                await LogService.inst.add_log(f"{acct['name']} view the challenge {chal_id}")
+                await LogService.inst.add_log(f"{acct['name']} view the challenge {chal_id}", 'manage.chal.view')
 
             code = True
 

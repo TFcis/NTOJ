@@ -85,7 +85,7 @@ class AcctHandler(RequestHandler):
             pw = self.get_argument('pw')
             acct_id = self.get_argument('acct_id')
             if acct_id != self.acct['acct_id']:
-                await LogService.inst.add_log((f"{self.acct['name']} was changing the password of user #{acct_id}."))
+                await LogService.inst.add_log((f"{self.acct['name']} was changing the password of user #{acct_id}."), 'manage.acct.update.pwd')
 
             err, _ = await UserService.inst.update_pw(
                 acct_id, old, pw, (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)

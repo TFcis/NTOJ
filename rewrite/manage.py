@@ -216,7 +216,7 @@ class ManageHandler(RequestHandler):
                 index = int(self.get_argument('index'))
 
                 err = await Service.Judge.connect_server(index)
-                await LogService.inst.add_log(f"{self.acct['name']} had been connected server-{index} succesfully.")
+                await LogService.inst.add_log(f"{self.acct['name']} had been connected server-{index} succesfully.", 'manage.judge.connect')
                 if err:
                     self.error(err)
                     return
@@ -228,12 +228,12 @@ class ManageHandler(RequestHandler):
                 pwd = str(self.get_argument('pwd'))
 
                 if config.unlock_pwd != base64.b64encode(packb(pwd)):
-                    await LogService.inst.add_log(f"{self.acct['name']} tryed to disconnect server-{index} but failed.")
+                    await LogService.inst.add_log(f"{self.acct['name']} tryed to disconnect server-{index} but failed.", 'manage.judge.disconnect.failure')
                     self.error('Eacces')
                     return
 
                 err = await Service.Judge.disconnect_server(index)
-                await LogService.inst.add_log(f"{self.acct['name']} had been disconnected server-{index} succesfully.")
+                await LogService.inst.add_log(f"{self.acct['name']} had been disconnected server-{index} succesfully.", 'manage.judge.disconnect')
                 if err:
                     self.error(err)
                     return
@@ -252,7 +252,7 @@ class ManageHandler(RequestHandler):
 
                 err, pro_id = await Service.Pro.add_pro(
                     name, status, clas, expire, pack_token)
-                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to add the problem #{pro_id}")
+                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro')
                 if err:
                     self.error(err)
                     return
@@ -275,7 +275,7 @@ class ManageHandler(RequestHandler):
 
                 err, ret = await Service.Pro.update_pro(
                     pro_id, name, status, clas, expire, pack_type, pack_token, tags)
-                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to update the problem #{pro_id}")
+                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to update the problem #{pro_id}", 'manage.pro.update.pro')
                 if err:
                     self.error(err)
                     return
@@ -289,7 +289,7 @@ class ManageHandler(RequestHandler):
                 memlimit = int(self.get_argument('memlimit'))
 
                 err, ret = await Service.Pro.update_limit(pro_id, timelimit, memlimit)
-                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to update the problem #{pro_id}")
+                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to update the problem #{pro_id}", 'manage.pro.update.limit')
                 if err:
                     self.error(err)
                     return
@@ -327,7 +327,7 @@ class ManageHandler(RequestHandler):
                         ''',
                         pro_id
                     )
-                await LogService.inst.add_log(f"{self.acct['name']} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals")
+                await LogService.inst.add_log(f"{self.acct['name']} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals", 'manage.chal.rechal')
 
                 for chal_id in result:
                     err, ret = await Service.Chal.reset_chal(chal_id)
@@ -382,7 +382,7 @@ class ManageHandler(RequestHandler):
                 status = int(self.get_argument('status'))
                 start = self.get_argument('start')
                 end = self.get_argument('end')
-                await LogService.inst.add_log(f"{self.acct['name']} was setting the contest \"{cont_name}\".")
+                await LogService.inst.add_log(f"{self.acct['name']} was setting the contest \"{cont_name}\".", 'manage.contest.set')
                 err, start = self.trantime(start)
                 if err:
                     self.error(err)
@@ -409,7 +409,7 @@ class ManageHandler(RequestHandler):
                 cont_name = self.get_argument('cont_name')
                 await Service.Contest.remove_cont(cont_name)
                 self.finish('S')
-                await LogService.inst.add_log(f"{self.acct['name']} was removing the contest \"{cont_name}\".")
+                await LogService.inst.add_log(f"{self.acct['name']} was removing the contest \"{cont_name}\".", 'manage.contest.remove')
                 return
 
         elif page == 'acct':
@@ -425,11 +425,11 @@ class ManageHandler(RequestHandler):
                 #    return
                 err, acct = await Service.Acct.info_acct(acct_id)
                 if err:
-                    await LogService.inst.add_log(f"{self.acct['name']}(#{self.acct['acct_id']}) had been send a request to update the account #{acct_id} but not found")
+                    await LogService.inst.add_log(f"{self.acct['name']}(#{self.acct['acct_id']}) had been send a request to update the account #{acct_id} but not found", 'manage.acct.update.failure')
                     self.error(err)
                     return
 
-                await LogService.inst.add_log(f"{self.acct['name']}(#{self.acct['acct_id']}) had been send a request to update the account {acct['name']}(#{acct['acct_id']})")
+                await LogService.inst.add_log(f"{self.acct['name']}(#{self.acct['acct_id']}) had been send a request to update the account {acct['name']}(#{acct['acct_id']})", 'manage.acct.update')
 
                 err, ret = await Service.Acct.update_acct(acct_id,
                                                                acct_type, clas, acct['name'], acct['photo'], acct['cover'])
@@ -444,7 +444,7 @@ class ManageHandler(RequestHandler):
         elif page == 'rquestion':
             reqtype = self.get_argument('reqtype')
             if reqtype == 'rpl':
-                await LogService.inst.add_log(f"{self.acct['name']} replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".")
+                await LogService.inst.add_log(f"{self.acct['name']} replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".", 'manage.question.reply')
 
                 index = self.get_argument('index')
                 rtext = self.get_argument('rtext')
@@ -454,7 +454,7 @@ class ManageHandler(RequestHandler):
                 return
 
             if reqtype == 'rrpl':
-                await LogService.inst.add_log(f"{self.acct['name']} re-replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".")
+                await LogService.inst.add_log(f"{self.acct['name']} re-replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".", 'manage.question.re-reply')
 
                 index = self.get_argument('index')
                 rtext = self.get_argument('rtext')
@@ -469,20 +469,20 @@ class ManageHandler(RequestHandler):
             if reqtype == 'set':
                 text = self.get_argument('text')
                 await Service.Inform.set_inform(text)
-                await LogService.inst.add_log(f"{self.acct['name']} added a line on bulletin: \"{text}\".")
+                await LogService.inst.add_log(f"{self.acct['name']} added a line on bulletin: \"{text}\".", 'manage.inform.add')
                 return
 
             elif reqtype == 'edit':
                 index = self.get_argument('index')
                 text = self.get_argument('text')
                 color = self.get_argument('color')
-                await LogService.inst.add_log(f"{self.acct['name']} changed a line on bulletin: \"{text}\" which it used to be the #{int(index) + 1}th row.")
+                await LogService.inst.add_log(f"{self.acct['name']} updated a line on bulletin: \"{text}\" which it used to be the #{int(index) + 1}th row.", 'manage.inform.update')
                 await Service.Inform.edit_inform(index, text, color)
                 return
 
             elif reqtype == 'del':
                 index = self.get_argument('index')
-                await LogService.inst.add_log(f"{self.acct['name']} removed a line on bulletin which it used to be the #{int(index) + 1}th row.")
+                await LogService.inst.add_log(f"{self.acct['name']} removed a line on bulletin which it used to be the #{int(index) + 1}th row.", 'manage.inform.remove')
                 await Service.Inform.del_inform(index)
                 return
             return
@@ -502,7 +502,7 @@ class ManageHandler(RequestHandler):
                     except ValueError:
                         pass
                 p_list = p_list2
-                await LogService.inst.add_log(f"{self.acct['name']} add proclass key={pclas_key} name={pclas_name} list={p_list}")
+                await LogService.inst.add_log(f"{self.acct['name']} add proclass key={pclas_key} name={pclas_name} list={p_list}", 'manage.proclass.add')
                 err = await Service.Pro.add_pclass(pclas_key, pclas_name, p_list)
                 if err:
                     self.error(err)
@@ -513,7 +513,7 @@ class ManageHandler(RequestHandler):
 
             elif reqtype == 'remove':
                 pclas_key = str(self.get_argument('pclas_key'))
-                await LogService.inst.add_log(f"{self.acct['name']} remove proclass key={pclas_key}")
+                await LogService.inst.add_log(f"{self.acct['name']} remove proclass key={pclas_key}", 'manage.proclass.remove')
                 err = await Service.Pro.remove_pclass(pclas_key)
                 if err:
                     self.error(err)
@@ -537,7 +537,7 @@ class ManageHandler(RequestHandler):
                         pass
 
                 p_list = p_list2
-                await LogService.inst.add_log(f"{self.acct['name']} update proclass key={pclas_key} newkey={new_pclas_key} name={pclas_name} list={p_list}")
+                await LogService.inst.add_log(f"{self.acct['name']} update proclass key={pclas_key} newkey={new_pclas_key} name={pclas_name} list={p_list}", 'manage.proclass.update')
                 err = await Service.Pro.edit_pclass(pclas_key, new_pclas_key, pclas_name, p_list)
                 if err:
                     self.error(err)
