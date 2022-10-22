@@ -16,8 +16,8 @@ class JudgeServerSerice:
         self.ws2 = None
 
     async def start(self):
-        asyncio.create_task(self.connect_server())
-        asyncio.create_task(self.heartbeat())
+        self.main_task = asyncio.create_task(self.connect_server())
+        self.heartbeat_task = asyncio.create_task(self.heartbeat())
 
     async def connect_server(self):
         try:
@@ -60,9 +60,12 @@ class JudgeServerSerice:
             #BUG: 這樣寫應該會出錯
             self.ws.close()
             self.ws2.close()
+            self.main_task.cancel()
+            self.heartbeat_task.cancel()
         except:
             return 'Ejudge'
 
+        await asyncio.sleep(3)
         return None
 
     async def get_servers_status(self):
@@ -77,9 +80,8 @@ class JudgeServerSerice:
         try:
             self.ws2 = await websocket_connect(self.server_url)
         except:
-            pass
-
-        await asyncio.sleep(5)
+            self.status = False
+            return
 
         while self.status:
             try:
@@ -133,6 +135,8 @@ class JudgeServerClusterService:
     async def disconnect_all_server(self) -> None:
         for server in self.servers:
             await server.disconnect_server()
+
+        await asyncio.sleep(3)
 
     async def _get_server_status(self, idx):
         return (await self.servers[idx].get_servers_status())
