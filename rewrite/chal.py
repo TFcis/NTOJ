@@ -69,6 +69,8 @@ class ChalService:
         ChalService.inst = self
 
     async def add_chal(self, pro_id, acct_id, code: str):
+        pro_id = int(pro_id)
+        chal_id = int(chal_id)
         if (await Service.Contest.running())[1] == False:
             return ('Eacces', None)
 
@@ -78,7 +80,7 @@ class ChalService:
                     INSERT INTO "challenge" ("pro_id", "acct_id")
                     VALUES ($1, $2) RETURNING "chal_id";
                 ''',
-                int(pro_id), int(acct_id)
+                pro_id, chal_id
             )
         if result.__len__() != 1:
             return ('Eunk', None)
@@ -95,8 +97,9 @@ class ChalService:
         return (None, chal_id)
 
     async def reset_chal(self, chal_id):
+        chal_id = int(chal_id)
         async with self.db.acquire() as con:
-            await con.execute('DELETE FROM "test" WHERE "chal_id" = $1;', int(chal_id))
+            await con.execute('DELETE FROM "test" WHERE "chal_id" = $1;', chal_id)
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
         await self.rs.delete('rate@kernel_True')
@@ -105,6 +108,7 @@ class ChalService:
         return (None, None)
 
     async def get_chal_state(self, chal_id):
+        chal_id = int(chal_id)
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
@@ -332,6 +336,7 @@ class ChalService:
         })
 
     async def update_test(self, chal_id, test_idx, state, runtime, memory, response):
+        chal_id = int(chal_id)
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
@@ -339,10 +344,9 @@ class ChalService:
                     SET "state" = $1, "runtime" = $2, "memory" = $3, "response" = $4
                     WHERE "chal_id" = $5 AND "test_idx" = $6;
                 ''',
-                state, runtime, memory, response, int(chal_id), test_idx
+                state, runtime, memory, response, chal_id, test_idx
             )
 
-        #TODO: redis publish materialized_view_req
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
         await self.rs.delete('prolist')
 

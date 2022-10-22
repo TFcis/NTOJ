@@ -53,7 +53,7 @@ class CodeHandler(RequestHandler):
 
         err, code = await CodeService.inst.get_code(chal_id, self.acct)
         if code == None:
-            self.finish('Cheating? No Way !!!\nBy tobiichi3227')
+            self.finish('')
             return
 
         lexer = get_lexer_by_name('c++', encoding='utf-8', stripall=True)

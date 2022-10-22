@@ -302,8 +302,7 @@ class ProService:
                 if pro_id in statemap:
                     pro['state'] = statemap[pro_id]
 
-                    #TODO: Sa說的AC再顯示Tags
-                    if pro['state'] != ChalConst.STATE_AC:
+                    if pro['state'] == None or pro['state'] != ChalConst.STATE_AC:
                         pro['tags'] = ''
 
             if pro['expire'] == None:
@@ -472,17 +471,12 @@ class ProService:
 
             try:
                 os.chmod(os.path.abspath(f'problem/{pro_id}'), 0o755)
+                #INFO: 正式上線要改路徑
                 os.symlink(os.path.abspath(f'problem/{pro_id}/http'), f'/home/tobiichi3227/html/oj/problem/{pro_id}')
 
             except FileExistsError:
                 pass
 
-            # try:
-            #     conf_f = open(f'problem/{pro_id}/conf.json')
-            #     conf = json.load(conf_f)
-            #
-            # except Exception:
-            #     return ('Econf', None)
             try:
                 with open(f'problem/{pro_id}/conf.json') as conf_f:
                     conf = json.load(conf_f)
@@ -648,33 +642,25 @@ class ProHandler(RequestHandler):
 
         isadmin = (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
-        #TODO: If not accept this problem, don't show problem tags
-        async with self.db.acquire() as con:
-            result = await con.fetchrow(
-                '''
-                    SELECT MIN("challenge_state"."state") AS "state"
-                    FROM "challenge"
-                    INNER JOIN "challenge_state"
-                    ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                    AND "challenge"."acct_id" = $1
-                    INNER JOIN "problem"
-                    ON "challenge"."pro_id" = $3
-                    WHERE "problem"."status" <= $2 AND "problem"."pro_id" = $3 AND "problem"."class" && $4;
-                ''',
-                int(self.acct['acct_id']), ChalConst.STATE_AC, int(pro['pro_id']), [1, 2]
-            )
 
-        if isadmin:
-            pass
-        elif result['state'] == None or result['state'] != ChalConst.STATE_AC:
-            pro['tags'] = ''
+        if isadmin == False:
+            async with self.db.acquire() as con:
+                result = await con.fetchrow(
+                    '''
+                        SELECT MIN("challenge_state"."state") AS "state"
+                        FROM "challenge"
+                        INNER JOIN "challenge_state"
+                        ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                        AND "challenge"."acct_id" = $1
+                        INNER JOIN "problem"
+                        ON "challenge"."pro_id" = $3
+                        WHERE "problem"."status" <= $2 AND "problem"."pro_id" = $3 AND "problem"."class" && $4;
+                    ''',
+                    int(self.acct['acct_id']), ChalConst.STATE_AC, int(pro['pro_id']), [1, 2]
+                )
 
-        # await self.render('pro', pro={
-        #     'pro_id' : pro['pro_id'],
-        #     'name'   : pro['name'],
-        #     'status' : pro['status'],
-        #     'tags'   : pro['tags'],
-        # }, testl=testl, isadmin=isadmin, can_submit=Service.doki.buf[0])
+            if result['state'] == None or result['state'] != ChalConst.STATE_AC:
+                pro['tags'] = ''
 
         judge_status_list = await Service.Judge.get_servers_status()
         can_submit = False
@@ -709,7 +695,7 @@ class ProTagsHandler(RequestHandler):
                 self.error(err)
                 return
 
-            await LogService.inst.add_log((self.acct['name'] + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."))
+            await LogService.inst.add_log((self.acct['name'] + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."), 'manage.pro.update.tag')
 
             err, ret = await ProService.inst.update_pro(
                 pro_id, pro['name'], pro['status'], pro['class'], pro['expire'], '', None, tags)
@@ -752,7 +738,7 @@ class SubmitHandler(RequestHandler):
                 break
 
         if can_submit == False:
-            self.finish('Judge Server Offline')
+            self.finish('<h1 style="color: red;">All Judge Server Offline</h1>')
             return
 
         await self.render('submit', pro=pro)
@@ -868,7 +854,7 @@ class ChalListHandler(RequestHandler):
         try:
             ppro_id = str(self.get_argument('proid'))
             tmp_pro_id = ppro_id.replace(' ', '').split(',')
-            pro_id = list()
+            pro_id = []
             for p in tmp_pro_id:
                 try:
                     pro_id.append(int(p))
@@ -885,7 +871,7 @@ class ChalListHandler(RequestHandler):
         try:
             pacct_id = str(self.get_argument('acctid'))
             tmp_acct_id = pacct_id.replace(' ', '').split(',')
-            acct_id = list()
+            acct_id = []
             for a in tmp_acct_id:
                 acct_id.append(int(a))
 
@@ -978,12 +964,6 @@ class ChalHandler(RequestHandler):
         await self.render('chal', pro=pro, chal=chal, rechal=rechal)
         return
 
-    @reqenv
-    async def post(self):
-        reqtype = self.get_argument('reqtype')
-        self.error('Eunk')
-        return
-
 class ChalStateHandler(WebSocketHandler):
     async def open(self):
         self.chal_id = -1
@@ -996,11 +976,9 @@ class ChalStateHandler(WebSocketHandler):
                 if msg['type'] != 'message':
                     continue
 
-                dbg_print(__file__, 972, self_chal_id=self.chal_id)
                 if int(msg['data']) == self.chal_id:
                     err, chal_states = await ChalService.inst.get_chal_state(self.chal_id)
                     await self.write_message(json.dumps(chal_states))
-                    dbg_print(__file__, 975, msg=msg)
 
         self.task = asyncio.tasks.Task(listen_chalstate())
 
