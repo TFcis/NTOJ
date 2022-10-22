@@ -665,8 +665,8 @@ class ProHandler(RequestHandler):
         judge_status_list = await Service.Judge.get_servers_status()
         can_submit = False
 
-        for status, _ in judge_status_list:
-            if status:
+        for status in judge_status_list:
+            if status['status']:
                 can_submit = True
                 break
 
@@ -732,8 +732,8 @@ class SubmitHandler(RequestHandler):
         judge_status_list = await Service.Judge.get_servers_status()
         can_submit = False
 
-        for status, _ in judge_status_list:
-            if status:
+        for status in judge_status_list:
+            if status['status']:
                 can_submit = True
                 break
 
@@ -753,8 +753,8 @@ class SubmitHandler(RequestHandler):
         judge_status_list = await Service.Judge.get_servers_status()
         can_submit = False
 
-        for status, _ in judge_status_list:
-            if status:
+        for status in judge_status_list:
+            if status['status']:
                 can_submit = True
                 break
 

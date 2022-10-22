@@ -1,4 +1,4 @@
-from typing import List, Union, Tuple, Literal
+from typing import List, Union, Tuple, Literal, Dict
 import json
 import asyncio
 
@@ -7,10 +7,11 @@ from tornado.websocket import websocket_connect
 from req import Service
 
 class JudgeServerSerice:
-    def __init__(self, rs, server_url) -> None:
+    def __init__(self, rs, server_name, server_url) -> None:
         self.rs = rs
+        self.server_name = server_name
         self.server_url = server_url
-        self.current_send_cnt = 0
+        self.running_chal_cnt = 0
         self.status = False
         self.ws = None
         self.ws2 = None
@@ -48,7 +49,7 @@ class JudgeServerSerice:
 
                 await asyncio.sleep(0.5)
                 await self.rs.publish('chalstatesub', res['chal_id'])
-                self.current_send_cnt -= 1
+                self.running_chal_cnt -= 1
 
 
     async def disconnect_server(self) -> Union[str, None]:
@@ -68,11 +69,15 @@ class JudgeServerSerice:
         await asyncio.sleep(3)
         return None
 
-    async def get_servers_status(self):
-        return (self.status, self.current_send_cnt)
+    async def get_server_status(self):
+        return (None, {
+            'name': self.server_name,
+            'status': self.status,
+            'running_chal_cnt': self.running_chal_cnt
+        })
 
     async def send(self, data):
-        self.current_send_cnt += 1
+        self.running_chal_cnt += 1
         await self.ws.write_message(data)
 
     async def heartbeat(self):
@@ -93,14 +98,19 @@ class JudgeServerSerice:
             await asyncio.sleep(1)
 
 class JudgeServerClusterService:
-    def __init__(self, rs, server_urls: List[str]) -> None:
+    def __init__(self, rs, server_urls: List[Dict]) -> None:
         JudgeServerClusterService.inst = self
         self.rs = rs
         self.servers: List[JudgeServerSerice] = []
         self.idx = 0
 
-        for url in server_urls:
-            self.servers.append(JudgeServerSerice(self.rs, url))
+        for server in server_urls:
+            url  = server.get('url')
+            name = server.get('name')
+            if name == None:
+                name = ''
+
+            self.servers.append(JudgeServerSerice(self.rs, name, url))
 
     async def start(self) -> None:
         for judge_server in self.servers:
@@ -138,13 +148,11 @@ class JudgeServerClusterService:
 
         await asyncio.sleep(3)
 
-    async def _get_server_status(self, idx):
-        return (await self.servers[idx].get_servers_status())
-
-    async def get_servers_status(self) -> List[Tuple[bool, int]]:
-        status_list: List[Tuple[bool, int]] = []
+    async def get_servers_status(self) -> List[Dict]:
+        status_list: List[Dict] = []
         for server in self.servers:
-            status_list.append((await server.get_servers_status()))
+            err, status = await server.get_server_status()
+            status_list.append(status)
 
         return status_list
 
@@ -154,8 +162,8 @@ class JudgeServerClusterService:
         while self.idx < servers_len:
             self.idx += 1
             self.idx %= servers_len
-            status, _ = await self._get_server_status(self.idx)
-            if status == False:
+            err, status = await self.servers[self.idx].get_server_status()
+            if status['status'] == False:
                 self.idx += 1
                 self.idx %= servers_len
                 continue

@@ -65,8 +65,8 @@
 	<table border=2>
 	    <thead>
 		<tr>
-		<td style="width:56%;">Server</td>
-		<td style="width:20%;">Current Challenge Count</td>
+		<td style="width:56%;">Server Name</td>
+		<td style="width:20%;">Running Challenge Count</td>
         <td style="width:8%;">Status</td>
 		<td style="width:8%;">Connect</td>
 		<td style="width:8%;">Disconnect</td></tr>
@@ -75,9 +75,13 @@
 		{% set count = 0 %}
 		{% for judge_status in judge_status_list %}
 		<tr>
-            <td>Server-{{ count }}</td>
-            <td>{{ judge_status[1] }}</td>
-            {% if judge_status[0] == True %}
+            {% if judge_status['name'] == '' %}
+                <td>Server-{{ count }}</td>
+            {% else %}
+                <td>{{ judge_status['name'] }}</td>
+            {% end %}
+            <td>{{ judge_status['running_chal_cnt'] }}</td>
+            {% if judge_status['status'] == True %}
                 <td style="color: green;">Online</td>
             {% else %}
                 <td style="color: red;">Offline</td>
