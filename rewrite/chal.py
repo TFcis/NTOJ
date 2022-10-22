@@ -261,6 +261,9 @@ class ChalService:
             'check_type' : test_conf['check_type'],
         }))
 
+        await self.rs.hdel('rate@kernel_True', str(acct_id))
+        await self.rs.hdel('rate@kernel_False', str(acct_id))
+
         return (None, None)
 
     #TODO: Porformance test
