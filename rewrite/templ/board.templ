@@ -3,41 +3,32 @@
 <link rel="stylesheet" type="text/css" href="/oj/board.css">
 
 <script type="text/javascript" id="contjs">
-    var ws;
     var end = new Date('{{end}}').getTime();
     var j_contest = $('#contest');
     function GetCount() {
 	    var j_count = $('#count');
 	    var now = new Date().getTime();
-	    var delta = Math.floor((end - now)/1000);
-	    if (delta<=0) {
+	    var delta = Math.floor((end - now) / 1000);
+	    if (delta <= 0) {
 	        j_count.text('Over');
 	    } else {
-	        var hour = Math.floor(delta/3600);
-	        delta = delta%3600;
+	        var hour = Math.floor(delta / 3600);
+	        delta = (delta % 3600);
 	        var minute = Math.floor(delta/60);
-	        delta = delta%60;
+	        delta = (delta % 60);
 	        var second = Math.floor(delta);
 	        j_count.text(hour+' '+'hour'+(hour>1?'s':'')+'  '+minute+' '+'minute'+(minute>1?'s':'')+'  '+second+' '+'second'+(second>1?'s':'')+' '+'Left');
 	        setTimeout(function(){GetCount()},1000);
 	    }
     }
+
     function init() {
 	    GetCount();
-        var j_board = $('#board');
-        var j_head = j_board.find('div.head');
-        $(window).on('scroll', function(e) {
-            if (j_board.offset().top <= $(window).scrollTop()) {
-                j_head.css('top',$(window).scrollTop() - j_board.offset().top);
-            } else {
-                j_head.css('top','auto');
-            }
-        });
-
     }
-    j_contest.find('select.cont').on('change',function(e) {
+
+    j_contest.find('select.cont').on('change', function(e) {
 	    var cont_name = $(this).val();
-	    index.go('/oj/board/?cont='+cont_name);
+	    index.go('/oj/board/?cont=' + cont_name);
     });
 </script>
 

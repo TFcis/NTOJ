@@ -1,7 +1,7 @@
 @import './color.scss';
 
 #cover {
-   width: 100%; 
+   width: 100%;
    height: 512px;
    background-size: cover;
    position: absolute;
@@ -37,6 +37,11 @@
 
         td.value {
             text-align: right;
+        }
+
+        td.value a {
+            color: #0F0;
+            font-size: 100%;
         }
     }
 }

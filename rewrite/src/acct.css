@@ -34,6 +34,10 @@
 #summary > table td.value {
   text-align: right;
 }
+#summary > table td.value a {
+  color: #0F0;
+  font-size: 100%;
+}
 
 table a {
   font-size: 130%;
