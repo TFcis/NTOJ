@@ -221,6 +221,7 @@ class ProService:
             clas = [clas]
 
         isguest = (acct['acct_id'] == UserConst.ACCTID_GUEST)
+        isadmin = (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
         statemap = {}
 
@@ -293,17 +294,17 @@ class ProService:
 
         for pro in prolist:
             pro_id = pro['pro_id']
-            pro['state'] = None
+            pro['state'] = statemap.get(pro_id)
 
-            if isguest:
+            if isadmin:
+                pass
+
+            elif isguest or pro['tags'] == None or pro['tags'] == '':
                 pro['tags'] = ''
 
             else:
-                if pro_id in statemap:
-                    pro['state'] = statemap[pro_id]
-
-                    if pro['state'] == None or pro['state'] != ChalConst.STATE_AC:
-                        pro['tags'] = ''
+                if pro['state'] == None:
+                    pro['tags'] = ''
 
             if pro['expire'] == None:
                 pro['outdate'] = False
@@ -640,10 +641,16 @@ class ProHandler(RequestHandler):
             if test['test_idx'] in countmap:
                 test['rate'] = math.floor(countmap[test['test_idx']])
 
+        isguest = (self.acct['acct_id'] == UserConst.ACCTID_GUEST)
         isadmin = (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
+        if isadmin:
+            pass
 
-        if isadmin == False:
+        elif isguest or pro['tags'] == None or pro['tags'] == '':
+            pro['tags'] = ''
+
+        else:
             async with self.db.acquire() as con:
                 result = await con.fetchrow(
                     '''
