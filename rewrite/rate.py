@@ -75,6 +75,8 @@ class RateService:
                     'all_cnt': all_chal_cnt,
                 }
                 await self.rs.hset(key, acct_id, packb(rate_data))
+        else:
+            rate_data = unpackb(rate_data)
 
         return (None, rate_data)
 
