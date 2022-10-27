@@ -556,6 +556,7 @@ class ManageHandler(RequestHandler):
                     self.error('Ekernel')
                     return
 
+                await LogService.inst.add_log(f"{self.acct['name']} updated group={gname} group_type={gtype} group_class={gclas}.", 'manage.group.update')
                 err = await Service.Group.update_group(gname, gtype, gclas)
                 if err:
                     self.error(err)
@@ -568,7 +569,13 @@ class ManageHandler(RequestHandler):
                 gname = str(self.get_argument('gname'))
                 gtype = int(self.get_argument('gtype'))
                 gclas = int(self.get_argument('gclas'))
+
+                await LogService.inst.add_log(f"{self.acct['name']} added group={gname} group_type={gtype} group_class={gclas}.", 'manage.group.add')
                 err = await Service.Group.add_group(gname, gtype, gclas)
+                if err:
+                    self.error(err)
+                    return
+
                 self.finish('S')
                 return
 
@@ -578,7 +585,12 @@ class ManageHandler(RequestHandler):
                     self.error('Ekernel')
                     return
 
+                await LogService.inst.add_log(f"{self.acct['name']} deleted group={gname}", 'manage.group.delete')
                 err = await Service.Group.del_group(gname)
+                if err:
+                    self.error(err)
+                    return
+
                 self.finish('S')
                 return
 
