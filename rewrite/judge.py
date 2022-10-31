@@ -148,6 +148,13 @@ class JudgeServerClusterService:
 
         await asyncio.sleep(3)
 
+    async def get_server_status(self, idx):
+        if idx < 0 or idx >= self.servers.__len__():
+            return 'Eparam'
+
+        err, status = await self.servers[idx].get_server_status()
+        return (None, status)
+
     async def get_servers_status(self) -> List[Dict]:
         status_list: List[Dict] = []
         for server in self.servers:

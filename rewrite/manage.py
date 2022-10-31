@@ -216,29 +216,41 @@ class ManageHandler(RequestHandler):
                 index = int(self.get_argument('index'))
 
                 err = await Service.Judge.connect_server(index)
-                await LogService.inst.add_log(f"{self.acct['name']} had been connected server-{index} succesfully.", 'manage.judge.connect')
+                err, server_inform = await Service.Judge.get_server_status(index)
+                if (server_name := server_inform['name']) == '':
+                    server_name = f"server-{index}"
+
                 if err:
+                    await LogService.inst.add_log(f"{self.acct['name']} tried connected {server_name} but failed.", 'manage.judge.connect.failure')
                     self.error(err)
                     return
 
+                await LogService.inst.add_log(f"{self.acct['name']} had been connected {server_name} succesfully.", 'manage.judge.connect')
+
                 self.finish('S')
+                return
 
             elif reqtype == 'disconnect':
                 index = int(self.get_argument('index'))
                 pwd = str(self.get_argument('pwd'))
 
+                err, server_inform = await Service.Judge.get_server_status(index)
+                if (server_name := server_inform['name']) == '':
+                    server_name = f"server-{index}"
+
                 if config.unlock_pwd != base64.b64encode(packb(pwd)):
-                    await LogService.inst.add_log(f"{self.acct['name']} tryed to disconnect server-{index} but failed.", 'manage.judge.disconnect.failure')
+                    await LogService.inst.add_log(f"{self.acct['name']} tried to disconnect {server_name} but failed.", 'manage.judge.disconnect.failure')
                     self.error('Eacces')
                     return
 
                 err = await Service.Judge.disconnect_server(index)
-                await LogService.inst.add_log(f"{self.acct['name']} had been disconnected server-{index} succesfully.", 'manage.judge.disconnect')
+                await LogService.inst.add_log(f"{self.acct['name']} had been disconnected {server_name} succesfully.", 'manage.judge.disconnect')
                 if err:
                     self.error(err)
                     return
 
                 self.finish('S')
+                return
 
         elif page == 'pro':
             reqtype = self.get_argument('reqtype')
