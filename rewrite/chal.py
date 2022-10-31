@@ -70,7 +70,8 @@ class ChalService:
 
     async def add_chal(self, pro_id, acct_id, code: str):
         pro_id = int(pro_id)
-        chal_id = int(chal_id)
+        acct_id = int(acct_id)
+
         if (await Service.Contest.running())[1] == False:
             return ('Eacces', None)
 
@@ -80,12 +81,11 @@ class ChalService:
                     INSERT INTO "challenge" ("pro_id", "acct_id")
                     VALUES ($1, $2) RETURNING "chal_id";
                 ''',
-                pro_id, chal_id
+                pro_id, acct_id
             )
         if result.__len__() != 1:
             return ('Eunk', None)
         result = result[0]
-
 
         chal_id = result['chal_id']
 
