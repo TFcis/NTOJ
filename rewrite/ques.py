@@ -39,7 +39,7 @@ class QuestionService:
         if acct['acct_id'] == UserConst.ACCTID_GUEST:
             return 'Esign'
 
-        if acct['acct_id'] != UserConst.ACCTTYPE_USER:
+        if acct['acct_type'] != UserConst.ACCTTYPE_USER:
             return 'Eacces'
 
         acct_id = acct['acct_id']
