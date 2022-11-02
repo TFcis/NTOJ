@@ -3,9 +3,7 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import HtmlFormatter
 
 from req import RequestHandler, reqenv
-from req import Service
-from user import UserService, UserConst
-from chal import ChalService
+from user import UserConst
 import config
 
 class CodeService:

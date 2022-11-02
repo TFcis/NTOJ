@@ -5,8 +5,6 @@ from msgpack import packb, unpackb
 
 from user import UserConst
 from chal import ChalConst
-from pro import ProConst
-from req import Service
 
 from dbg import dbg_print
 

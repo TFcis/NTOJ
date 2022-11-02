@@ -1,11 +1,8 @@
 import math
 import re
 
-from msgpack import packb, unpackb
-
 from req import RequestHandler, Service, reqenv
 from user import UserService, UserConst
-from chal import ChalConst
 from log import LogService
 
 from dbg import dbg_print

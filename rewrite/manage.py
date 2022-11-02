@@ -6,7 +6,7 @@ from msgpack import packb, unpackb
 import tornado.web
 
 from group import GroupConst
-from user import UserService, UserConst
+from user import UserConst
 from req import RequestHandler, reqenv
 from req import Service
 from log import LogService

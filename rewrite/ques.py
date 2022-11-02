@@ -125,7 +125,6 @@ class QuestionHandler(RequestHandler):
         reqtype = str(self.get_argument('reqtype'))
 
         if reqtype == 'ask':
-            acct_id = self.get_argument('acct_id')
             qtext = str(self.get_argument('qtext'))
             err = await QuestionService.inst.set_ques(self.acct, qtext)
             if err:
@@ -136,8 +135,7 @@ class QuestionHandler(RequestHandler):
             return
 
         elif reqtype == 'rm_ques':
-            acct_id = self.get_argument('acct_id')
-            index = self.get_argument('index')
+            index = int(self.get_argument('index'))
             err = await QuestionService.inst.rm_ques(self.acct, index)
             if err:
                 self.error(err)
