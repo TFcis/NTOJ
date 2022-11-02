@@ -226,9 +226,6 @@ class UserService:
 
         await self.rs.delete(f'account@{acct_id}')
         await self.rs.delete('acctlist')
-        await self.rs.delete('prolist')
-        await self.rs.delete('rate@kernel_True')
-        await self.rs.delete('rate@kernel_False')
 
         return (None, None)
 

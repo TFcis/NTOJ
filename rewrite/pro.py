@@ -48,7 +48,7 @@ class ProService:
 
     async def get_pclass_list(self, pro_clas):
         if (clas := (await self.rs.get(f'{pro_clas}_pro_list'))) == None:
-            return ('Eexist', None)
+            return ('Enoext', None)
 
         return (None, unpackb(clas))
 
@@ -356,8 +356,6 @@ class ProService:
             await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
 
         await self.rs.delete('prolist')
-        await self.rs.delete('rate@kernel_True')
-        await self.rs.delete('rate@kernel_False')
 
         return (None, pro_id)
 
@@ -398,8 +396,6 @@ class ProService:
                 await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
 
         await self.rs.delete('prolist')
-        await self.rs.delete('rate@kernel_True')
-        await self.rs.delete('rate@kernel_False')
 
         return (None, None)
 
@@ -785,7 +781,7 @@ class SubmitHandler(RequestHandler):
             if self.acct['acct_type'] != UserConst.ACCTTYPE_KERNEL:
                 last_submit_name = f"last_submit_time_{self.acct['acct_id']}"
                 if (last_submit_time := (await self.rs.get(last_submit_name))) == None:
-                    await self.rs.set(last_submit_name, int(time.time()))
+                    await self.rs.set(last_submit_name, int(time.time()), ex=600)
 
                 else:
                     last_submit_time = int(str(last_submit_time)[2:-1])

@@ -102,8 +102,6 @@ class ChalService:
             await con.execute('DELETE FROM "test" WHERE "chal_id" = $1;', chal_id)
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
-        await self.rs.delete('rate@kernel_True')
-        await self.rs.delete('rate@kernel_False')
 
         return (None, None)
 
@@ -341,7 +339,7 @@ class ChalService:
     async def update_test(self, chal_id, test_idx, state, runtime, memory, response):
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
-            result = await con.fetch(
+            await con.execute(
                 '''
                     UPDATE "test"
                     SET "state" = $1, "runtime" = $2, "memory" = $3, "response" = $4
@@ -351,7 +349,6 @@ class ChalService:
             )
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
-        await self.rs.delete('prolist')
 
         return (None, None)
 

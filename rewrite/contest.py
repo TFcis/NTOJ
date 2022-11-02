@@ -93,9 +93,6 @@ class ContestService:
                 'end'    : end
             }, default=_mp_encoder))
 
-            await self.rs.delete('rate@kernel_True')
-            await self.rs.delete('rate@kernel_False')
-
             return (None, None)
 
         else:
@@ -131,13 +128,9 @@ class ContestService:
                 'acct_list' : acct_list
             }, default=_mp_encoder))
 
-            await self.rs.delete('rate@kernel_True')
-            await self.rs.delete('rate@kernel_False')
-
             return (None, None)
 
     async def running(self):
-        #TODO: get default
         err, meta = await self.get('default')
 
         if meta['status'] == ContestConst.STATUS_OFFLINE:

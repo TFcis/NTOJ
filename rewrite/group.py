@@ -75,8 +75,6 @@ class GroupService:
         acct_id = int(acct_id)
         async with self.db.acquire() as con:
             result = await con.fetch('SELECT "account"."group" FROM "account" WHERE "account"."acct_id" = $1', acct_id)
-        if result.__len__() != 1:
-            return
 
         return result[0]['group']
 
@@ -107,9 +105,6 @@ class GroupService:
 
         await self.rs.delete(f'account@{acct_id}')
         await self.rs.delete('acctlist')
-        await self.rs.delete('prolist')
-        await self.rs.delete('rate@kernel_True')
-        await self.rs.delete('rate@kernel_False')
         return None
 
     async def _update_group(self, gname, gtype, gclas):
@@ -131,7 +126,7 @@ class GroupService:
     async def update_group(self, gname, gtype, gclas):
         glist = await self.list_group()
         if gname not in glist:
-            return 'Eexist'
+            return 'Enoext'
 
         err = await self._update_group(gname, int(gtype), int(gclas))
         if err:
