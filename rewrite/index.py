@@ -44,3 +44,16 @@ class InfoHandler(RequestHandler):
             inform_list = []
 
         await self.render('info', inform_list=inform_list)
+
+class OnlineCounterHandler(RequestHandler):
+    @reqenv
+    async def get(self):
+        if (cnt := (await self.rs.get('online_counter'))) == None:
+            cnt = 0
+        else:
+            cnt = cnt.decode('utf-8')
+
+        set_cnt = await self.rs.scard('online_counter_set')
+
+        self.finish(f"<h1>{cnt}</h1> <br> <h1>{set_cnt}</h1>")
+        return
