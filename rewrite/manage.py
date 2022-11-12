@@ -339,6 +339,7 @@ class ManageHandler(RequestHandler):
                         ''',
                         pro_id
                     )
+                    result = result[0]
                 await LogService.inst.add_log(f"{self.acct['name']} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals", 'manage.chal.rechal')
 
                 for chal_id in result:
@@ -348,7 +349,7 @@ class ManageHandler(RequestHandler):
                         pro_id,
                         pro['testm_conf'],
                         f'/nfs/code/{chal_id}/main.cpp',
-                        f'/nfs/problem/{chal_id}/res'
+                        f'/nfs/problem/{pro_id}/res'
                     )
 
                 self.finish('S')
