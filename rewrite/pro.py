@@ -389,7 +389,7 @@ class ProService:
                 return ('Enoext', None)
 
             if pack_token != None:
-                err, ret = await self._unpack_pro(pro_id, pack_type, pack_token)
+                err, _ = await self._unpack_pro(pro_id, pack_type, pack_token)
                 if err:
                     return (err, None)
 
@@ -453,15 +453,15 @@ class ProService:
         if pack_type == ProService.PACKTYPE_CONTHTML:
             prefix = f'problem/{pro_id}/http/'
             _clean_cont(prefix)
-            PackService.inst.direct_copy(pack_token, f'{prefix}cont.html')
+            await PackService.inst.direct_copy(pack_token, f'{prefix}cont.html')
 
         elif pack_type == ProService.PACKTYPE_CONTPDF:
             prefix = f'problem/{pro_id}/http/'
             _clean_cont(prefix)
-            PackService.inst.direct_copy(pack_token, f'{prefix}cont.pdf')
+            await PackService.inst.direct_copy(pack_token, f'{prefix}cont.pdf')
 
         elif pack_type == ProService.PACKTYPE_FULL:
-            err = PackService.inst.unpack(pack_token, f'problem/{pro_id}', True)
+            err = await PackService.inst.unpack(pack_token, f'problem/{pro_id}', True)
             await asyncio.sleep(3)
             if err:
                 return (err, None)
@@ -469,7 +469,8 @@ class ProService:
             try:
                 os.chmod(os.path.abspath(f'problem/{pro_id}'), 0o755)
                 #INFO: 正式上線要改路徑
-                os.symlink(os.path.abspath(f'problem/{pro_id}/http'), f'/home/tobiichi3227/html/oj/problem/{pro_id}')
+                os.symlink(os.path.abspath(f'problem/{pro_id}/http'), f'/srv/oj_web/oj//problem/{pro_id}')
+                # os.symlink(os.path.abspath(f'problem/{pro_id}/http'), f'/home/tobiichi3227/html/oj/problem/{pro_id}')
 
             except FileExistsError:
                 pass
