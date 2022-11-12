@@ -88,7 +88,7 @@ class PackHandler(WebSocketHandler):
     STATE_DTAT = 1
     CHUNK_MAX = 65536
 
-    async def check_origin(self, origin: str) -> bool:
+    def check_origin(self, origin: str) -> bool:
         #TODO: secure
         return True
 
@@ -127,7 +127,7 @@ class PackHandler(WebSocketHandler):
             self.write_message('S')
             return
 
-    async def on_close(self) -> None:
+    def on_close(self) -> None:
         if self.output != None:
             self.output.close()
 
