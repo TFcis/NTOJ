@@ -1,6 +1,31 @@
 <link rel="stylesheet" type="text/css" href="/oj/pro.css">
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax:{
+            inlineMath:[['$','$'],['\\(','\\)']]
+        }
+    });
+</script>
 <script type="text/javascript">
     function init(){
+        var scriptTag = document.createElement('script');
+        scriptTag.src = 'https://toj.tfcis.org/oj/third/pdf_find_bar.js';
+        document.head.appendChild(scriptTag);
+
+        scriptTag = document.createElement('script');
+        scriptTag.src = 'https://toj.tfcis.org/oj/third/pdf_find_controller.js';
+        document.head.appendChild(scriptTag);
+
+        scriptTag = document.createElement('script');
+        scriptTag.src = 'https://toj.tfcis.org/oj/third/text_layer_builder.js';
+        document.head.appendChild(scriptTag);
+
+        scriptTag = document.createElement('script');
+        scriptTag.src = 'https://toj.tfcis.org/oj/third/ui_utils.js';
+        document.head.appendChild(scriptTag);
+
+        PDFJS.workerSrc = 'https://toj.tfcis.org/oj/third/pdf.worker.js'
+        
         $('#tags').keydown(function(event) {
             if (event.which == 13) // return
                 $('#tags').focusout();
@@ -37,6 +62,10 @@
         var j_cont = $('#cont');
 
         function _load_html() {
+            scriptTag = document.createElement('script');
+            scriptTag.src = 'https://toj.tfcis.org/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
+            document.head.appendChild(scriptTag);
+
             j_cont.load('/oj/pro/{{ pro['pro_id'] }}/cont.html', function(res, status, xhr) {
                 if (status == 'error') {
                     $('#pdfbtn').show();
@@ -128,7 +157,9 @@
     {% end %}
     <a class="btn-con" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
     <a class="btn-def" href="/oj/chal/?proid={{ pro['pro_id'] }}">Status</a>
-    <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf?downtimelimitload=1','_blank'?downtimelim?downtimelimii);" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
+    <!-- <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf?downtimelimitload=1','_blank'?downtimelim?downtimelimii);" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a> -->
+
+    <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf?download=1');" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
     <a id="switchviewer" class="btn-wrn" style="display:none; width:156px; text-align:center;">Switch Viewer</a>
     <div></div>
     {% if (isadmin) %}
