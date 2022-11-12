@@ -1,4 +1,3 @@
-import math
 import datetime
 
 from msgpack import packb, unpackb

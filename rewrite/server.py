@@ -10,6 +10,7 @@ import tornado.process
 import tornado.httpserver
 import tornado.web
 import tornado.log
+import tornado.options
 
 import config
 from inform import InformService, InformSub
@@ -31,7 +32,7 @@ from rank import RankService, RankHandler
 from auto import AutoService, AutoHandler
 from group import GroupService
 from log import LogService, LogHandler
-from index import IndexHandler, AbouotHandler, InfoHandler
+from index import IndexHandler, AbouotHandler, InfoHandler, OnlineCounterHandler
 
 async def materialized_view_task():
     db = await asyncpg.connect(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password='322752278227', host='localhost')
@@ -56,8 +57,6 @@ async def materialized_view_task():
         counter = await _update()
 
 if __name__ == "__main__":
-    # miyuki is my wife and sister 深雪わ私の妻です
-
     httpsock = tornado.netutil.bind_sockets(5500)
     def run_materialized_view_task():
         try:
@@ -125,17 +124,13 @@ if __name__ == "__main__":
         ('/auto',           AutoHandler,args),
         ('/code',           CodeHandler,args),
         ('/informsub',      InformSub,args),
-        ('/chalstatesub',   ChalStateHandler, args)
+        ('/chalstatesub',   ChalStateHandler, args),
+        ('/online_count',   OnlineCounterHandler, args),
     ], autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC)
 
-    log_file_handler = logging.FileHandler('toj.log')
     tornado.log.enable_pretty_logging()
-    access_log = logging.getLogger('tornado.access')
-    access_log.addHandler(log_file_handler)
-    application_log = logging.getLogger('tornado.application')
-    application_log.addHandler(log_file_handler)
-    general_log = logging.getLogger('tornado.general')
-    general_log.addHandler(log_file_handler)
+
+    tornado.options.parse_command_line()
 
     httpsrv = tornado.httpserver.HTTPServer(app, xheaders=True)
     httpsrv.add_sockets(httpsock)

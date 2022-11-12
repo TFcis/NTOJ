@@ -58,17 +58,7 @@ class RequestHandler(tornado.web.RequestHandler):
             self.finish(json.dumps(kwargs, cls=_encoder))
 
         else:
-            # key = f'render@{hash(packb(kwargs, default=_mp_encoder))}-{self.request.path}'
-            # key = 'render@%d-%d' % (
-            #         hash(msgpack.packb(kwargs, default=_mp_encoder)),
-            #         hash(self.request.path))
-            # data = self.rs.get(key)
-            # if data == None or True:
-            # tpldr = tornado.template.Loader('templ')
-            # data = tpldr.load(templ + '.templ').generate(**kwargs)
-            #     self.rs.set(key,data,datetime.timedelta(hours=24))
             data = self.tpldr.load(templ + '.templ').generate(**kwargs)
-
             self.finish(data)
 
         return
