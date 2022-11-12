@@ -25,12 +25,15 @@
         } else {
             function update_state_data(chal_state_data) {
                 var states = document.querySelectorAll('tr.states');
+                let print = document.querySelector('div.print');
                 states.forEach(function(element, idx, arr) {
                     let state = element.querySelector('td.state');
                     state.innerHTML = state_map[chal_state_data[idx]['state']];
                     state.className = `state state-${chal_state_data[idx]['state']}`;
                     element.querySelector('td.runtime').innerHTML = chal_state_data[idx]['runtime'];
                     element.querySelector('td.memory').innerHTML = Math.round((chal_state_data[idx]['memory'] / 1024));
+                    print.innerHTML = chal_state_data[idx]['response'];
+                    print.style['opacity'] = 1;
                 })
             };
 

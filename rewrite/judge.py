@@ -45,7 +45,7 @@ class JudgeServerSerice:
                         result['state'],
                         result['runtime'],
                         result['peakmem'],
-                        ret)
+                        result['verdict'][0])
 
                 await asyncio.sleep(0.5)
                 await self.rs.publish('chalstatesub', res['chal_id'])

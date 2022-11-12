@@ -1,14 +1,5 @@
-from multiprocessing import shared_memory
 import os
 import json
-import msgpack
-import asyncio
-
-from tornado.gen import coroutine
-from tornado.websocket import websocket_connect
-from pygments import highlight
-from pygments.lexers import get_lexer_by_name
-from pygments.formatters import HtmlFormatter
 
 import config
 from user import UserConst
@@ -110,7 +101,7 @@ class ChalService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "test_idx", "state", "runtime", "memory"
+                    SELECT "test_idx", "state", "runtime", "memory", "response"
                     FROM "test"
                     WHERE "chal_id" = $1 ORDER BY "test_idx" ASC;
                 ''',
@@ -118,12 +109,13 @@ class ChalService:
             )
 
         tests = []
-        for (test_idx, state, runtime, memory) in result:
+        for (test_idx, state, runtime, memory, response) in result:
             tests.append({
                 'test_idx' : test_idx,
                 'state'    : state,
                 'runtime'  : int(runtime),
                 'memory'   : int(memory),
+                'response' : response,
             })
 
         return (None, tests)
@@ -266,7 +258,7 @@ class ChalService:
 
     #TODO: Porformance test
     async def list_chal(self, off, num, min_accttype=UserConst.ACCTTYPE_USER,
-            flt = {'pro_id': None, 'acct_id': None, 'state': 0}):
+            flt={'pro_id': None, 'acct_id': None, 'state': 0}):
 
         fltquery = await self._get_fltquery(flt)
 
