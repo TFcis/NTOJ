@@ -177,6 +177,8 @@ class ProService:
                 ''',
                 pro_id
             )
+            if result.__len__() == 0:
+                return ('Econf', None)
 
         testm_conf = OrderedDict()
         for (test_idx, comp_type, score_type, check_type, timelimit, memlimit, weight, metadata, chalmeta) in result:
