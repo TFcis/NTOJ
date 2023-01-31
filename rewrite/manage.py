@@ -215,11 +215,11 @@ class ManageHandler(RequestHandler):
             if reqtype == 'connect':
                 index = int(self.get_argument('index'))
 
-                err = await Service.Judge.connect_server(index)
                 err, server_inform = await Service.Judge.get_server_status(index)
                 if (server_name := server_inform['name']) == '':
                     server_name = f"server-{index}"
 
+                err = await Service.Judge.connect_server(index)
                 if err:
                     await LogService.inst.add_log(f"{self.acct['name']} tried connected {server_name} but failed.", 'manage.judge.connect.failure')
                     self.error(err)
