@@ -45,7 +45,11 @@
         max(0,math.ceil(lognum / 50) - 19))%}
     {% for i, off in enumerate(range(st * 50,
         min(lognum,st * 50 + 950),50)) %}
-        <li{% if ct == (i + st) %} class="active"{% end %}><a href="?off={{str(off)}}">{{ i + 1 + st }}</a></li>
+        {% if cur_logtype == None %}
+            <li{% if ct == (i + st) %} class="active"{% end %}><a href="?off={{ str(off) }}">{{ i + 1 + st }}</a></li>
+        {% else %}
+            <li{% if ct == (i + st) %} class="active"{% end %}><a href="?off={{ str(off) }}&logtype={{ cur_logtype }}">{{ i + 1 + st }}</a></li>
+        {% end %}
     {% end %}
     </ul>
 </div>
