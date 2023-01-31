@@ -139,11 +139,12 @@ class ChalService:
         result = result[0]
 
         pro_id, acct_id, timestamp, acct_name = result['pro_id'], result['acct_id'], result['timestamp'], result['acct_name']
+        response = ""
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "test_idx", "state", "runtime", "memory"
+                    SELECT "test_idx", "state", "runtime", "memory", "response"
                     FROM "test"
                     WHERE "chal_id" = $1 ORDER BY "test_idx" ASC;
                 ''',
@@ -151,7 +152,8 @@ class ChalService:
             )
 
         testl = []
-        for (test_idx, state, runtime, memory) in result:
+        for (test_idx, state, runtime, memory, response) in result:
+            response = response
             testl.append({
                 'test_idx' : test_idx,
                 'state'    : state,
@@ -181,7 +183,8 @@ class ChalService:
             'acct_name' : acct_name,
             'timestamp' : timestamp,
             'testl'     : testl,
-            'code'      : code
+            'code'      : code,
+            'response'  : response,
         })
 
     async def emit_chal(self, chal_id, pro_id, testm_conf, code_path, res_path):
