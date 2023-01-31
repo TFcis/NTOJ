@@ -3,25 +3,28 @@
 
 <script type="text/javascript">
     function init() {
-        var j_form = $('#form');
+    var j_form = $('#form');
         j_form.find('button.submit').on('click', function(e) {
-	    	var qtext = j_form.find('textarea.ques').val();
+            var qtext = j_form.find('textarea.ques').val();
 
-	    	$.post('/oj/be/question', {
-				'reqtype': 'ask',
-				'acct_id':{{ acct['acct_id'] }},
-				'qtext': qtext,
-	    	}, function(res) {
-     	       msg = 'Unknown';
-     	       if (res[0] == 'E') {
-     	           msg = res;
-     	           j_form.find('div.print').print(msg);
-     	       } else {
-     	           j_form.find('div.print').print('Done',true)
-     	           setTimeout(function(){index.reload();},1000);
-     	       }
-	    	});
-		});
+            $.post('/oj/be/question', {
+                'reqtype': 'ask',
+                'acct_id':{{ acct['acct_id'] }},
+                'qtext': qtext,
+            }, function(res) {
+                msg = 'Unknown';
+                if (res[0] == 'E') {
+                    msg = res;
+                    if (res == 'Equesempty') {
+                        msg = 'Do not submit empty question';
+                    }
+                    j_form.find('div.print').print(msg);
+                } else {
+                    j_form.find('div.print').print('Done',true)
+                    setTimeout(function(){index.reload();},1000);
+                }
+            });
+        });
     }
 
     function rm_ques(index) {

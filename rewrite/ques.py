@@ -126,6 +126,10 @@ class QuestionHandler(RequestHandler):
 
         if reqtype == 'ask':
             qtext = str(self.get_argument('qtext'))
+            if len(qtext.strip()) == 0:
+                self.error('Equesempty')
+                return
+
             err = await QuestionService.inst.set_ques(self.acct, qtext)
             if err:
                 self.error(err)
