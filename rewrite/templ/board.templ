@@ -2,6 +2,21 @@
 <link rel="stylesheet" type="text/css" href="/oj/board.css">
 
 <script type="text/javascript" id="contjs">
+    var board = document.querySelector('.board')
+    // board.style.scrollBehavior = 'smooth'
+
+    board.addEventListener('scroll', () => {
+        window.localStorage.setItem('board_scoll_left', board.scrollLeft)
+    }, false)
+
+    setTimeout(() => {
+        var board = document.querySelector('.board')
+        if (window.localStorage.getItem('board_scoll_left')) {
+            const board_old_scroll_left = parseInt(window.localStorage.getItem('board_scoll_left'))
+            board.scrollLeft = board_old_scroll_left
+        }
+    }, 50)
+
     var end = new Date('{{end}}').getTime();
     var j_contest = $('#contest');
     function GetCount() {
@@ -46,7 +61,7 @@
         <div id="count"></div>
     </h3>
 
-    <div style="width:100%; margin-bottom:48px; overflow-x:scroll;">
+    <div style="width:100%; margin-bottom:48px; overflow-x:scroll;" class="board">
 	    <table style="width:{{9+64+150+112+len(prolist)*99}}px;">
             <thead style="display:block;">
                 <tr>
