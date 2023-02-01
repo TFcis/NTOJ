@@ -243,13 +243,13 @@ class UserService:
                 return ('Eexist', None)
             result = result[0]
 
-            hpw = base64.b64encode(result['password'].encode('utf-8'))
+            hpw = base64.b64decode(result['password'].encode('utf-8'))
             if (bcrypt.hashpw(old.encode('utf-8'), hpw) != hpw) and isadmin == False:
                 return ('Epwold', None)
 
             hpw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
             await con.execute('UPDATE "account" SET "password" = $1 WHERE "acct_id" = $2',
-                    (base64.b64encode(hpw).decode('utf-8'), acct_id))
+                    base64.b64encode(hpw).decode('utf-8'), acct_id)
 
         return (None, None)
 
