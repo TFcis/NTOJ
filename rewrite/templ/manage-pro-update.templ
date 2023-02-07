@@ -2,8 +2,13 @@
 {% block head %}
 <link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
 
-<script type="text/javascript" id="contjs">
+<script type="text/javascript" id="contjs" async>
+	var editor;	
     function init() {
+        var scriptTag = document.createElement('script');
+        scriptTag.src = `https://cdnjs.cloudflare.com/ajax/libs/ace/1.15.0/ace.js`;
+        document.head.appendChild(scriptTag);
+
 		var j_form = $('#form');
 		var j_form2 = $('#form2');
 		var j_upload = $('#upload');
@@ -131,6 +136,40 @@
 				}
 			});
 		});
+
+		$('#editor_button').on('click', function(e) {
+			const conf_json = editor.getValue()
+			try {
+				JSON.parse(conf_json)
+			} catch (e) {
+				alert('Syntax Error')
+				return
+			}
+
+			$.post('/oj/be/manage/pro', {
+				'reqtype': 'updateconf',
+				'conf': conf_json,
+				'pro_id': {{ pro['pro_id'] }}
+			}, function(res) {
+				var msg = 'Unknown';
+				if (res[0] == 'E') {
+					if (res == 'Econf') {
+						msg = 'Syntax Error';
+					} else {
+						msg = res;
+					}
+					j_form2.find('div.print').print(msg);
+				} else {
+					index.go('/oj/manage/pro/');
+				}
+			})
+		})
+
+		setTimeout(() => {
+			editor = ace.edit('editor')
+			editor.setTheme('ace/theme/monokai')
+			editor.session.setMode('ace/mode/json')
+		}, 50)
     }
 </script>
 {% end %}
@@ -183,5 +222,22 @@
 			<div class="bar"></div>
 		</div>
     </div>
+	<div id="editor">{{ problem_config_json }}</div>
+	<button class="btn-con" id="editor_button">Update</button>
+	<style>
+		#editor {
+			position: relative;
+			bottom: 580px;
+			left: 120%;
+			width: 500px;
+			height: 400px;
+		}		
+
+		#editor_button {
+			position: relative;
+			bottom: 570px;
+			left: 120%;
+		}
+	</style>
 </div>
 {% end %}

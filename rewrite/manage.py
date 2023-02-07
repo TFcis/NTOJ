@@ -45,11 +45,30 @@ class ManageHandler(RequestHandler):
             await self.render('manage-pro-add', page=page)
             return
 
+        elif page == 'reinitpro':
+            pro_id = int(self.get_argument('proid'))
+
+            await self.render('manage-pro-reinit', page=page, pro_id=pro_id)
+            return
+
         elif page == 'updatepro':
             pro_id = int(self.get_argument('proid'))
 
             err, pro = await Service.Pro.get_pro(pro_id, self.acct)
-            if err:
+            if err == 'Econf':
+                self.finish(
+                '''
+                    <script type="text/javascript" id="contjs">
+                        function init() {
+                '''
+                            f"index.go('/oj/manage/reinitpro/?proid={pro_id}')"
+                '''
+                        }
+                    </script>
+                '''
+                )
+                return
+            elif err != None:
                 self.error(err)
                 return
 
@@ -65,7 +84,13 @@ class ManageHandler(RequestHandler):
                     'rate'     : 2000
                 })
 
-            await self.render('manage-pro-update', page=page, pro=pro, lock=lock, testl=testl)
+            try:
+                with open(f"problem/{pro_id}/conf.json", 'r') as conf_file:
+                    conf_content = conf_file.read()
+            except FileNotFoundError:
+                conf_content = ''
+
+            await self.render('manage-pro-update', page=page, pro=pro, lock=lock, testl=testl, problem_config_json=conf_content)
             return
 
         elif page == 'contest':
@@ -295,6 +320,18 @@ class ManageHandler(RequestHandler):
                 self.finish('S')
                 return
 
+            elif reqtype == 'reinitpro':
+                pro_id = int(self.get_argument('pro_id'))
+                pack_token = self.get_argument('pack_token')
+                pack_type = Service.Pro.PACKTYPE_FULL
+                err, _ = await Service.Pro._unpack_pro(pro_id, pack_type, pack_token)
+                if err:
+                    self.error(err)
+                    return
+
+                self.finish('S')
+                return
+
             elif reqtype == 'updatelimit':
                 pro_id = int(self.get_argument('pro_id'))
                 timelimit = int(self.get_argument('timelimit'))
@@ -305,6 +342,48 @@ class ManageHandler(RequestHandler):
                 if err:
                     self.error(err)
                     return
+
+                self.finish('S')
+                return
+
+            elif reqtype == 'updateconf':
+                pro_id = int(self.get_argument('pro_id'))
+                conf_json_text = self.get_argument('conf')
+
+                try:
+                    conf_json = json.loads(conf_json_text)
+                except Exception:
+                    self.error('Econf')
+                    return
+
+                with open(f'problem/{pro_id}/conf.json', 'w') as conf_f:
+                    conf_f.write(conf_json_text)
+
+                comp_type  = conf_json['compile']
+                score_type = conf_json['score']
+                check_type = conf_json['check']
+                timelimit  = conf_json['timelimit']
+                memlimit   = conf_json['memlimit'] * 1024
+                chalmeta   = conf_json['metadata']
+
+                async with self.db.acquire() as con:
+                    await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
+
+                    for test_idx, test_conf in enumerate(conf_json['test']):
+                        metadata = { 'data': test_conf['data'] }
+
+                        await con.execute(
+                            '''
+                                INSERT INTO "test_config"
+                                ("pro_id", "test_idx", "compile_type", "score_type", "check_type",
+                                "timelimit", "memlimit", "weight", "metadata", "chalmeta")
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+                            ''',
+                            int(pro_id), int(test_idx), comp_type, score_type, check_type,
+                            int(timelimit), int(memlimit), int(test_conf['weight']), json.dumps(metadata), json.dumps(chalmeta)
+                        )
+
+                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to update the problem #{pro_id}", 'manage.pro.update.conf')
 
                 self.finish('S')
                 return
