@@ -1,45 +1,45 @@
 'use strict';
 
-var pack = new function(){
+var pack = new function() {
     var that = this;
 
-    that.get_token = function(){
+    that.get_token = function() {
 	    var defer = $.Deferred();
 
-	    $.post('/oj/be/manage/pack',{
+	    $.post('/oj/be/manage/pack', {
 	        'reqtype':'gettoken'
-	    },function(res){
-	        if(res[0] == 'E'){
+	    }, function(res) {
+	        if (res[0] == 'E') {
 	    		defer.reject(res[0]);
-	        }else{
+	        } else {
 	    		defer.resolve(JSON.parse(res));
 	        }
 	    });
 
 	    return defer.promise();
     };
-    that.send = function(pack_token, file){
-	// var ws = new WebSocket('ws://192.168.122.157/oj/be/pack');
-	var ws = new WebSocket(`wss://${location.hostname}/oj/be/pack`);
+    that.send = function(pack_token, file) {
+	// var ws = new WebSocket(`wss://${location.hostname}/oj/be/pack`);
+	var ws = new WebSocket(`ws://${location.hostname}/oj/be/pack`);
 	var defer = $.Deferred();
 	var off = 0;
 	var remain = file.size;
 	var lt = 0;
 
-	ws.onopen = function(e){
+	ws.onopen = function(e) {
 	    ws.send(JSON.stringify({
-		    'pack_token':pack_token,
-		    'pack_size':file.size
+		    'pack_token' : pack_token,
+		    'pack_size' : file.size
 	    }));
 	};
-	ws.onmessage = function(e){
+	ws.onmessage = function(e) {
 	    var size;
 	    var ct;
 
-	    if(e.data[0] == 'E'){
+	    if (e.data[0] == 'E') {
 		    ws.close();
 		    defer.reject();
-	    } else if (remain > 0){
+	    } else if (remain > 0) {
 		    size = Math.min(remain, 65536);
 		    ws.send(file.slice(off, off + size));
 
