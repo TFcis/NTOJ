@@ -4,7 +4,8 @@
 <link rel="stylesheet" type="text/css" href="/oj/proset.css">
 
 <script type="text/javascript">
-    function init(){
+    var re = /[^0-9]/
+    function init() {
         var j_filter = $('#filter');
 
         j_filter.find('select.pclass').on('change', function(e) {
@@ -54,8 +55,14 @@
 
         var select_prob = j_filter.find('input.select_prob');
         select_prob.on('keypress', function(e) {
-            if (e.keyCode == 13)
-                $(location).attr('href', "/oj/pro/" + select_prob.val()+ "/");
+            if (e.keyCode == 13) {
+                if (re.test(select_prob.val())) {
+                    alert('請輸入數字')
+                    select_prob.val('')
+                    return
+                }
+                $(location).attr('href', "/oj/pro/" + select_prob.val() + "/");
+            }
         });
     }
 </script>

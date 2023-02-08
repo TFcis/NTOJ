@@ -6,6 +6,7 @@
 <script type="text/javascript">
     var ws;
     var chalsub_count;
+    var re = /[^0-9,\ ]/
 
     function init() {
         var j_filter = $('#filter');
@@ -18,6 +19,13 @@
 		        var acctid = j_filter.find('input.acctid').val();
 		        var stat = j_filter.find('select.state').val();
 		        var url = '/oj/chal/';
+
+                if (re.test(proid) || re.test(acctid)) {
+                    alert('請輸入數字、逗號與空白做查詢，範例：1, 2, 3')
+                    j_filter.find('input.proid').val('')
+                    j_filter.find('input.acctid').val('')
+                    return
+                }
 
 		        if (proid != '') {
 		            url += '?proid=' + proid;
@@ -41,6 +49,13 @@
 	        var stat = j_filter.find('select.state').val();
             var url = '/oj/chal/';
 
+            if (re.test(proid) || re.test(acctid)) {
+                alert('請輸入數字、逗號與空白做查詢，範例：1, 2, 3')
+                j_filter.find('input.proid').val('')
+                j_filter.find('input.acctid').val('')
+                return
+            }
+
             if(proid != '') {
                 url += '?proid=' + proid;
                 if(acctid != '') {
@@ -63,9 +78,10 @@
 
         chalsub_count = 0;
 
-        // ws = new WebSocket('ws://192.168.122.157/oj/be/chalsub');
-	    ws = new WebSocket(`ws://${location.hostname}/oj/be/chalsub`);
-	    ws.onopen = function(e){
+
+	    // ws = new WebSocket(`ws://${location.hostname}/oj/be/chalsub`);
+	    ws = new WebSocket(`wss://${location.hostname}/oj/be/chalsub`);
+	    ws.onopen = function(e) {
 
 	    };
 
@@ -180,13 +196,13 @@
 
     {% set postfix = '' %}
     {% if flt['pro_id'] != None %}
-    {% set postfix = postfix + '&proid=%s'%ppro_id %}
+        {% set postfix = postfix + '&proid=%s'%ppro_id %}
     {% end %}
     {% if flt['acct_id'] != None %}
-    {% set postfix = postfix + '&acctid=%s'%pacct_id %}
+        {% set postfix = postfix + '&acctid=%s'%pacct_id %}
     {% end %}
     {% if flt['state'] != 0 %}
-    {% set postfix = postfix + '&state=%s'%flt['state']%}
+        {% set postfix = postfix + '&state=%s'%flt['state']%}
     {% end %}
         <li><a href="?off=0{{ postfix }}">&#x21e4;</a></li>
     {% set ct = math.floor(pageoff / 20) %}
