@@ -17,10 +17,16 @@ class JudgeServerSerice:
         self.ws2 = None
 
     async def start(self):
-        self.main_task = asyncio.create_task(self.connect_server())
         self.heartbeat_task = asyncio.create_task(self.heartbeat())
+        await asyncio.sleep(3)
+
+        if self.status == True:
+            self.main_task = asyncio.create_task(self.connect_server())
 
     async def connect_server(self):
+        if self.status == False:
+            return 'Ejudge'
+
         try:
             self.status = False
             self.ws = await websocket_connect(self.server_url)
@@ -50,7 +56,6 @@ class JudgeServerSerice:
                 await asyncio.sleep(0.5)
                 await self.rs.publish('chalstatesub', res['chal_id'])
                 self.running_chal_cnt -= 1
-
 
     async def disconnect_server(self) -> Union[str, None]:
         if self.status == False:
@@ -82,6 +87,8 @@ class JudgeServerSerice:
 
     async def heartbeat(self):
         #INFO: DokiDoki
+        self.status = True
+
         try:
             self.ws2 = await websocket_connect(self.server_url)
         except:
@@ -93,8 +100,7 @@ class JudgeServerSerice:
                 self.ws2.ping()
             except:
                 self.status = False
-                break
-            self.status = True
+                return
             await asyncio.sleep(1)
 
 class JudgeServerClusterService:
@@ -121,16 +127,16 @@ class JudgeServerClusterService:
             return 'Eparam'
 
         if self.servers[idx].status == True:
-            return 'S'
+            pass
 
         else:
             asyncio.create_task(self.servers[idx].start())
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
 
             if self.servers[idx].status == False:
                 return 'Ejudge'
 
-            return 'S'
+        return 'S'
 
     async def disconnect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
         if idx < 0 or idx >= self.servers.__len__():
@@ -164,16 +170,28 @@ class JudgeServerClusterService:
         return status_list
 
     async def send(self, data) -> None:
-        servers_len = self.servers.__len__()
+        # simple round-robin impl
 
-        while self.idx < servers_len:
-            self.idx += 1
-            self.idx %= servers_len
-            err, status = await self.servers[self.idx].get_server_status()
-            if status['status'] == False:
-                self.idx += 1
-                self.idx %= servers_len
+        for i in range(self.idx + 1, len(self.servers)):
+            if self.servers[i].ws == None:
                 continue
 
-            await self.servers[self.idx].send(data)
-            break
+            _, status = await self.servers[i].get_server_status()
+            if status['status'] == False:
+                continue
+
+            await self.servers[i].send(data)
+            self.idx = i
+            return
+
+        for i in range(0, len(self.servers)):
+            if self.servers[i].ws == None:
+                continue
+
+            _, status = await self.servers[i].get_server_status()
+            if status['status'] == False:
+                continue
+
+            await self.servers[i].send(data)
+            self.idx = i
+            return
