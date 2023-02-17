@@ -4,6 +4,9 @@
 </script>
 <div class="g-lg-12">
     <h2>大會公告</h2>
+	{% if judge_server_status == False %}
+		<h1 style="color: red;">目前TOJ不能Judge</h1>
+	{% end %}
     <table border=2>
 	<thead>
 	    <tr>

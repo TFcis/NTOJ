@@ -2,7 +2,7 @@ import msgpack
 
 from user import UserConst
 from ques import QuestionService
-from req import RequestHandler, reqenv
+from req import RequestHandler, Service, reqenv
 
 class IndexHandler(RequestHandler):
     @reqenv
@@ -43,7 +43,15 @@ class InfoHandler(RequestHandler):
         else:
             inform_list = []
 
-        await self.render('info', inform_list=inform_list)
+        judge_status_list = await Service.Judge.get_servers_status()
+        can_submit = False
+
+        for status in judge_status_list:
+            if status['status']:
+                can_submit = True
+                break
+
+        await self.render('info', inform_list=inform_list, judge_server_status=can_submit)
 
 class OnlineCounterHandler(RequestHandler):
     @reqenv
