@@ -212,9 +212,13 @@ class ProService:
 
         if acct == None:
             max_status = ProService.STATUS_ONLINE
+            isguest = True
+            isadmin = False
 
         else:
             max_status = await self.get_acct_limit(acct)
+            isguest = (acct['acct_id'] == UserConst.ACCTID_GUEST)
+            isadmin = (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
         if clas == None:
             clas = [1, 2]
@@ -222,8 +226,6 @@ class ProService:
         else:
             clas = [clas]
 
-        isguest = (acct['acct_id'] == UserConst.ACCTID_GUEST)
-        isadmin = (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
         statemap = {}
 
@@ -350,10 +352,6 @@ class ProService:
             pro_id = int(result[0]['pro_id'])
 
             err, ret = await self._unpack_pro(pro_id, ProService.PACKTYPE_FULL, pack_token)
-            if err:
-                await con.execute('DELETE FROM "problem" WHERE "pro_id" = $1', pro_id)
-
-                return (err, None)
 
             await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
 
@@ -464,15 +462,15 @@ class ProService:
 
         elif pack_type == ProService.PACKTYPE_FULL:
             err = await PackService.inst.unpack(pack_token, f'problem/{pro_id}', True)
-            await asyncio.sleep(3)
+            await asyncio.sleep(5)
             if err:
                 return (err, None)
 
             try:
                 os.chmod(os.path.abspath(f'problem/{pro_id}'), 0o755)
                 #INFO: 正式上線要改路徑
-                os.symlink(os.path.abspath(f'problem/{pro_id}/http'), f'/srv/oj_web/oj//problem/{pro_id}')
-                # os.symlink(os.path.abspath(f'problem/{pro_id}/http'), f'/home/tobiichi3227/html/oj/problem/{pro_id}')
+                # os.symlink(os.path.abspath(f'problem/{pro_id}/http'), f'/srv/oj_web/oj//problem/{pro_id}')
+                os.symlink(os.path.abspath(f'problem/{pro_id}/http'), f'/home/last_order/html/oj/problem/{pro_id}')
 
             except FileExistsError:
                 pass
@@ -480,7 +478,7 @@ class ProService:
             try:
                 with open(f'problem/{pro_id}/conf.json') as conf_f:
                     conf = json.load(conf_f)
-            except Exception as e:
+            except Exception:
                 return ('Econf', None)
 
             comp_type  = conf['compile']

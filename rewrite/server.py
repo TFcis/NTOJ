@@ -26,7 +26,7 @@ from contest import ContestService, BoardHandler
 from manage import ManageHandler
 from pack import PackService, PackHandler
 from ques import QuestionService, QuestionHandler
-# from api import ApiService, ApiHandler
+from api import ApiService, ApiHandler
 from code import CodeService, CodeHandler
 from rank import RankService, RankHandler
 from auto import AutoService, AutoHandler
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     Service.Question = QuestionService(db, rs)
     Service.Inform   = InformService(db, rs)
     Service.Pack     = PackService(db, rs)
-    # Service.Api      = ApiService(db, rs)
+    Service.Api      = ApiService(db, rs)
     Service.Code     = CodeService(db, rs)
     Service.Rank     = RankService(db, rs)
     Service.Auto     = AutoService(db, rs)
@@ -126,6 +126,7 @@ if __name__ == "__main__":
         ('/informsub',      InformSub,args),
         ('/chalstatesub',   ChalStateHandler, args),
         ('/online_count',   OnlineCounterHandler, args),
+        ('/api',            ApiHandler, args),
     ], autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC)
 
     tornado.log.enable_pretty_logging()
