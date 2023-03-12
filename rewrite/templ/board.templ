@@ -2,7 +2,7 @@
 <link rel="stylesheet" type="text/css" href="/oj/board.css">
 
 <script type="text/javascript" id="contjs">
-    var board = document.querySelector('.board')
+    var board = document.querySelector('.board1')
     // board.style.scrollBehavior = 'smooth'
 
     board.addEventListener('scroll', () => {
@@ -10,7 +10,7 @@
     }, false)
 
     setTimeout(() => {
-        var board = document.querySelector('.board')
+        var board = document.querySelector('.board1')
         if (window.localStorage.getItem('board_scoll_left')) {
             const board_old_scroll_left = parseInt(window.localStorage.getItem('board_scoll_left'))
             board.scrollLeft = board_old_scroll_left
@@ -61,7 +61,7 @@
         <div id="count"></div>
     </h3>
 
-    <div style="width:100%; margin-bottom:48px; overflow-x:scroll;" class="board">
+    <div style="width:100%; margin-bottom:48px; overflow-x:scroll;" class="board1">
 	    <table style="width:{{9+64+150+112+len(prolist)*99}}px;">
             <thead style="display:block;">
                 <tr>

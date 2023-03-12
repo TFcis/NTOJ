@@ -1,8 +1,6 @@
 __pycache__/
 code/
 problem/
-# templ/*_board.templ
-# templ/pboard.templ
 tmp/
 trash/
 rewrite/NTOJ_installer/
@@ -44,6 +42,8 @@ ojtmp.tar.gz
 /~contest.py
 /~pro.py
 /inform.py
+/templ/*
+deploy.sh
 
 # 敏感文件
 config.py

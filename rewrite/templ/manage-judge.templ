@@ -16,7 +16,7 @@
 
             if (res[0] == 'E') {
                 if (res == 'Ejudge') {
-                    msg = 'cannot connect to server';
+                    msg = 'Cannot connect to server';
 	    	        j_form.find('div.print').print(msg);
                 } else {
                     j_form.find('div.print').print(res);
@@ -41,7 +41,7 @@
                 if (res == 'Ejudge') {
                     msg = 'server was offline';
                     j_form.find('div.print').print(msg);
-                } else if (res == 'Eacces') { 
+                } else if (res == 'Eacces') {
                     msg = 'password incorrect';
                     j_form.find('div.print').print(msg);
                 } else {
