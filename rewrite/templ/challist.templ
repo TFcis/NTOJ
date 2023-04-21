@@ -78,9 +78,14 @@
 
         chalsub_count = 0;
 
+        let ws_link = '';
+        if (location.protocol !== 'https:') {
+            ws_link = `ws://${location.hostname}/oj/be/chalsub`;
+        } else {
+            ws_link = `wss://${location.hostname}/oj/be/chalsub`;
+        }
+	    ws = new WebSocket(ws_link);
 
-	    // ws = new WebSocket(`ws://${location.hostname}/oj/be/chalsub`);
-	    ws = new WebSocket(`wss://${location.hostname}/oj/be/chalsub`);
 	    ws.onopen = function(e) {
 
 	    };
