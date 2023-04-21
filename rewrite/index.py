@@ -65,3 +65,9 @@ class OnlineCounterHandler(RequestHandler):
 
         self.finish(f"<h1>{cnt}</h1> <br> <h1>{set_cnt}</h1>")
         return
+
+class DevInfoHandler(RequestHandler):
+    @reqenv
+    async def get(self):
+        await self.render('dev-info')
+        return

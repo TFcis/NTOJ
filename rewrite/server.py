@@ -32,7 +32,7 @@ from rank import RankService, RankHandler
 from auto import AutoService, AutoHandler
 from group import GroupService
 from log import LogService, LogHandler
-from index import IndexHandler, AbouotHandler, InfoHandler, OnlineCounterHandler
+from index import IndexHandler, AbouotHandler, InfoHandler, OnlineCounterHandler, DevInfoHandler
 
 async def materialized_view_task():
     db = await asyncpg.connect(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password='322752278227', host='localhost')
@@ -127,6 +127,7 @@ if __name__ == "__main__":
         ('/chalstatesub',   ChalStateHandler, args),
         ('/online_count',   OnlineCounterHandler, args),
         ('/api',            ApiHandler, args),
+        ('/dev-info',       DevInfoHandler, args),
     ], autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC)
 
     tornado.log.enable_pretty_logging()
