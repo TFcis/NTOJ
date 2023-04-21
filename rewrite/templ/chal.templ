@@ -18,9 +18,14 @@
     };
 
     function init() {
+        let ws_link = '';
+        if (location.protocol !== 'https:') {
+            ws_link = `ws://${location.hostname}/oj/be/chalstatesub`;
+        } else {
+            ws_link = `wss://${location.hostname}/oj/be/chalstatesub`;
+        }
+	    ws = new WebSocket(ws_link);
 
-	    // ws = new WebSocket('ws://192.168.122.157/oj/be/chalstatesub');
-	    ws = new WebSocket(`ws://${location.hostname}/oj/be/chalstatesub`);
         if ((document.querySelectorAll('td.state-100').length == 0 && document.querySelectorAll('td.state-101') == 0)) {
         } else {
             function update_state_data(chal_state_data) {
@@ -65,6 +70,7 @@
         {% end %}
 
         {% if chal['code'] == True %}
+
         let code_txt = '';
 	    $.post('/oj/be/code', {
 	        'chal_id': {{chal['chal_id']}},
@@ -74,20 +80,17 @@
 	        _code.innerHTML = res;
 	    });
 
-        $('#copycode').on('click', function(e) {
-            if (!navigator.clipboard) {
-                console.log('err');
-                return;
+        $('#compile_info_button').on('click', function(e) {
+            let compile_info = document.getElementById('compile_info');
+            if (compile_info.style.display == 'none') {
+                compile_info.style.display = '';
+                document.getElementById('compile_info_button').innerText = 'Hidden Compile Info';
+            } else {
+                compile_info.style.display = 'none';
+                document.getElementById('compile_info_button').innerText = 'Show Compile Info';
             }
-
-            navigator.clipboard.writeText(code_txt).then(() => {
-                console.log('copy code to clipboard');
-                $("div.print").print('Copy Successfully', true);
-            }).catch(err => {
-                $("div.print").print('Cannot Copy', true);
-                console.log('something went wrong', err);
-            })
         });
+
         {% end %}
     }
 
@@ -126,10 +129,10 @@
         </table>
     {% if rechal == True and chal['code'] == True %}
         <button id="rechal" class="btn-wrn">Rechallenge</button>
-        <button id="copycode" class="btn-con">Copy Code</button>
+        <button id="compile_info_button" class="btn-con">Hidden Compile Info</button>
         <div class="print"></div>
     {% elif chal['code'] == True %}
-        <button id="copycode" class="btn-con">Copy Code</button>
+        <button id="compile_info_button" class="btn-con">Hidden Compile Info</button>
         <div class="print"></div>
     {% end %}
 
@@ -158,9 +161,9 @@
     </div>
 </div>
 {% if chal['code'] == True %}
-<div class="g-r" style="margin-top:32px;">
+<pre class="g-r" id="compile_info" style="margin-top: 32px;">
     {{ chal['response'] }}
-</div>
+</pre>
 <div class="g-r" style="margin-top:32px;">
     <div id="_code"></div>
 </div>
