@@ -18,6 +18,7 @@ from log import LogService
 from req import RequestHandler, reqenv
 from req import WebSocketHandler
 from req import Service
+import config
 
 from dbg import dbg_print
 
@@ -468,9 +469,8 @@ class ProService:
 
             try:
                 os.chmod(os.path.abspath(f'problem/{pro_id}'), 0o755)
-                #INFO: 正式上線要改路徑
-                # os.symlink(os.path.abspath(f'problem/{pro_id}/http'), f'/srv/oj_web/oj//problem/{pro_id}')
-                os.symlink(os.path.abspath(f'problem/{pro_id}/http'), f'/home/last_order/html/oj/problem/{pro_id}')
+                #INFO: 正式上線請到config.py修改成正確路徑
+                os.symlink(os.path.abspath(f"problem/{pro_id}/http"), f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}")
 
             except FileExistsError:
                 pass
