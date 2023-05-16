@@ -118,6 +118,10 @@
                     <td><a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }} / {{ pro['name'] }}</a> (<a href="/oj/chal/?proid={{ pro['pro_id'] }}">chals</a>)</td>
                 </tr>
                 <tr>
+                    <td>Compiler</td>
+                    <td>{{ chal['comp_type'] }}</td>
+                </tr>
+                <tr>
                     <td>Account</td>
                     <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a> (<a href="/oj/chal/?acctid={{ chal['acct_id'] }}">chals</a>)</td>
                 </tr>

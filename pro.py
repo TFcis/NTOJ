@@ -770,6 +770,7 @@ class SubmitHandler(RequestHandler):
         if reqtype == 'submit':
             pro_id = int(self.get_argument('pro_id'))
             code = self.get_argument('code')
+            comp_type = str(self.get_argument('comp_type'))
 
             if len(code.strip()) == 0:
                 self.error('Eempty')
@@ -793,6 +794,10 @@ class SubmitHandler(RequestHandler):
                     else:
                         await self.rs.set(last_submit_name, int(time.time()))
 
+            if comp_type not in ['gcc', 'g++', 'clang++', 'python3', 'rustc']:
+                self.error('Eparam')
+                return
+
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
             if err:
                 self.error(err)
@@ -805,7 +810,7 @@ class SubmitHandler(RequestHandler):
             #TODO: code prevent '/dev/random'
             #code = code.replace('bits/stdc++.h','DontUseMe.h')
             err, chal_id = await ChalService.inst.add_chal(
-                pro_id, self.acct['acct_id'], code)
+                pro_id, self.acct['acct_id'], comp_type, code)
 
             if err:
                 self.error(err)
@@ -820,6 +825,7 @@ class SubmitHandler(RequestHandler):
             err, chal = await ChalService.inst.get_chal(chal_id, self.acct)
 
             pro_id = chal['pro_id']
+            comp_type = chal['comp_type']
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
             if err:
                 self.finish(err)
@@ -829,11 +835,14 @@ class SubmitHandler(RequestHandler):
             self.error('Eparam')
             return
 
-        err, ret = await ChalService.inst.emit_chal(
+        file_ext = ChalConst.FILE_EXTENSION[comp_type]
+
+        err, _ = await ChalService.inst.emit_chal(
             chal_id,
             pro_id,
             pro['testm_conf'],
-            f'/nfs/code/{chal_id}/main.cpp',
+            comp_type,
+            f'/nfs/code/{chal_id}/main.{file_ext}',
             f'/nfs/problem/{pro_id}/res')
         if err:
             self.error(err)
@@ -964,6 +973,8 @@ class ChalHandler(RequestHandler):
             rechal = True
         else:
             rechal = False
+
+        chal['comp_type'] = ChalConst.COMPILER_NAME[chal['comp_type']]
 
         await self.render('chal', pro=pro, chal=chal, rechal=rechal)
         return

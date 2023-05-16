@@ -176,6 +176,7 @@
                 <th>State</th>
                 <th>Runtime</th>
                 <th>Memory</th>
+                <th>Compiler</th>
                 <th>Time</th>
             </tr>
         </thead>
@@ -192,6 +193,7 @@
                 <td class="state-{{ chal['state'] }}">{{ ChalService.STATE_STR[chal['state']] }}</td>
                 <td>{{ chal['runtime'] }}</td>
                 <td>{{ round(chal['memory'] / 1024) }}</td>
+                <td>{{ chal['comp_type'] }}</td>
                 <td class="time">{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
             </tr>
         {% end %}
