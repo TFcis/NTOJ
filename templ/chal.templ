@@ -91,6 +91,10 @@
             }
         });
 
+        $('#report_pro_button').on('click', function(e) {
+            index.go('/oj/report/?chal_id={{ chal['chal_id'] }}');
+        });
+
         {% end %}
     }
 
@@ -137,6 +141,7 @@
         <div class="print"></div>
     {% elif chal['code'] == True %}
         <button id="compile_info_button" class="btn-con">Hidden Compile Info</button>
+        <button id="report_pro_button" class="btn-wrn">Report Problem</button>
         <div class="print"></div>
     {% end %}
 

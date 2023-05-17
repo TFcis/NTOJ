@@ -32,6 +32,7 @@ from rank import RankService, RankHandler
 from auto import AutoService, AutoHandler
 from group import GroupService
 from log import LogService, LogHandler
+from report import ReportHandler
 from index import IndexHandler, AbouotHandler, InfoHandler, OnlineCounterHandler, DevInfoHandler
 
 async def materialized_view_task():
@@ -128,6 +129,7 @@ if __name__ == "__main__":
         ('/online_count',   OnlineCounterHandler, args),
         ('/api',            ApiHandler, args),
         ('/dev-info',       DevInfoHandler, args),
+        ('/report',         ReportHandler, args),
     ], autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC)
 
     tornado.log.enable_pretty_logging()
