@@ -20,20 +20,20 @@
                     }
                     j_form.find('div.print').print(msg);
                 } else {
-                    j_form.find('div.print').print('Done',true)
-                    setTimeout(function(){index.reload();},1000);
+                    j_form.find('div.print').print('Done', true)
+                    setTimeout(function(){index.reload();}, 1000);
                 }
             });
         });
     }
 
-    function rm_ques(index) {
+    function rm_ques(idx) {
         var j_form = $('#form');
 
         $.post('/oj/be/question', {
             'reqtype': 'rm_ques',
             'acct_id': {{ acct['acct_id'] }},
-            'index': index,
+            'index': idx,
         }, function(res) {
             msg = 'Unknown';
             if (res[0] == 'E') {
