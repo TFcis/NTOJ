@@ -265,6 +265,9 @@ class ChalService:
 
         chalmeta = test_conf['chalmeta']
 
+        if test_conf['comp_type'] == 'makefile':
+            comp_type = 'makefile'
+
         await Service.Judge.send(json.dumps({
             'chal_id'    : chal_id,
             'test'       : testl,
