@@ -1,5 +1,6 @@
 import os
 import json
+import datetime
 
 import config
 from user import UserConst
@@ -194,12 +195,14 @@ class ChalService:
         else:
             code = False
 
+        tz = datetime.timezone(datetime.timedelta(hours=+8))
+
         return (None, {
             'chal_id'   : chal_id,
             'pro_id'    : pro_id,
             'acct_id'   : acct_id,
             'acct_name' : acct_name,
-            'timestamp' : timestamp,
+            'timestamp' : timestamp.astimezone(tz),
             'testl'     : testl,
             'code'      : code,
             'response'  : response,
@@ -323,12 +326,14 @@ class ChalService:
             else:
                 memory = int(memory)
 
+            tz = datetime.timezone(datetime.timedelta(hours=+8))
+
             challist.append({
                 'chal_id'   : chal_id,
                 'pro_id'    : pro_id,
                 'acct_id'   : acct_id,
                 'comp_type' : ChalConst.COMPILER_NAME[comp_type],
-                'timestamp' : timestamp,
+                'timestamp' : timestamp.astimezone(tz),
                 'acct_name' : acct_name,
                 'state'     : state,
                 'runtime'   : runtime,

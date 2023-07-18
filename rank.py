@@ -1,4 +1,5 @@
 from req import RequestHandler, reqenv
+import datetime
 
 class RankService:
     def __init__(self, db, rs) -> None:
@@ -9,6 +10,7 @@ class RankService:
 class RankHandler(RequestHandler):
     @reqenv
     async def get(self, pro_id):
+        tz = datetime.timezone(datetime.timedelta(hours=+8))
         pro_id = int(pro_id)
 
         async with self.db.acquire() as con:
@@ -44,7 +46,7 @@ class RankHandler(RequestHandler):
                 'acct_name' : acct_name,
                 'runtime'   : int(runtime),
                 'memory'    : int(memory),
-                'timestamp' : timestamp
+                'timestamp' : timestamp.astimezone(tz).isoformat(timespec="seconds"),
             })
 
         await self.render('rank', pro_id=pro_id, chal_list=chal_list)

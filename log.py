@@ -1,4 +1,5 @@
 import json
+import datetime
 
 import tornado.web
 
@@ -30,6 +31,7 @@ class LogService:
         return (None, result[0]['log_id'])
 
     async def list_log(self, off, num, log_type=None):
+        tz = datetime.timezone(datetime.timedelta(hours=+8))
         async with self.db.acquire() as con:
             if log_type == None:
                 result = await con.fetch(
@@ -63,10 +65,10 @@ class LogService:
                 loglist.append({
                     'log_id'    : log_id,
                     'message'   : message,
-                    'timestamp' : timestamp,
+                    'timestamp' : timestamp.astimezone(tz).isoformat(timespec="seconds"),
                 })
 
-        return (None, { 'loglist': loglist, 'lognum': count })
+        return (None, {'loglist': loglist, 'lognum': count})
 
     async def get_log_type(self):
         async with self.db.acquire() as con:
