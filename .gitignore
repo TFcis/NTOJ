@@ -10,3 +10,5 @@ deploy.sh
 third/
 NTOJ_installer/
 test.py
+
+.idea/

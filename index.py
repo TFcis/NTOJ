@@ -8,8 +8,8 @@ class IndexHandler(RequestHandler):
     @reqenv
     async def get(self):
         manage = False
-        ask = False
         reply = False
+        ask_cnt = 0
 
         if self.acct['acct_id'] == UserConst.ACCTID_GUEST:
             name = ''
@@ -19,15 +19,12 @@ class IndexHandler(RequestHandler):
 
             if self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL:
                 manage = True
-
-                if (tmp := (await self.rs.get('someoneask'))) != None:
-                    if msgpack.unpackb(tmp) == True:
-                        ask = True
+                _, _, ask_cnt = await QuestionService.inst.get_asklist()
 
             else:
                 reply = await QuestionService.inst.have_reply(self.acct['acct_id'])
 
-        await self.render('index', name=name, manage=manage, ask=ask, reply=reply)
+        await self.render('index', name=name, manage=manage, ask_cnt=ask_cnt, reply=reply)
         return
 
 class AbouotHandler(RequestHandler):

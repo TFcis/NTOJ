@@ -26,7 +26,7 @@ class QuestionService:
 
             acct_id = acctid
 
-        if (active := (await self.rs.get(f'{acct_id}_msg_active'))) == None:
+        if (await self.rs.get(f'{acct_id}_msg_active')) == None:
             await self.rs.set(f'{acct_id}_msg_active', packb(True))
             await self.rs.set(f'{acct_id}_msg_ask', packb(False))
             await self.rs.set(f'{acct_id}_msg_list', packb([]))
@@ -62,8 +62,7 @@ class QuestionService:
         while len(ques_list) > 10:
             ques_list.pop(0)
 
-        #TODO: someoneask處理
-        await self.rs.set('someoneask', packb(True))
+        # await self.rs.set('someoneask', packb(True))
         await self.rs.set(f'{acct_id}_msg_list', packb(ques_list))
         return None
 
@@ -76,7 +75,7 @@ class QuestionService:
             return err
 
         ques_list[int(index)]['A'] = rtext
-        await self.rs.set('someoneask', packb(False))
+        # await self.rs.set('someoneask', packb(False))
         await self.rs.set(f'{qacct_id}_msg_list', packb(ques_list))
         await self.rs.set(f'{qacct_id}_have_reply', packb(True))
 
@@ -99,6 +98,21 @@ class QuestionService:
 
         return unpackb(reply)
 
+    async def get_asklist(self):
+        err, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, True)
+
+        asklist = {}
+        ask_cnt = 0
+        for acct in acctlist:
+            if (ask := (await self.rs.get(f"{acct['acct_id']}_msg_ask"))) == None:
+                asklist.update({acct['acct_id']: False})
+            else:
+                ask = unpackb(ask)
+                asklist.update({acct['acct_id']: ask})
+                if ask == True:
+                    ask_cnt += 1
+
+        return (None, asklist, ask_cnt)
 
 class QuestionHandler(RequestHandler):
     @reqenv

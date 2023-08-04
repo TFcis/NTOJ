@@ -86,8 +86,8 @@
 	{% if manage != True %}
 	    <li class="question"><a href="/oj/question/">Question</a></li>
 	{% end %}
-	{% if manage == True and ask == True %}
-	    <li class="ask"><a style="color:red;" href="/oj/manage/question/">ask</a></li>
+	{% if manage == True and ask_cnt > 0 %}
+	    <li class="ask"><a style="color:red;" href="/oj/manage/question/">get {{ ask_cnt }} ask</a></li>
 	{% end %}
 	{% if manage == False and reply == True %}
 	    <li><a style="color:red;" href="/oj/question/">get reply</a></li>
@@ -105,8 +105,12 @@
         <a class="pull-r" href="/oj/acct/{{ acct_id }}/">{{ name }}</a>
     </div>
 </nav>
-<div class="container" style="min-height:100%;"><div id="index-cont" class="g-r">
-</div></div>
+
+<div class="container" style="min-height:100%;">
+    <div id="index-cont" class="g-r">
+    </div>
+</div>
+
 <div id="footer"><div class="container">
     <small><code>TNFSH Online Judge 13 - HypeXky</code></small>
 </div></div>

@@ -1,6 +1,5 @@
 <link rel="stylesheet" type="text/css" href="/oj/question.css">
 <link rel="stylesheet" type="text/css" href="/oj/blk.css">
-
 <script type="text/javascript">
     function init() {
     var j_form = $('#form');
@@ -46,6 +45,7 @@
         });
     }
 </script>
+<!--
 <div class="g-lg-12">
     <div>
 	{{ acct['acct_id'] }}
@@ -79,5 +79,31 @@
 	<textarea class="ques" style="width:100%; height:100px;"></textarea>
 	<button class="btn-con submit">Ask</button>
 	<div class="print"></div>
+    </div>
+</div>
+-->
+<div class="g-lg-12">
+    <div>
+    Account : {{acct['acct_name']}} {{ acct['acct_id'] }}
+    </div>
+    <div id="form">
+        {% set count = 0 %}
+        {% for ques in ques_list %}
+        <div id="abc" style="border:2px lavander solid;">
+            <h5>{{ques['Q']}}</h5>
+            {% if ques['A'] == None%}
+            <p style="color:red;">Wait for Reply</p>
+            {% else %}
+            <p>{{ques['A']}}</p>
+            {% end %}
+            <input type="button" id="buttom" value="Remove" onclick="rm_ques({{ count }});">
+            {% set count = count + 1 %}
+            {% end %}
+        </div>
+    <br />
+    <textarea class="ques" style="width:100%; height:100px;"></textarea>
+    <br />
+    <button class="btn-con submit">Ask</button>
+    <div class="print"></div>
     </div>
 </div>
