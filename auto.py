@@ -2,8 +2,8 @@ from datetime import datetime
 
 from msgpack import packb, unpackb
 
-from req import RequestHandler, reqenv
-from req import Service
+from utils.req import RequestHandler, reqenv
+from utils.req import Service
 
 class AutoService:
     def __init__(self, db, rs) -> None:
