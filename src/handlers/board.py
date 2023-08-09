@@ -8,7 +8,7 @@ from services.user import UserService, UserConst
 from services.contest import ContestService, ContestConst
 from services.pro import ProService
 from services.rate import RateService
-from utils.req import RequestHandler, reqenv
+from handlers.base import RequestHandler, reqenv
 
 
 class BoardHandler(RequestHandler):

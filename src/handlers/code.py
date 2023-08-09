@@ -3,7 +3,7 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import HtmlFormatter
 
 from services.code import CodeService
-from utils.req import RequestHandler, reqenv
+from handlers.base import RequestHandler, reqenv
 
 
 class CodeHandler(RequestHandler):

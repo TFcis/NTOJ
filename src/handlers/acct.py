@@ -5,7 +5,7 @@ from services.log import LogService
 from services.pro import ProService
 from services.rate import RateService
 from services.user import UserService, UserConst
-from utils.req import RequestHandler, reqenv
+from handlers.base import RequestHandler, reqenv, require_permission
 
 
 class AcctHandler(RequestHandler):
@@ -55,6 +55,7 @@ class AcctHandler(RequestHandler):
         await self.render('acct', acct=acct, rate=rate_data, prolist=prolist2, isadmin=isadmin)
 
     @reqenv
+    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def post(self):
         reqtype = self.get_argument('reqtype')
 

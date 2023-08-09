@@ -1,22 +1,15 @@
-from msgpack import packb, unpackb
+from msgpack import packb
 
-from utils.req import RequestHandler, reqenv
+from handlers.base import RequestHandler, reqenv, require_permission
 from services.ques import QuestionService
 from services.user import UserConst
 
 
 class QuestionHandler(RequestHandler):
     @reqenv
+    @require_permission(UserConst.ACCTTYPE_USER)
     async def get(self):
-        if self.acct['acct_id'] == UserConst.ACCTID_GUEST:
-            self.error('Esign')
-            return
-
-        if self.acct['acct_type'] != UserConst.ACCTTYPE_USER:
-            self.error('Eacces')
-            return
-
-        err, ques_list = await QuestionService.inst.get_queslist(acct=self.acct, acctid=0)
+        err, ques_list = await QuestionService.inst.get_queslist(self.acct['acct_id'])
         if err:
             self.error(err)
             return
@@ -26,6 +19,7 @@ class QuestionHandler(RequestHandler):
         return
 
     @reqenv
+    @require_permission([UserConst.ACCTTYPE_USER])
     async def post(self):
         reqtype = str(self.get_argument('reqtype'))
 
@@ -35,7 +29,7 @@ class QuestionHandler(RequestHandler):
                 self.error('Equesempty')
                 return
 
-            err = await QuestionService.inst.set_ques(self.acct, qtext)
+            err = await QuestionService.inst.set_ques(self.acct['acct_id'], qtext)
             if err:
                 self.error(err)
                 return
@@ -45,7 +39,7 @@ class QuestionHandler(RequestHandler):
 
         elif reqtype == 'rm_ques':
             index = int(self.get_argument('index'))
-            err = await QuestionService.inst.rm_ques(self.acct, index)
+            err = await QuestionService.inst.rm_ques(self.acct['acct_id'], index)
             if err:
                 self.error(err)
                 return

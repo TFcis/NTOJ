@@ -6,8 +6,8 @@ import tornado.web
 from services.chal import ChalService, ChalConst
 from services.pro import ProService
 from services.user import UserService, UserConst
-from utils.req import RequestHandler, reqenv
-from utils.req import WebSocketHandler
+from handlers.base import RequestHandler, reqenv
+from handlers.base import WebSocketHandler
 
 
 class ChalListHandler(RequestHandler):

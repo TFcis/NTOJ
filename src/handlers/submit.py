@@ -5,16 +5,13 @@ from services.user import UserService, UserConst
 from services.chal import ChalService, ChalConst
 from services.pro import ProService
 from services.judge import JudgeServerClusterService
-from utils.req import RequestHandler, reqenv
+from handlers.base import RequestHandler, reqenv, require_permission
 
 
 class SubmitHandler(RequestHandler):
     @reqenv
+    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def get(self, pro_id):
-        if self.acct['acct_id'] == UserService.ACCTID_GUEST:
-            self.error('Esign')
-            return
-
         pro_id = int(pro_id)
         err, pro = await ProService.inst.get_pro(pro_id, self.acct)
         if err:
@@ -41,11 +38,8 @@ class SubmitHandler(RequestHandler):
         return
 
     @reqenv
+    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def post(self):
-        if self.acct['acct_id'] == UserConst.ACCTID_GUEST:
-            self.error('Esign')
-            return
-
         judge_status_list = await JudgeServerClusterService.inst.get_servers_status()
         can_submit = False
 

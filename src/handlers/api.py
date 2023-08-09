@@ -3,7 +3,7 @@ import json
 from services.pro import ProService
 from services.rate import RateService
 from services.user import UserService
-from utils.req import RequestHandler, reqenv
+from handlers.base import RequestHandler, reqenv
 
 
 class ApiHandler(RequestHandler):

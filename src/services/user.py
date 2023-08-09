@@ -19,6 +19,7 @@ class UserConst:
 
     ACCTTYPE_KERNEL = 0
     ACCTTYPE_USER = 3
+    ACCTTYPE_GUEST = 6
 
     ACCTID_GUEST = 0
 
@@ -33,6 +34,7 @@ class UserService:
 
     ACCTTYPE_KERNEL = 0
     ACCTTYPE_USER = 3
+    ACCTTYPE_GUEST = 6
 
     ACCTID_GUEST = 0
 
@@ -158,7 +160,7 @@ class UserService:
         if acct_id is None:
             return (None, {
                 'acct_id': 0,
-                'acct_type': UserConst.ACCTTYPE_USER,
+                'acct_type': UserConst.ACCTTYPE_GUEST,
                 'class': 0,
                 'name': '',
                 'photo': '',

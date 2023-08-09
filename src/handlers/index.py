@@ -3,7 +3,7 @@ import msgpack
 from services.user import UserConst
 from services.ques import QuestionService
 from services.judge import JudgeServerClusterService
-from utils.req import RequestHandler, reqenv
+from handlers.base import RequestHandler, reqenv
 
 
 class IndexHandler(RequestHandler):
@@ -13,7 +13,7 @@ class IndexHandler(RequestHandler):
         reply = False
         ask_cnt = 0
 
-        if self.acct['acct_id'] == UserConst.ACCTID_GUEST:
+        if self.acct['acct_type'] == UserConst.ACCTTYPE_GUEST:
             name = ''
 
         else:

@@ -1,8 +1,9 @@
 from redis import asyncio as aioredis
 import asyncio
 
-from utils.req import WebSocketHandler
-from utils.dbg import dbg_print
+from handlers.base import WebSocketHandler
+
+
 class InformSub(WebSocketHandler):
     async def open(self):
         self.ars = aioredis.Redis(host='localhost', port=6379, db=1)
@@ -24,7 +25,6 @@ class InformSub(WebSocketHandler):
         self.write_message(msg)
 
     def on_close(self) -> None:
-        dbg_print(__file__, 64, ip=self.request.remote_ip)
         asyncio.create_task(self.ars.decr('online_counter', 1))
         asyncio.create_task(self.ars.srem('online_counter_set', self.request.remote_ip))
         self.task.cancel()

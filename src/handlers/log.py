@@ -1,17 +1,15 @@
 import tornado.web
 
 from services.log import LogService
-from utils.req import RequestHandler, reqenv
+from handlers.base import RequestHandler, reqenv, require_permission
 
 
 class LogHandler(RequestHandler):
-    @reqenv
-    async def get(self):
-        from services.user import UserConst
-        if self.acct['acct_type'] != UserConst.ACCTTYPE_KERNEL:
-            self.error('Eacces')
-            return
+    from services.user import UserConst
 
+    @reqenv
+    @require_permission(UserConst.ACCTTYPE_KERNEL)
+    async def get(self):
         try:
             off = int(self.get_argument('off'))
         except tornado.web.HTTPError:

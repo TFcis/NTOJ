@@ -207,7 +207,7 @@ class ProService:
 
         else:
             max_status = await self.get_acct_limit(acct)
-            isguest = (acct['acct_id'] == UserConst.ACCTID_GUEST)
+            isguest = (acct['acct_type'] == UserConst.ACCTTYPE_GUEST)
             isadmin = (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
         if clas is None:

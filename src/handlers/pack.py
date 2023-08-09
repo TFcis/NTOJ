@@ -2,7 +2,7 @@ import os
 import json
 import uuid
 
-from utils.req import WebSocketHandler
+from handlers.base import WebSocketHandler
 
 
 class PackHandler(WebSocketHandler):

@@ -7,7 +7,7 @@ from services.judge import JudgeServerClusterService
 from services.log import LogService
 from services.pro import ProService
 from services.user import UserConst
-from utils.req import RequestHandler, reqenv
+from handlers.base import RequestHandler, reqenv, require_permission
 
 
 class ProsetHandler(RequestHandler):
@@ -143,7 +143,7 @@ class ProHandler(RequestHandler):
             if test['test_idx'] in countmap:
                 test['rate'] = math.floor(countmap[test['test_idx']])
 
-        isguest = (self.acct['acct_id'] == UserConst.ACCTID_GUEST)
+        isguest = (self.acct['acct_type'] == UserConst.ACCTTYPE_GUEST)
         isadmin = (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
         if isadmin:
@@ -190,15 +190,12 @@ class ProHandler(RequestHandler):
 
 class ProTagsHandler(RequestHandler):
     @reqenv
+    @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self):
-        if self.acct['acct_id'] == UserConst.ACCTID_GUEST:
-            self.error('Esign')
-            return
-
         tags = self.get_argument('tags')
         pro_id = int(self.get_argument('pro_id'))
 
-        if isinstance(tags, str) and self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL:
+        if isinstance(tags, str):
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
             if err:
                 self.error(err)
