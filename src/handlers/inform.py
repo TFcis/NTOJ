@@ -30,5 +30,5 @@ class InformSub(WebSocketHandler):
         self.task.cancel()
 
     def check_origin(self, origin):
-        #TODO: secure
+        # TODO: secure
         return True

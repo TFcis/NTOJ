@@ -2,6 +2,7 @@ class GroupConst:
     DEFAULT_GROUP = 'normal_user'
     KERNEL_GROUP = 'kernel'
 
+
 class GroupService:
     DEFAULT_GROUP = 'normal_user'
     KERNEL_GROUP = 'kernel'
@@ -37,7 +38,7 @@ class GroupService:
             await con.execute('DELETE FROM "group" WHERE "group"."group_name" = $1;', gname)
         gacct = await self.list_acct_in_group(gname)
         for acct in gacct:
-            err = await self.set_acct_group(acct['acct_id'], self.DEFAULT_GROUP)
+            _ = await self.set_acct_group(acct['acct_id'], self.DEFAULT_GROUP)
 
         return None
 
@@ -65,8 +66,8 @@ class GroupService:
         acct_list = []
         for (acct_id, acct_name) in result:
             acct_list.append({
-                'acct_id'   : int(acct_id),
-                'acct_name' : str(acct_name),
+                'acct_id': int(acct_id),
+                'acct_name': str(acct_name),
             })
 
         return acct_list
@@ -134,5 +135,5 @@ class GroupService:
 
         gacct = await self.list_acct_in_group(gname)
         for acct in gacct:
-            err = await self.set_acct_group(acct['acct_id'], gname)
+            _ = await self.set_acct_group(acct['acct_id'], gname)
         return None

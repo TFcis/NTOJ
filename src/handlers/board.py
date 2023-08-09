@@ -73,7 +73,7 @@ class BoardHandler(RequestHandler):
                         if rate['rate'] > 0:
                             count = count - rate['count']
 
-                return (acct['rate'], count)
+                return acct['rate'], count
 
             submit_count = {None: None}
             for acct in acctlist:

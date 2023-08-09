@@ -1,12 +1,13 @@
-import json
 import datetime
+import json
 
-import tornado.template
 import tornado.gen
+import tornado.template
 import tornado.web
 import tornado.websocket
 
-from services.user import UserService, UserConst
+from services.user import UserService
+
 
 class RequestHandler(tornado.web.RequestHandler):
     def __init__(self, *args, **kwargs):
@@ -50,7 +51,7 @@ class RequestHandler(tornado.web.RequestHandler):
         else:
             kwargs['acct_id'] = ''
 
-        if self.res_json == True:
+        if self.res_json is True:
             self.finish(json.dumps(kwargs, cls=_encoder))
 
         else:
@@ -59,12 +60,14 @@ class RequestHandler(tornado.web.RequestHandler):
 
         return
 
+
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def __init__(self, *args, **kwargs):
         self.db = kwargs.pop('db')
         self.rs = kwargs.pop('rs')
 
         super().__init__(*args, **kwargs)
+
 
 def reqenv(func):
     # @tornado.gen.coroutine

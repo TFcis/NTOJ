@@ -1,22 +1,22 @@
-import json
 import base64
 import datetime
+import json
 
-from msgpack import packb, unpackb
 import tornado.web
+from msgpack import packb, unpackb
 
-from services.group import GroupService, GroupConst
-from services.user import UserService, UserConst
-from services.pro import ProService
-from services.judge import JudgeServerClusterService
-from services.inform import InformService
-from services.contest import ContestService
-from services.chal import ChalService
-from services.ques import QuestionService
-from services.pack import PackService
-from services.log import LogService
-from utils.req import RequestHandler, reqenv
 import config
+from services.chal import ChalService
+from services.contest import ContestService
+from services.group import GroupService, GroupConst
+from services.inform import InformService
+from services.judge import JudgeServerClusterService
+from services.log import LogService
+from services.pack import PackService
+from services.pro import ProService
+from services.ques import QuestionService
+from services.user import UserService, UserConst
+from utils.req import RequestHandler, reqenv
 
 
 class ManageHandler(RequestHandler):
@@ -38,7 +38,7 @@ class ManageHandler(RequestHandler):
         elif page == 'pro':
             err, prolist = await ProService.inst.list_pro(self.acct)
 
-            if (lock_list := (await self.rs.get('lock_list'))) != None:
+            if (lock_list := (await self.rs.get('lock_list'))) is not None:
                 lock_list = unpackb(lock_list)
             else:
                 lock_list = []
@@ -62,15 +62,15 @@ class ManageHandler(RequestHandler):
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
             if err == 'Econf':
                 self.finish(
-                '''
-                    <script type="text/javascript" id="contjs">
-                        function init() {
-                '''
-                            f"index.go('/oj/manage/reinitpro/?proid={pro_id}')"
-                '''
-                        }
-                    </script>
-                '''
+                    '''
+                        <script type="text/javascript" id="contjs">
+                            function init() {
+                    '''
+                    f"index.go('/oj/manage/reinitpro/?proid={pro_id}')"
+                    '''
+                            }
+                        </script>
+                    '''
                 )
                 return
             elif err != None:
@@ -82,11 +82,11 @@ class ManageHandler(RequestHandler):
             testl = []
             for test_idx, test_conf in pro['testm_conf'].items():
                 testl.append({
-                    'test_idx' : test_idx,
+                    'test_idx': test_idx,
                     'timelimit': test_conf['timelimit'],
-                    'memlimit' : test_conf['memlimit'],
-                    'weight'   : test_conf['weight'],
-                    'rate'     : 2000
+                    'memlimit': test_conf['memlimit'],
+                    'weight': test_conf['weight'],
+                    'rate': 2000
                 })
 
             try:
@@ -95,7 +95,8 @@ class ManageHandler(RequestHandler):
             except FileNotFoundError:
                 conf_content = ''
 
-            await self.render('manage-pro-update', page=page, pro=pro, lock=lock, testl=testl, problem_config_json=conf_content)
+            await self.render('manage-pro-update', page=page, pro=pro, lock=lock, testl=testl,
+                              problem_config_json=conf_content)
             return
 
         elif page == 'contest':
@@ -108,20 +109,22 @@ class ManageHandler(RequestHandler):
                         return
 
                 else:
-                    cont_meta = {'start': datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8))),
-                                 'end': datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))}
+                    cont_meta = {
+                        'start': datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8))),
+                        'end': datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))}
 
             except tornado.web.HTTPError:
                 cont_name = 'Add_cont'
-                cont_meta = {'start': datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8))),
-                             'end': datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))}
+                cont_meta = {
+                    'start': datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8))),
+                    'end': datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))}
 
             await self.render('manage-contest',
-                        page=page,
-                        meta=(await ContestService.inst.get('default'))[1],
-                        contlist=await ContestService.inst.get_list(),
-                        cont_meta=cont_meta,
-                        cont_name=cont_name)
+                              page=page,
+                              meta=(await ContestService.inst.get('default'))[1],
+                              contlist=await ContestService.inst.get_list(),
+                              cont_meta=cont_meta,
+                              cont_name=cont_name)
             return
 
         elif page == 'acct':
@@ -144,7 +147,7 @@ class ManageHandler(RequestHandler):
             asklist = {}
             for acct in acctlist:
 
-                if (ask := (await self.rs.get(f"{acct['acct_id']}_msg_ask"))) == None:
+                if (ask := (await self.rs.get(f"{acct['acct_id']}_msg_ask"))) is None:
                     asklist.update({acct['acct_id']: False})
                 else:
                     asklist.update({acct['acct_id']: unpackb(ask)})
@@ -160,7 +163,7 @@ class ManageHandler(RequestHandler):
             return
 
         elif page == 'inform':
-            if (inform_list := (await self.rs.get('inform'))) != None:
+            if (inform_list := (await self.rs.get('inform'))) is not None:
                 inform_list = unpackb(inform_list)
             else:
                 inform_list = []
@@ -172,12 +175,12 @@ class ManageHandler(RequestHandler):
             try:
                 pclas_key = str(self.get_argument('pclas_key'))
 
-            except:
+            except tornado.web.HTTPError:
                 pclas_key = None
 
-            if pclas_key == None:
+            if pclas_key is None:
                 await self.render('manage-proclass', page=page, pclas_key=pclas_key, pclas_name='',
-                        clas_list=await ProService.inst.get_class_list(), p_list=None)
+                                  clas_list=await ProService.inst.get_class_list(), p_list=None)
                 return
 
             else:
@@ -211,18 +214,19 @@ class ManageHandler(RequestHandler):
                 gtype = int(result['group_type'])
                 gclas = int(result['group_class'])
 
-            except:
+            except tornado.web.HTTPError:
                 gname = None
                 gtype = None
                 gclas = None
 
             glist = await GroupService.inst.list_group()
-            if gname != None:
+            if gname is not None:
                 gacct = await GroupService.inst.list_acct_in_group(gname)
             else:
                 gacct = None
 
-            await self.render('manage-group', page=page, gname=gname, glist=glist, gacct=gacct, gtype=gtype, gclas=gclas)
+            await self.render('manage-group', page=page, gname=gname, glist=glist, gacct=gacct, gtype=gtype,
+                              gclas=gclas)
             return
 
     @reqenv
@@ -251,11 +255,13 @@ class ManageHandler(RequestHandler):
 
                 err = await JudgeServerClusterService.inst.connect_server(index)
                 if err:
-                    await LogService.inst.add_log(f"{self.acct['name']} tried connected {server_name} but failed.", 'manage.judge.connect.failure')
+                    await LogService.inst.add_log(f"{self.acct['name']} tried connected {server_name} but failed.",
+                                                  'manage.judge.connect.failure')
                     self.error(err)
                     return
 
-                await LogService.inst.add_log(f"{self.acct['name']} had been connected {server_name} succesfully.", 'manage.judge.connect')
+                await LogService.inst.add_log(f"{self.acct['name']} had been connected {server_name} succesfully.",
+                                              'manage.judge.connect')
 
                 self.finish('S')
                 return
@@ -269,12 +275,14 @@ class ManageHandler(RequestHandler):
                     server_name = f"server-{index}"
 
                 if config.unlock_pwd != base64.b64encode(packb(pwd)):
-                    await LogService.inst.add_log(f"{self.acct['name']} tried to disconnect {server_name} but failed.", 'manage.judge.disconnect.failure')
+                    await LogService.inst.add_log(f"{self.acct['name']} tried to disconnect {server_name} but failed.",
+                                                  'manage.judge.disconnect.failure')
                     self.error('Eacces')
                     return
 
                 err = await JudgeServerClusterService.inst.disconnect_server(index)
-                await LogService.inst.add_log(f"{self.acct['name']} had been disconnected {server_name} succesfully.", 'manage.judge.disconnect')
+                await LogService.inst.add_log(f"{self.acct['name']} had been disconnected {server_name} succesfully.",
+                                              'manage.judge.disconnect')
                 if err:
                     self.error(err)
                     return
@@ -294,7 +302,8 @@ class ManageHandler(RequestHandler):
 
                 err, pro_id = await ProService.inst.add_pro(
                     name, status, clas, expire, pack_token)
-                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro')
                 if err:
                     self.error(err)
                     return
@@ -317,7 +326,9 @@ class ManageHandler(RequestHandler):
 
                 err, ret = await ProService.inst.update_pro(
                     pro_id, name, status, clas, expire, pack_type, pack_token, tags)
-                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to update the problem #{pro_id}", 'manage.pro.update.pro')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} had been send a request to update the problem #{pro_id}",
+                    'manage.pro.update.pro')
                 if err:
                     self.error(err)
                     return
@@ -343,7 +354,9 @@ class ManageHandler(RequestHandler):
                 memlimit = int(self.get_argument('memlimit'))
 
                 err, ret = await ProService.inst.update_limit(pro_id, timelimit, memlimit)
-                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to update the problem #{pro_id}", 'manage.pro.update.limit')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} had been send a request to update the problem #{pro_id}",
+                    'manage.pro.update.limit')
                 if err:
                     self.error(err)
                     return
@@ -357,25 +370,25 @@ class ManageHandler(RequestHandler):
 
                 try:
                     conf_json = json.loads(conf_json_text)
-                except Exception:
+                except json.decoder.JSONDecodeError:
                     self.error('Econf')
                     return
 
                 with open(f'problem/{pro_id}/conf.json', 'w') as conf_f:
                     conf_f.write(conf_json_text)
 
-                comp_type  = conf_json['compile']
+                comp_type = conf_json['compile']
                 score_type = conf_json['score']
                 check_type = conf_json['check']
-                timelimit  = conf_json['timelimit']
-                memlimit   = conf_json['memlimit'] * 1024
-                chalmeta   = conf_json['metadata']
+                timelimit = conf_json['timelimit']
+                memlimit = conf_json['memlimit'] * 1024
+                chalmeta = conf_json['metadata']
 
                 async with self.db.acquire() as con:
                     await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
 
                     for test_idx, test_conf in enumerate(conf_json['test']):
-                        metadata = { 'data': test_conf['data'] }
+                        metadata = {'data': test_conf['data']}
 
                         await con.execute(
                             '''
@@ -385,10 +398,13 @@ class ManageHandler(RequestHandler):
                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
                             ''',
                             int(pro_id), int(test_idx), comp_type, score_type, check_type,
-                            int(timelimit), int(memlimit), int(test_conf['weight']), json.dumps(metadata), json.dumps(chalmeta)
+                            int(timelimit), int(memlimit), int(test_conf['weight']), json.dumps(metadata),
+                            json.dumps(chalmeta)
                         )
 
-                await LogService.inst.add_log(f"{self.acct['name']} had been send a request to update the problem #{pro_id}", 'manage.pro.update.conf')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} had been send a request to update the problem #{pro_id}",
+                    'manage.pro.update.conf')
 
                 self.finish('S')
                 return
@@ -404,7 +420,7 @@ class ManageHandler(RequestHandler):
                         can_submit = True
                         break
 
-                if can_submit == False:
+                if not can_submit:
                     self.error('Ejudge')
                     return
 
@@ -424,7 +440,9 @@ class ManageHandler(RequestHandler):
                         pro_id
                     )
                     result = result[0]
-                await LogService.inst.add_log(f"{self.acct['name']} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals", 'manage.chal.rechal')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals",
+                    'manage.chal.rechal')
 
                 for chal_id in result:
                     err, ret = await ChalService.inst.reset_chal(chal_id)
@@ -443,7 +461,7 @@ class ManageHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 await self.rs.set(f'{pro_id}_owner', packb(1))
 
-                if (lock_list := (await self.rs.get('lock_list'))) != None:
+                if (lock_list := (await self.rs.get('lock_list'))) is not None:
                     lock_list = unpackb(lock_list)
                 else:
                     lock_list = []
@@ -479,7 +497,8 @@ class ManageHandler(RequestHandler):
                 status = int(self.get_argument('status'))
                 start = self.get_argument('start')
                 end = self.get_argument('end')
-                await LogService.inst.add_log(f"{self.acct['name']} was setting the contest \"{cont_name}\".", 'manage.contest.set')
+                await LogService.inst.add_log(f"{self.acct['name']} was setting the contest \"{cont_name}\".",
+                                              'manage.contest.set')
                 err, start = self.trantime(start)
                 if err:
                     self.error(err)
@@ -497,7 +516,7 @@ class ManageHandler(RequestHandler):
                     pro_list = str(self.get_argument('pro_list'))
                     acct_list = str(self.get_argument('acct_list'))
                     await ContestService.inst.set(cont_name=cont_name, clas=None, status=status, start=start, end=end,
-                            pro_list=pro_list, acct_list=acct_list)
+                                                  pro_list=pro_list, acct_list=acct_list)
 
                 self.finish('S')
                 return
@@ -506,7 +525,8 @@ class ManageHandler(RequestHandler):
                 cont_name = self.get_argument('cont_name')
                 await ContestService.inst.remove_cont(cont_name)
                 self.finish('S')
-                await LogService.inst.add_log(f"{self.acct['name']} was removing the contest \"{cont_name}\".", 'manage.contest.remove')
+                await LogService.inst.add_log(f"{self.acct['name']} was removing the contest \"{cont_name}\".",
+                                              'manage.contest.remove')
                 return
 
         elif page == 'acct':
@@ -522,14 +542,19 @@ class ManageHandler(RequestHandler):
                 #    return
                 err, acct = await UserService.inst.info_acct(acct_id)
                 if err:
-                    await LogService.inst.add_log(f"{self.acct['name']}(#{self.acct['acct_id']}) had been send a request to update the account #{acct_id} but not found", 'manage.acct.update.failure')
+                    await LogService.inst.add_log(
+                        f"{self.acct['name']}(#{self.acct['acct_id']}) had been send a request to update the account #{acct_id} but not found",
+                        'manage.acct.update.failure')
                     self.error(err)
                     return
 
-                await LogService.inst.add_log(f"{self.acct['name']}(#{self.acct['acct_id']}) had been send a request to update the account {acct['name']}(#{acct['acct_id']})", 'manage.acct.update')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']}(#{self.acct['acct_id']}) had been send a request to update the account {acct['name']}(#{acct['acct_id']})",
+                    'manage.acct.update')
 
                 err, ret = await UserService.inst.update_acct(acct_id,
-                                                               acct_type, clas, acct['name'], acct['photo'], acct['cover'])
+                                                              acct_type, clas, acct['name'], acct['photo'],
+                                                              acct['cover'])
                 if err:
                     self.error(err)
                     return
@@ -541,7 +566,9 @@ class ManageHandler(RequestHandler):
         elif page == 'rquestion':
             reqtype = self.get_argument('reqtype')
             if reqtype == 'rpl':
-                await LogService.inst.add_log(f"{self.acct['name']} replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".", 'manage.question.reply')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".",
+                    'manage.question.reply')
 
                 index = self.get_argument('index')
                 rtext = self.get_argument('rtext')
@@ -551,7 +578,9 @@ class ManageHandler(RequestHandler):
                 return
 
             if reqtype == 'rrpl':
-                await LogService.inst.add_log(f"{self.acct['name']} re-replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".", 'manage.question.re-reply')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} re-replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".",
+                    'manage.question.re-reply')
 
                 index = self.get_argument('index')
                 rtext = self.get_argument('rtext')
@@ -566,20 +595,25 @@ class ManageHandler(RequestHandler):
             if reqtype == 'set':
                 text = self.get_argument('text')
                 await InformService.inst.set_inform(text)
-                await LogService.inst.add_log(f"{self.acct['name']} added a line on bulletin: \"{text}\".", 'manage.inform.add')
+                await LogService.inst.add_log(f"{self.acct['name']} added a line on bulletin: \"{text}\".",
+                                              'manage.inform.add')
                 return
 
             elif reqtype == 'edit':
                 index = self.get_argument('index')
                 text = self.get_argument('text')
                 color = self.get_argument('color')
-                await LogService.inst.add_log(f"{self.acct['name']} updated a line on bulletin: \"{text}\" which it used to be the #{int(index) + 1}th row.", 'manage.inform.update')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} updated a line on bulletin: \"{text}\" which it used to be the #{int(index) + 1}th row.",
+                    'manage.inform.update')
                 await InformService.inst.edit_inform(index, text, color)
                 return
 
             elif reqtype == 'del':
                 index = self.get_argument('index')
-                await LogService.inst.add_log(f"{self.acct['name']} removed a line on bulletin which it used to be the #{int(index) + 1}th row.", 'manage.inform.remove')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} removed a line on bulletin which it used to be the #{int(index) + 1}th row.",
+                    'manage.inform.remove')
                 await InformService.inst.del_inform(index)
                 return
             return
@@ -599,7 +633,9 @@ class ManageHandler(RequestHandler):
                     except ValueError:
                         pass
                 p_list = p_list2
-                await LogService.inst.add_log(f"{self.acct['name']} add proclass key={pclas_key} name={pclas_name} list={p_list}", 'manage.proclass.add')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} add proclass key={pclas_key} name={pclas_name} list={p_list}",
+                    'manage.proclass.add')
                 err = await ProService.inst.add_pclass(pclas_key, pclas_name, p_list)
                 if err:
                     self.error(err)
@@ -610,7 +646,8 @@ class ManageHandler(RequestHandler):
 
             elif reqtype == 'remove':
                 pclas_key = str(self.get_argument('pclas_key'))
-                await LogService.inst.add_log(f"{self.acct['name']} remove proclass key={pclas_key}", 'manage.proclass.remove')
+                await LogService.inst.add_log(f"{self.acct['name']} remove proclass key={pclas_key}",
+                                              'manage.proclass.remove')
                 err = await ProService.inst.remove_pclass(pclas_key)
                 if err:
                     self.error(err)
@@ -634,7 +671,9 @@ class ManageHandler(RequestHandler):
                         pass
 
                 p_list = p_list2
-                await LogService.inst.add_log(f"{self.acct['name']} update proclass key={pclas_key} newkey={new_pclas_key} name={pclas_name} list={p_list}", 'manage.proclass.update')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} update proclass key={pclas_key} newkey={new_pclas_key} name={pclas_name} list={p_list}",
+                    'manage.proclass.update')
                 err = await ProService.inst.edit_pclass(pclas_key, new_pclas_key, pclas_name, p_list)
                 if err:
                     self.error(err)
@@ -653,7 +692,9 @@ class ManageHandler(RequestHandler):
                     self.error('Ekernel')
                     return
 
-                await LogService.inst.add_log(f"{self.acct['name']} updated group={gname} group_type={gtype} group_class={gclas}.", 'manage.group.update')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} updated group={gname} group_type={gtype} group_class={gclas}.",
+                    'manage.group.update')
                 err = await GroupService.inst.update_group(gname, gtype, gclas)
                 if err:
                     self.error(err)
@@ -667,7 +708,9 @@ class ManageHandler(RequestHandler):
                 gtype = int(self.get_argument('gtype'))
                 gclas = int(self.get_argument('gclas'))
 
-                await LogService.inst.add_log(f"{self.acct['name']} added group={gname} group_type={gtype} group_class={gclas}.", 'manage.group.add')
+                await LogService.inst.add_log(
+                    f"{self.acct['name']} added group={gname} group_type={gtype} group_class={gclas}.",
+                    'manage.group.add')
                 err = await GroupService.inst.add_group(gname, gtype, gclas)
                 if err:
                     self.error(err)
@@ -705,6 +748,6 @@ class ManageHandler(RequestHandler):
                 time = time.replace(tzinfo=datetime.timezone.utc)
 
             except ValueError:
-                return ('Eparam', None)
+                return 'Eparam', None
 
-        return (None, time)
+        return None, time

@@ -2,12 +2,14 @@ import math
 
 import tornado.web
 
-from services.pro import ProService
-from services.log import LogService
-from services.judge import JudgeServerClusterService
-from services.user import UserConst
 from services.chal import ChalConst
+from services.judge import JudgeServerClusterService
+from services.log import LogService
+from services.pro import ProService
+from services.user import UserConst
 from utils.req import RequestHandler, reqenv
+
+
 class ProsetHandler(RequestHandler):
     @reqenv
     async def get(self):
@@ -23,21 +25,21 @@ class ProsetHandler(RequestHandler):
 
         try:
             pclas_key = str(self.get_argument('pclas_key'))
-        except:
+        except tornado.web.HTTPError:
             pclas_key = None
 
         # Backward compatibility
-        if pclas_key == None:
+        if pclas_key is None:
             try:
                 pclas_name = str(self.get_argument('pclas_name'))
                 pclas_key = await ProService.inst.get_pclass_key_by_name(pclas_name)
-            except:
+            except tornado.web.HTTPError:
                 pass
 
         err, prolist = await ProService.inst.list_pro(
             self.acct, state=True, clas=clas)
 
-        if pclas_key == None:
+        if pclas_key is None:
             pronum = len(prolist)
             prolist = prolist[off:off + 40]
             await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pclas_key=pclas_key,
@@ -64,6 +66,7 @@ class ProsetHandler(RequestHandler):
     @reqenv
     async def post(self):
         pass
+
 
 class ProStaticHandler(RequestHandler):
     @reqenv
@@ -98,6 +101,7 @@ class ProStaticHandler(RequestHandler):
         self.set_header('X-Accel-Redirect', f'/oj/problem/{pro_id}/{path}')
         return
 
+
 class ProHandler(RequestHandler):
     @reqenv
     async def get(self, pro_id):
@@ -115,11 +119,11 @@ class ProHandler(RequestHandler):
         testl = []
         for test_idx, test_conf in pro['testm_conf'].items():
             testl.append({
-                'test_idx'  : test_idx,
-                'timelimit' : test_conf['timelimit'],
-                'memlimit'  : test_conf['memlimit'],
-                'weight'    : test_conf['weight'],
-                'rate'      : 2000
+                'test_idx': test_idx,
+                'timelimit': test_conf['timelimit'],
+                'memlimit': test_conf['memlimit'],
+                'weight': test_conf['weight'],
+                'rate': 2000
             })
 
         async with self.db.acquire() as con:
@@ -145,7 +149,7 @@ class ProHandler(RequestHandler):
         if isadmin:
             pass
 
-        elif isguest or pro['tags'] == None or pro['tags'] == '':
+        elif isguest or pro['tags'] is None or pro['tags'] == '':
             pro['tags'] = ''
 
         else:
@@ -164,7 +168,7 @@ class ProHandler(RequestHandler):
                     int(self.acct['acct_id']), ChalConst.STATE_AC, int(pro['pro_id']), [1, 2]
                 )
 
-            if result['state'] == None or result['state'] != ChalConst.STATE_AC:
+            if result['state'] is None or result['state'] != ChalConst.STATE_AC:
                 pro['tags'] = ''
 
         judge_status_list = await JudgeServerClusterService.inst.get_servers_status()
@@ -176,10 +180,10 @@ class ProHandler(RequestHandler):
                 break
 
         await self.render('pro', pro={
-            'pro_id' : pro['pro_id'],
-            'name'   : pro['name'],
-            'status' : pro['status'],
-            'tags'   : pro['tags'],
+            'pro_id': pro['pro_id'],
+            'name': pro['name'],
+            'status': pro['status'],
+            'tags': pro['tags'],
         }, testl=testl, isadmin=isadmin, can_submit=can_submit)
         return
 
@@ -200,7 +204,9 @@ class ProTagsHandler(RequestHandler):
                 self.error(err)
                 return
 
-            await LogService.inst.add_log((self.acct['name'] + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."), 'manage.pro.update.tag')
+            await LogService.inst.add_log(
+                (self.acct['name'] + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."),
+                'manage.pro.update.tag')
 
             err, ret = await ProService.inst.update_pro(
                 pro_id, pro['name'], pro['status'], pro['class'], pro['expire'], '', None, tags)

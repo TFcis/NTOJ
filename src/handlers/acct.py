@@ -1,10 +1,10 @@
 import math
 import re
 
-from services.user import UserService, UserConst
-from services.rate import RateService
-from services.pro import ProService
 from services.log import LogService
+from services.pro import ProService
+from services.rate import RateService
+from services.user import UserService, UserConst
 from utils.req import RequestHandler, reqenv
 
 
@@ -39,7 +39,7 @@ class AcctHandler(RequestHandler):
 
         for pro in prolist:
             pro_id = pro['pro_id']
-            tmp = { 'pro_id': pro_id, 'score': -1 }
+            tmp = {'pro_id': pro_id, 'score': -1}
             if pro_id in ratemap2:
                 tmp['score'] = ratemap2[pro_id]['rate']
 
@@ -83,7 +83,8 @@ class AcctHandler(RequestHandler):
             pw = self.get_argument('pw')
             acct_id = self.get_argument('acct_id')
             if acct_id != self.acct['acct_id']:
-                await LogService.inst.add_log((f"{self.acct['name']} was changing the password of user #{acct_id}."), 'manage.acct.update.pwd')
+                await LogService.inst.add_log(f"{self.acct['name']} was changing the password of user #{acct_id}.",
+                                              'manage.acct.update.pwd')
 
             err, _ = await UserService.inst.update_pw(
                 acct_id, old, pw, (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
@@ -97,6 +98,7 @@ class AcctHandler(RequestHandler):
 
         self.error('Eunk')
         return
+
 
 class SignHandler(RequestHandler):
     @reqenv
@@ -115,16 +117,16 @@ class SignHandler(RequestHandler):
             err, acct_id = await UserService.inst.sign_in(mail, pw)
             if err:
                 await LogService.inst.add_log(f'{mail} try to sign in but failed: {err}', 'signin.failure', {
-                    'type' : 'signin.failure',
-                    'mail' : mail,
-                    'err'  : err,
+                    'type': 'signin.failure',
+                    'mail': mail,
+                    'err': err,
                 })
                 self.error(err)
                 return
 
             await LogService.inst.add_log(f'#{acct_id} sign in successfully', 'signin.success', {
-                'type'    : 'signin.success',
-                'acct_id' : acct_id
+                'type': 'signin.success',
+                'acct_id': acct_id
             })
 
             self.set_secure_cookie('id', str(acct_id), path='/oj', httponly=True)
@@ -147,9 +149,9 @@ class SignHandler(RequestHandler):
 
         elif reqtype == 'signout':
             await LogService.inst.add_log(f"{self.acct['name']}(#{self.acct['acct_id']}) sign out", 'signout', {
-                'type' : 'signin.failure',
-                'name' : self.acct['name'],
-                'acct_id'  : self.acct['acct_id'],
+                'type': 'signin.failure',
+                'name': self.acct['name'],
+                'acct_id': self.acct['acct_id'],
             })
 
             self.clear_cookie('id', path='/oj')

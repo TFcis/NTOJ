@@ -2,11 +2,13 @@ import datetime
 
 from utils.req import RequestHandler, reqenv
 
+
 class RankService:
     def __init__(self, db, rs) -> None:
         self.db = db
         self.rs = rs
         RankService.inst = self
+
 
 class RankHandler(RequestHandler):
     @reqenv

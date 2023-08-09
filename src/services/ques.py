@@ -10,28 +10,28 @@ class QuestionService:
         QuestionService.inst = self
 
     async def get_queslist(self, acct, acctid=None):
-        if acct != None:
+        if acct is not None:
             if acct['acct_id'] == UserConst.ACCTID_GUEST:
-                return ('Esign', None)
+                return 'Esign', None
 
             if acct['acct_type'] != UserConst.ACCTTYPE_USER:
-                return ('Eacces', None)
+                return 'Eacces', None
             acct_id = acct['acct_id']
 
         else:
             if acctid == UserConst.ACCTID_GUEST:
-                return ('Esign', None)
+                return 'Esign', None
 
             acct_id = acctid
 
-        if (await self.rs.get(f'{acct_id}_msg_active')) == None:
+        if (await self.rs.get(f'{acct_id}_msg_active')) is None:
             await self.rs.set(f'{acct_id}_msg_active', packb(True))
             await self.rs.set(f'{acct_id}_msg_ask', packb(False))
             await self.rs.set(f'{acct_id}_msg_list', packb([]))
-            return (None, [])
+            return None, []
 
         else:
-            return (None, unpackb((await self.rs.get(f'{acct_id}_msg_list'))))
+            return None, unpackb((await self.rs.get(f'{acct_id}_msg_list')))
 
     async def set_ques(self, acct, ques_text):
         if acct['acct_id'] == UserConst.ACCTID_GUEST:
@@ -41,13 +41,12 @@ class QuestionService:
             return 'Eacces'
 
         acct_id = acct['acct_id']
-        active = None
-        if (active := (await self.rs.get(f'{acct_id}_msg_active'))) == None:
+        if (active := (await self.rs.get(f'{acct_id}_msg_active'))) is None:
             await self.rs.set(f'{acct_id}_msg_active', packb(True))
             await self.rs.set(f'{acct_id}_msg_ask', packb(False))
             await self.rs.set(f'{acct_id}_msg_list', packb([]))
 
-        elif active == False:
+        elif not active:
             return 'Eacces'
 
         await self.rs.set(f'{acct_id}_msg_ask', packb(True))
@@ -90,7 +89,7 @@ class QuestionService:
         return None
 
     async def have_reply(self, acct_id):
-        if (reply := (await self.rs.get(f'{acct_id}_have_reply'))) == None:
+        if (reply := (await self.rs.get(f'{acct_id}_have_reply'))) is None:
             await self.rs.set(f'{acct_id}_have_reply', packb(False))
             return False
 
@@ -102,12 +101,12 @@ class QuestionService:
         asklist = {}
         ask_cnt = 0
         for acct in acctlist:
-            if (ask := (await self.rs.get(f"{acct['acct_id']}_msg_ask"))) == None:
+            if (ask := (await self.rs.get(f"{acct['acct_id']}_msg_ask"))) is None:
                 asklist.update({acct['acct_id']: False})
             else:
                 ask = unpackb(ask)
                 asklist.update({acct['acct_id']: ask})
-                if ask == True:
+                if ask:
                     ask_cnt += 1
 
-        return (None, asklist, ask_cnt)
+        return None, asklist, ask_cnt

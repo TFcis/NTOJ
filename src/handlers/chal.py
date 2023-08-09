@@ -1,10 +1,11 @@
 import asyncio
 import json
+
 import tornado.web
 
-from services.user import UserService, UserConst
 from services.chal import ChalService, ChalConst
 from services.pro import ProService
+from services.user import UserService, UserConst
 from utils.req import RequestHandler, reqenv
 from utils.req import WebSocketHandler
 

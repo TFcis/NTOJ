@@ -1,34 +1,34 @@
-import os
-import json
 import datetime
+import json
+import os
 
 import config
-from services.user import UserConst
-from services.log import LogService
 from services.contest import ContestService
 from services.judge import JudgeServerClusterService
+from services.log import LogService
+from services.user import UserConst
 
 
 class ChalConst:
-    STATE_AC         = 1
-    STATE_WA         = 2
-    STATE_RE         = 3
-    STATE_TLE        = 4
-    STATE_MLE        = 5
-    STATE_CE         = 6
-    STATE_ERR        = 7
-    STATE_JUDGE      = 100
+    STATE_AC = 1
+    STATE_WA = 2
+    STATE_RE = 3
+    STATE_TLE = 4
+    STATE_MLE = 5
+    STATE_CE = 6
+    STATE_ERR = 7
+    STATE_JUDGE = 100
     STATE_NOTSTARTED = 101
 
     STATE_STR = {
-        STATE_AC    : 'AC',
-        STATE_WA    : 'WA',
-        STATE_RE    : 'RE',
-        STATE_TLE   : 'TLE',
-        STATE_MLE   : 'MLE',
-        STATE_CE    : 'CE',
-        STATE_ERR   : 'IE',
-        STATE_JUDGE : 'JDG',
+        STATE_AC: 'AC',
+        STATE_WA: 'WA',
+        STATE_RE: 'RE',
+        STATE_TLE: 'TLE',
+        STATE_MLE: 'MLE',
+        STATE_CE: 'CE',
+        STATE_ERR: 'IE',
+        STATE_JUDGE: 'JDG',
     }
 
     FILE_EXTENSION = {
@@ -47,27 +47,28 @@ class ChalConst:
         'python3': 'CPython 3.8.10',
     }
 
+
 class ChalService:
-    STATE_AC         = 1
-    STATE_WA         = 2
-    STATE_RE         = 3
-    STATE_TLE        = 4
-    STATE_MLE        = 5
-    STATE_CE         = 6
-    STATE_ERR        = 7
-    STATE_JUDGE      = 100
+    STATE_AC = 1
+    STATE_WA = 2
+    STATE_RE = 3
+    STATE_TLE = 4
+    STATE_MLE = 5
+    STATE_CE = 6
+    STATE_ERR = 7
+    STATE_JUDGE = 100
     STATE_NOTSTARTED = 101
 
     STATE_STR = {
-        STATE_AC         : 'Accepted',
-        STATE_WA         : 'Wrong Answer',
-        STATE_RE         : 'Runtime Error',
-        STATE_TLE        : 'Time Limit Exceed',
-        STATE_MLE        : 'Memory Limit Exceed',
-        STATE_CE         : 'Compile Error',
-        STATE_ERR        : 'Internal Error',
-        STATE_JUDGE      : 'Challenging',
-        STATE_NOTSTARTED : 'Not Started',
+        STATE_AC: 'Accepted',
+        STATE_WA: 'Wrong Answer',
+        STATE_RE: 'Runtime Error',
+        STATE_TLE: 'Time Limit Exceed',
+        STATE_MLE: 'Memory Limit Exceed',
+        STATE_CE: 'Compile Error',
+        STATE_ERR: 'Internal Error',
+        STATE_JUDGE: 'Challenging',
+        STATE_NOTSTARTED: 'Not Started',
     }
 
     def __init__(self, db, rs):
@@ -80,8 +81,9 @@ class ChalService:
         pro_id = int(pro_id)
         acct_id = int(acct_id)
 
-        if (await ContestService.inst.running())[1] == False:
-            return ('Eacces', None)
+        # TODO: Refactor ContestService
+        if not (await ContestService.inst.running())[1]:
+            return 'Eacces', None
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -92,7 +94,7 @@ class ChalService:
                 pro_id, acct_id, comp_type
             )
         if result.__len__() != 1:
-            return ('Eunk', None)
+            return 'Eunk', None
         result = result[0]
 
         chal_id = result['chal_id']
@@ -104,7 +106,7 @@ class ChalService:
         code_f.write(code.encode('utf-8'))
         code_f.close()
 
-        return (None, chal_id)
+        return None, chal_id
 
     async def reset_chal(self, chal_id):
         chal_id = int(chal_id)
@@ -113,7 +115,7 @@ class ChalService:
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
 
-        return (None, None)
+        return None, None
 
     async def get_chal_state(self, chal_id):
         chal_id = int(chal_id)
@@ -130,14 +132,14 @@ class ChalService:
         tests = []
         for (test_idx, state, runtime, memory, response) in result:
             tests.append({
-                'test_idx' : test_idx,
-                'state'    : state,
-                'runtime'  : int(runtime),
-                'memory'   : int(memory),
-                'response' : response,
+                'test_idx': test_idx,
+                'state': state,
+                'runtime': int(runtime),
+                'memory': int(memory),
+                'response': response,
             })
 
-        return (None, tests)
+        return None, tests
 
     async def get_chal(self, chal_id, acct):
         chal_id = int(chal_id)
@@ -154,7 +156,7 @@ class ChalService:
                 chal_id
             )
         if result.__len__() != 1:
-            return ('Enoext', None)
+            return 'Enoext', None
         result = result[0]
 
         pro_id, acct_id, timestamp, comp_type, acct_name = result['pro_id'], result['acct_id'], result['timestamp'], result['compiler_type'], result['acct_name']
@@ -174,18 +176,19 @@ class ChalService:
         for (test_idx, state, runtime, memory, response) in result:
             response = response
             testl.append({
-                'test_idx' : test_idx,
-                'state'    : state,
-                'runtime'  : int(runtime),
-                'memory'   : int(memory),
+                'test_idx': test_idx,
+                'state': state,
+                'runtime': int(runtime),
+                'memory': int(memory),
             })
 
         owner = await self.rs.get(f'{pro_id}_owner')
         unlock = [1]
         if (acct['acct_id'] == acct_id or
                 (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL and
-                 (owner == None or acct['acct_id'] in config.lock_user_list) and (acct['acct_id'] in config.can_see_code_user))):
-                #INFO: owner is problem uploader. if problem was locked, only problem owner can see submit code about this problem
+                 (owner is None or acct['acct_id'] in config.lock_user_list) and (
+                         acct['acct_id'] in config.can_see_code_user))):
+            # INFO: owner is problem uploader. if problem was locked, only problem owner can see submit code about this problem
 
             if (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL) and (acct['acct_id'] != acct_id):
                 await LogService.inst.add_log(f"{acct['name']} view the challenge {chal_id}", 'manage.chal.view')
@@ -198,15 +201,15 @@ class ChalService:
         tz = datetime.timezone(datetime.timedelta(hours=+8))
 
         return (None, {
-            'chal_id'   : chal_id,
-            'pro_id'    : pro_id,
-            'acct_id'   : acct_id,
-            'acct_name' : acct_name,
-            'timestamp' : timestamp.astimezone(tz),
-            'testl'     : testl,
-            'code'      : code,
-            'response'  : response,
-            'comp_type' : comp_type,
+            'chal_id': chal_id,
+            'pro_id': pro_id,
+            'acct_id': acct_id,
+            'acct_name': acct_name,
+            'timestamp': timestamp.astimezone(tz),
+            'testl': testl,
+            'code': code,
+            'response': response,
+            'comp_type': comp_type,
         })
 
     async def emit_chal(self, chal_id, pro_id, testm_conf, comp_type, code_path, res_path):
@@ -222,7 +225,7 @@ class ChalService:
                 chal_id
             )
         if result.__len__() != 1:
-            return ('Enoext', None)
+            return 'Enoext', None
         result = result[0]
 
         acct_id, timestamp = int(result['acct_id']), result['timestamp']
@@ -231,10 +234,10 @@ class ChalService:
             testl = []
             for test_idx, test_conf in testm_conf.items():
                 testl.append({
-                    'test_idx'  : test_idx,
-                    'timelimit' : test_conf['timelimit'],
-                    'memlimit'  : test_conf['memlimit'],
-                    'metadata'  : test_conf['metadata']
+                    'test_idx': test_idx,
+                    'timelimit': test_conf['timelimit'],
+                    'memlimit': test_conf['memlimit'],
+                    'metadata': test_conf['metadata']
                 })
 
                 await con.execute(
@@ -256,7 +259,7 @@ class ChalService:
 
         except FileNotFoundError:
             for test in testl:
-                err, ret = await self.update_test(
+                _, ret = await self.update_test(
                     chal_id,
                     test['test_idx'],
                     ChalService.STATE_ERR,
@@ -264,7 +267,7 @@ class ChalService:
                     0,
                     ''
                 )
-            return (None, None)
+            return None, None
 
         chalmeta = test_conf['chalmeta']
 
@@ -272,24 +275,26 @@ class ChalService:
             comp_type = 'makefile'
 
         await JudgeServerClusterService.inst.send(json.dumps({
-            'chal_id'    : chal_id,
-            'test'       : testl,
-            'code_path'  : code_path,
-            'res_path'   : res_path,
-            'metadata'   : chalmeta,
-            'comp_type'  : comp_type,
-            'check_type' : test_conf['check_type'],
+            'chal_id': chal_id,
+            'test': testl,
+            'code_path': code_path,
+            'res_path': res_path,
+            'metadata': chalmeta,
+            'comp_type': comp_type,
+            'check_type': test_conf['check_type'],
         }))
 
         await self.rs.hdel('rate@kernel_True', str(acct_id))
         await self.rs.hdel('rate@kernel_False', str(acct_id))
 
-        return (None, None)
+        return None, None
 
-    #TODO: Porformance test
+    # TODO: Porformance test
     async def list_chal(self, off, num, min_accttype=UserConst.ACCTTYPE_USER,
-            flt={'pro_id': None, 'acct_id': None, 'state': 0}):
+                        flt=None):
 
+        if flt is None:
+            flt = {'pro_id': None, 'acct_id': None, 'state': 0}
         fltquery = await self._get_fltquery(flt)
 
         async with self.db.acquire() as con:
@@ -312,16 +317,16 @@ class ChalService:
 
         challist = []
         for (chal_id, pro_id, acct_id, comp_type, timestamp, acct_name,
-                state, runtime, memory) in result:
-            if state == None:
+             state, runtime, memory) in result:
+            if state is None:
                 state = ChalService.STATE_NOTSTARTED
 
-            if runtime == None:
+            if runtime is None:
                 runtime = 0
             else:
                 runtime = int(runtime)
 
-            if memory == None:
+            if memory is None:
                 memory = 0
             else:
                 memory = int(memory)
@@ -329,32 +334,32 @@ class ChalService:
             tz = datetime.timezone(datetime.timedelta(hours=+8))
 
             challist.append({
-                'chal_id'   : chal_id,
-                'pro_id'    : pro_id,
-                'acct_id'   : acct_id,
-                'comp_type' : ChalConst.COMPILER_NAME[comp_type],
-                'timestamp' : timestamp.astimezone(tz),
-                'acct_name' : acct_name,
-                'state'     : state,
-                'runtime'   : runtime,
-                'memory'    : memory
+                'chal_id': chal_id,
+                'pro_id': pro_id,
+                'acct_id': acct_id,
+                'comp_type': ChalConst.COMPILER_NAME[comp_type],
+                'timestamp': timestamp.astimezone(tz),
+                'acct_name': acct_name,
+                'state': state,
+                'runtime': runtime,
+                'memory': memory
             })
 
-        return (None, challist)
+        return None, challist
 
     async def get_stat(self, min_accttype=UserConst.ACCTTYPE_USER, flt=None):
         fltquery = await self._get_fltquery(flt)
 
         async with self.db.acquire() as con:
             result = await con.fetch(('SELECT COUNT(1) FROM "challenge" '
-                'INNER JOIN "account" '
-                'ON "challenge"."acct_id" = "account"."acct_id" '
-                'LEFT JOIN "challenge_state" '
-                'ON "challenge"."chal_id"="challenge_state"."chal_id" '
-                f'WHERE "account"."acct_type" >= {min_accttype}' + fltquery + ';'))
+                                      'INNER JOIN "account" '
+                                      'ON "challenge"."acct_id" = "account"."acct_id" '
+                                      'LEFT JOIN "challenge_state" '
+                                      'ON "challenge"."chal_id"="challenge_state"."chal_id" '
+                                      f'WHERE "account"."acct_type" >= {min_accttype}' + fltquery + ';'))
 
         if result.__len__() != 1:
-            return ('Eunk', None)
+            return 'Eunk', None
 
         total_chal = result[0]['count']
         return (None, {
@@ -375,17 +380,17 @@ class ChalService:
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
 
-        return (None, None)
+        return None, None
 
     async def _get_fltquery(self, flt):
         query = ' '
-        if flt['pro_id'] != None:
+        if flt['pro_id'] is not None:
             query += 'AND ( "challenge"."pro_id" = 0 '
             for pro_id in flt['pro_id']:
                 query += f' OR "challenge"."pro_id" = {pro_id} '
             query += ')'
 
-        if flt['acct_id'] != None:
+        if flt['acct_id'] is not None:
             query += 'AND ( "challenge"."acct_id" = 0 '
             for acct_id in flt['acct_id']:
                 query += f' OR "challenge"."acct_id" = {acct_id} '
@@ -397,4 +402,4 @@ class ChalService:
             else:
                 query += (' AND "challenge_state"."state" = ' + str(flt['state']) + ' ')
 
-        return (query)
+        return query

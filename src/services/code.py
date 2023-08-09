@@ -13,16 +13,17 @@ class CodeService:
         chal_id = int(chal_id)
 
         async with self.db.acquire() as con:
-            result = await con.fetch('SELECT "challenge"."acct_id", "challenge"."pro_id", "challenge"."compiler_type" FROM "challenge" WHERE "chal_id" = $1;', chal_id)
+            result = await con.fetch('SELECT "challenge"."acct_id", "challenge"."pro_id", "challenge"."compiler_type" '
+                                     'FROM "challenge" WHERE "chal_id" = $1;', chal_id)
             if result.__len__() != 1:
-                return ('Enoext', None, None)
+                return 'Enoext', None, None
 
             acct_id, pro_id, comp_type = int(result[0]['acct_id']), int(result[0]['pro_id']), result[0]['compiler_type']
 
         owner = await self.rs.get(f'{pro_id}_owner')
         if (acct['acct_id'] == acct_id or
                 (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL and
-                 (owner == None or acct['acct_id'] in config.lock_user_list) and (acct['acct_id'] in config.can_see_code_user))):
+                 (owner is None or acct['acct_id'] in config.lock_user_list) and (acct['acct_id'] in config.can_see_code_user))):
 
             file_ext = ChalConst.FILE_EXTENSION[comp_type]
 
@@ -36,4 +37,4 @@ class CodeService:
         else:
             code = None
 
-        return (None, code, comp_type)
+        return None, code, comp_type

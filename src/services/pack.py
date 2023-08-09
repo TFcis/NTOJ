@@ -4,7 +4,6 @@ import uuid
 import tornado.process
 
 
-
 class PackService:
     def __init__(self, db, rs) -> None:
         self.db = db
@@ -15,14 +14,14 @@ class PackService:
         pack_token = str(uuid.uuid1())
         await self.rs.set(f'PACK_TOKEN@{pack_token}', 0)
 
-        return (None, pack_token)
+        return None, pack_token
 
     async def direct_copy(self, pack_token, dst):
         pack_token = str(uuid.UUID(pack_token))
 
         ret = await self.rs.get(f'PACK_TOKEN@{pack_token}')
-        if ret == None:
-            return ('Enoext', None)
+        if ret is None:
+            return 'Enoext', None
 
         await self.rs.delete(f'PACK_TOKEN@{pack_token}')
 
@@ -48,34 +47,33 @@ class PackService:
 
             def __tar():
                 sub = tornado.process.Subprocess(
-                        ['/bin/tar', '-Jxf', f'tmp/{pack_token}', '-C', dst])
+                    ['/bin/tar', '-Jxf', f'tmp/{pack_token}', '-C', dst])
                 sub.set_exit_callback(__tar_cb)
 
             def __tar_cb(code):
                 if code != 0:
                     return ('Eunk', None)
 
-                #os.remove('tmp/%s'%pack_token)
+                # os.remove('tmp/%s'%pack_token)
 
                 sub = tornado.process.Subprocess(
-                        ['/bin/bash', 'newline.sh', f'{dst}/res/testdata'])
+                    ['/bin/bash', 'newline.sh', f'{dst}/res/testdata'])
 
-            if clean == False:
+            if not clean:
                 __tar()
 
             else:
                 sub = tornado.process.Subprocess(
-                        ['/bin/rm', '-Rf', dst])
+                    ['/bin/rm', '-Rf', dst])
                 sub.set_exit_callback(__rm_cb)
 
         pack_token = str(uuid.UUID(pack_token))
 
         ret = await self.rs.get(f'PACK_TOKEN@{pack_token}')
-        if ret == None:
-            return ('Enoext', None)
+        if ret is None:
+            return 'Enoext', None
 
         await self.rs.delete(f'PACK_TOKEN@{pack_token}')
 
         ret = _unpack()
         return ret
-

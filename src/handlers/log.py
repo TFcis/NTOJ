@@ -2,6 +2,8 @@ import tornado.web
 
 from services.log import LogService
 from utils.req import RequestHandler, reqenv
+
+
 class LogHandler(RequestHandler):
     @reqenv
     async def get(self):
@@ -27,5 +29,6 @@ class LogHandler(RequestHandler):
             self.error(err)
             return
 
-        await self.render('loglist', pageoff=off, lognum=log['lognum'], loglist=log['loglist'], logtype_list=logtype_list, cur_logtype=logtype)
+        await self.render('loglist', pageoff=off, lognum=log['lognum'], loglist=log['loglist'],
+                          logtype_list=logtype_list, cur_logtype=logtype)
         return

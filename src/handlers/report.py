@@ -1,6 +1,7 @@
 from services.user import UserConst
 from utils.req import RequestHandler, reqenv
 
+
 class ReportHandler(RequestHandler):
     @reqenv
     async def get(self):

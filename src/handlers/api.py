@@ -5,6 +5,7 @@ from services.rate import RateService
 from services.user import UserService
 from utils.req import RequestHandler, reqenv
 
+
 class ApiHandler(RequestHandler):
     @reqenv
     async def get(self):
@@ -66,4 +67,3 @@ class ApiHandler(RequestHandler):
                 rate = 0
             self.finish(str(json.dumps({'nick': acct['name'], 'score': rate})))
             return
-

@@ -50,7 +50,7 @@ class PackHandler(WebSocketHandler):
             return
 
     def on_close(self) -> None:
-        if self.output != None:
+        if self.output is not None:
             self.output.close()
 
         if self.remain > 0:

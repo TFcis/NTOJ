@@ -4,6 +4,8 @@ from pygments.formatters import HtmlFormatter
 
 from services.code import CodeService
 from utils.req import RequestHandler, reqenv
+
+
 class CodeHandler(RequestHandler):
     @reqenv
     async def get(self):
@@ -15,7 +17,7 @@ class CodeHandler(RequestHandler):
         chal_id = int(self.get_argument('chal_id'))
 
         err, code, comp_type = await CodeService.inst.get_code(chal_id, self.acct)
-        if code == None:
+        if code is None:
             self.finish('')
             return
 

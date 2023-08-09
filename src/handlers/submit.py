@@ -7,6 +7,7 @@ from services.pro import ProService
 from services.judge import JudgeServerClusterService
 from utils.req import RequestHandler, reqenv
 
+
 class SubmitHandler(RequestHandler):
     @reqenv
     async def get(self, pro_id):
@@ -32,7 +33,7 @@ class SubmitHandler(RequestHandler):
                 can_submit = True
                 break
 
-        if can_submit == False:
+        if not can_submit:
             self.finish('<h1 style="color: red;">All Judge Server Offline</h1>')
             return
 
@@ -53,7 +54,7 @@ class SubmitHandler(RequestHandler):
                 can_submit = True
                 break
 
-        if can_submit == False:
+        if not can_submit:
             self.error('Ejudge')
             return
 
@@ -73,7 +74,7 @@ class SubmitHandler(RequestHandler):
 
             if self.acct['acct_type'] != UserConst.ACCTTYPE_KERNEL:
                 last_submit_name = f"last_submit_time_{self.acct['acct_id']}"
-                if (last_submit_time := (await self.rs.get(last_submit_name))) == None:
+                if (last_submit_time := (await self.rs.get(last_submit_name))) is None:
                     await self.rs.set(last_submit_name, int(time.time()), ex=600)
 
                 else:
@@ -98,8 +99,8 @@ class SubmitHandler(RequestHandler):
                 self.error('Eacces')
                 return
 
-            #TODO: code prevent '/dev/random'
-            #code = code.replace('bits/stdc++.h','DontUseMe.h')
+            # TODO: code prevent '/dev/random'
+            # code = code.replace('bits/stdc++.h','DontUseMe.h')
             err, chal_id = await ChalService.inst.add_chal(
                 pro_id, self.acct['acct_id'], comp_type, code)
 

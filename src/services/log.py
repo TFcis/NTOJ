@@ -23,12 +23,12 @@ class LogService:
                 ''',
                 message, log_type, params
             )
-        return (None, result[0]['log_id'])
+        return None, result[0]['log_id']
 
     async def list_log(self, off, num, log_type=None):
         tz = datetime.timezone(datetime.timedelta(hours=+8))
         async with self.db.acquire() as con:
-            if log_type == None:
+            if log_type is None:
                 result = await con.fetch(
                     '''
                         SELECT "log"."log_id", "log"."message", "log"."timestamp"
@@ -63,7 +63,7 @@ class LogService:
                     'timestamp': timestamp.astimezone(tz).isoformat(timespec="seconds"),
                 })
 
-        return (None, {'loglist': loglist, 'lognum': count})
+        return None, {'loglist': loglist, 'lognum': count}
 
     async def get_log_type(self):
         async with self.db.acquire() as con:
@@ -73,4 +73,4 @@ class LogService:
             for type in result:
                 log_type.append(type['type'])
 
-        return (None, log_type)
+        return None, log_type
