@@ -124,16 +124,3 @@ class ContestService:
             }, default=_mp_encoder))
 
             return None, None
-
-    async def running(self):
-        err, meta = await self.get('default')
-
-        if meta['status'] == ContestConst.STATUS_OFFLINE:
-            return None, False
-
-        now = datetime.datetime.now().replace(
-            tzinfo=datetime.timezone(datetime.timedelta(hours=8)))
-        if meta['start'] > now or meta['end'] <= now:
-            return None, False
-
-        return None, True

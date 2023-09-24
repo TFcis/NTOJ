@@ -82,8 +82,6 @@ class ChalService:
         acct_id = int(acct_id)
 
         # TODO: Refactor ContestService
-        if not (await ContestService.inst.running())[1]:
-            return 'Eacces', None
 
         async with self.db.acquire() as con:
             result = await con.fetch(
