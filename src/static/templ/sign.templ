@@ -106,35 +106,39 @@
     }
 </script>
 
-<div id="intro" class="g-lg-5 g-off-lg-1"></div>
-<div id="sign">
-    <div id="signin" class="g-lg-3 blk-cont">
-        <h3>登入</h3>
-        <input class="mail" type="text" tabindex=1 placeholder="mail">
-        <input class="pw" type="password" tabindex=2 placeholder="password">
-        <button class="btn-con submit" tabindex=3 submit>登入</button>
-        <div class="print"></div>
-        <div style="margin-top:64px;">
+<div class="row">
+    <div class="col-lg-2"></div>
+    <div id="intro" class="col-lg-5"></div>
+    <div id="sign" class="col-lg-3">
+        <div id="signin" class="">
+            <h3>登入</h3>
+            <input class="mail" type="text" tabindex=1 placeholder="mail">
+            <input class="pw" type="password" tabindex=2 placeholder="password">
+            <br>
+            <button class="btn btn-success submit" tabindex=3 submit>登入</button>
+            <div class="print"></div>
+            <div style="margin-top:64px;">
+                <h3>註冊</h3>
+                <button class="btn btn-primary signup" tabindex=8 submit>註冊</button>
+            </div>
+        </div>
+        <div id="signup" class="col-lg-4 blk-cont" style="display:none;">
             <h3>註冊</h3>
-            <button class="btn-pri signup" tabindex=8 submit>註冊</button>
+            <input class="name" type="text" tabindex=4 placeholder="name">
+            <input class="mail" type="text" tabindex=5 placeholder="mail">
+            <input class="pw" type="password" tabindex=6 placeholder="password">
+            <input class="repeat "type="password" tabindex=7 placeholder="repeat">
+            <button class="btn btn-primary submit" tabindex=8 submit>註冊</button>
+            <button class="btn btn-secondary cancel">取消</button>
+            <div class="print"></div>
         </div>
     </div>
-    <div id="signup" class="g-lg-4 blk-cont" style="display:none;">
-        <h3>註冊</h3>
-        <input class="name" type="text" tabindex=4 placeholder="name">
-        <input class="mail" type="text" tabindex=5 placeholder="mail">
-        <input class="pw" type="password" tabindex=6 placeholder="password">
-        <input class="repeat "type="password" tabindex=7 placeholder="repeat">
-        <button class="btn-pri submit" tabindex=8 submit>註冊</button>
-        <button class="btn-def cancel">取消</button>
-        <div class="print"></div>
-    </div>
-</div>
-<div id="warning" class="g-lg-6 g-off-lg-3">
-    <img src="/oj/img/warning2.png"><img>
-    <div class="text">
-	<span>你想不想要養我.....QAQ...??</span><br><br>
-        <button class="btn-con confirm" style="margin-left:48px;">是</button>
-        <button class="btn-def cancel">否</button>
+    <div id="warning" class="g-lg-6 g-off-lg-3">
+        <img src="/oj/img/warning2.png"><img>
+        <div class="text">
+        <span>你想不想要養我.....QAQ...??</span><br><br>
+            <button class="btn btn-success confirm" style="margin-left:48px;">是</button>
+            <button class="btn btn-secondary cancel">否</button>
+        </div>
     </div>
 </div>

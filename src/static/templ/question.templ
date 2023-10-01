@@ -1,8 +1,6 @@
-<link rel="stylesheet" type="text/css" href="/oj/question.css">
-<link rel="stylesheet" type="text/css" href="/oj/blk.css">
 <script type="text/javascript">
     function init() {
-    var j_form = $('#form');
+        var j_form = $('#form');
         j_form.find('button.submit').on('click', function(e) {
             var qtext = j_form.find('textarea.ques').val();
 
@@ -45,65 +43,30 @@
         });
     }
 </script>
-<!--
 <div class="g-lg-12">
     <div>
-	{{ acct['acct_id'] }}
-    </div>
-    <div id="form">
-	<table border="2px">
-	    <thead>
-		<tr>
-		    <td style="width:8%;"></td>
-		    <td style="width:46%;">Q</td>
-		    <td style="width:46%;">A</td>
-		</tr>
-	    </thead>
-	    <tbody>
-	    {% set count = 0 %}
-	    {% for ques in ques_list %}
-	    <tr>
-		<td style="width:8%;"><input type="button" value="remove" onclick="rm_ques({{ count }});"></input></td>
-		<td>{{ques['Q']}}</td>
-		{% if ques['A'] == None%}
-		<td style="color:red;">Wait for Reply</td>
-		{% else %}
-		<td>{{ques['A']}}</td>
-		{% end %}
-	    </tr>
-	    {% set count = count + 1 %}
-	    {% end %}
-	    </tbody>
-	</table>
-	<br />
-	<textarea class="ques" style="width:100%; height:100px;"></textarea>
-	<button class="btn-con submit">Ask</button>
-	<div class="print"></div>
-    </div>
-</div>
--->
-<div class="g-lg-12">
-    <div>
-    Account : {{acct['acct_name']}} {{ acct['acct_id'] }}
+    Account : {{ acct['name'] }} {{ acct['acct_id'] }}
     </div>
     <div id="form">
         {% set count = 0 %}
         {% for ques in ques_list %}
         <div id="abc" style="border:2px lavander solid;">
+            <h3>Question: </h3>
             <h5>{{ques['Q']}}</h5>
             {% if ques['A'] == None%}
             <p style="color:red;">Wait for Reply</p>
             {% else %}
-            <p>{{ques['A']}}</p>
+            <h3>Reply:</p>
+            <h5>{{ques['A']}}</p>
             {% end %}
             <input type="button" id="buttom" value="Remove" onclick="rm_ques({{ count }});">
             {% set count = count + 1 %}
-            {% end %}
         </div>
-    <br />
-    <textarea class="ques" style="width:100%; height:100px;"></textarea>
-    <br />
-    <button class="btn-con submit">Ask</button>
-    <div class="print"></div>
+        {% end %}
+        <br />
+        <textarea class="ques" style="width:100%; height:100px;"></textarea>
+        <br />
+        <button class="btn btn-success">Ask</button>
+        <div class="print"></div>
     </div>
 </div>

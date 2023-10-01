@@ -1,16 +1,18 @@
 {% block head %}{% end %}
-<div class="g-lg-2">
-    <ul class="nav-stack">
-	<li{% if page == 'dash' %} class="active"{% end %}><a href="/oj/manage/dash/">Dashboard</a></li>
-	<li{% if page == 'pro' %} class="active"{% end %}><a href="/oj/manage/pro/">Problem</a></li>
-	<li{% if page == 'contest' %} class="active"{% end %}><a href="/oj/manage/contest/">Contest</a></li>
-	<li{% if page == 'acct' %} class="active"{% end %}><a href="/oj/manage/acct/">Account</a></li>
-	<li{% if page == 'question' %} class="active"{% end %}><a href="/oj/manage/question/">Question</a></li>
-	<li{% if page == 'inform' %} class="active"{% end %}><a href="/oj/manage/inform/">Inform</a></li>
-	<li{% if page == 'proclass' %} class="active"{% end %}><a href="/oj/manage/proclass/">ProClass</a></li>
-	<li{% if page == 'group' %} class="active"{% end %}><a href="/oj/manage/group/">Group</a></li>
-    </ul>
+<div class="row">
+<div class="col-1">
+	<nav class="nav">
+		<a href="/oj/manage/dash/" class="nav-link {% if page == 'dash' %} active{% end %}">Dashboard</a>
+		<a href="/oj/manage/acct/" class="nav-link {% if page == 'acct' %} active{% end %}">Account</a>
+		<a href="/oj/manage/pro/" class="nav-link {% if page == 'pro' %} active{% end %}">Problem</a>
+		<a href="/oj/manage/board/" class="nav-link{% if page == 'board' %}  active{% end %}">Board</a>
+		<!-- <a href="/oj/manage/contest/" class="nav-link{% if page == 'contest' %}  active{% end %}">Contest</a> -->
+		<a href="/oj/manage/question/" class="nav-link{% if page == 'question' %} active{% end %}">Question</a>
+		<a href="/oj/manage/bulletin/" class="nav-link{% if page == 'bulletin' %} active{% end %}">Bulletin</a>
+		<a href="/oj/manage/proclass/" class="nav-link{% if page == 'proclass' %} active{% end %}">ProClass</a>
+		<a href="/oj/manage/group/" class="nav-link{% if page == 'group' %} active{% end %}">Group</a>
+		<a href="/oj/manage/judge/" class="nav-link{% if page == 'judge' %} active{% end %}">Judge</a>
+	</nav>
 </div>
-<div class="g-lg-10">
 {% block content %}{% end %}
 </div>

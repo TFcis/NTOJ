@@ -30,6 +30,7 @@
             if (event.which == 13) // return
                 $('#tags').focusout();
         });
+
         $('#tags').focusout(function(event) {
             var tags = event.target.value;
             if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1 || tags.length==0) {
@@ -46,6 +47,16 @@
                 event.target.focus();
                 $('#tags-invalid').show();
             }
+        });
+
+        $("#pdfbtn").on('click', function(event) {
+            let url = "/oj/pro/{{ pro['pro_id'] }}/cont.pdf?download=1";
+            let downloadLink = document.createElement("a");
+
+            downloadLink.href = url;
+            downloadLink.setAttribute("download", "");
+            downloadLink.target = 'downloadIframe';
+            downloadLink.click();
         });
 
         var viewer = 1;
@@ -147,67 +158,74 @@
         _load_html();
     }
 </script>
+<div class="row">
+    <div id="side" class="col-lg-2 col-12 ms-lg-2 mt-lg-2">
+        <h3>{{ pro['pro_id']}} / {{ pro['name'] }}</h3>
+        {% if can_submit == True %}
+            <a class="btn btn-primary btn-lg my-lg-1" href="/oj/submit/{{ pro['pro_id'] }}/">Submit</a><br />
+        {% else %}
+            <a class="btn btn-warning btn-lg my-lg-1">Cannot Submit</a><br />
+        {% end %}
 
-<div id="side" class="g-lg-2 blk-cont">
-    <h3>{{ pro['pro_id']}} / {{ pro['name'] }}</h3>
-    {% if can_submit == True %}
-        <a class="btn-pri btn-lg" href="/oj/submit/{{ pro['pro_id'] }}/">Submit</a><br />
-    {% else %}
-        <a class="btn-pri btn-lg">Cannot Submit</a><br />
-    {% end %}
-    <a class="btn-con" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
-    <a class="btn-def" href="/oj/chal/?proid={{ pro['pro_id'] }}">Status</a>
-    <!-- <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf?downtimelimitload=1','_blank'?downtimelim?downtimelimii);" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a> -->
+        <div class="my-lg-1">
+            <a class="btn btn-success" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
+            <a class="btn btn-secondary" href="/oj/chal/?proid={{ pro['pro_id'] }}">Status</a>
+        </div>
 
-    <a class="btn-wrn" href="javascript:open('/oj/pro/{{ pro['pro_id'] }}/cont.pdf?download=1');" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
-    <a id="switchviewer" class="btn-wrn" style="display:none; width:156px; text-align:center;">Switch Viewer</a>
-    <div></div>
-    {% if (isadmin) %}
-        <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="add tags here">
-    {% else %}
-        <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="no tags" disabled>
-    {% end %}
-    <div></div>
-    <span id="tags-invalid" style="color:red; display:none">TAGS INVALID!</span>
-    <span id="tags-done" style="color:green; display:none">SET TAGS SUCCESS</span>
-    <table>
-        <thead>
-            <tr>
-                <th>Key</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>time</td>
-                <td>{{ testl[0]['timelimit'] }} &nbsp;ms</td>
-            </tr>
-            <tr>
-                <td>mem</td>
-                <td>{{ round(testl[0]['memlimit'] / 1024) }} Kb</td>
-            </tr>
-        </tbody>
-    </table>
-    <table>
-        <thead>
-            <tr>
-                <th>Test</th>
-                <th>Weight</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for test in testl %}
+        <div class="my-lg-1">
+            <a class="btn btn-warning my-lg-1" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
+            <a class="btn btn-warning my-lg-1" id="switchviewer" style="display:none; width:156px; text-align:center;">Switch Viewer</a>
+        </div>
+        {% if (isadmin) %}
+            <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="add tags here">
+        {% else %}
+            <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="no tags" disabled>
+        {% end %}
+        <div></div>
+        <span id="tags-invalid" style="color:red; display:none">TAGS INVALID!</span>
+        <span id="tags-done" style="color:green; display:none">SET TAGS SUCCESS</span>
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>{{ '%04d'%(test['test_idx'] + 1) }}</td>
-                    <td>{{ test['weight'] }}</td>
+                    <th>Key</th>
+                    <th>Value</th>
                 </tr>
-            {% end %}
-        </tbody>
-    </table>
-    {% if (isadmin) %}
-        <a class="btn-wrn" href="/oj/manage/updatepro/?proid={{pro['pro_id']}}">Manage</a>
-    {% end %}
-</div>
-<div id="cont" class="g-lg-10">
-    <strong>Loading...</strong>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>time</td>
+                    <td>{{ testl[0]['timelimit'] }} &nbsp;ms</td>
+                </tr>
+                <tr>
+                    <td>mem</td>
+                    <td>{{ round(testl[0]['memlimit'] / 1024) }} Kb</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Test</th>
+                    <th>Weight</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for test in testl %}
+                    <tr>
+                        <td>{{ '%04d' % (test['test_idx'] + 1) }}</td>
+                        <td>{{ test['weight'] }}</td>
+                    </tr>
+                {% end %}
+            </tbody>
+        </table>
+        {% if (isadmin) %}
+            <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro['pro_id']}}">Manage</a>
+        {% end %}
+    </div>
+
+    <!-- TODO: Remove fixed height -->
+    <div id="cont" class="col-lg-10 col-12" style="height: 904px;">
+        <strong>Loading...</strong>
+    </div>
 </div>

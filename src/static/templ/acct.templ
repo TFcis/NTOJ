@@ -1,16 +1,68 @@
-<link rel="stylesheet" type="text/css" href="/oj/acct.css">
+<!-- <link rel="stylesheet" type="text/css" href="/oj/acct.css"> -->
+
+<style>
+    #cover {
+        height: 512px;
+        background-size: cover;
+    }
+
+    #summary {
+      height: 512px;
+      margin-top: -512px;
+      color: #FCFAF2;
+      background-color: rgba(32, 32, 32, 0.6);
+      position: relative;
+      z-index: 100;
+    }
+    #summary > img#photo {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+    }
+    #summary > h1 {
+      margin-top: 8px;
+      margin-bottom: 0px;
+      text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.6);
+    }
+    #summary > table {
+      width: 86%;
+      color: #FCFAF2;
+    }
+    #summary > table td.value {
+      text-align: right;
+    }
+    #summary > table td.value a {
+      color: #0F0;
+      font-size: 100%;
+    }
+
+    table td._state {
+        text-align: center;
+    }
+
+    a._state-1 {
+	    color:#0F0;
+    }
+    a._state-2 {
+	    color:#ffeb00;
+    }
+    a._state-3 {
+	    color:#ed784a;
+    }
+</style>
 
 <script id="contjs" type="text/javascript" photo="{{ acct['photo'] }}" cover="{{ acct['cover'] }}">
-    function init(){
+    function init() {
         var photo = $('#contjs').attr('photo');
         var cover = $('#contjs').attr('cover');
         var j_profile = $('#profile');
         var j_reset = $('#reset');
 
         j_profile.find('button.submit').on('click', function(e) {
-            var name = j_profile.find('input.name').val();
-            var photo = j_profile.find('input.photo').val();
-            var cover = j_profile.find('input.cover').val();
+            var name = j_profile.find('input#name').val();
+            var photo = j_profile.find('input#photo').val();
+            var cover = j_profile.find('input#cover').val();
 
             $.post('/oj/be/acct', {
                 'reqtype': 'profile',
@@ -86,93 +138,118 @@
     }
 </script>
 
-<div id="cover" style=""></div>
-<div class="g-r"><div id="summary" class="g-lg-3 g-sm-4">
-	<h1>{{ acct['name'] }}</h1><br />
-    <img id="photo"></img>
-    <table>
-        <tbody>
-            <tr>
-                <td style="font-size:130%;"><strong>Score</strong></td>
-                <td class="value" style="font-size:130%;"><strong>{{ rate['rate'] }}</strong></td>
-            </tr>
-            <tr>
-                <td style="font-size:130%;"><strong>Ac Ratio</strong></td>
-                <td class="value" style="font-size:130%;">
-                    {% if rate['all_cnt'] == 0 %}
-                        <strong>0.0%</strong>
-                    {% else %}
-                        <strong>{{ round(((rate['ac_cnt'] / rate['all_cnt']) * 100), 1) }}%</strong>
-                    {% end %}
-                    (
-                    <strong><a href="/oj/chal/?acctid={{ acct['acct_id'] }}&state=1">{{ rate['ac_cnt'] }}</a></strong>
-                    <strong>/</strong>
-                    <strong><a href="/oj/chal/?acctid={{ acct['acct_id'] }}">{{ rate['all_cnt'] }}</a></strong>
-                    )
-                </td>
-            </tr>
-        </tbody>
-    </table>
-</div></div>
-
-<div class="g-r">
-    <div class="g-lg-3">
-    {% if (acct['acct_id'] == acct_id) %}
-        <div id="profile" class="blk-cont">
-            <h1>人物簡介</h1>
-            <h3>基本情報</h3>
-            <input class="name" type="text" value="{{ acct['name'] }}" placeholder="name">
-            <input class="photo" type="t/xt" value="{{ acct['photo'] }}" placeholder="photo">
-            <input class="cover" type="text" value="{{ acct['cover'] }}" placeholder="cover">
-            <button class="btn-con submit">更新</button>
-            <div class="print"></div>
+<div class="row">
+    <div id="cover"></div>
+    <div class="row">
+        <div id="summary" class="col-lg-3 col-sm-4">
+            <h1>{{ acct['name'] }}</h1>
+            <img id="photo">
         </div>
-    {% end %}
-    {% if (acct['acct_id'] == acct_id) or (isadmin) %}
-        <div id="reset" class="blk-cont">
-            <h3>更改密碼</h3>
-            <input class="old" type="password" placeholder="previous">
-            <input class="pw" type="password" placeholder="password">
-            <input class="repeat" type="password" placeholder="repeat">
-            <button class="btn-wrn submit">確認</button>
-            <div class="print"></div>
-        </div>
-    {% end %}
-    </div>
-    <div class="g-lg-9">
-	<br / >
-	<div>
-	    <table border="1px" bordercolor="gray"><tbody>
-	{% set count = 0 %}
-	{% for pro in prolist%}
-	    {% if count == 10 %}
-		</tr>
-		{% set count = 0 %}
-	    {% end %}
-	    {% if count == 0 %}
-		<tr>
-	    {% end %}
-	    {% if pro['score'] == 100 %}
-		<td class="_state"><a class="_state-1" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
-	    {% elif pro['score'] == -1 %}
-		<td class="_state"><a class="_state-4" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
-	    {% elif pro['score'] >= 50 %}
-		<td class="_state"><a class="_state-2" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
-	    {% else %}
-		<td class="_state"><a class="_state-3" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
-	    {% end %}
-	{% set count = count + 1 %}
-	{% end %}
-	{%if count != 10%}
-	{% while count != 10 %}
-	    <td></td>
-	    {% set count = count + 1 %}
-	{% end %}
-	</tr>
-	{% end %}
-	   </tbody></table>
-	</div>
-	<!--<canvas id="frate"></canvas>-->
     </div>
 </div>
 
+<div class="row mt-lg-3">
+    <div class="col-lg-3">
+        <form id="profile">
+            <h1>人物簡介</h1>
+            <h3>基本情報</h3>
+
+            <table class="table">
+                <tbody>
+                    <tr>
+                        <td>Score</td>
+                        <td style="text-align: right;">{{ rate['rate'] }}</td>
+                    </tr>
+                    <tr>
+                        <td>Ac Ratio</td>
+                        <td style="text-align: right;">
+                            {% if rate['all_cnt'] == 0 %}
+                                0.0%
+                            {% else %}
+                                {{ round(((rate['ac_cnt'] / rate['all_cnt']) * 100), 1) }}%
+                            {% end %}
+                            (
+                            <a style="color: #0F0;" href="/oj/chal/?acctid={{ acct['acct_id'] }}&state=1">{{ rate['ac_cnt'] }}</a>
+                            /
+                            <a style="color: #0F0" href="/oj/chal/?acctid={{ acct['acct_id'] }}">{{ rate['all_cnt'] }}</a>
+                            )
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            {% if (acct['acct_id'] == acct_id) %}
+                <div class="mb-1">
+                    <label class="form-label">Name</label>
+                    <input class="name form-control" type="text" value="{{ acct['name'] }}" placeholder="name">
+                </div>
+                
+                <div class="mb-1">
+                    <label class="form-label">Photo</label>
+                    <input class="photo form-control" type="text" value="{{ acct['photo'] }}" placeholder="photo">
+                </div>
+
+                <div class="mb-1">
+                    <label class="form-label">Cover</label>
+                    <input class="cover form-control" type="text" value="{{ acct['cover'] }}" placeholder="cover">
+                </div>
+
+                <button class="btn btn-primary submit">更新</button>
+                <div class="print"></div>
+            {% end %}
+        </form>
+    {% if (acct['acct_id'] == acct_id) or (isadmin) %}
+        <form id="reset">
+            <h3>更改密碼</h3>
+
+            <div class="mb-1">
+                <input class="old form-control" type="password" placeholder="previous">
+            </div>
+
+            <div class="mb-1">
+                <input class="pw form-control" type="password" placeholder="password">
+            </div>
+
+            <div class="mb-1">
+                <input class="repeat form-control" type="password" placeholder="repeat">
+            </div>
+
+            <button class="btn btn-warning submit">確認</button>
+            <div class="print"></div>
+        </form>
+    {% end %}
+    </div>
+    <div class="col-lg-9">
+        <table class="table" style="font-size: 130%;" border="1px" bordercolor="gray">
+            <tbody>
+                {% set count = 0 %}
+                {% for pro in prolist%}
+                    {% if count == 10 %}
+                    </tr>
+                    {% set count = 0 %}
+                    {% end %}
+                    {% if count == 0 %}
+                    <tr>
+                    {% end %}
+                    {% if pro['score'] == 100 %}
+                    <td class="_state"><a class="_state-1" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                    {% elif pro['score'] == -1 %}
+                    <td class="_state"><a class="_state-4" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                    {% elif pro['score'] >= 50 %}
+                    <td class="_state"><a class="_state-2" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                    {% else %}
+                    <td class="_state"><a class="_state-3" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                    {% end %}
+                {% set count = count + 1 %}
+                {% end %}
+                {%if count != 10%}
+                {% while count != 10 %}
+                    <td></td>
+                    {% set count = count + 1 %}
+                {% end %}
+                </tr>
+                {% end %}
+	        </tbody>
+       </table>
+    </div>
+</div>
