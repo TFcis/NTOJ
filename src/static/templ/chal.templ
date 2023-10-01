@@ -1,11 +1,13 @@
 {% from services.chal import ChalService %}
 
 <link rel="stylesheet" type="text/css" href="/oj/chal.css">
-<link rel="stylesheet" type="text/css" href="/oj/pygments.css">
+<!-- <link rel="stylesheet" type="text/css" href="/oj/pygments.css"> -->
+<link rel="stylesheet" href="/oj/third/prism.css">
+<script src="/oj/third/prism.js"></script>
+
 <script type="text/javascript">
     var ws;
-    const chal_id = {{ chal['chal_id'] }};
-    const state_map = {
+    var state_map = {
         1: 'Accepted',
         2: 'Wrong Answer',
         3: 'Runtime Error',
@@ -18,6 +20,7 @@
     };
 
     function init() {
+        const chal_id = {{ chal['chal_id'] }};
         let ws_link = '';
         if (location.protocol !== 'https:') {
             ws_link = `ws://${location.hostname}/oj/be/chalstatesub`;
@@ -37,9 +40,8 @@
                     state.className = `state state-${chal_state_data[idx]['state']}`;
                     element.querySelector('td.runtime').innerHTML = chal_state_data[idx]['runtime'];
                     element.querySelector('td.memory').innerHTML = Math.round((chal_state_data[idx]['memory'] / 1024));
-                    print.innerHTML = chal_state_data[idx]['response'];
-                    print.style['opacity'] = 1;
-                })
+                });
+                index.reload();
             };
 
             ws.onopen = function(e) {
@@ -75,21 +77,14 @@
 	    $.post('/oj/be/code', {
 	        'chal_id': {{chal['chal_id']}},
 	    }, function(res) {
-            code_txt = res;
-	        var _code = document.getElementById('_code');
-	        _code.innerHTML = res;
-	    });
+            res = JSON.parse(res);
+            let code = $("#code");
+            code.attr("data-language", res.comp_type);
+            code.find("code").addClass(`language-${res.comp_type}`);
+            code.find("code").html(res.code);
 
-        $('#compile_info_button').on('click', function(e) {
-            let compile_info = document.getElementById('compile_info');
-            if (compile_info.style.display == 'none') {
-                compile_info.style.display = '';
-                document.getElementById('compile_info_button').innerText = 'Hidden Compile Info';
-            } else {
-                compile_info.style.display = 'none';
-                document.getElementById('compile_info_button').innerText = 'Show Compile Info';
-            }
-        });
+            $.getScript('/oj/third/prism.js');
+	    });
 
         $('#report_pro_button').on('click', function(e) {
             index.go('/oj/report/?chal_id={{ chal['chal_id'] }}');
@@ -103,9 +98,9 @@
     }
 </script>
 
-<div class="g-r">
-    <div class="g-lg-4 blk-cont">
-        <table id="info">
+<div class="row">
+    <div class="col-lg-4">
+        <table id="info" class="table">
             <thead>
                 <tr>
                     <th>Key</th>
@@ -135,19 +130,20 @@
                 </tr>
             </tbody>
         </table>
+
     {% if rechal == True and chal['code'] == True %}
-        <button id="rechal" class="btn-wrn">Rechallenge</button>
-        <button id="compile_info_button" class="btn-con">Hidden Compile Info</button>
+        <button id="rechal" class="btn btn-warning">Rechallenge</button>
+        <!-- <button id="compile_info_button" class="btn btn-primary">Hidden Compile Info</button> -->
         <div class="print"></div>
     {% elif chal['code'] == True %}
-        <button id="compile_info_button" class="btn-con">Hidden Compile Info</button>
-        <button id="report_pro_button" class="btn-wrn">Report Problem</button>
+        <!-- <button id="compile_info_button" class="btn btn-primary">Hidden Compile Info</button> -->
+        <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
         <div class="print"></div>
     {% end %}
-
     </div>
-    <div class="g-lg-8 blk-cont">
-        <table id="test">
+
+    <div class="col-lg-8">
+        <table id="test" class="table">
             <thead>
                 <tr>
                     <th>Test</th>
@@ -169,12 +165,30 @@
         </table>
     </div>
 </div>
+
 {% if chal['code'] == True %}
-<pre class="g-r" id="compile_info" style="margin-top: 32px;">
-    {{ chal['response'] }}
-</pre>
-<div class="g-r" style="margin-top:32px;">
+
+{% if chal['response'] != '' %}
+    <div class="panel panel-default mt-3">
+        <div class="panel-heading">
+            <span>Compilation Error Message</span>
+            <span class="material-symbols-outlined ms-auto" data-bs-toggle="collapse" data-bs-target="#compileInfo" aria-expanded="false" aria-controls="compileInfo">
+                expand_more
+            </span>
+        </div>
+        <div class="panel-body">
+            <pre class="collapse show" id="compileInfo" style="margin-top: 32px;">
+                {{ chal['response'] }}
+            </pre>
+        </div>
+    </div>
+{% end %}
+
+<!-- <div class="g-r" style="margin-top:32px;">
     <div id="_code"></div>
 </div>
+-->
+
+<pre id="code" class="line-numbers" data-language="" data-prismjs-copy="Copy Code" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"><code class=""></code></pre>
 {% end %}
 
