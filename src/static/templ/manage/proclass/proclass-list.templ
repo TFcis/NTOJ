@@ -1,0 +1,34 @@
+{% extends '../manage.templ' %}
+{% block head %}
+<script>
+    function init() {
+    }
+</script>
+{% end %}
+{% block content %}
+<div class="col-10 ms-lg-2 mt-lg-2">
+	<table class="table">
+		<thead>
+			<tr>
+				<td scope="col">#</td>
+				<td scope="">Name</td>
+				<td>
+                    <a class="btn btn-primary" href="/oj/manage/proclass/add/">&#x271a</a>
+				</td>
+			</tr>
+		</thead>
+
+		<tbody>
+		{% for pubclass in pubclass_list %}
+            <tr>
+                <th scope="row">{{ pubclass['pubclass_id'] }}</th>
+				<td>{{ pubclass['name'] }}</td>
+                <td>
+                    <a class="btn btn-secondary" href="/oj/manage/proclass/update/?pubclassid={{ pubclass['pubclass_id'] }}">&#x2699</a>
+                </td>
+            </tr>
+		{% end %}
+		</tbody>
+	</table>
+</div>
+{% end %}
