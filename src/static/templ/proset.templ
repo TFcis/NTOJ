@@ -8,29 +8,9 @@
     function init() {
         var j_filter = $('#filter');
 
-        j_filter.find('select.pclass').on('change', function(e) {
-            var pclas = $(this).val();
-            var clas = j_filter.find('select.class').val();
-
-            if (pclas == 'None') {
-                if (clas == -1) {
-                    index.go('/oj/proset/');
-                } else {
-                    index.go('/oj/proset/?class=' + clas);
-                }
-            } else {
-                if(clas == -1) {
-                    index.go('/oj/proset/?pclas_key=' + pclas);
-                } else {
-                    index.go('/oj/proset/?class=' + clas + '&pclas_key=' + pclas);
-                }
-            }
-        });
-
-        j_filter.find('select.class').on('change', function(e) {
-            var clas = $(this).val();
+        j_filter.find('#publicProClass').on('change', function(e) {
             var off = location.href.match(/off=(\d+)/);
-            var pclas = j_filter.find('select.pclass').val();
+            var pubclass_id = $(this).val();
 
             if (off == null) {
                 off = 0;
@@ -38,18 +18,10 @@
                 off = parseInt(off[1]);
             }
 
-            if (clas == -1) {
-                if (pclas == 'None') {
-                    index.go('/oj/proset/?off=' + off);
-                } else {
-                    index.go('/oj/proset/?off='+off+'&pclas_key='+pclas);
-                }
+            if (pubclass_id == 'None') {
+                index.go(`/oj/proset/?off=${off}`);
             } else {
-                if (pclas == 'None') {
-                    index.go('/oj/proset/?off=' + off + '&class=' + clas);
-                } else {
-                    index.go('/oj/proset/?off='+off+'&class='+clas+'&pclas_key='+pclas);
-                }
+                index.go(`/oj/proset/?off=${off}&pubclass_id=${pubclass_id}`);
             }
         });
 
@@ -67,95 +39,116 @@
     }
 </script>
 
-<div class="g-lg-2">
-    <table id="filter">
-        <thead>
-            <tr>
-                <th colspan=2>過濾器</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td colspan=2><select class="class">
-                    <option value=-1{% if clas == None%} selected{% end %}>All</option>
-                    <option value=1{% if clas == 1%} selected{% end %}>Normal</option>
-                    <option value=2{% if clas == 2%} selected{% end %}>Contest</option>
-                </select></td>
-            </tr>
-        <tr>
-        <td colspan=2>Class</td>
-        </tr>
-        <tr>
-        <td colspan=2><select class="pclass">
-            <option value="None" {% if pclas_key == None %}selected{% end %}>None</option>
-            {% for pclas in pclist %}
-            <option value="{{pclas['key']}}" {% if pclas['key'] == pclas_key %}selected{% end %}>{{ pclas['name'] }}</option>
+<div class="row">
+    <div class="col-lg-2 col-12">
+        <form id="filter">
+            <label class="form-label">過濾器</label>
+
+            <div class="mb-1">
+                <label for="" class="form-label">Public Problem Class</label>
+                <select id="publicProClass" class="form-select">
+                    <option value="None" {% if cur_pubclass is None %}selected{% end %}>None</option>
+                    {% for pc in pubclass_list %}
+                        <option value="{{ pc['pubclass_id'] }}" {% if cur_pubclass is not None and pc['pubclass_id'] == cur_pubclass['pubclass_id'] %}selected{% end %}>
+                            {{ pc['name'] }}
+                        </option>
+                    {% end %}
+                </select>
+            </div>
+
+            <div class="mb-1">
+                <label for="" class="form-label">Private Problem Class</label>
+                <select id="privateProClass" class="form-select">
+                    <option value="WIP">None</option> <!-- TODO: Private Problem Set -->
+                </select>
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">Go to Problem</label>
+                <input type="text" class="select_prob form-control" placeholder="problem number">
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-10 col-12">
+        <table id="prolist" class="table table-striped table-hover table-responsive col mx-lg-3">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">State</th>
+                    <th scope="col">Problem Name</th>
+                    <th scope="col">AC Ratio (User)</th>
+                    <th scope="col">AC Ratio (Submission)</th>
+                    <th scope="col">Tags</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for pro in prolist %}
+                <tr>
+                    <td class="id">{{ pro['pro_id'] }}</td>
+                    {% if pro['state'] is None %}
+                        <td>Todo</td> 
+                    {% else %}
+                        <td class="state-{{ pro['state'] }}">{{ChalService.STATE_STR[pro['state']]}}</td>
+                    {% end %}
+                    <td class="name">
+                        <a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['name'] }}</a>
+                    </td>
+                    
+                    {% set rate = pro['rate_data'] %}
+                    <td>
+                        {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
+                            {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}% 
+                        {% else %}
+                            {{ '0.00%' }}
+                        {% end %}
+
+                        ({{ rate['user_ac_chal_cnt'] }} / {{ rate['user_all_chal_cnt'] }})
+                    </td>
+
+                    <td>
+                        {% if rate['all_chal_cnt'] and rate['ac_chal_cnt'] %}
+                            {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}% 
+                        {% else %}
+                            {{ '0.00%' }}
+                        {% end %}
+                        (<a href="/oj/chal/?proid={{ pro['pro_id'] }}&state=1">{{ rate['ac_chal_cnt'] }}</a>
+                        /
+                        <a href="/oj/chal/?proid={{ pro['pro_id'] }}">{{ rate['all_chal_cnt'] }}</a>)
+                    </td>
+
+                    <td class="name">{{ pro.get('tags', '') or '' }}</td>
+                </tr>
             {% end %}
-        </select></td>
-        </tr>
-        <tr>
-        <td colspan=2>Problem</td>
-        </tr>
-        <tr>
-        <td colspan=2>
-            <input type="text" class="select_prob" placeholder="problem number">
-        </td>
-        </tr>
-        </tbody>
-    </table>
-    <ul class="pagin">
-    {% set postfix = '' %}
-    {% if clas != None %}
-    {% set postfix = postfix + '&class=%s'%clas %}
-    {% end %}
-    {% if pclas_key != None %}
-    {% set postfix = postfix + '&pclas_key=%s'%pclas_key %}
-    {% end %}
+            </tbody>
+        </table>
 
-    {% set ct = math.floor(pageoff / 40) %}
-    {% set st = min(max(0,ct - 9),
-        max(0,math.ceil(pronum / 40) - 39))%}
-    {% for i,off in enumerate(range(st * 40,pronum,40)) %}
-        <li{% if ct == (i + st) %} class="active"{% end %}><a href="?off={{str(off) + postfix }}">{{ i + 1 + st }}</a></li>
-    {% end %}
-    </ul>
-</div>
-<div id="prolist" class="g-lg-10">
-    <div class="g-r head">
-        <div class="g-sm-1">#</div>
-        <div class="g-sm-3">State</div>
-        <div class="g-sm-4">Problem Name</div>
-        <div class="g-sm-4">Tags</div>
-    </div>
-{% for pro in prolist %}
-    <div class="g-r item">
-        <div class="g-sm-1 id">{{ pro['pro_id'] }}</div>
-        {% if pro['state'] == None %}
-            <div class="g-sm-3 light">Todo</div>
-        {% else %}
-            <div class="g-sm-3 state-{{ pro['state'] }}">{{ ChalService.STATE_STR[pro['state']] }}</div>
+        {% set postfix = '' %}
+        {% if cur_pubclass != None %}
+        {% set postfix = postfix + '&pubclass_id=%s' % cur_pubclass['pubclass_id'] %}
         {% end %}
-        <div class="g-sm-4 name">
-            <a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['name'] }}</a>
-        </div>
-        <div class="g-sm-4 name">{{ pro.get('tags', '') or '' }}</div>
-    </div>
-{% end %}
-    <ul class="pagin">
-    {% set postfix = '' %}
-    {% if clas != None %}
-    {% set postfix = postfix + '&class=%s'%clas %}
-    {% end %}
-    {% if pclas_key != None %}
-    {% set postfix = postfix + '&pclas_key=%s'%pclas_key %}
-    {% end %}
 
-        <li><a href="?off=0{{ postfix }}">&#x21e4;</a></li>
-    {% set ct = math.floor(pageoff / 40) %}
-    {% set st = min(max(0,ct - 9),
-        max(0,math.ceil(pronum / 40) - 39))%}
-    {% for i,off in enumerate(range(st * 40,pronum,40)) %}
-        <li{% if ct == (i + st) %} class="active"{% end %}><a href="?off={{str(off) + postfix }}">{{ i + 1 + st }}</a></li>
-    {% end %}
-    </ul>
+        <div class="row">
+            <div class="col-1"></div>
+            <div class="col pt-3">
+                <nav aria-label="Page navigation example">
+                    <ul class="pagination justify-content-center">
+                        <!-- this algorithm from toj -->
+                        <!-- 我沒研究怎麼實現的，但能用 -->
+                        <li class="page-item"><a class="page-link" href="?off=0{{ postfix }}">&#x21e4;</a></li>
+                        {% import math %}
+                        {% set limit = 40 %}
+                        {% set ct = math.floor(pageoff / limit) %}
+                        {% set st = min(max(0, ct - 9), max(0, math.ceil(pronum / limit) - 39)) %}
+                        {% for i, off in enumerate(range(st * limit, pronum, limit)) %}
+                        <li class="page-item {% if ct == (i + st) %} active {% end %}">
+                            <a class="page-link {% if ct == (i + st) %} active{% end %}" href="?off={{ str(off) + postfix }}">{{i + 1 + st}}</a>
+                        </li>
+                        {% end %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+    </div>
 </div>
