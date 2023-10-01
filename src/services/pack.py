@@ -25,7 +25,7 @@ class PackService:
 
         await self.rs.delete(f'PACK_TOKEN@{pack_token}')
 
-        inf = open(f'templ/tmp/{pack_token}', 'rb')
+        inf = open(f'tmp/{pack_token}', 'rb')
         outf = open(dst, 'wb')
         while True:
             data = inf.read(65536)
@@ -37,7 +37,7 @@ class PackService:
         inf.close()
         outf.close()
 
-        os.remove(f'templ/tmp/{pack_token}')
+        os.remove(f'tmp/{pack_token}')
 
     async def unpack(self, pack_token, dst, clean=False):
         def _unpack():
