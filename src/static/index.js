@@ -78,11 +78,9 @@ var index = new function() {
             destroy();
         }
 
-        j_cont.stop().fadeOut(100, function() {cont_defer.done(function(res) {
+        cont_defer.done(function(res) {
             j_cont.html(res).ready(function() {
                 var defer;
-
-                $('pre > code').each(function(i, e) {hljs.highlightBlock(e)});
 
                 if (typeof(init) == 'function') {
                     init();
@@ -91,8 +89,8 @@ var index = new function() {
                 defer = Array();
                 j_cont.find('link').each(function(i, e) {
                     defer[i] = $.Deferred();
-
-                    $(e).load(function() {
+                    
+                    $(e).on('load', function() {
                         defer[i].resolve();
                     });
                 });
@@ -103,7 +101,7 @@ var index = new function() {
             });
 
             _scroll();
-        });});
+        });
 
         $(window).scrollTop(0);
         $.get('/oj/be' + req, args, function(res) {
