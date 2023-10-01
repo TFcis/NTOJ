@@ -1,0 +1,102 @@
+{% extends '../manage.templ' %}
+{% block head %}
+
+<script type="text/javascript">
+    function init() {
+        let j_form = $("#form");
+        let re = /[^0-9,\ ]/;
+
+        j_form.find("#add").on('click', (event) => {
+            let name = j_form.find("#name").val();
+            let status = j_form.find("#status").val();
+            let start = j_form.find("#start").val();
+            let end = j_form.find("#end").val();
+            let pro_list = j_form.find("#pro_list").val();
+            let acct_list = j_form.find("#acct_list").val();
+
+            if (start != '' && start != '-1') {
+                start = new Date(start + ' +0800').toISOString();
+            } else if (start == '-1') {
+                start = new Date('1970/01/01 00:00 +0800').toISOString();
+            }
+
+            if (end != '' && end != '-1') {
+                end = new Date(end + ' +0800').toISOString();
+            } else if (end == '-1') {
+                end = new Date('2100/01/01 00:00 +0800').toISOString();
+            }
+
+            if (re.test(pro_list)) {
+                alert("Problem List錯誤，請輸入數字、逗號與空白設定，範例：1, 2, 3");
+                return;
+            }
+
+            if (re.test(acct_list)) {
+                alert("Account List錯誤，請輸入數字、逗號與空白設定，範例：1, 2, 3");
+                return;
+            }
+
+            $.post('/oj/be/manage/board/add', {
+                reqtype: 'add',
+                name: name,
+                status: status,
+                start: start,
+                end: end,
+                pro_list: pro_list,
+                acct_list: acct_list,
+            }, function(res) {
+                if (res[0] == 'E') {
+
+                } else {
+                    index.go("/oj/manage/board/")
+                }
+            });
+        });
+
+        j_form.find("#cancel").on('click', (event) => {
+            index.go("/oj/manage/board/")
+        });
+    }
+</script>
+{% end %}
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+	<form id="form">
+		<div class="mb-1">
+            <label for="name" class="form-label">Name</label>
+			<input class="form-control" id="name" type="text">
+		</div>
+        <div class="mb-1">
+            <label for="#status" class="form-label">Status</label>
+			<select class="form-select" id="status">
+				<option value=0>Online</option>
+				<option value=1>Hidden</option>
+				<option value=2>Offline</option>
+			</select>
+        </div>
+
+        <div class="mb-1">
+            <label for="#start" class="form-label">Start</label>
+            <input type="text" class="form-control" id="start" placeholder="[Year / Month / Day Hour : Minute]">
+
+            <label for="#end" class="form-label">End</label>
+            <input type="text" class="form-control" id="end" placeholder="[Year / Month / Day Hour : Minute]">
+        </div>
+
+        <div class="mb-1">
+            <label>Account List</label>
+            <input class="form-control" id="acct_list" type="text">
+        </div>
+
+        <div class="mb-1">
+            <label>Problem List</label>
+            <input class="form-control" id="pro_list" type="text">
+        </div>
+
+		<div class="mt-2">
+			<button type="button" class="btn btn-primary" id="add">Add</button>
+			<button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
+		</div>
+	</form>
+</div>
+{% end %}

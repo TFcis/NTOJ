@@ -1,8 +1,129 @@
 {% import math %}
-<link rel="stylesheet" type="text/css" href="/oj/board.css">
+<!-- <link rel="stylesheet" type="text/css" href="/oj/board.css"> -->
+
+<style>
+    table th._rank {
+        text-align: center;
+        width: 64px;
+    }
+
+    table th._acct {
+        text-align: center;
+        width: 150px;
+    }
+    table th._score {
+        text-align: center;
+        width: 112px;
+    }
+    table th._pro {
+        text-align: center;
+        width: 96px;
+    }
+    table td._rank {
+        width: 64px;
+        text-align: center;
+        padding: 0 0;
+    }
+
+    table td._acct {
+        width: 150px;
+        padding: 0 0;
+    }
+    table td._score {
+        text-align: center;
+        width: 112px;
+        padding: 0 0;
+    }
+    table td._pro {
+        text-align: center;
+        padding: 0 0;
+        width: 96px;
+    }
+
+    table td._state-0 a {
+        color: #DC0000;
+    }
+    table td._state-1 a {
+        color: #DC2000;
+    }
+    table td._state-2 a {
+        color: #DC5800;
+    }
+    table td._state-3 a {
+        color: #DC8400;
+    }
+    table td._state-4 a {
+        color: #DEB000;
+    }
+    table td._state-5 a {
+        color: #DCDC00;
+    }
+    table td._state-6 a {
+        color: #CADC00;
+    }
+    table td._state-7 a {
+        color: #C0DC00;
+    }
+    table td._state-8 a {
+        color: #B0DC00;
+    }
+    table td._state-9 a {
+        color: #8DDC00;
+    }
+    table td._state-10 a {
+        color: #00dc00;
+        font-weight: bolder;
+    }
+
+    tr {
+        line-height: 32px;
+    }
+
+    thead > tr {
+        line-height: 48px;
+    }
+
+    /*
+    table td._state-0 {
+        background-color: #DC0000;
+    }
+    table td._state-1 {
+        background-color: #DC2000;
+    }
+    table td._state-2 {
+        background-color: #DC5800;
+    }
+    table td._state-3 {
+        background-color: #DC8400;
+    }
+    table td._state-4 {
+        background-color: #DEB000;
+    }
+    table td._state-5 {
+        background-color: #DCDC00;
+    }
+    table td._state-6 {
+        background-color: #CADC00;
+    }
+    table td._state-7 {
+        background-color: #C0DC00;
+    }
+    table td._state-8 {
+        background-color: #B0DC00;
+    }
+    table td._state-9 {
+        background-color: #8DDC00;
+    }
+    table td._state-10 {
+        background-color: #00dc00;
+        font-weight: bolder;
+    }
+    */
+
+</style>
 
 <script type="text/javascript" id="contjs">
-    var board = document.querySelector('.board1')
+    var board = document.getElementById('board1');
     // board.style.scrollBehavior = 'smooth'
 
     board.addEventListener('scroll', () => {
@@ -10,12 +131,12 @@
     }, false)
 
     setTimeout(() => {
-        var board = document.querySelector('.board1')
+        var board = document.getElementById('board1');
         if (window.localStorage.getItem('board_scoll_left')) {
             const board_old_scroll_left = parseInt(window.localStorage.getItem('board_scoll_left'))
             board.scrollLeft = board_old_scroll_left
         }
-    }, 50)
+    }, 50);
 
     var end = new Date('{{end}}').getTime();
     var j_contest = $('#contest');
@@ -40,65 +161,71 @@
 	    GetCount();
     }
 
-    j_contest.find('select.cont').on('change', function(e) {
-	    var cont_name = $(this).val();
-	    index.go('/oj/board/?cont=' + cont_name);
+    j_contest.find('#cont').on('change', function(e) {
+	    var board_id = $(this).val();
+	    index.go(`/oj/board/${board_id}/`);
     });
+
 </script>
 
-<div class="g-lg-12">
-    <div id="contest">
-	    <strong>記分板&nbsp;&nbsp;</strong>
-	    <select class="cont">
-	        <option value="default" {% if cont_name == 'default' %}selected{% end %}>Default</option>
-	        {% for cont in cont_list %}
-	        <option value="{{ cont }}" {% if cont_name == cont %}selected{% end %}>{{ cont }}</option>
-	        {% end %}
-	    </select>
-    </div>
-
-    <h3>
-        <div id="count"></div>
-    </h3>
-
-    <div style="width:100%; margin-bottom:48px; overflow-x:scroll;" class="board1">
-	    <table style="width:{{9+64+150+112+len(prolist)*99}}px;">
-            <thead style="display:block;">
-                <tr>
-                <th class="_rank">rank</th>
-                <th class="_acct">account</th>
-                <th class="_score">score</th>
-                {% for pro in prolist %}
-                    <th class="_pro _state"><a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }}</a></th>
+<div class="col-lg-12">
+    <div class="row">
+        <div id="contest">
+            <strong>記分板&nbsp;&nbsp;</strong>
+            <select class="form-select" id="cont">
+                {% for board in board_list %}
+                <option value="{{ board['board_id'] }}" {% if board['name'] == name %}selected{% end %}>{{ board['name'] }}</option>
                 {% end %}
+            </select>
+        </div>
+
+        <h3>
+            <div id="count"></div>
+        </h3>
+    </div> 
+
+    <div class="col-lg-12" style="overflow-x: scroll;" id="board1">
+        <table class="table table-hover table-sm table-bordered table-responsive-sm col mx-lg-3" style="width:{{9+64+150+112+len(prolist)*99}}px;">
+            <thead>
+                <tr>
+                    <th class="_rank">Rank</th>
+                    <th class="_acct">Account</th>
+                    <th class="_score">Score</th>
+                    {% for pro in prolist %}
+                        <th class="_pro"><a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }}</a></th>
+                    {% end %}
                 </tr>
             </thead>
-	    <tbody style="display:block;">
-        {% for acct in acctlist %}
-        {% set acct_id = acct['acct_id'] %}
-        <tr>
-            <td class="_rank">{{ acct['rank'] }}</td>
-            <td class="_acct">&nbsp<a href="/oj/acct/{{ acct['acct_id'] }}/">{{ acct['name'] }}</a></td>
-            <td class="_score"><a href="/oj/chal/?acctid={{ acct['acct_id'] }}">{{ acct['rate'] }} / {{ acct_submit[acct_id] }}</a></td>
-            {% for pro in prolist %}
-            {% set pro_id = pro['pro_id'] %}
-            {% if acct_id in ratemap and pro_id in ratemap[acct_id] %}
-            {% set rate = ratemap[acct_id][pro_id] %}
-	        {% set sc = math.floor(rate['rate']/10)%}
-	            <td class="_pro _state-{{ sc }} _state"><a href="/oj/chal/?acctid={{ acct_id }}&proid={{ pro_id }}&state=0">{{ rate['rate'] }} / {{ rate['count'] }}</a></td>
-            {% else %}
-                <td class="_pro _state">&nbsp</td>
-            {% end %}
-            {% end %}
-            </tr>
-        {% end %}
-	    <tr>
-	        <td colspan="3" style="text-align:center; padding:0 0">score / submit</td>
-	        {% for pro in prolist %}
-	        {% set pro_id = pro['pro_id'] %}
-	    	    <td class="_pro _state">{{pro_sc_sub[pro_id][0]}} / {{pro_sc_sub[pro_id][1]}}</td>
-	        {% end %}
-	    </tr>
-	</tbody>
-    </table>
-</div></div>
+
+            <tbody>
+                {% for acct in acctlist %}
+                {% set acct_id = acct['acct_id'] %}
+                <tr>
+                    <td class="_rank">{{ acct['rank'] }}</td>
+                    <td class="_acct">&nbsp<a href="/oj/acct/{{ acct_id }}/">{{ acct['name'] }}</a></td>
+                    <td class="_score"><a href="/oj/chal/?acctid={{ acct_id }}">{{ acct['rate'] }} / {{ acct_submit[acct_id] }}</a></td>
+                    {% for pro in prolist %}
+                        {% set pro_id = pro['pro_id'] %}
+                        <!-- TODO: Is this if-statement necessary??? -->
+                        {% if acct_id in ratemap and pro_id in ratemap[acct_id] %}
+                            {% set rate = ratemap[acct_id][pro_id] %}
+                            {% set sc = math.floor(rate['rate'] / 10) %}
+                            <td class="_pro _state-{{ sc }} _state"><a href="/oj/chal/?acctid={{ acct_id }}&proid={{ pro_id }}&state=0">{{ rate['rate'] }} / {{ rate['count'] }}</a></td>
+                        {% else %}
+                            <td class="_pro _state">&nbsp</td>
+                        {% end %}
+                    {% end %}
+                </tr>
+                {% end %}    
+
+                <tr>
+                    <td colspan="3" style="text-align:center; padding:0 0">score / submit</td>
+                    {% for pro in prolist %}
+                    {% set pro_id = pro['pro_id'] %}
+                        <td class="_pro _state">{{pro_sc_sub[pro_id][0]}} / {{pro_sc_sub[pro_id][1]}}</td>
+                    {% end %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
