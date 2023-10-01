@@ -3,7 +3,6 @@ import json
 import os
 
 import config
-from services.contest import ContestService
 from services.judge import JudgeServerClusterService
 from services.log import LogService
 from services.user import UserConst
@@ -226,6 +225,9 @@ class ChalService:
             return 'Enoext', None
         result = result[0]
 
+        # NOTE Recalculate problem rate
+        await self.rs.hdel('pro_rate', str(pro_id))
+
         acct_id, timestamp = int(result['acct_id']), result['timestamp']
 
         async with self.db.acquire() as con:
@@ -292,7 +294,7 @@ class ChalService:
                         flt=None):
 
         if flt is None:
-            flt = {'pro_id': None, 'acct_id': None, 'state': 0}
+            flt = {'pro_id': None, 'acct_id': None, 'state': 0, 'compiler': 'all'}
         fltquery = await self._get_fltquery(flt)
 
         async with self.db.acquire() as con:
@@ -399,5 +401,8 @@ class ChalService:
                 query += ' AND "challenge_state"."state" IS NULL '
             else:
                 query += (' AND "challenge_state"."state" = ' + str(flt['state']) + ' ')
+
+        if flt['compiler'] != 'all':
+            query += f" AND \"challenge\".\"compiler_type\"=\'{flt['compiler']}\' "
 
         return query
