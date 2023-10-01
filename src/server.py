@@ -18,7 +18,7 @@ from services.judge import JudgeServerClusterService
 
 
 async def materialized_view_task():
-    db = await asyncpg.connect(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password='322752278227', host='localhost')
+    db = await asyncpg.connect(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost')
     rs = await aioredis.Redis(host='localhost', port=6379, db=1)
     p = rs.pubsub()
     await p.subscribe('materialized_view_req')
@@ -44,11 +44,10 @@ if __name__ == "__main__":
     def run_materialized_view_task():
         try:
             loop = asyncio.new_event_loop()
-            task = loop.create_task(materialized_view_task())
+            loop.run_until_complete(materialized_view_task())
             loop.run_forever()
 
         finally:
-            task.cancel()
             loop.stop()
             loop.close()
 
