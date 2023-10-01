@@ -1,6 +1,9 @@
-{% extends 'manage.templ' %}
+{% extends '../manage.templ' %}
 {% block head %}
-<link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
+<style>
+    div#upload>div.prog{margin-top:8px}
+    div.blk-prog{border:#bdc0ba 1px dashed;padding:4px 4px}div.blk-prog>div.bar{width:0;height:4px;background-color:#5dac81;transition:width 500ms}
+</style>
 
 <script type="text/javascript" id="contjs" async>
 	var editor;	
@@ -11,11 +14,11 @@
 
 		var j_form = $('#form');
 		var j_form2 = $('#form2');
-		var j_upload = $('#upload');
+		var j_upload = $('div#upload');
 
 		j_form.find('button.unlock').on('click', function(e) {
 		    pwd = prompt('unlock password');
-		    $.post('/oj/be/manage/pro', {
+		    $.post('/oj/be/manage/pro/update', {
 				'reqtype': 'pro-unlock',
 				'pro_id': {{ pro['pro_id'] }},
 				'pwd': pwd,
@@ -51,7 +54,7 @@
 		    var pack_token = '';
 
 		    function _update() {
-				$.post('/oj/be/manage/pro', {
+				$.post('/oj/be/manage/pro/update', {
 				    'reqtype': 'updatepro',
 				    'pro_id': {{ pro['pro_id'] }},
 				    'name': name,
@@ -115,7 +118,7 @@
 		    var timelimit = j_form2.find('input.timelimit').val();
 		    var memlimit = j_form2.find('input.memlimit').val();
 
-			$.post('/oj/be/manage/pro', {
+			$.post('/oj/be/manage/pro/update', {
 			    'reqtype': 'updatelimit',
 			    'pro_id': {{ pro['pro_id'] }},
 			    'timelimit': timelimit,
@@ -146,7 +149,7 @@
 				return
 			}
 
-			$.post('/oj/be/manage/pro', {
+			$.post('/oj/be/manage/pro/update', {
 				'reqtype': 'updateconf',
 				'conf': conf_json,
 				'pro_id': {{ pro['pro_id'] }}
@@ -169,53 +172,53 @@
 			editor = ace.edit('editor')
 			editor.setTheme('ace/theme/monokai')
 			editor.session.setMode('ace/mode/json')
-		}, 50)
+		}, 50);
     }
 </script>
 {% end %}
 {% block content %}
-<div class="g-lg-6">
-    <div id="form" class="blk-cont">
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <form id="form" class="blk-cont">
 		{% if lock != None %}
-			<label style="color:red;">Lock!!</label>
+			<label class="form-label" style="color:red;">Lock!!</label>
 		{% end %}
-		<input type="text" class="name" placeholder="Problem Name" value="{{ pro['name'] }}">
-		<input type="text" class="tags" placeholder="Tags" value="{{ pro.get('tags', '') or '' }}">
+		<input type="text" class="form-control name" placeholder="Problem Name" value="{{ pro['name'] }}">
+		<input type="text" class="form-control tags" placeholder="Tags" value="{{ pro.get('tags', '') or '' }}">
 
-		<select class="status">
+		<select class="form-select status">
 			<option value="0" {% if pro['status'] == 0 %} selected {% end %}>Online</option>
 			<option value="1" {% if pro['status'] == 1 %} selected {% end %}>Hidden</option>
 			<option value="2" {% if pro['status'] == 2 %} selected {% end %}>Offline</option>
 		</select>
-			<select class="class">
+			<select class="form-select class">
 			<option value="1" {% if pro['class'] == 1 %} selected {% end %}>Normal</option>
 			<option value="2" {% if pro['class'] == 2 %} selected {% end %}>Contest</option>
 		</select>
 
 			<label>文件</label>
-			<select class="packtype">
+			<select class="form-select packtype">
 			<option value="1">full</option>
 			<option value="2">cont.html</option>
 			<option value="3">cont.pdf</option>
 		</select>
-		<input type="file" class="file">
+		<input type="file" class="form-control file">
 
-		<button class="btn-con submit">Update</button>
-		<button class="btn-con lock">Lock</button>
-		<button class="btn-def unlock">UnLock</button>
-		<button class="btn-def cancel">Cancel</button>
+		<button type="button" class="btn btn-primary submit">Update</button>
+		<button type="button" class="btn btn-primary lock">Lock</button>
+		<button type="button" class="btn btn-secondary unlock">UnLock</button>
+		<button type="button" class="btn btn-secondary cancel">Cancel</button>
 		<div class="print"></div>
-    </div>
-	<div id="form2" class="blk-cont" style="margin-top: 60px; border: 1px solid red; padding: 3px;">
-		<label style="color: red;">Danger Zone</label>
-		<label>Time limit (ms)</label>
-		<input type="number" class="timelimit" value="{{ testl[0]['timelimit'] }}">
-		<label>Mem limit (Kb)</label>
-		<input type="number" class="memlimit" value="{{ round(testl[0]['memlimit'] / 1024) }}">
-		<button class="btn-wrn submit">Update</button>
+    </form>
+	<form id="form2" class="blk-cont" style="margin-top: 60px; border: 1px solid red; padding: 3px;">
+		<label class="form-label" style="color: red;">Danger Zone</label>
+		<label class="form-label">Time limit (ms)</label>
+		<input type="number" class="form-control timelimit" value="{{ testl[0]['timelimit'] }}">
+		<label class="form-label">Mem limit (Kb)</label>
+		<input type="number" class="form-control memlimit" value="{{ round(testl[0]['memlimit'] / 1024) }}">
+		<button type="button" class="btn btn-danger submit">Update</button>
 		<div class="print"></div>
-    </div>
-    <div id="upload" class="hide">
+    </form>
+    <div id="upload" style="display: none;">
 		<strong>Uploading ...</strong>
 		<div class="print"></div>
 		<div class="blk-prog prog">
@@ -223,7 +226,7 @@
 		</div>
     </div>
 	<div id="editor">{{ problem_config_json }}</div>
-	<button class="btn-con" id="editor_button">Update</button>
+	<button type="button" class="btn btn-success" id="editor_button">Update</button>
 	<style>
 		#editor {
 			position: relative;

@@ -5,7 +5,8 @@ import tornado.web
 from services.chal import ChalConst
 from services.judge import JudgeServerClusterService
 from services.log import LogService
-from services.pro import ProService
+from services.pro import ProService, ProClassService
+from services.rate import RateService
 from services.user import UserConst
 from handlers.base import RequestHandler, reqenv, require_permission
 
@@ -18,40 +19,39 @@ class ProsetHandler(RequestHandler):
         except tornado.web.HTTPError:
             off = 0
 
-        try:
-            clas = int(self.get_argument('class'))
-        except tornado.web.HTTPError:
-            clas = None
+        clas = None
 
         try:
-            pclas_key = str(self.get_argument('pclas_key'))
+            pubclass_id = int(self.get_argument('pubclass_id'))
         except tornado.web.HTTPError:
-            pclas_key = None
+            pubclass_id = None
 
-        # Backward compatibility
-        if pclas_key is None:
-            try:
-                pclas_name = str(self.get_argument('pclas_name'))
-                pclas_key = await ProService.inst.get_pclass_key_by_name(pclas_name)
-            except tornado.web.HTTPError:
-                pass
+        if pubclass_id is None:
+            pass
 
         err, prolist = await ProService.inst.list_pro(
             self.acct, state=True, clas=clas)
 
-        if pclas_key is None:
+        _, pubclass_list = await ProClassService.inst.get_pubclass_list()
+
+        if pubclass_id is None:
             pronum = len(prolist)
             prolist = prolist[off:off + 40]
-            await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pclas_key=pclas_key,
-                              pclist=await ProService.inst.get_class_list(), pageoff=off)
+            for pro in prolist:
+                _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'])
+                pro['rate_data'] = rate
+
+            await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pubclass_list=pubclass_list,
+                              cur_pubclass=None, pageoff=off)
             return
 
         else:
-            err, p_list = await ProService.inst.get_pclass_list(pclas_key)
+            err, pubclass = await ProClassService.inst.get_pubclass(pubclass_id)
             if err:
                 self.error(err)
                 return
 
+            p_list = pubclass['list']
             prolist2 = []
             for pro in prolist:
                 if pro['pro_id'] in p_list:
@@ -59,8 +59,12 @@ class ProsetHandler(RequestHandler):
             prolist = prolist2
             pronum = len(prolist)
             prolist = prolist[off:off + 40]
-            await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pclas_key=pclas_key,
-                              pclist=await ProService.inst.get_class_list(), pageoff=off)
+            for pro in prolist:
+                _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'])
+                pro['rate_data'] = rate
+
+            await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pubclass_list=pubclass_list,
+                              cur_pubclass=pubclass, pageoff=off)
             return
 
     @reqenv

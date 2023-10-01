@@ -49,7 +49,7 @@ class RankHandler(RequestHandler):
                 'acct_name' : acct_name,
                 'runtime'   : int(runtime),
                 'memory'    : int(memory),
-                'timestamp' : timestamp.astimezone(tz).isoformat(timespec="seconds"),
+                'timestamp' : timestamp.astimezone(tz),
             })
 
         await self.render('rank', pro_id=pro_id, chal_list=chal_list)

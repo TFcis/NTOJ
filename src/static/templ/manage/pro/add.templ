@@ -1,17 +1,21 @@
-{% extends 'manage.templ' %}
+{% extends '../manage.templ' %}
 {% block head %}
-<link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
+<style>
+    div#upload>div.prog{margin-top:8px}
+    div.blk-prog{border:#bdc0ba 1px dashed;padding:4px 4px}div.blk-prog>div.bar{width:0;height:4px;background-color:#5dac81;transition:width 500ms}
+</style>
 
 <script type="text/javascript" id="contjs">
     function init() {
 	    var j_form = $('#form');
-	    var j_upload = $('#upload');
+	    var j_upload = $('div#upload');
 
-	    j_form.find('button.submit').on('click', function(e) {
-	        var name = j_form.find('input.name').val();
-	        var status = j_form.find('select.status').val();
-            var clas = j_form.find('select.class').val();
-	        var files = j_form.find('input.file')[0].files;
+	    j_form.find('#upload').on('click', function(e) {
+	        let name = j_form.find('#name').val();
+	        let status = j_form.find('#status').val();
+            // var clas = j_form.find('select.class').val();
+            let clas = 1;
+	        let files = j_form.find('#file')[0].files;
 
 	        if (files.length == 0) {
 	    	    j_form.find('div.print').print('No file selected');
@@ -25,7 +29,7 @@
                 j_upload.show();
 
                 pack.send(pack_token, files[0]).done(function() {
-                    $.post('/oj/be/manage/pro', {
+                    $.post('/oj/be/manage/pro/add', {
                         'reqtype': 'addpro',
                         'name': name,
                         'status': status,
@@ -56,31 +60,41 @@
             });
 	    });
 
-	    j_form.find('button.cancel').on('click', function(e) {
+	    j_form.find('#cancel').on('click', function(e) {
 	        index.go('/oj/manage/pro/');
 	    });
     }
 </script>
 {% end %}
 {% block content %}
-<div class="g-lg-10">
-    <div id="form" class="blk-cont">
-	    <input type="text" class="name" placeholder="Problem Name">
-	    <select class="status">
-	        <option value=0>Online</option>
-	        <option value=1>Hidden</option>
-	        <option value=2>Offline</option>
-	    </select>
-           <select class="class">
-	        <option value=1>Normal</option>
-	        <option value=2>Contest</option>
-	    </select>
-	    <input type="file" class="file">
-	    <button class="btn-con submit">Upload</button>
-	    <button class="btn-def cancel">Cancel</button>
-	    <div class="print"></div>
-    </div>
-    <div id="upload" class="hide">
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <form id="form">
+        <div class="mb-1">
+            <label for="#name" class="form-label">Problem Name</label>
+            <input type="text" class="form-control" id="name" placeholder="Problem Name">
+        </div>
+
+        <div class="mb-1">
+            <label for="#status" class="form-label">Status</label>
+            <select class="form-select" id="status">
+                <option value=0>Online</option>
+                <option value=1>Hidden</option>
+                <option value=2>Offline</option>
+            </select>
+        </div>
+
+        <div class="mb-1">
+            <input class="form-control" type="file" id="file">
+        </div>
+
+        <div class="mb-1">
+            <button type="button" class="btn btn-primary" id="upload">Upload</button>
+            <button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
+            <div class="print"></div>
+        </div>
+    </form>
+
+    <div id="upload" style="display: none;">
 	    <strong>Uploading ...</strong>
 	    <div class="print"></div>
 	    <div class="blk-prog prog">
@@ -92,7 +106,7 @@
         給各位TOJ管理員：
         <br>
         如果發生json檔案錯誤，現在可以不用上傳新的題目<br>
-        可以直接點選設定出錯的題目，會重新導向到Re初始化的頁面<br>
+        可以直接點選設定出錯的題目，會導向到重新初始化的頁面<br>
         重新上傳即可<br>
         <br>
         By tobiichi3227 (T24)

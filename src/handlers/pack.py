@@ -43,7 +43,7 @@ class PackHandler(WebSocketHandler):
 
             self.pack_token = str(uuid.UUID(hdr['pack_token']))
             self.remain = hdr['pack_size']
-            self.output = open(f'templ/tmp/{self.pack_token}', 'wb')
+            self.output = open(f'tmp/{self.pack_token}', 'wb')
             self.state = PackHandler.STATE_DTAT
 
             self.write_message('S')
@@ -54,4 +54,4 @@ class PackHandler(WebSocketHandler):
             self.output.close()
 
         if self.remain > 0:
-            os.remove(f'templ/tmp/{self.pack_token}')
+            os.remove(f'tmp/{self.pack_token}')

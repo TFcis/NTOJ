@@ -1,0 +1,145 @@
+{% extends 'manage.templ' %}
+{% block head %}
+<script>
+    function init() {
+	var j_form = $('#form');
+
+	j_form.find('#glist').on('change', function(e) {
+	    var url = '/oj/manage/group/';
+	    var gname = $(this).val();
+	    if (gname != 'add_group') {
+			url += '?gname=' + gname;
+	    }
+	    index.go(url);
+	});
+
+	j_form.find('button.submit').on('click', function(e) {
+	    alert('submit');
+	    var gname = '{{ gname }}';
+	    var gtype = j_form.find('#gtype').val();
+	    var gclas = j_form.find('#gclas').val();
+
+	    $.post('/oj/be/manage/group', {
+			'reqtype': 'edit',
+			'gname': gname,
+			'gtype': gtype,
+			'gclas': gclas,
+	    }, function(res) {
+			if (res[0] == 'E') {
+			    j_form.find('div.print').print(res);
+			} else {
+			    j_form.find('div.print').print('Done', true);
+			}
+	    });
+	});
+
+	j_form.find('button.add_group').on('click', function(e) {
+	    var gname = j_form.find('#gname').val();
+	    var gtype = j_form.find('#gtype').val();
+	    var gclas = j_form.find('#gclas').val();
+
+	    if (gname == '') {
+			j_form.find('div.print').print('name error');
+			return;
+	    }
+
+	    $.post('/oj/be/manage/group', {
+			'reqtype': 'add_group',
+			'gname': gname,
+			'gtype': gtype,
+			'gclas': gclas
+	    }, function(res) {
+			if (res[0] == 'E') {
+			    j_form.find('div.print').print(res);
+			} else {
+			    j_form.find('div.print').print('Done', true);
+			    index.reload();
+			}
+	    });
+	});
+
+	j_form.find('button.del_group').on('click', function(e) {
+	    var gname = "{{ gname }}";
+	    $.post('/oj/be/manage/group', {
+			'reqtype': 'del_group',
+			'gname': gname,
+	    }, function(res) {
+			if (res[0] == 'E') {
+			    j_form.find('div.print').print(res);
+			} else {
+			    j_form.find('div.print').print('Done', true);
+			    index.go('/oj/manage/group/');
+			}
+	    });
+	});
+    }
+</script>
+{% end %}
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+	<form id="form">
+		<select class="form-select" id="glist">
+			<option value="add_group" {% if gname == None %}selected{% end %}>Add Group</option>
+			{% for group in glist %}
+			<option value="{{group}}" {% if gname == group %}selected{% end %}>{{ group }}</option>
+			{% end %}
+		</select>
+
+		{% if gname == None %}
+			<label>Group Name</label>
+			<input class="form-control" id="gname"></input>	
+
+			<label class="form-label">group type</label>
+			<select class="form-select" id="gtype">
+				<option value=0>Kernel</option>
+				<option value=3 selected>User</option>
+			</select>
+
+			<label class="form-label">group class</label>
+			<select class="form-select" id="gclas">
+				<option value=0>Other</option>
+				<option value=1 selected>Normal</option>
+				<option value=2>Contest</option>
+			</select>
+
+			<button type="button" class="btn btn-primary add_group">Add</button>
+			<button type="button" class="btn btn-secondary cancel">Cancel</button>
+		{% else %}
+			<label class="form-label">group type</label>
+			<select class="form-select" id="gtype">
+				<option value=0 {% if gtype == 0 %}selected{% end %}>Kernel</option>
+				<option value=3 {% if gtype == 3 %}selected{% end %}>User</option>
+			</select>
+
+			<label class="form-label">group class</label>
+			<select class="form-select" id="gclas">
+				<option value=0 {% if gclas == 0 %}selected{% end %}>Other</option>
+				<option value=1 {% if gclas == 1 %}selected{% end %}>Normal</option>
+				<option value=2 {% if gclas == 2 %}selected{% end %}>Contest</option>
+			</select>
+
+			<button type="button" class="btn btn-primary submit">Apply</button>
+			<button type="button" class="btn btn-secondary cancel">Cancel</button>
+			<button type="button" class="btn btn-danger del_group">Delete</button>
+
+			<label class="form-label">account in group</label>
+			<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Name</th>
+					</tr>
+				</thead>
+				<tbody>
+				{% for acct in gacct %}
+					<tr>
+						<td>{{ acct['acct_id'] }}</td>
+						<td><a href="/oj/acct/{{ acct['acct_id'] }}/">{{ acct['acct_name'] }}</a></td>
+					</tr>
+				{% end %}
+				</tbody>
+			</table>
+		{% end %}
+	</form>
+</div>
+{% end %}

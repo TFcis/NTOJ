@@ -53,10 +53,16 @@ class ChalListHandler(RequestHandler):
         except (tornado.web.HTTPError, ValueError):
             state = 0
 
+        try:
+            compiler_type = self.get_argument('compiler_type')
+        except tornado.web.HTTPError:
+            compiler_type = 'all'
+
         flt = {
             'pro_id': pro_id,
             'acct_id': acct_id,
-            'state': state
+            'state': state,
+            'compiler': compiler_type,
         }
 
         err, chalstat = await ChalService.inst.get_stat(

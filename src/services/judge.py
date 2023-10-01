@@ -211,6 +211,14 @@ class JudgeServerClusterService:
 
         return status_list
 
+    async def is_server_online(self) -> bool:
+        for server in self.servers:
+            err, status = await server.get_server_status()
+            if status['status']:
+                return True
+
+        return False
+
     async def send(self, data) -> None:
         # simple round-robin impl
 

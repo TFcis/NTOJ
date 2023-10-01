@@ -35,26 +35,6 @@ class AbouotHandler(RequestHandler):
     async def get(self):
         await self.render('about')
 
-
-class InfoHandler(RequestHandler):
-    @reqenv
-    async def get(self):
-        if (inform_list := (await self.rs.get('inform'))) is not None:
-            inform_list = msgpack.unpackb(inform_list)
-        else:
-            inform_list = []
-
-        judge_status_list = await JudgeServerClusterService.inst.get_servers_status()
-        can_submit = False
-
-        for status in judge_status_list:
-            if status['status']:
-                can_submit = True
-                break
-
-        await self.render('info', inform_list=inform_list, judge_server_status=can_submit)
-
-
 class OnlineCounterHandler(RequestHandler):
     @reqenv
     async def get(self):

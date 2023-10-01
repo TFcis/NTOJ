@@ -61,6 +61,8 @@ if __name__ == "__main__":
 
     services_init(db, rs)
     app = tornado.web.Application(ur.get_url(db, rs), autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC)
+    # NOTE: for dev
+    # app = tornado.web.Application(ur.get_url(db, rs), autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC, debug=True, autoreload=True)
 
     tornado.log.enable_pretty_logging()
 

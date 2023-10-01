@@ -1,0 +1,83 @@
+{% extends '../manage.templ' %}
+{% block head %}
+
+<script type="text/javascript">
+    function reply(index) {
+		var j_form = $('#form');
+		var rtext = j_form.find(`input.${index}`).val();
+
+		$.post('/oj/be/manage/question/reply', {
+		    'reqtype': 'rpl',
+		    'qacct_id': {{ qacct_id }},
+		    'index': index,
+		    'rtext': rtext,
+		}, function(res) {
+		    msg = 'Unknown';
+		    if (res[0] == 'E') {
+				msg = res;
+				j_form.find('div.print').print(msg);
+		    } else {
+				j_form.find('div.print').print('Done', true);
+				setTimeout("index.reload()", 1000);
+		    }
+		});
+    }
+
+    function rreply(index) {
+		var j_form = $('#form');
+		var rtext = j_form.find(`input.${index}`).val();
+
+		$.post('/oj/be/manage/question/reply', {
+		    'reqtype': 'rrpl',
+		    'qacct_id': {{ qacct_id }},
+		    'index': index,
+		    'rtext': rtext,
+		}, function(res) {
+		    msg = 'Unknown';
+		    if (res[0] == 'E') {
+				msg = res;
+				j_form.find('div.print').print(msg);
+		    } else {
+				j_form.find('div.print').print('Done', true);
+				setTimeout("index.reload()", 1000);
+		    }
+		});
+    }
+</script>
+{% end %}
+{% block content%}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <div id="form">
+		<div>
+			{{str(qacct_id)}} 
+		</div>
+		<table border=1 class="table">
+			<thead>
+				<tr>
+					<td>Q</td>
+					<td colspan=2>A</td>
+				</tr>
+			</thead>
+
+			<tbody>
+			{% set count = 0 %}
+			{% for ques in ques_list %}
+			<tr>
+				<td style="width:46%;">{{ ques['Q'] }}</td>
+				{% if ques['A'] == None %}
+				<td style="width:46%;"><input class="{{ count }}"></input></td>
+				<td style="width:8%;"><input class="btn btn-success" type="button" value="Reply" onclick="reply({{ count }});"></input></td>
+				{% else %}
+				<td style="width:46%;"><input class="{{ count }}" value="{{ ques['A'] }}"></input></td>
+				<td style="width:8%;"><input class="btn btn-success" type="button" value="Re Reply" onclick="rreply({{ count }});"></input></td>
+				{% end %}
+			</tr>
+			{% set count = count + 1 %}
+			{% end %}
+			</tbody>
+		</table>
+
+		<div class="print"></div>
+    </div>
+</div>
+{% end %}

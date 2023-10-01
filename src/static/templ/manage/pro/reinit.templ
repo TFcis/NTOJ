@@ -1,4 +1,4 @@
-{% extends 'manage.templ' %}
+{% extends '../manage.templ' %}
 {% block head %}
 <link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
 
@@ -21,7 +21,7 @@
 
                 j_upload.show();
 				pack.send(pack_token, files[0]).done(function() {
-					$.post('/oj/be/manage/pro', {
+					$.post('/oj/be/manage/pro/reinit', {
 						'reqtype': 'reinitpro',
 						'pro_id': {{ pro_id }},
 						'pack_token': pack_token,
@@ -55,14 +55,14 @@
 </script>
 {% end %}
 {% block content %}
-<div class="g-lg-10">
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
     <div id="form" class="blk-cont">
 		<input type="file" class="file">
-		<button class="btn-con submit">Upload</button>
-		<button class="btn-def cancel">Cancel</button>
+		<button class="btn btn-success submit">Upload</button>
+		<button class="btn btn-secondary cancel">Cancel</button>
 	<div class="print"></div>
     </div>
-    <div id="upload" class="hide">
+    <div id="upload" style="display: none;">
 	<strong>Uploading ...</strong>
 		<div class="print"></div>
 		<div class="blk-prog prog">

@@ -54,47 +54,44 @@
         });
     }
 </script>
-
-
 {% end %}
 {% block content %}
-
-<div class="g-lg-12">
+<div class="col-lg-10 mt-lg-2">
     Server Status
     <div id="form">
-	<table border=2>
-	    <thead>
-		<tr>
-		<td style="width:56%;">Server Name</td>
-		<td style="width:20%;">Running Challenge Count</td>
-        <td style="width:8%;">Status</td>
-		<td style="width:8%;">Connect</td>
-		<td style="width:8%;">Disconnect</td></tr>
-	    </thead>
-	    <tbody>
-		{% set count = 0 %}
-		{% for judge_status in judge_status_list %}
-		<tr>
-            {% if judge_status['name'] == '' %}
-                <td>Server-{{ count }}</td>
-            {% else %}
-                <td>{{ judge_status['name'] }}</td>
-            {% end %}
-            <td>{{ judge_status['running_chal_cnt'] }}</td>
-            {% if judge_status['status'] == True %}
-                <td style="color: green;">Online</td>
-            {% else %}
-                <td style="color: red;">Offline</td>
-            {% end %}
-		    <td><input class="btn-con" type="button" value="connect" onclick="connect_sever({{ count }});"></input></td>
-		    <td><input class="btn-wrn" type="button" value="disconnect" onclick="disconnect_server({{ count }});"></input></td>
-		</tr>
-		{% set count = count + 1 %}
-		{% end %}
-	    </tbody>
-	</table>
-	<div class="print"></div>
+        <table border=2 class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+            <thead>
+            <tr>
+                <td>Server Name</td>
+                <td>Running Challenge Count</td>
+                <td>Status</td>
+                <td>Connect</td>
+                <td>Disconnect</td>
+            </tr>
+            </thead>
+            <tbody>
+                {% set count = 0 %}
+                {% for judge_status in judge_status_list %}
+                <tr>
+                    {% if judge_status['name'] == '' %}
+                        <td>Server-{{ count }}</td>
+                    {% else %}
+                        <td>{{ judge_status['name'] }}</td>
+                    {% end %}
+                    <td>{{ judge_status['running_chal_cnt'] }}</td>
+                    {% if judge_status['status'] == True %}
+                        <td style="color: green !important;">Online</td>
+                    {% else %}
+                        <td style="color: red !important;">Offline</td>
+                    {% end %}
+                    <td><button class="btn btn-primary" type="button" onclick="connect_sever({{ count }});">Connect</button></td>
+                    <td><button class="btn btn-danger" type="button" onclick="disconnect_server({{ count }});">Disconnect</button></td>
+                </tr>
+                {% set count = count + 1 %}
+                {% end %}
+            </tbody>
+        </table>
+        <div class="print"></div>
     </div>
 </div>
-
 {% end %}
