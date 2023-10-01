@@ -1,4 +1,5 @@
 <link rel="stylesheet" type="text/css" href="/oj/info.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
 <script type="text/javascript">
 </script>
@@ -7,18 +8,35 @@
 	{% if judge_server_status == False %}
 		<h1 style="color: red;">目前TOJ不能Judge</h1>
 	{% end %}
-    <table border=2>
+    <table border=2 class="table">
 	<thead>
 	    <tr>
-		<td style="width:85%;">公告內容</td>
-		<td style="width:15%;">公告時間</td>
+		<td style="width:70%;">
+			<span class="material-symbols-outlined">push_pin</span>
+			Title
+		</td>
+		<td style="width:15%;">Time</td>
+		<td style="width:15%;">Author</td>
 	    </tr>
 	</thead>
 	<tbody>
-    {% for inform in inform_list%}
+    {% for bulletin in bulletin_list %}
 	    <tr>
-		<td style="color: {{ inform['color'] }};"><font size=5>{{inform['text']}}</font></td>
-		<td><font size=3>{{ inform['time'] }}</font></td>
+			<td>
+				<a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/" style="color: {{ bulletin['color'] }};">
+					<font size=5>
+					{% if bulletin['pinned'] %}
+						<span class="material-symbols-outlined">push_pin</span>
+					{% end %}
+						{{ bulletin['title'] }}
+					</font>
+				</a>
+			</td>
+			<td><font size=3>{{ bulletin['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</font></td>
+			<td><font size=3>
+				<a href="/oj/acct/{{ bulletin['acct_id'] }}/">{{ bulletin['name'] }}</a>
+			</font></td>
+
 	    </tr>
     {% end %}
 	</tbody>

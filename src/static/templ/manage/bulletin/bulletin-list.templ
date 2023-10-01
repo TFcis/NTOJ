@@ -1,0 +1,52 @@
+{% extends '../manage.templ' %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="/oj/manage-question.css">
+
+<script type="text/javascript">
+</script>
+{% end %}
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <table class="table">
+        <thead>
+            <tr>
+                <td>#</td>
+                <td>Title</td>
+                <td>Color</td>
+                <td>Author</td>
+                <td>Timestamp</td>
+                <td>
+                    <a class="btn btn-primary" href="/oj/manage/bulletin/add/">&#x271a</a>
+                    <div class="print"></div>
+                </td>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for bulletin in bulletin_list %}
+            <tr>
+                <th scope="row">{{ bulletin['bulletin_id'] }}</th>
+                <td>
+                    <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/"
+                        <font size=5>
+                        {% if bulletin['pinned'] %}
+                            <span class="material-symbols-outlined">push_pin</span>
+                        {% end %}
+                            {{ bulletin['title'] }}
+                        </font>
+                    </a>
+                </td>
+                <td style="color: {{ bulletin['color'] }}">{{ bulletin['color'] }}</td>
+                <td><font size=3>
+                    <a href="/oj/acct/{{ bulletin['acct_id'] }}/">{{ bulletin['name'] }}</a>
+                </font></td>
+                <td><font size=3>{{ bulletin['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</font></td>
+                <td>
+                    <a class="btn btn-secondary" href="/oj/manage/bulletin/update/?bulletinid={{ bulletin['bulletin_id'] }}">&#x2699</a>
+                </td>
+            </tr>
+        {% end %}
+        </tbody>
+    </table>
+</div>
+{% end %}

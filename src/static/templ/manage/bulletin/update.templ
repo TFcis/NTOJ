@@ -1,0 +1,81 @@
+{% extends '../manage.templ' %}
+{% block head %}
+
+<script type="text/javascript">
+    function init() {
+        let j_form = $("#form");
+
+        j_form.find("#update").on('click', (event) => {
+            let pinned = j_form.find("#pinned").is(":checked");
+            let title = j_form.find("#title").val();
+            let color = j_form.find("#color").val();
+            let content = j_form.find("#content").val();
+
+            $.post('/oj/be/manage/bulletin/update', {
+                reqtype: 'update',
+				bulletin_id: "{{ bulletin_id }}",
+                pinned: pinned,
+                title: title,
+                color: color,
+                content: content,
+            }, function(res) {
+                if (res[0] == 'E') {
+
+                } else {
+                    index.go("/oj/manage/bulletin/")
+                }
+            });
+        });
+
+		j_form.find("#remove").on('click', (event) => {
+			$.post('/oj/be/manage/bulletin/update', {
+				reqtype: 'remove',
+				bulletin_id: "{{ bulletin_id }}"
+			}, function(res) {
+                if (res[0] == 'E') {
+
+                } else {
+                    index.go("/oj/manage/bulletin/")
+                }
+			});
+		});
+
+        j_form.find("#cancel").on('click', (event) => {
+            index.go("/oj/manage/bulletin/")
+        });
+
+		j_form.find("#content").val(`{{ bulletin['content'] }}`);
+    }
+</script>
+{% end %}
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+	<form id="form">
+		<div class="mb-1">
+            <label for="pinned" class="form-label">Pinned</label>
+			<input class="form-check-input" id="pinned" type="checkbox" {% if bulletin['pinned'] %} checked {% end %}>
+		</div>
+
+		<div class="mb-1">
+            <label for="title" class="form-label">Title</label>
+			<input class="form-control" id="title" type="text" value="{{ bulletin['title'] }}">
+		</div>
+
+		<div class="mb-1">
+            <label for="color" class="form-label">Title Color (Use CSS)</label>
+			<input class="form-control" id="color" type="text" value="{{ bulletin['color'] }}">
+		</div>
+
+		<div class="mb-1">
+            <label for="content">Content</label>
+			<textarea class="form-control" name="content" id="content" cols="30" rows="10" style="white-space: pre-line;"></textarea>
+		</div>
+
+		<div class="mt-2">
+			<button type="button" class="btn btn-primary" id="update">Update</button>
+			<button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
+			<button type="button" class="btn btn-danger" id="remove">Remove</button>
+		</div>
+	</form>
+</div>
+{% end %}

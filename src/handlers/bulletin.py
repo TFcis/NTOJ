@@ -1,16 +1,33 @@
 from redis import asyncio as aioredis
 import asyncio
 
-from handlers.base import WebSocketHandler
+from handlers.base import RequestHandler, WebSocketHandler, reqenv
+from services.bulletin import BulletinService
+from services.judge import JudgeServerClusterService
 
 
-class InformSub(WebSocketHandler):
+class BulletinHandler(RequestHandler):
+    @reqenv
+    async def get(self, bulletin_id=None):
+        if bulletin_id is None:
+            can_submit = await JudgeServerClusterService.inst.is_server_online()
+            err, bulletin_list = await BulletinService.inst.list_bulletin()
+
+            await self.render('info', bulletin_list=bulletin_list, judge_server_status=can_submit)
+            return
+
+        bulletin_id = int(bulletin_id)
+        err, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
+        await self.render('bulletin', bulletin=bulletin)
+
+
+class BulletinSub(WebSocketHandler):
     async def open(self):
         self.ars = aioredis.Redis(host='localhost', port=6379, db=1)
         await self.ars.incr('online_counter', 1)
         await self.ars.sadd('online_counter_set', self.request.remote_ip)
         self.p = self.ars.pubsub()
-        await self.p.subscribe('informsub')
+        await self.p.subscribe('bulletinsub')
 
         async def test():
             async for msg in self.p.listen():
