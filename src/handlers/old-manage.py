@@ -9,30 +9,27 @@ import config
 from services.chal import ChalService
 from services.contest import ContestService
 from services.group import GroupService, GroupConst
-from services.inform import InformService
+from services.bulletin import BulletinService
 from services.judge import JudgeServerClusterService
 from services.log import LogService
 from services.pack import PackService
 from services.pro import ProService
 from services.ques import QuestionService
 from services.user import UserService, UserConst
-from utils.req import RequestHandler, reqenv
+from handlers.base import RequestHandler, reqenv, require_permission
 
 
 class ManageHandler(RequestHandler):
     @reqenv
+    @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page='dash'):
-        if self.acct['acct_type'] != UserConst.ACCTTYPE_KERNEL:
-            self.error('Eacces')
-            return
-
         if page == 'dash':
-            await self.render('manage-dash', page=page)
+            await self.render('manage/manage-dash', page=page)
             return
 
         elif page == 'judge':
             judge_status_list = await JudgeServerClusterService.inst.get_servers_status()
-            await self.render('manage-judge', page=page, judge_status_list=judge_status_list)
+            await self.render('manage/manage-judge', page=page, judge_status_list=judge_status_list)
             return
 
         elif page == 'pro':
@@ -43,17 +40,17 @@ class ManageHandler(RequestHandler):
             else:
                 lock_list = []
 
-            await self.render('manage-pro', page=page, prolist=prolist, lock_list=lock_list)
+            await self.render('manage/manage-pro', page=page, prolist=prolist, lock_list=lock_list)
             return
 
         elif page == 'addpro':
-            await self.render('manage-pro-add', page=page)
+            await self.render('manage/manage-pro-add', page=page)
             return
 
         elif page == 'reinitpro':
             pro_id = int(self.get_argument('proid'))
 
-            await self.render('manage-pro-reinit', page=page, pro_id=pro_id)
+            await self.render('manage/manage-pro-reinit', page=page, pro_id=pro_id)
             return
 
         elif page == 'updatepro':
@@ -95,7 +92,7 @@ class ManageHandler(RequestHandler):
             except FileNotFoundError:
                 conf_content = ''
 
-            await self.render('manage-pro-update', page=page, pro=pro, lock=lock, testl=testl,
+            await self.render('manage/manage-pro-update', page=page, pro=pro, lock=lock, testl=testl,
                               problem_config_json=conf_content)
             return
 
@@ -119,7 +116,7 @@ class ManageHandler(RequestHandler):
                     'start': datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8))),
                     'end': datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))}
 
-            await self.render('manage-contest',
+            await self.render('manage/manage-contest',
                               page=page,
                               meta=(await ContestService.inst.get('default'))[1],
                               contlist=await ContestService.inst.get_list(),
@@ -130,7 +127,7 @@ class ManageHandler(RequestHandler):
         elif page == 'acct':
             err, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, True)
 
-            await self.render('manage-acct', page=page, acctlist=acctlist)
+            await self.render('manage/manage-acct', page=page, acctlist=acctlist)
             return
 
         elif page == 'updateacct':
@@ -139,7 +136,7 @@ class ManageHandler(RequestHandler):
             err, acct = await UserService.inst.info_acct(acct_id)
             glist = await GroupService.inst.list_group()
             group = await GroupService.inst.group_of_acct(acct_id)
-            await self.render('manage-acct-update', page=page, acct=acct, glist=glist, group=group)
+            await self.render('manage/manage-acct-update', page=page, acct=acct, glist=glist, group=group)
             return
 
         elif page == 'question':
@@ -152,14 +149,14 @@ class ManageHandler(RequestHandler):
                 else:
                     asklist.update({acct['acct_id']: unpackb(ask)})
 
-            await self.render('manage-question', page=page, acctlist=acctlist, asklist=asklist)
+            await self.render('manage/manage-question', page=page, acctlist=acctlist, asklist=asklist)
             return
 
         elif page == 'rquestion':
             qacct_id = int(self.get_argument('qacct'))
-            err, ques_list = await QuestionService.inst.get_queslist(acct=None, acctid=qacct_id)
-            await self.rs.set(f'{qacct_id}_msg_ask', packb(False))
-            await self.render('manage-rquestion', page=page, qacct_id=qacct_id, ques_list=ques_list)
+            err, ques_list = await QuestionService.inst.get_queslist(acct_id=qacct_id)
+            # await self.rs.set(f'{qacct_id}_msg_ask', packb(False))
+            await self.render('manage/manage-rquestion', page=page, qacct_id=qacct_id, ques_list=ques_list)
             return
 
         elif page == 'inform':
@@ -168,7 +165,7 @@ class ManageHandler(RequestHandler):
             else:
                 inform_list = []
 
-            await self.render('manage-inform', page=page, inform_list=inform_list)
+            await self.render('manage/manage-inform', page=page, inform_list=inform_list)
             return
 
         elif page == 'proclass':
@@ -179,7 +176,7 @@ class ManageHandler(RequestHandler):
                 pclas_key = None
 
             if pclas_key is None:
-                await self.render('manage-proclass', page=page, pclas_key=pclas_key, pclas_name='',
+                await self.render('manage/manage-proclass', page=page, pclas_key=pclas_key, pclas_name='',
                                   clas_list=await ProService.inst.get_class_list(), p_list=None)
                 return
 
@@ -194,7 +191,7 @@ class ManageHandler(RequestHandler):
                     self.error(err)
                     return
 
-                await self.render('manage-proclass', page=page, pclas_key=pclas_key, pclas_name=pclas_name,
+                await self.render('manage/manage-proclass', page=page, pclas_key=pclas_key, pclas_name=pclas_name,
                                   clas_list=(await ProService.inst.get_class_list()), p_list=p_list)
             return
 
@@ -225,7 +222,7 @@ class ManageHandler(RequestHandler):
             else:
                 gacct = None
 
-            await self.render('manage-group', page=page, gname=gname, glist=glist, gacct=gacct, gtype=gtype,
+            await self.render('manage/manage-group', page=page, gname=gname, glist=glist, gacct=gacct, gtype=gtype,
                               gclas=gclas)
             return
 
@@ -573,7 +570,7 @@ class ManageHandler(RequestHandler):
                 index = self.get_argument('index')
                 rtext = self.get_argument('rtext')
                 qacct_id = int(self.get_argument('qacct_id'))
-                await QuestionService.inst.reply(self.acct, qacct_id, index, rtext)
+                await QuestionService.inst.reply(qacct_id, index, rtext)
                 self.finish('S')
                 return
 
@@ -585,36 +582,44 @@ class ManageHandler(RequestHandler):
                 index = self.get_argument('index')
                 rtext = self.get_argument('rtext')
                 qacct_id = int(self.get_argument('qacct_id'))
-                await QuestionService.inst.reply(self.acct, qacct_id, index, rtext)
+                await QuestionService.inst.reply(qacct_id, index, rtext)
                 self.finish('S')
                 return
 
         elif page == 'inform':
             reqtype = str(self.get_argument('reqtype'))
 
-            if reqtype == 'set':
-                text = self.get_argument('text')
-                await InformService.inst.set_inform(text)
-                await LogService.inst.add_log(f"{self.acct['name']} added a line on bulletin: \"{text}\".",
+            if reqtype == 'add':
+                # TODO: 改成Title and Content
+                title = self.get_argument('title')
+                content = self.get_argument('content')
+                pinned = self.get_argument('pinned')
+                color = self.get_argument('color')
+                await BulletinService.inst.add_bulletin(title, content, self.acct['acct_id'], color, pinned)
+
+                await LogService.inst.add_log(f"{self.acct['name']} added a line on bulletin: \"{title}\".",
                                               'manage.inform.add')
                 return
 
             elif reqtype == 'edit':
-                index = self.get_argument('index')
-                text = self.get_argument('text')
+                bulletin_id = int(self.get_argument('bulletin_id'))
+                title = self.get_argument('title')
+                content = self.get_argument('content')
+                pinned = self.get_argument('pinned')
                 color = self.get_argument('color')
+
                 await LogService.inst.add_log(
-                    f"{self.acct['name']} updated a line on bulletin: \"{text}\" which it used to be the #{int(index) + 1}th row.",
+                    f"{self.acct['name']} updated a line on bulletin: \"{title}\" which id is #{bulletin_id}.",
                     'manage.inform.update')
-                await InformService.inst.edit_inform(index, text, color)
+                await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct['acct_id'], color, pinned)
                 return
 
             elif reqtype == 'del':
-                index = self.get_argument('index')
+                bulletin_id = int(self.get_argument('bulletin_id'))
                 await LogService.inst.add_log(
-                    f"{self.acct['name']} removed a line on bulletin which it used to be the #{int(index) + 1}th row.",
+                    f"{self.acct['name']} removed a line on bulletin which id is #{bulletin_id}.",
                     'manage.inform.remove')
-                await InformService.inst.del_inform(index)
+                await BulletinService.inst.del_bulletin(bulletin_id)
                 return
             return
 
