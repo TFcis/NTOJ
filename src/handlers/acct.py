@@ -22,7 +22,7 @@ class AcctHandler(RequestHandler):
             self.error(err)
             return
 
-        max_status = await ProService.inst.get_acct_limit(self.acct)
+        max_status = ProService.inst.get_acct_limit(self.acct)
         async with self.db.acquire() as con:
             prolist = await con.fetch(
                 '''

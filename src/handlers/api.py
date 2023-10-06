@@ -32,7 +32,7 @@ class ApiHandler(RequestHandler):
             acct_id = int(self.get_argument('acct_id'))
             err, acct = await UserService.inst.info_acct(acct_id)
 
-            max_status = await ProService.inst.get_acct_limit(acct)
+            max_status = ProService.inst.get_acct_limit(acct)
             async with self.db.acquire() as con:
                 prolist = await con.fetch(
                     '''

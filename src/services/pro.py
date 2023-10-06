@@ -40,7 +40,7 @@ class ProService:
 
     async def get_pro(self, pro_id, acct=None, special=None):
         pro_id = int(pro_id)
-        max_status = await self.get_acct_limit(acct, special)
+        max_status = self.get_acct_limit(acct, special)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -106,7 +106,7 @@ class ProService:
             isadmin = False
 
         else:
-            max_status = await self.get_acct_limit(acct)
+            max_status = self.get_acct_limit(acct)
             isguest = (acct['acct_type'] == UserConst.ACCTTYPE_GUEST)
             isadmin = (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
 
@@ -311,7 +311,7 @@ class ProService:
         return None, None
 
     # TODO: 把這破函數命名改一下
-    async def get_acct_limit(self, acct, special=None):
+    def get_acct_limit(self, acct, special=None):
         if special:
             return ProService.STATUS_OFFLINE
 
@@ -446,103 +446,3 @@ class ProClassService:
 
     async def get_priclass_list(self, acct_id):
         pass
-
-    async def get_pclass_list(self, pro_clas):
-        if (clas := (await self.rs.get(f'{pro_clas}_pro_list'))) is None:
-            return 'Enoext', None
-
-        return None, unpackb(clas)
-
-    async def get_class_list_old(self):
-        if (clas_list := (await self.rs.get('pro_class_list'))) is None:
-            await self.rs.set('pro_class_list', packb([]))
-            return []
-
-        return unpackb(clas_list)
-
-    async def get_class_list(self):
-        if (clas_list := (await self.rs.get('pro_class_list2'))) is None:
-            res = []
-            for row in await self.get_class_list_old():
-                res.append({
-                    'key': row,
-                    'name': row,
-                })
-            await self.rs.set('pro_class_list2', packb(res))
-            return res
-
-        return unpackb(clas_list)
-
-    async def get_pclass_name_by_key(self, pclas_key):
-        pclas_key = str(pclas_key)
-        clas_list = await self.get_class_list()
-        for row in clas_list:
-            if row['key'] == pclas_key:
-                return row['name']
-
-        return None
-
-    async def get_pclass_key_by_name(self, pclas_name):
-        pclas_name = str(pclas_name)
-        clas_list = await self.get_class_list()
-        for row in clas_list:
-            if row['name'] == pclas_name:
-                return row['key']
-
-        return None
-
-    async def add_pclass(self, pclas_key, pclas_name, p_list):
-        if (pclas_key := str(pclas_key)) == '':
-            return 'EbadKey'
-
-        clas_list = await self.get_class_list()
-        clas_list_keys = [row['key'] for row in clas_list]
-        if pclas_key in clas_list_keys:
-            return 'Eexist'
-
-        clas_list.append({
-            'key': pclas_key,
-            'name': pclas_name
-        })
-        await self.rs.set('pro_class_list2', packb(clas_list))
-        await self.rs.set(f'{pclas_key}_pro_list', packb(p_list))
-        return None
-
-    async def remove_pclass(self, pclas_key):
-        clas_list = await self.get_class_list()
-        clas_list_keys = [row['key'] for row in clas_list]
-
-        try:
-            clas_index = clas_list_keys.index(str(pclas_key))
-
-        except ValueError:
-            return 'Eexist'
-
-        clas_list.pop(clas_index)
-        await self.rs.set('pro_class_list2', packb(clas_list))
-        await self.rs.delete(f'{pclas_key}_pro_list')
-        return None
-
-    async def edit_pclass(self, pclas_key, new_pclas_key, pclas_name, p_list):
-        if (new_pclas_key := str(new_pclas_key)) == '':
-            return 'EbadKey'
-
-        clas_list = await self.get_class_list()
-        clas_list_keys = [row['key'] for row in clas_list]
-
-        try:
-            pclas_key = str(pclas_key)
-            clas_index = clas_list_keys.index(pclas_key)
-
-        except ValueError:
-            return 'Eexist'
-
-        clas_list[clas_index]['key'] = new_pclas_key
-        clas_list[clas_index]['name'] = str(pclas_name)
-        await self.rs.set('pro_class_list2', packb(clas_list))
-
-        if pclas_key != new_pclas_key:
-            await self.rs.delete(f'{pclas_key}_pro_list')
-
-        await self.rs.set(f'{new_pclas_key}_pro_list', packb(p_list))
-        return None
