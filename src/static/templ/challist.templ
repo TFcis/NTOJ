@@ -204,15 +204,20 @@
             </tbody>
         </table>
 
+        {% from tornado.escape import url_escape %}
+
         {% set postfix = '' %}
         {% if flt['pro_id'] != None %}
-            {% set postfix = postfix + '&proid=%s'%ppro_id %}
+            {% set postfix = postfix + f"&proid={ppro_id}" %}
         {% end %}
         {% if flt['acct_id'] != None %}
-            {% set postfix = postfix + '&acctid=%s'%pacct_id %}
+            {% set postfix = postfix + f"&acctid={pacct_id}" %}
         {% end %}
         {% if flt['state'] != 0 %}
-            {% set postfix = postfix + '&state=%s'%flt['state']%}
+            {% set postfix = postfix + f"&state={flt['state']}" %}
+        {% end %}
+        {% if flt['compiler'] != 'all' %}
+            {% set postfix = postfix + "&compiler_type=" + url_escape(flt['compiler'], False) %}
         {% end %}
 
         <div class="row">
