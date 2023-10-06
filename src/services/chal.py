@@ -3,9 +3,10 @@ import json
 import os
 
 import config
-from services.judge import JudgeServerClusterService
+from services.judge import JudgeServerClusterService, NewJudgeService
 from services.log import LogService
 from services.user import UserConst
+from services.pro import ProService
 
 
 class ChalConst:
@@ -274,15 +275,17 @@ class ChalService:
         if test_conf['comp_type'] == 'makefile':
             comp_type = 'makefile'
 
-        await JudgeServerClusterService.inst.send(json.dumps({
-            'chal_id': chal_id,
-            'test': testl,
-            'code_path': code_path,
-            'res_path': res_path,
-            'metadata': chalmeta,
-            'comp_type': comp_type,
-            'check_type': test_conf['check_type'],
-        }))
+        await JudgeServerClusterService.inst.new_judge.send_to_compile(chal_id, code_path, file_ext, comp_type)
+
+        # await JudgeServerClusterService.inst.send(json.dumps({
+        #     'chal_id': chal_id,
+        #     'test': testl,
+        #     'code_path': code_path,
+        #     'res_path': res_path,
+        #     'metadata': chalmeta,
+        #     'comp_type': comp_type,
+        #     'check_type': test_conf['check_type'],
+        # }))
 
         await self.rs.hdel('rate@kernel_True', str(acct_id))
         await self.rs.hdel('rate@kernel_False', str(acct_id))
@@ -297,6 +300,8 @@ class ChalService:
             flt = {'pro_id': None, 'acct_id': None, 'state': 0, 'compiler': 'all'}
         fltquery = await self._get_fltquery(flt)
 
+        max_status = ProService.inst.get_acct_limit({'acct_type': min_accttype})
+
         async with self.db.acquire() as con:
             result = await con.fetch(
                 f'''
@@ -306,6 +311,8 @@ class ChalService:
                     FROM "challenge"
                     INNER JOIN "account"
                     ON "challenge"."acct_id" = "account"."acct_id"
+                    INNER JOIN "problem"
+                    ON "challenge"."pro_id" = "problem"."pro_id" AND "problem"."status" <= {max_status}
                     LEFT JOIN "challenge_state"
                     ON "challenge"."chal_id" = "challenge_state"."chal_id"
                     WHERE "account"."acct_type" >= {min_accttype}
