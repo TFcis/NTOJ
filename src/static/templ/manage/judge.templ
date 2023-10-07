@@ -1,0 +1,97 @@
+{% extends 'manage.templ' %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="/oj/manage-dash.css">
+
+<script type="text/javascript" id="contjs">
+    var j_form = $('#form');
+    function init() {
+    }
+
+    function connect_sever(index) {
+        $.post('/oj/be/manage/judge', {
+            'reqtype': 'connect',
+            'index': index,
+        }, function(res) {
+            var msg = 'Unknown';
+
+            if (res[0] == 'E') {
+                if (res == 'Ejudge') {
+                    msg = 'Cannot connect to server';
+	    	        j_form.find('div.print').print(msg);
+                } else {
+                    j_form.find('div.print').print(res);
+                }
+            } else {
+	    	    j_form.find('div.print').print('Connect Server Successfully', true);
+	    		setTimeout(function(){location.href='/oj/manage/judge/';}, 1000);
+            }
+        });
+    }
+
+    function disconnect_server(index) {
+        pwd = prompt('password');
+        $.post('/oj/be/manage/judge', {
+            'reqtype': 'disconnect',
+            'index': index,
+            'pwd': pwd,
+        }, function(res) {
+            var msg = 'Unknown';
+
+            if (res[0] == 'E') {
+                if (res == 'Ejudge') {
+                    msg = 'server was offline';
+                    j_form.find('div.print').print(msg);
+                } else if (res == 'Eacces') {
+                    msg = 'password incorrect';
+                    j_form.find('div.print').print(msg);
+                } else {
+                    j_form.find('div.print').print(res);
+                }
+            } else {
+	    	    j_form.find('div.print').print('Disconnect Server Successfully', true);
+	    		setTimeout(function(){location.href='/oj/manage/judge/';}, 1000);
+            }
+        });
+    }
+</script>
+{% end %}
+{% block content %}
+<div class="col-lg-10 mt-lg-2">
+    Server Status
+    <div id="form">
+        <table border=2 class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+            <thead>
+            <tr>
+                <td>Server Name</td>
+                <td>Running Challenge Count</td>
+                <td>Status</td>
+                <td>Connect</td>
+                <td>Disconnect</td>
+            </tr>
+            </thead>
+            <tbody>
+                {% set count = 0 %}
+                {% for judge_status in judge_status_list %}
+                <tr>
+                    {% if judge_status['name'] == '' %}
+                        <td>Server-{{ count }}</td>
+                    {% else %}
+                        <td>{{ judge_status['name'] }}</td>
+                    {% end %}
+                    <td>{{ judge_status['running_chal_cnt'] }}</td>
+                    {% if judge_status['status'] == True %}
+                        <td style="color: green !important;">Online</td>
+                    {% else %}
+                        <td style="color: red !important;">Offline</td>
+                    {% end %}
+                    <td><button class="btn btn-primary" type="button" onclick="connect_sever({{ count }});">Connect</button></td>
+                    <td><button class="btn btn-danger" type="button" onclick="disconnect_server({{ count }});">Disconnect</button></td>
+                </tr>
+                {% set count = count + 1 %}
+                {% end %}
+            </tbody>
+        </table>
+        <div class="print"></div>
+    </div>
+</div>
+{% end %}

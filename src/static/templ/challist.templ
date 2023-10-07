@@ -1,0 +1,244 @@
+{% import math %}
+{% from services.chal import ChalService %}
+
+<link rel="stylesheet" type="text/css" href="/oj/challist.css">
+
+<script type="text/javascript">
+    var ws;
+    var chalsub_count;
+    var re = /[^0-9,\ ]/
+
+    function init() {
+        var j_filter = $('#filter');
+        var j_chalsub = $('#chalsub');
+	    j_filter.find('input, select').keypress(function(e) {
+
+	        if (e.keyCode == 13) {
+                //KeyCode 13 means Enter
+		        let proid = j_filter.find('#proid').val();
+		        let acctid = j_filter.find('#acctid').val();
+		        let state = j_filter.find('#state').val();
+                let compiler_type = j_filter.find("#compiler").val();
+		        let url = '/oj/chal/?';
+
+                if (re.test(proid) || re.test(acctid)) {
+                    alert('請輸入數字、逗號與空白做查詢，範例：1, 2, 3')
+                    j_filter.find('input.proid').val('')
+                    j_filter.find('input.acctid').val('')
+                    return
+                }
+
+                if (proid != '') {
+                    url += `&proid=${proid}`
+                }
+
+                if (acctid != '') {
+                    url += `&acctid=${acctid}`;
+                }
+
+                if (state != '') {
+                    url += `&state=${state}`;
+                }
+
+                if (compiler_type != '') {
+                    url += `&compiler_type=${compiler_type}`;
+                }
+
+                index.go(url);
+            }
+	    });
+
+        j_filter.find('button.submit').on('click', function(e) {
+            let proid = j_filter.find('#proid').val();
+            let acctid = j_filter.find('#acctid').val();
+	        let state = j_filter.find('#state').val();
+            let compiler_type = j_filter.find("#compiler").val();
+            let url = '/oj/chal/?';
+
+            if (re.test(proid) || re.test(acctid)) {
+                alert('請輸入數字、逗號與空白做查詢，範例：1, 2, 3')
+                j_filter.find('input.proid').val('')
+                j_filter.find('input.acctid').val('')
+                return
+            }
+
+            if (proid != '') {
+                url += `&proid=${proid}`
+            }
+
+            if (acctid != '') {
+                url += `&acctid=${acctid}`;
+            }
+
+            if (state != '') {
+                url += `&state=${state}`;
+            }
+
+            if (compiler_type != '') {
+                url += `&compiler_type=${compiler_type}`;
+            }
+
+            index.go(url);
+        });
+
+        j_chalsub.on('click', function(e) {
+            index.reload();
+        });
+
+        chalsub_count = 0;
+
+        let ws_link = '';
+        if (location.protocol !== 'https:') {
+            ws_link = `ws://${location.hostname}/oj/be/chalsub`;
+        } else {
+            ws_link = `wss://${location.hostname}/oj/be/chalsub`;
+        }
+	    ws = new WebSocket(ws_link);
+
+	    ws.onopen = function(e) {
+
+	    };
+
+	    ws.onmessage = function(e) {
+            chalsub_count += 1;
+            j_chalsub.find('a').text(chalsub_count + ' new challenges');
+            j_chalsub.show();
+        };
+
+        var chalids = {{ chalids }};
+        $('#rechalall').on('click', function(e) {
+            chalids.forEach(function(chalid) {
+                $.post('/oj/be/submit', {
+                    'reqtype': 'rechal',
+                    'chal_id': chalid,
+                });
+            });
+            index.reload();
+        });
+    }
+
+    function destroy() {
+        ws.close();
+    }
+</script>
+
+<div class="row">
+    <div class="col-lg-2 col-12">
+        <form id="filter">
+            <label class="form-label">過濾器</label>
+
+            <div class="mb-1">
+                <label class="form-label">Your ID: {{ acct['acct_id'] }}</label>
+                <input id="proid" class="form-control mb-1" type="text" value="{% if flt['pro_id'] != None %}{{ ppro_id }}{% end %}" placeholder="Problem ID">
+                <input id="acctid" class="form-control mb-1" type="text" value="{% if flt['acct_id'] != None %}{{ pacct_id }}{% end %}" placeholder="Account ID">
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">Status</label>
+                <select id="state" class="form-select">
+                    <option value=0 {% if flt['state'] == 0 %}selected{% end %}>All</option>
+                    <option value=1 {% if flt['state'] == 1 %}selected{% end %}>AC</option>
+                    <option value=2 {% if flt['state'] == 2 %}selected{% end %}>WA</option>
+                    <option value=3 {% if flt['state'] == 3 %}selected{% end %}>RE</option>
+                    <option value=4 {% if flt['state'] == 4 %}selected{% end %}>TLE</option>
+                    <option value=5 {% if flt['state'] == 5 %}selected{% end %}>MLE</option>
+                    <option value=6 {% if flt['state'] == 6 %}selected{% end %}>CE</option>
+                    <option value=7 {% if flt['state'] == 7 %}selected{% end %}>IE</option>
+                    <option value=100 {% if flt['state'] == 100 %}selected{% end %}>Challenging</option>
+                    <option value=101 {% if flt['state'] == 101 %}selected{% end %}>Not started</option>
+                </select>
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">Compiler</label>
+                <select id="compiler" class="form-select">
+                    <option value="all" {% if flt['compiler'] == 'all' %}selected{% end %}>All</option>
+                    <option value="g%2B%2B" {% if flt['compiler'] == 'g++' %}selected{% end %}>G++ 9.4.0 GNU++17</option>
+                    <!-- %2B means '+' -->
+                    <option value="clang%2B%2B" {% if flt['compiler'] == 'clang++' %}selected{% end %}>Clang++ 10.0.0 C++17</option>
+                    <option value="rustc" {% if flt['compiler'] == 'rustc' %}selected{% end %}>Rustc 1.65</option>
+                    <option value="python3" {% if flt['compiler'] == 'python3' %}selected{% end %}>CPython 3.8.10</option>
+                </select>
+            </div>
+
+            <div class="mb-1">
+                <button type="button" class="btn btn-primary mx-auto submit">Filter</button>
+                {% if (flt['state'] == 100 or flt['state'] == 101) and isadmin %}
+                    <button type="button" id="rechalall" class="btn btn-warning btn-sm">Rechallenge all</button>
+                {% end %}
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-10 col-12">
+        <table id="challist" class="table table-striped table-hover table-sm table-responsive-sm col mx-lg-3">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Problem</th>
+                    <th scope="col">Account</th>
+                    <th scope="col">State</th>
+                    <th scope="col">Runtime</th>
+                    <th scope="col">Memory</th>
+                    <th scope="col">Compiler</th>
+                    <th scope="col">Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="chalsub" style="cursor:pointer; display:none;">
+                    <td colspan=3></td>
+                    <td colspan=4><a href="" style="color:#58B2DC"></a></td>
+                </tr>
+            {% for chal in challist %}
+                <tr>
+                    <td scope="row"><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
+                    <td><a href="/oj/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
+                    <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a></td>
+                    <td class="state-{{ chal['state'] }}">{{ ChalService.STATE_STR[chal['state']] }}</td>
+                    <td>{{ chal['runtime'] }}</td>
+                    <td>{{ round(chal['memory'] / 1024) }}</td>
+                    <td>{{ chal['comp_type'] }}</td>
+                    <td class="time">{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                </tr>
+            {% end %}
+            </tbody>
+        </table>
+
+        {% from tornado.escape import url_escape %}
+
+        {% set postfix = '' %}
+        {% if flt['pro_id'] != None %}
+            {% set postfix = postfix + f"&proid={ppro_id}" %}
+        {% end %}
+        {% if flt['acct_id'] != None %}
+            {% set postfix = postfix + f"&acctid={pacct_id}" %}
+        {% end %}
+        {% if flt['state'] != 0 %}
+            {% set postfix = postfix + f"&state={flt['state']}" %}
+        {% end %}
+        {% if flt['compiler'] != 'all' %}
+            {% set postfix = postfix + "&compiler_type=" + url_escape(flt['compiler'], False) %}
+        {% end %}
+
+        <div class="row">
+            <div class="col-1"></div>
+            <div class="col pt-3">
+                <nav aria-label="Page navigation example">
+                    <ul class="pagination justify-content-center">
+                        <!-- this algorithm from toj -->
+                        <!-- 我沒研究怎麼實現的，但能用 -->
+                        <li class="page-item"><a class="page-link" href="?off=0{{ postfix }}">&#x21e4;</a></li>
+                        {% import math %}
+                        {% set ct = math.floor(pageoff / 20) %}
+                        {% set st = min(max(0, ct - 9), max(0, math.ceil(chalstat['total_chal'] / 20) - 19)) %}
+                        {% for i, off in enumerate(range(st * 20, min(chalstat['total_chal'], st * 20 + 380), 20)) %}
+                        <li class="page-item {% if ct == (i + st) %} active {% end %}">
+                            <a class="page-link {% if ct == (i + st) %} active{% end %}" href="?off={{ str(off) + postfix }}">{{i + 1 + st}}</a>
+                        </li>
+                        {% end %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>

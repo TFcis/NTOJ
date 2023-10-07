@@ -1,0 +1,32 @@
+<script type="text/javascript" id="contjs">
+    function init() {
+    }
+</script>
+<div class="col-lg-12 ms-lg-2">
+    <table id="prolist" class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+	<thead>
+	    <tr>
+			<th scope="col">#</th>
+			<th scope="col">Board Name</th>
+			<th scope="col">Status</th>
+	    </tr>
+	</thead>
+	<tbody>
+	{% for board in boardlist %}
+	    <tr>
+			<th scope="row">{{ board['board_id'] }}</th>
+            <td><a href="/oj/board/{{ board['board_id'] }}/">{{ board['name'] }}</a></td>
+            <td>
+				{% set delta = board['end'] - datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8))) %}
+				{% set deltasecond = delta.days * 24 * 60 * 60 + delta.seconds %}
+				{% if deltasecond <= 0 %}
+				Over
+				{% else %}
+				Online
+				{% end %}
+			</td>
+	    </tr>
+	{% end %}
+	</tbody>
+    </table>
+</div>

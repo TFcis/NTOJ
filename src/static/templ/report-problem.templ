@@ -1,0 +1,53 @@
+<link rel="stylesheet" type="text/css" href="/oj/submit.css">
+
+<script type="text/javascript">
+    function init() {
+	    var j_submit = $('#submit');
+
+        j_submit.find('button.submit').on('click', function(e) {
+            let info = j_submit.find('textarea.info').val();
+            let chal_id = {{ chal_id }};
+
+            $.post('/oj/be/question', {
+                'reqtype': 'ask',
+                'acct_id': {{ acct['acct_id'] }},
+                'qtext':
+                `
+                題目問題回報
+                chal_id: ${chal_id}
+                其他資訊: ${info}
+                `,
+            }, function(res) {
+                if (res[0] == 'E') {
+                    if (res == 'E') {
+                    } else {
+                        j_submit.find('div.print').print(res);
+                    }
+                } else {
+                    j_submit.find('div.print').print('Success!!!');
+                    setTimeout(function(){index.go("/oj/info/");}, 2000);
+                }
+            });
+        });
+
+        j_submit.find('button.cancel').on('click', function(e) {
+            if (index.prev_url == null) {
+                location.href = '/oj/info/';
+                return;
+            }
+            location.href = index.prev_url;
+        })
+    }
+</script>
+
+<div id="submit" class="g-lg-8 g-off-lg-2 blk-cont">
+    <h1>題目問題回報</h1>
+    <p>
+    下面可以撰寫您認為對我們有幫助的資訊，謝謝
+    </p>
+
+    <textarea class="info" placeholder="Info"></textarea>
+    <button class="btn btn-warning submit">Send Report</button>
+    <button class="btn btn-success cancel">Cancel</button>
+    <div class="print"></div>
+</div>

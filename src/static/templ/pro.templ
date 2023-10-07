@@ -1,0 +1,231 @@
+<link rel="stylesheet" type="text/css" href="/oj/pro.css">
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax:{
+            inlineMath:[['$','$'],['\\(','\\)']]
+        }
+    });
+</script>
+<script type="text/javascript">
+    function init(){
+        var scriptTag = document.createElement('script');
+        scriptTag.src = 'https://toj.tfcis.org/oj/third/pdf_find_bar.js';
+        document.head.appendChild(scriptTag);
+
+        scriptTag = document.createElement('script');
+        scriptTag.src = 'https://toj.tfcis.org/oj/third/pdf_find_controller.js';
+        document.head.appendChild(scriptTag);
+
+        scriptTag = document.createElement('script');
+        scriptTag.src = 'https://toj.tfcis.org/oj/third/text_layer_builder.js';
+        document.head.appendChild(scriptTag);
+
+        scriptTag = document.createElement('script');
+        scriptTag.src = 'https://toj.tfcis.org/oj/third/ui_utils.js';
+        document.head.appendChild(scriptTag);
+
+        PDFJS.workerSrc = 'https://toj.tfcis.org/oj/third/pdf.worker.js'
+        
+        $('#tags').keydown(function(event) {
+            if (event.which == 13) // return
+                $('#tags').focusout();
+        });
+
+        $('#tags').focusout(function(event) {
+            var tags = event.target.value;
+            if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1 || tags.length==0) {
+                // valid
+                $('#tags-invalid').hide();
+                $.post('/oj/be/set-tags', {
+                    'pro_id': {{ pro['pro_id'] }},
+                    'tags': tags,
+                }, function() {
+                    $('#tags-done').show();
+                });
+            } else {
+                // invalid
+                event.target.focus();
+                $('#tags-invalid').show();
+            }
+        });
+
+        $("#pdfbtn").on('click', function(event) {
+            let url = "/oj/pro/{{ pro['pro_id'] }}/cont.pdf?download=1";
+            let downloadLink = document.createElement("a");
+
+            downloadLink.href = url;
+            downloadLink.setAttribute("download", "");
+            downloadLink.target = 'downloadIframe';
+            downloadLink.click();
+        });
+
+        var viewer = 1;
+        $('#switchviewer').on('click', function() {
+            if (viewer == 1) {
+                _load_pdf_embed();
+                viewer = 2;
+            } else {
+                _load_pdf_js();
+                viewer = 1;
+            }
+        });
+
+        var j_cont = $('#cont');
+
+        function _load_html() {
+            scriptTag = document.createElement('script');
+            scriptTag.src = 'https://toj.tfcis.org/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
+            document.head.appendChild(scriptTag);
+
+            j_cont.load('/oj/pro/{{ pro['pro_id'] }}/cont.html', function(res, status, xhr) {
+                if (status == 'error') {
+                    $('#pdfbtn').show();
+                    $('#switchviewer').show();
+
+                    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                        _load_pdf_js();
+                    } else {
+                        _load_pdf_embed();
+                        viewer = 2;
+                    }
+                } else {
+                    MathJax.Hub.Queue(["Typeset",MathJax.Hub,j_cont[0]]);
+                    j_cont.find('pre > code').each(function(i, e) {
+                        $(e).addClass('html');
+                        hljs.highlightBlock(e);
+                    });
+                }
+            });
+        }
+        function _load_pdf_js() {
+            PDFJS.getDocument('/oj/pro/{{ pro['pro_id'] }}/cont.pdf').then(function(pdf) {
+                var i;
+                j_cont.empty();
+                for (i = 1; i <= pdf.numPages; i++) {
+                    var j_page = $('<div id="pdf-page-' + i + '"></div>');
+                    j_cont.append(j_page)
+                }
+
+                for (i = 0;i < pdf.numPages; i++) {
+                    pdf.getPage(i + 1).then(function(idx){return function(page) {
+                        var j_page = $('#pdf-page-' + idx);
+                        var j_canvas = $('<canvas style="width:100%; margin-bottom:16px; display:block;"></canvas>');
+                        var j_div = $('<div></div>');
+                        var ctx = j_canvas[0].getContext('2d');
+                        var offset;
+                        var viewport;
+
+                        j_page.append(j_canvas);
+
+                        offset = j_canvas.offset();
+                        viewport = page.getViewport(
+                            j_canvas.width() / page.getViewport(1.0).width);
+
+                        j_canvas.attr('width', viewport.width);
+                        j_canvas.attr('height', viewport.height);
+
+                        j_div.addClass('textlayer');
+                        j_div.css('width', viewport.width);
+                        j_div.css('height', viewport.height);
+                        j_div.offset({'top':offset.top, 'left':offset.left});
+
+                        j_page.append(j_div);
+
+                        page.getTextContent().then(function(text) {
+                            var textlayer = new TextLayerBuilder({
+                                'textLayerDiv': j_div[0],
+                                'viewport': viewport,
+                                'pageIndex': idx
+                            });
+
+                            textlayer.setTextContent(text);
+
+                            page.render({
+                                'canvasContext': ctx,
+                                'viewport': viewport,
+                                'textLayer': textlayer
+                            });
+                        });
+                    };}(i + 1));
+                }
+            });
+        }
+        function _load_pdf_embed() {
+            j_cont.empty();
+            var embed = $('<embed width="100%" height="100%" src="/oj/pro/{{ pro['pro_id'] }}/cont.pdf" type="application/pdf">');
+            j_cont.append(embed);
+        }
+        _load_html();
+    }
+</script>
+<div class="row">
+    <div id="side" class="col-lg-2 col-12 mt-lg-2">
+        <h3>{{ pro['pro_id']}} / {{ pro['name'] }}</h3>
+        {% if can_submit == True %}
+            <a class="btn btn-primary btn-lg my-lg-1" href="/oj/submit/{{ pro['pro_id'] }}/">Submit</a><br />
+        {% else %}
+            <a class="btn btn-warning btn-lg my-lg-1">Cannot Submit</a><br />
+        {% end %}
+
+        <div class="my-lg-1">
+            <a class="btn btn-success" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
+            <a class="btn btn-secondary" href="/oj/chal/?proid={{ pro['pro_id'] }}">Status</a>
+        </div>
+
+        <div class="my-lg-1">
+            <a class="btn btn-warning my-lg-1" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
+            <a class="btn btn-warning my-lg-1" id="switchviewer" style="display:none; width:156px; text-align:center;">Switch Viewer</a>
+        </div>
+        {% if (isadmin) %}
+            <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="add tags here">
+        {% else %}
+            <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="no tags" disabled>
+        {% end %}
+        <div></div>
+        <span id="tags-invalid" style="color:red; display:none">TAGS INVALID!</span>
+        <span id="tags-done" style="color:green; display:none">SET TAGS SUCCESS</span>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Key</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>time</td>
+                    <td>{{ testl[0]['timelimit'] }} &nbsp;ms</td>
+                </tr>
+                <tr>
+                    <td>mem</td>
+                    <td>{{ round(testl[0]['memlimit'] / 1024) }} Kb</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Test</th>
+                    <th>Weight</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for test in testl %}
+                    <tr>
+                        <td>{{ '%04d' % (test['test_idx'] + 1) }}</td>
+                        <td>{{ test['weight'] }}</td>
+                    </tr>
+                {% end %}
+            </tbody>
+        </table>
+        {% if (isadmin) %}
+            <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro['pro_id']}}">Manage</a>
+        {% end %}
+    </div>
+
+    <!-- TODO: Remove fixed height -->
+    <div id="cont" class="col-lg-10 col-12" style="height: 904px;">
+        <strong>Loading...</strong>
+    </div>
+</div>

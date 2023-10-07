@@ -1,0 +1,154 @@
+{% import math %}
+{% from services.chal import ChalService %}
+
+<link rel="stylesheet" type="text/css" href="/oj/proset.css">
+
+<script type="text/javascript">
+    var re = /[^0-9]/
+    function init() {
+        var j_filter = $('#filter');
+
+        j_filter.find('#publicProClass').on('change', function(e) {
+            var off = location.href.match(/off=(\d+)/);
+            var pubclass_id = $(this).val();
+
+            if (off == null) {
+                off = 0;
+            } else {
+                off = parseInt(off[1]);
+            }
+
+            if (pubclass_id == 'None') {
+                index.go(`/oj/proset/?off=${off}`);
+            } else {
+                index.go(`/oj/proset/?off=${off}&pubclass_id=${pubclass_id}`);
+            }
+        });
+
+        var select_prob = j_filter.find('input.select_prob');
+        select_prob.on('keypress', function(e) {
+            if (e.keyCode == 13) {
+                if (re.test(select_prob.val())) {
+                    alert('請輸入數字')
+                    select_prob.val('')
+                    return
+                }
+                $(location).attr('href', "/oj/pro/" + select_prob.val() + "/");
+            }
+        });
+    }
+</script>
+
+<div class="row">
+    <div class="col-lg-2 col-12">
+        <form id="filter">
+            <label class="form-label">過濾器</label>
+
+            <div class="mb-1">
+                <label for="" class="form-label">Public Problem Class</label>
+                <select id="publicProClass" class="form-select">
+                    <option value="None" {% if cur_pubclass is None %}selected{% end %}>None</option>
+                    {% for pc in pubclass_list %}
+                        <option value="{{ pc['pubclass_id'] }}" {% if cur_pubclass is not None and pc['pubclass_id'] == cur_pubclass['pubclass_id'] %}selected{% end %}>
+                            {{ pc['name'] }}
+                        </option>
+                    {% end %}
+                </select>
+            </div>
+
+            <div class="mb-1">
+                <label for="" class="form-label">Private Problem Class</label>
+                <select id="privateProClass" class="form-select">
+                    <option value="WIP">None</option> <!-- TODO: Private Problem Set -->
+                </select>
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">Go to Problem</label>
+                <input type="text" class="select_prob form-control" placeholder="problem number">
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-10 col-12">
+        <table id="prolist" class="table table-striped table-hover table-responsive col mx-lg-3">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">State</th>
+                    <th scope="col">Problem Name</th>
+                    <th scope="col">AC Ratio (User)</th>
+                    <th scope="col">AC Ratio (Submission)</th>
+                    <th scope="col">Tags</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for pro in prolist %}
+                <tr>
+                    <td class="id">{{ pro['pro_id'] }}</td>
+                    {% if pro['state'] is None %}
+                        <td>Todo</td> 
+                    {% else %}
+                        <td class="state-{{ pro['state'] }}">{{ChalService.STATE_STR[pro['state']]}}</td>
+                    {% end %}
+                    <td class="name">
+                        <a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['name'] }}</a>
+                    </td>
+                    
+                    {% set rate = pro['rate_data'] %}
+                    <td>
+                        {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
+                            {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}% 
+                        {% else %}
+                            {{ '0.00%' }}
+                        {% end %}
+
+                        ({{ rate['user_ac_chal_cnt'] }} / {{ rate['user_all_chal_cnt'] }})
+                    </td>
+
+                    <td>
+                        {% if rate['all_chal_cnt'] and rate['ac_chal_cnt'] %}
+                            {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}% 
+                        {% else %}
+                            {{ '0.00%' }}
+                        {% end %}
+                        (<a href="/oj/chal/?proid={{ pro['pro_id'] }}&state=1">{{ rate['ac_chal_cnt'] }}</a>
+                        /
+                        <a href="/oj/chal/?proid={{ pro['pro_id'] }}">{{ rate['all_chal_cnt'] }}</a>)
+                    </td>
+
+                    <td class="name">{{ pro.get('tags', '') or '' }}</td>
+                </tr>
+            {% end %}
+            </tbody>
+        </table>
+
+        {% set postfix = '' %}
+        {% if cur_pubclass != None %}
+        {% set postfix = postfix + '&pubclass_id=%s' % cur_pubclass['pubclass_id'] %}
+        {% end %}
+
+        <div class="row">
+            <div class="col-1"></div>
+            <div class="col pt-3">
+                <nav aria-label="Page navigation example">
+                    <ul class="pagination justify-content-center">
+                        <!-- this algorithm from toj -->
+                        <!-- 我沒研究怎麼實現的，但能用 -->
+                        <li class="page-item"><a class="page-link" href="?off=0{{ postfix }}">&#x21e4;</a></li>
+                        {% import math %}
+                        {% set limit = 40 %}
+                        {% set ct = math.floor(pageoff / limit) %}
+                        {% set st = min(max(0, ct - 9), max(0, math.ceil(pronum / limit) - 39)) %}
+                        {% for i, off in enumerate(range(st * limit, pronum, limit)) %}
+                        <li class="page-item {% if ct == (i + st) %} active {% end %}">
+                            <a class="page-link {% if ct == (i + st) %} active{% end %}" href="?off={{ str(off) + postfix }}">{{i + 1 + st}}</a>
+                        </li>
+                        {% end %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+    </div>
+</div>

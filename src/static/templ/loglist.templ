@@ -1,0 +1,77 @@
+{% import math %}
+
+<link rel="stylesheet" type="text/css" href="/oj/proset.css">
+
+<script type="text/javascript">
+    var j_form = $("#form");
+    function init() {
+        j_form.find("#logtype_list").on('change', function(e) {
+            var url = '/oj/log/';
+            var logtype = $(this).val();
+            if (logtype != 'All Type') {
+                url += '?logtype=' + logtype;
+            }
+            index.go(url);
+        });
+    }
+</script>
+
+<div id="prolist">
+    <div id="form" class="row">
+        <strong>Type Filter  </strong>
+        <select class="form-select" id="logtype_list">
+            <option value="All Type" {% if cur_logtype == None %}selected{% end %}>All Type</option>
+            {% for logtype in logtype_list %}
+                <option value="{{ logtype }}" {% if logtype == cur_logtype %}selected{% end %}>{{ logtype }}</option>
+            {% end %}
+        </select>
+    </div>
+    <div class="row">
+        <table class="table table-striped table-hover table-sm table-responsive-sm col mx-lg-3">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Message</th>
+                    <th scope="col">Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for log in loglist %}
+                <tr>
+                    <td scope="row" class="id">{{ log['log_id'] }}</td>
+                    <td>{% raw log['message'] %}</td>
+                    <td>{{ log['timestamp'] }}</td>
+                </tr>
+            {% end %}
+            </tbody>
+        </table>
+
+        <div class="row">
+            <div class="col-1"></div>
+            <div class="col pt-3">
+                <nav aria-label="Page navigation example">
+                    <ul class="pagination justify-content-center">
+                        <!-- this algorithm from toj -->
+                        <!-- 我沒研究怎麼實現的，但能用 -->
+                        {% set postfix = '' %}
+                        {% if cur_logtype is not None %}
+                            {% set postfix = postfix + '&logtype=%s' % cur_logtype %}
+                        {% end %}
+
+                        <li class="page-item"><a class="page-link" href="?off=0{{ postfix }}">&#x21e4;</a></li>
+                        {% import math %}
+                        {% set limit = 50 %}
+                        {% set ct = math.floor(pageoff / limit) %}
+                        {% set st = min(max(0, ct - 9), max(0, math.ceil(lognum / limit) - 19)) %}
+                        {% for i, off in enumerate(range(st * limit, min(lognum, st * limit + 950), limit)) %}
+                        <li class="page-item {% if ct == (i + st) %} active {% end %}">
+                            <a class="page-link {% if ct == (i + st) %} active{% end %}" href="?off={{ str(off) + postfix }}">{{i + 1 + st}}</a>
+                        </li>
+                        {% end %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+    </div>
+</div>

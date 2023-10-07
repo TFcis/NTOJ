@@ -1,0 +1,46 @@
+{% extends '../manage.templ' %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="/oj/manage-acct.css">
+
+<script type="text/javascript" id="contjs">
+    function init() {
+	}
+</script>
+
+{% end %}
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+
+	<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+		<thead>
+			<th scope="col">#</th>
+			<th scope="col">Board Name</th>
+			<th scope="col">Status</th>
+			<th scope="col">
+				<a class="btn btn-primary" href="/oj/manage/board/add/">&#x271a</a>
+			</th>
+		</thead>
+
+		<tbody>
+			{% for board in boardlist %}
+				<tr>
+					<th scope="row">{{ board['board_id'] }}</th>
+					<td><a href="/oj/board/{{ board['board_id'] }}/">{{ board['name'] }}</a></td>
+
+					{% if board['status'] == 0 %}
+						<td class="status-online">Online</td>
+					{% elif board['status'] == 1 %}
+						<td class="status-hidden">Hidden</td>
+					{% elif board['status'] == 2 %}
+						<td class="status-offline">Offline</td>
+					{% end %}
+
+					<td>
+						<a class="btn btn-secondary" href="/oj/manage/board/update/?boardid={{ board['board_id'] }}">&#x2699</a>
+					</td>
+				</tr>
+			{% end %}
+		</tbody>
+	</table>
+</div>
+{% end %}

@@ -1,0 +1,56 @@
+{% extends '../manage.templ' %}
+{% block head %}
+
+<script type="text/javascript">
+    function init() {
+        let j_form = $("#form");
+        let re = /[^0-9,\ ]/;
+
+        j_form.find("#add").on('click', (event) => {
+            let name = j_form.find("#name").val();
+            let list = j_form.find("#list").val();
+            
+            if (re.test(list)) {
+                alert("請輸入數字、逗號與空白設定，範例：1, 2, 3");
+                return;
+            }
+
+            $.post('/oj/be/manage/proclass/add', {
+                reqtype: 'add',
+                name: name,
+                list: list,
+            }, function(res) {
+                if (res[0] == 'E') {
+
+                } else {
+                    index.go(`/oj/manage/proclass/update?pubclassid=${res}`)
+                }
+            });
+        });
+
+        j_form.find("#cancel").on('click', (event) => {
+            index.go("/oj/manage/proclass/")
+        });
+    }
+</script>
+{% end %}
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+	<form id="form">
+		<div class="mb-1">
+            <label for="name" class="form-label">Name</label>
+			<input class="form-control" id="name" type="text">
+		</div>
+
+        <div class="mb-1">
+            <label>Problem List</label>
+            <input class="form-control" id="list" type="text">
+        </div>
+
+		<div class="mt-2">
+			<button type="button" class="btn btn-primary" id="add">Add</button>
+			<button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
+		</div>
+	</form>
+</div>
+{% end %}

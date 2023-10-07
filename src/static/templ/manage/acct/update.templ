@@ -1,0 +1,74 @@
+{% extends '../manage.templ' %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="/oj/manage-acct.css">
+
+<script type="text/javascript" id="contjs">
+    function init() {
+		var j_form = $('#form');
+
+		j_form.find('button.submit').on('click', function(e) {
+ 	           	var type = j_form.find('#type').val();
+ 	    		var clas = j_form.find('#class').val();
+				var group = j_form.find('#glist').val(); 
+
+ 	           	$.post('/oj/be/manage/acct/update', {
+ 	                'reqtype': 'update',
+ 	                'acct_id': {{ acct['acct_id'] }},
+ 	                'acct_type': type,
+ 	                'class': clas,
+					'group': group,
+ 	           	}, function(res) {
+					console.log(res);
+ 	                var msg = 'Unknown';
+
+ 	                if(res[0] == 'E') {
+
+ 	                } else {
+ 	                    index.go('/oj/manage/acct/');
+ 	                }
+ 	           });
+		});
+
+		j_form.find('button.cancel').on('click', function(e) {
+		    index.go('/oj/manage/acct/');
+		});
+    }
+</script>
+{% end %}
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <form id="form" class="">
+        <h3>{{ acct['acct_id'] }} / {{ acct['name'] }}</h3>
+
+		<div class="mb-3">
+			<label>Level</label>
+			<select class="form-select" id="type">
+				<option value=0{% if acct['acct_type'] == 0 %} selected{% end %}>Kernel</option>
+				<option value=3{% if acct['acct_type'] == 3 %} selected{% end %}>User</option>
+			</select>
+		</div>
+
+		<div class="mb-3">
+			<label>Class</label>
+			<select class="form-select" id="class">
+				<option value=0{% if acct['class'] == 1 %} selected{% end %}>Other</option>
+				<option value=1{% if acct['class'] == 1 %} selected{% end %}>Normal</option>
+				<option value=2{% if acct['class'] == 2 %} selected{% end %}>Contest</option>
+			</select>
+		</div>
+
+		<div class="mb-3">
+			<label>Group</label>
+			<select class="form-select" id="glist">
+				{% for g in glist %}
+					<option value="{{g}}" {% if g == group %}selected{% end %}>{{g}}</option>
+				{% end %}
+			</select>
+		</div>
+
+		<button type="button" class="btn btn-primary submit">Update</button>
+		<button type="button" class="btn btn-secondary cancel">Cancel</button>
+		<div class="print"></div>
+    </form>
+</div>
+{% end %}

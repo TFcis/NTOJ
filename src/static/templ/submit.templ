@@ -1,0 +1,74 @@
+<link rel="stylesheet" type="text/css" href="/oj/submit.css">
+
+<script type="text/javascript">
+    function init() {
+	    var j_submit = $('#submit');
+
+	    j_submit.find('input.file').on('change', function(e) {
+	        var reader = new FileReader();
+
+	        reader.onload = function(e) {
+	    	    j_submit.find('textarea.code').val(reader.result);
+	        };
+
+	        reader.readAsText(this.files[0]);
+	    });
+        j_submit.find('button.submit').on('click', function(e) {
+            var code = j_submit.find('textarea.code').val();
+            var comp_type = j_submit.find('#compilerList').val();
+
+            $.post('/oj/be/submit', {
+                'reqtype': 'submit',
+                'pro_id' : {{ pro['pro_id'] }},
+                'code': code,
+                'comp_type': comp_type,
+            }, function(res) {
+                if (res[0] == 'E') {
+                    if (res == 'Einternal') {
+                        j_submit.find('div.print').print('interval < 30 sec');
+                    } else if (res == 'Eempty') {
+                        j_submit.find('div.print').print('Do not submit empty code');
+                    } else if (res == 'Ejudge') {
+                        j_submit.find('div.print').print('All Judge Server offline, cannot submit')
+                    } else {
+                        j_submit.find('div.print').print(res);
+                    }
+                } else {
+                    index.go('/oj/chal/' + JSON.parse(res) + '/');
+                }
+            });
+        });
+    }
+</script>
+
+<div class="row">
+    <div class="col-lg-2"></div>
+    <div id="submit" class="col-lg-8">
+        <h3>{{ pro['pro_id']}} / {{ pro['name'] }}</h3>
+        <form>
+            <div class="mb-1">
+                <label for="" class="form-label">Compiler</label>
+                <select id="compilerList" class="form-select">
+                    <option value="g++" selected>G++ 9.4.0 GNU++17</option>
+                    <option value="clang++">Clang++ 10.0.0 C++17</option>
+                    <!-- <option value="gcc">GCC 9.4.0 C11</option> -->
+                    <option value="python3">CPython 3.8.10</option>
+                    <option value="rustc">Rust 1.65</option>
+                </select>
+            </div>
+
+            <div class="mb-1">
+                <textarea class="code form-control" placeholder="Code"></textarea>
+            </div>
+
+            <div class="mb-1">
+                <input type="file" class="file">
+            </div>
+
+            <button type="button" class="btn btn-primary submit">Submit</button>
+        </form>
+
+        <div class="print"></div>
+    </div>
+    <div class="col-lg-2"></div>
+</div>

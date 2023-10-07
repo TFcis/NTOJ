@@ -1,0 +1,56 @@
+a {
+    text-decoration: none !important;
+}
+
+a:hover a:visited a:link a:active {
+    text-decoration: none !important;
+}
+
+// .state-1 { // ac
+//     color:#2ecc71 !important;
+// }
+// .state-2 { // wa
+//     color:#e74c3c !important;
+// }
+// .state-3 { // re
+//     color:#f1c40f !important;
+// }
+// .state-4 { // tle
+//     color:#3498db !important;
+// }
+// .state-5 { // mle
+//     color:#A4A832 !important;
+// }
+// .state-6 { // ce
+//     color:#34495e !important;
+// }
+
+.state-1{color:#0f0 !important}
+.state-2{color:#ed784a !important}
+.state-3{color:#27fff6 !important}
+.state-4{color:#70649a !important}
+.state-5{color:#e83015 !important}
+.state-6{color:#ffeb00 !important}
+
+.panel {
+    margin-bottom: 20px;
+    // background-color: #fff;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+}
+
+.panel-default {
+    border-color: #ddd;
+}
+
+.panel-heading {
+    padding: 10px 15px;
+    border-bottom: 1px solid transparent;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.panel-body {
+    padding: 15px;
+}
