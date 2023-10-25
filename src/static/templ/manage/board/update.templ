@@ -16,15 +16,15 @@
             let acct_list = j_form.find("#acct_list").val();
 
             if (start != '' && start != '-1') {
-                start = new Date(start + ' +0800').toISOString();
+                start = new Date(start + ' +0000').toISOString();
             } else if (start == '-1') {
-                start = new Date('1970/01/01 00:00 +0800').toISOString();
+                start = new Date('1970/01/01 00:00 +0000').toISOString();
             }
 
             if (end != '' && end != '-1') {
-                end = new Date(end + ' +0800').toISOString();
+                end = new Date(end + ' +0000').toISOString();
             } else if (end == '-1') {
-                end = new Date('2100/01/01 00:00 +0800').toISOString();
+                end = new Date('2100/01/01 00:00 +0000').toISOString();
             }
 
             if (re.test(pro_list)) {
