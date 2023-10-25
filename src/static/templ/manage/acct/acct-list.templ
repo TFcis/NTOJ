@@ -24,28 +24,28 @@
         <tbody>
         {% for acct in acctlist %}
             <tr>
-                <td>{{ acct['acct_id'] }}</td>
-                <td><a href="/oj/acct/{{ acct['acct_id'] }}/">{{ acct['name'] }}</a></td>
-                <td>{{ acct['mail'] }}</td>
-                <td>{{ acct['lastip'] }}</td>
+                <td>{{ acct.acct_id }}</td>
+                <td><a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.name }}</a></td>
+                <td>{{ acct.mail }}</td>
+                <td>{{ acct.lastip }}</td>
                 <td>
-                {% if acct['acct_type'] == 0 %}
-                    Kernel
-                {% elif acct['acct_type'] == 3 %}
-                    User
-                {% end %}
+                    {% if acct.is_kernel() %}
+                        Kernel
+                    {% else %}
+                        User
+                    {% end %}
                 </td>
                 <td>
-                {% if acct['class'] == 0 %}
-                    Other
-                {% elif acct['class'] == 1 %}
-                    Normal
-                {% elif acct['class'] == 2 %}
-            Contest
-                {% end %}
+                    {% if acct.acct_class == 0 %}
+                        Other
+                    {% elif acct.acct_class == 1 %}
+                        Normal
+                    {% elif acct.acct_class == 2 %}
+                        Contest
+                    {% end %}
                 </td>
                 <td>
-                    <a class="btn btn-secondary" href="/oj/manage/acct/update/?acctid={{ acct['acct_id'] }}">&#x2699</a>
+                    <a class="btn btn-secondary" href="/oj/manage/acct/update/?acctid={{ acct.acct_id }}">&#x2699</a>
                 </td>
             </tr>
         {% end %}

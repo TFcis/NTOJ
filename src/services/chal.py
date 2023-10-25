@@ -1,11 +1,10 @@
 import datetime
-import json
 import os
 
 import config
 from services.judge import JudgeServerClusterService, NewJudgeService
 from services.log import LogService
-from services.user import UserConst
+from services.user import Account, UserConst
 from services.pro import ProService
 
 
@@ -139,7 +138,7 @@ class ChalService:
 
         return None, tests
 
-    async def get_chal(self, chal_id, acct):
+    async def get_chal(self, chal_id, acct: Account):
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -182,19 +181,17 @@ class ChalService:
 
         owner = await self.rs.get(f'{pro_id}_owner')
         unlock = [1]
-        if (acct['acct_id'] == acct_id or
-                (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL and
-                 (owner is None or acct['acct_id'] in config.lock_user_list) and (
-                         acct['acct_id'] in config.can_see_code_user))):
+
+        if acct.acct_id == acct_id:
+            can_see_code = True
+
+        elif acct.is_kernel() and (owner is None or acct.acct_id in config.lock_user_list) and acct.acct_id in config.can_see_code_user:
             # INFO: owner is problem uploader. if problem was locked, only problem owner can see submit code about this problem
-
-            if (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL) and (acct['acct_id'] != acct_id):
-                await LogService.inst.add_log(f"{acct['name']} view the challenge {chal_id}", 'manage.chal.view')
-
-            code = True
+            await LogService.inst.add_log(f"{acct.name} view the challenge {chal_id}", 'manage.chal.view')
+            can_see_code = True
 
         else:
-            code = False
+            can_see_code = False
 
         tz = datetime.timezone(datetime.timedelta(hours=+8))
 
@@ -205,7 +202,7 @@ class ChalService:
             'acct_name': acct_name,
             'timestamp': timestamp.astimezone(tz),
             'testl': testl,
-            'code': code,
+            'code': can_see_code,
             'response': response,
             'comp_type': comp_type,
         })
@@ -275,8 +272,12 @@ class ChalService:
         if test_conf['comp_type'] == 'makefile':
             comp_type = 'makefile'
 
-        await JudgeServerClusterService.inst.new_judge.send_to_compile(chal_id, code_path, file_ext, comp_type)
+        # await JudgeServerClusterService.inst.new_judge.send_to_compile(chal_id, code_path, file_ext, comp_type)
 
+        """
+        create submission
+        chal_id, pro_id, code_path, res_path, metadata, comp_type, check_type 
+        """
         # await JudgeServerClusterService.inst.send(json.dumps({
         #     'chal_id': chal_id,
         #     'test': testl,
@@ -293,14 +294,15 @@ class ChalService:
         return None, None
 
     # TODO: Porformance test
-    async def list_chal(self, off, num, min_accttype=UserConst.ACCTTYPE_USER,
+    async def list_chal(self, off, num, acct: Account,
                         flt=None):
 
         if flt is None:
             flt = {'pro_id': None, 'acct_id': None, 'state': 0, 'compiler': 'all'}
         fltquery = await self._get_fltquery(flt)
 
-        max_status = ProService.inst.get_acct_limit({'acct_type': min_accttype})
+        max_status = ProService.inst.get_acct_limit(acct)
+        min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -354,8 +356,9 @@ class ChalService:
 
         return None, challist
 
-    async def get_stat(self, min_accttype=UserConst.ACCTTYPE_USER, flt=None):
+    async def get_stat(self, acct: Account, flt=None):
         fltquery = await self._get_fltquery(flt)
+        min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:
             result = await con.fetch(('SELECT COUNT(1) FROM "challenge" '

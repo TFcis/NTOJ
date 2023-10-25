@@ -45,8 +45,8 @@ class RequestHandler(tornado.web.RequestHandler):
             return obj
 
         from services.user import UserConst
-        if self.acct['acct_type'] != UserConst.ACCTTYPE_GUEST:
-            kwargs['acct_id'] = self.acct['acct_id']
+        if not self.acct.is_guest():
+            kwargs['acct_id'] = self.acct.acct_id
 
         else:
             kwargs['acct_id'] = ''
@@ -85,11 +85,11 @@ def require_permission(acct_type):
     def decorator(func):
         async def wrap(self, *args, **kwargs):
             if isinstance(acct_type, list):
-                if self.acct['acct_type'] not in acct_type:
+                if self.acct.acct_type not in acct_type:
                     await self.finish('Eacces')
                     return
 
-            elif self.acct['acct_type'] != acct_type:
+            elif self.acct.acct_type != acct_type:
                 await self.finish('Eacces')
                 return
 

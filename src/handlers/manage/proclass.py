@@ -46,7 +46,7 @@ class ManageProClassHandler(RequestHandler):
                 await self.error('E')
                 return
 
-            await LogService.inst.add_log(f"{self.acct['name']} add proclass name={name} list={p_list}", 'manage.proclass.add')
+            await LogService.inst.add_log(f"{self.acct.name} add proclass name={name} list={p_list}", 'manage.proclass.add')
             err, pubclass_id = await ProClassService.inst.add_pubclass(name, p_list)
             if err:
                 self.error(err)
@@ -71,7 +71,7 @@ class ManageProClassHandler(RequestHandler):
                 await self.error('E')
                 return
 
-            await LogService.inst.add_log(f"{self.acct['name']} update proclass name={name} list={p_list}", 'manage.proclass.update')
+            await LogService.inst.add_log(f"{self.acct.name} update proclass name={name} list={p_list}", 'manage.proclass.update')
             err = await ProClassService.inst.update_pubclass(pubclass_id, name, p_list)
             if err:
                 await self.error(err)
@@ -84,7 +84,7 @@ class ManageProClassHandler(RequestHandler):
             _, pubclass = await ProClassService.inst.get_pubclass(pubclass_id)
 
             await LogService.inst.add_log(
-                f"{self.acct['name']} remove proclass name={pubclass['name']}.", 'manage.proclass.remove')
+                f"{self.acct.name} remove proclass name={pubclass['name']}.", 'manage.proclass.remove')
             await ProClassService.inst.remove_pubclass(pubclass_id)
 
             self.finish('S')

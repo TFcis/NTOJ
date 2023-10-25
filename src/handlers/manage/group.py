@@ -53,7 +53,7 @@ class ManageGroupHandler(RequestHandler):
                 return
 
             await LogService.inst.add_log(
-                f"{self.acct['name']} updated group={gname} group_type={gtype} group_class={gclas}.",
+                f"{self.acct.name} updated group={gname} group_type={gtype} group_class={gclas}.",
                 'manage.group.update')
             err = await GroupService.inst.update_group(gname, gtype, gclas)
             if err:
@@ -69,7 +69,7 @@ class ManageGroupHandler(RequestHandler):
             gclas = int(self.get_argument('gclas'))
 
             await LogService.inst.add_log(
-                f"{self.acct['name']} added group={gname} group_type={gtype} group_class={gclas}.",
+                f"{self.acct.name} added group={gname} group_type={gtype} group_class={gclas}.",
                 'manage.group.add')
             err = await GroupService.inst.add_group(gname, gtype, gclas)
             if err:
@@ -85,7 +85,7 @@ class ManageGroupHandler(RequestHandler):
                 self.error('Ekernel')
                 return
 
-            await LogService.inst.add_log(f"{self.acct['name']} deleted group={gname}", 'manage.group.delete')
+            await LogService.inst.add_log(f"{self.acct.name} deleted group={gname}", 'manage.group.delete')
             err = await GroupService.inst.del_group(gname)
             if err:
                 self.error(err)

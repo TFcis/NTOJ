@@ -1,4 +1,4 @@
-from services.user import UserConst
+from services.user import Account
 from services.chal import ChalConst
 import config
 
@@ -9,7 +9,7 @@ class CodeService:
         self.rs = rs
         CodeService.inst = self
 
-    async def get_code(self, chal_id, acct):
+    async def get_code(self, chal_id, acct: Account):
         chal_id = int(chal_id)
 
         async with self.db.acquire() as con:
@@ -21,10 +21,7 @@ class CodeService:
             acct_id, pro_id, comp_type = int(result[0]['acct_id']), int(result[0]['pro_id']), result[0]['compiler_type']
 
         owner = await self.rs.get(f'{pro_id}_owner')
-        if (acct['acct_id'] == acct_id or
-                (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL and
-                 (owner is None or acct['acct_id'] in config.lock_user_list) and (acct['acct_id'] in config.can_see_code_user))):
-
+        if acct.acct_id == acct_id or (acct.is_kernel() and (owner is None or acct.acct_id in config.lock_user_list) and acct.acct_id in config.can_see_code_user):
             file_ext = ChalConst.FILE_EXTENSION[comp_type]
 
             try:

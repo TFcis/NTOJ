@@ -51,7 +51,7 @@ class ManageBoardHandler(RequestHandler):
             pro_list = str(self.get_argument('pro_list'))
             acct_list = str(self.get_argument('acct_list'))
 
-            await LogService.inst.add_log(f"{self.acct['name']} was added the contest \"{name}\".",
+            await LogService.inst.add_log(f"{self.acct.name} was added the contest \"{name}\".",
                                           'manage.board.add')
             err, start = trantime(start)
             if err:
@@ -74,7 +74,7 @@ class ManageBoardHandler(RequestHandler):
             status = int(self.get_argument('status'))
             start = self.get_argument('start')
             end = self.get_argument('end')
-            await LogService.inst.add_log(f"{self.acct['name']} was updated the contest \"{name}\".",
+            await LogService.inst.add_log(f"{self.acct.name} was updated the contest \"{name}\".",
                                           'manage.board.update')
             err, start = trantime(start)
             if err:
@@ -97,6 +97,6 @@ class ManageBoardHandler(RequestHandler):
             board_id = int(self.get_argument('board_id'))
             await BoardService.inst.remove_board(board_id)
             self.finish('S')
-            await LogService.inst.add_log(f"{self.acct['name']} was removed the contest \"{board_id}\".",
+            await LogService.inst.add_log(f"{self.acct.name} was removed the contest \"{board_id}\".",
                                           'manage.board.remove')
             return

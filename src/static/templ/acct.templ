@@ -52,7 +52,7 @@
     }
 </style>
 
-<script id="contjs" type="text/javascript" photo="{{ acct['photo'] }}" cover="{{ acct['cover'] }}">
+<script id="contjs" type="text/javascript" photo="{{ acct.photo }}" cover="{{ acct.cover }}">
     function init() {
         var photo = $('#contjs').attr('photo');
         var cover = $('#contjs').attr('cover');
@@ -66,7 +66,7 @@
 
             $.post('/oj/be/acct', {
                 'reqtype': 'profile',
-                'acct_id': {{ acct['acct_id'] }},
+                'acct_id': {{ acct.acct_id }},
                 'name': name,
                 'photo': photo,
                 'cover': cover
@@ -103,7 +103,7 @@
 
             $.post('/oj/be/acct', {
                 'reqtype': 'reset',
-                'acct_id': {{ acct['acct_id'] }},
+                'acct_id': {{ acct.acct_id }},
                 'old': old,
                 'pw': pw,
             }, function(res) {
@@ -126,10 +126,10 @@
             });
         });
 
-        if(photo == '') {
-            photo = 'https://www.gravatar.com/avatar/{{ acct['acct_id'] }}?d=identicon&f=y&s=480;'
+        if (photo == '') {
+            photo = 'https://www.gravatar.com/avatar/{{ acct.acct_id }}?d=identicon&f=y&s=480;'
         }
-        if(cover == '') {
+        if (cover == '') {
             cover = 'https://i.imgur.com/D5IKr7d.jpg';
         }
 
@@ -142,7 +142,7 @@
     <div id="cover"></div>
     <div class="row">
         <div id="summary" class="col-lg-3 col-sm-4">
-            <h1>{{ acct['name'] }}</h1>
+            <h1>{{ acct.name }}</h1>
             <img id="photo">
         </div>
     </div>
@@ -169,36 +169,36 @@
                                 {{ round(((rate['ac_cnt'] / rate['all_cnt']) * 100), 1) }}%
                             {% end %}
                             (
-                            <a style="color: #0F0;" href="/oj/chal/?acctid={{ acct['acct_id'] }}&state=1">{{ rate['ac_cnt'] }}</a>
+                            <a style="color: #0F0;" href="/oj/chal/?acctid={{ acct.acct_id }}&state=1">{{ rate['ac_cnt'] }}</a>
                             /
-                            <a style="color: #0F0" href="/oj/chal/?acctid={{ acct['acct_id'] }}">{{ rate['all_cnt'] }}</a>
+                            <a style="color: #0F0" href="/oj/chal/?acctid={{ acct.acct_id }}">{{ rate['all_cnt'] }}</a>
                             )
                         </td>
                     </tr>
                 </tbody>
             </table>
 
-            {% if (acct['acct_id'] == acct_id) %}
+            {% if (acct.acct_id == acct_id) %}
                 <div class="mb-1">
                     <label class="form-label">Name</label>
-                    <input class="name form-control" type="text" value="{{ acct['name'] }}" placeholder="name">
+                    <input class="name form-control" type="text" value="{{ acct.name }}" placeholder="name">
                 </div>
                 
                 <div class="mb-1">
                     <label class="form-label">Photo</label>
-                    <input class="photo form-control" type="text" value="{{ acct['photo'] }}" placeholder="photo">
+                    <input class="photo form-control" type="text" value="{{ acct.photo }}" placeholder="photo">
                 </div>
 
                 <div class="mb-1">
                     <label class="form-label">Cover</label>
-                    <input class="cover form-control" type="text" value="{{ acct['cover'] }}" placeholder="cover">
+                    <input class="cover form-control" type="text" value="{{ acct.cover }}" placeholder="cover">
                 </div>
 
                 <button class="btn btn-primary submit">更新</button>
                 <div class="print"></div>
             {% end %}
         </form>
-    {% if (acct['acct_id'] == acct_id) or (isadmin) %}
+    {% if (acct.acct_id == acct_id) or (isadmin) %}
         <form id="reset">
             <h3>更改密碼</h3>
 

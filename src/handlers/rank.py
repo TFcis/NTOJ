@@ -39,7 +39,7 @@ class RankHandler(RequestHandler):
                 ') temp '
                 'ORDER BY "runtime" ASC, "memory" ASC,'
                 '"timestamp" ASC, "acct_id" ASC;',
-                self.acct['acct_type'], pro_id)
+                self.acct.acct_type, pro_id)
 
         chal_list = []
         for (chal_id, acct_id, timestamp, acct_name, runtime, memory) in result:

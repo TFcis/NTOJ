@@ -13,7 +13,7 @@
 
  	           	$.post('/oj/be/manage/acct/update', {
  	                'reqtype': 'update',
- 	                'acct_id': {{ acct['acct_id'] }},
+ 	                'acct_id': {{ acct.acct_id }},
  	                'acct_type': type,
  	                'class': clas,
 					'group': group,
@@ -38,22 +38,22 @@
 {% block content %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <form id="form" class="">
-        <h3>{{ acct['acct_id'] }} / {{ acct['name'] }}</h3>
+        <h3>{{ acct.acct_id }} / {{ acct.name }}</h3>
 
 		<div class="mb-3">
 			<label>Level</label>
 			<select class="form-select" id="type">
-				<option value=0{% if acct['acct_type'] == 0 %} selected{% end %}>Kernel</option>
-				<option value=3{% if acct['acct_type'] == 3 %} selected{% end %}>User</option>
+				<option value=0{% if acct.is_kernel() %} selected{% end %}>Kernel</option>
+				<option value=3{% if not acct.is_kernel() %} selected{% end %}>User</option>
 			</select>
 		</div>
 
 		<div class="mb-3">
 			<label>Class</label>
 			<select class="form-select" id="class">
-				<option value=0{% if acct['class'] == 1 %} selected{% end %}>Other</option>
-				<option value=1{% if acct['class'] == 1 %} selected{% end %}>Normal</option>
-				<option value=2{% if acct['class'] == 2 %} selected{% end %}>Contest</option>
+				<option value=0{% if acct.acct_class == 1 %} selected{% end %}>Other</option>
+				<option value=1{% if acct.acct_class == 1 %} selected{% end %}>Normal</option>
+				<option value=2{% if acct.acct_class == 2 %} selected{% end %}>Contest</option>
 			</select>
 		</div>
 

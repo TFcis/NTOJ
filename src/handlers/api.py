@@ -65,5 +65,5 @@ class ApiHandler(RequestHandler):
 
             if rate == None:
                 rate = 0
-            self.finish(str(json.dumps({'nick': acct['name'], 'score': rate})))
+            self.finish(str(json.dumps({'nick': acct.name, 'score': rate})))
             return

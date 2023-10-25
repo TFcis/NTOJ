@@ -87,17 +87,9 @@
 
         chalsub_count = 0;
 
-        let ws_link = '';
-        if (location.protocol !== 'https:') {
-            ws_link = `ws://${location.hostname}/oj/be/chalsub`;
-        } else {
-            ws_link = `wss://${location.hostname}/oj/be/chalsub`;
-        }
-	    ws = new WebSocket(ws_link);
+        ws = index.go_ws('chalsub');
 
-	    ws.onopen = function(e) {
-
-	    };
+	    ws.onopen = function(e) {};
 
 	    ws.onmessage = function(e) {
             chalsub_count += 1;
@@ -128,7 +120,7 @@
             <label class="form-label">過濾器</label>
 
             <div class="mb-1">
-                <label class="form-label">Your ID: {{ acct['acct_id'] }}</label>
+                <label class="form-label">Your ID: {{ acct.acct_id }}</label>
                 <input id="proid" class="form-control mb-1" type="text" value="{% if flt['pro_id'] != None %}{{ ppro_id }}{% end %}" placeholder="Problem ID">
                 <input id="acctid" class="form-control mb-1" type="text" value="{% if flt['acct_id'] != None %}{{ pacct_id }}{% end %}" placeholder="Account ID">
             </div>
@@ -217,13 +209,13 @@
             {% set postfix = postfix + f"&state={flt['state']}" %}
         {% end %}
         {% if flt['compiler'] != 'all' %}
-            {% set postfix = postfix + "&compiler_type=" + url_escape(flt['compiler'], False) %}
+            {% set postfix = postfix + f"&compiler_type={url_escape(flt['compiler'], False)}" %}
         {% end %}
 
         <div class="row">
             <div class="col-1"></div>
             <div class="col pt-3">
-                <nav aria-label="Page navigation example">
+                <nav aria-label="Page navigation">
                     <ul class="pagination justify-content-center">
                         <!-- this algorithm from toj -->
                         <!-- 我沒研究怎麼實現的，但能用 -->

@@ -9,12 +9,12 @@ class QuestionHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_USER)
     async def get(self):
-        err, ques_list = await QuestionService.inst.get_queslist(self.acct['acct_id'])
+        err, ques_list = await QuestionService.inst.get_queslist(self.acct.acct_id)
         if err:
             self.error(err)
             return
 
-        await self.rs.set(f"{self.acct['acct_id']}_have_reply", packb(False))
+        await self.rs.set(f"{self.acct.acct_id}_have_reply", packb(False))
         await self.render('question', acct=self.acct, ques_list=ques_list)
         return
 
@@ -29,7 +29,7 @@ class QuestionHandler(RequestHandler):
                 self.error('Equesempty')
                 return
 
-            err = await QuestionService.inst.set_ques(self.acct['acct_id'], qtext)
+            err = await QuestionService.inst.set_ques(self.acct.acct_id, qtext)
             if err:
                 self.error(err)
                 return
@@ -39,7 +39,7 @@ class QuestionHandler(RequestHandler):
 
         elif reqtype == 'rm_ques':
             index = int(self.get_argument('index'))
-            err = await QuestionService.inst.rm_ques(self.acct['acct_id'], index)
+            err = await QuestionService.inst.rm_ques(self.acct.acct_id, index)
             if err:
                 self.error(err)
                 return
