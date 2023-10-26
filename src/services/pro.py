@@ -9,7 +9,7 @@ from msgpack import packb, unpackb
 
 import config
 from services.pack import PackService
-from services.user import UserConst
+from services.user import Account
 
 
 class ProConst:
@@ -38,7 +38,7 @@ class ProService:
         self.rs = rs
         ProService.inst = self
 
-    async def get_pro(self, pro_id, acct=None, special=None):
+    async def get_pro(self, pro_id, acct: Account=None, special=None):
         pro_id = int(pro_id)
         max_status = self.get_acct_limit(acct, special)
 
@@ -93,7 +93,7 @@ class ProService:
             'tags': tags,
         })
 
-    async def list_pro(self, acct=None, state=False, clas=None, reload=False):
+    async def list_pro(self, acct: Account=None, state=False, clas=None, reload=False):
         def _mp_encoder(obj):
             if isinstance(obj, datetime.datetime):
                 return obj.astimezone(datetime.timezone.utc).timestamp()
@@ -107,8 +107,8 @@ class ProService:
 
         else:
             max_status = self.get_acct_limit(acct)
-            isguest = (acct['acct_type'] == UserConst.ACCTTYPE_GUEST)
-            isadmin = (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
+            isguest = acct.is_guest()
+            isadmin = acct.is_kernel()
 
         if clas is None:
             clas = [1, 2]
@@ -134,7 +134,7 @@ class ProService:
                         GROUP BY "problem"."pro_id"
                         ORDER BY "pro_id" ASC;
                     ''',
-                    int(acct['acct_id']), max_status, clas
+                    int(acct.acct_id), max_status, clas
                 )
 
             for pro_id, state in result:
@@ -311,11 +311,11 @@ class ProService:
         return None, None
 
     # TODO: 把這破函數命名改一下
-    def get_acct_limit(self, acct, special=None):
+    def get_acct_limit(self, acct: Account, special=None):
         if special:
             return ProService.STATUS_OFFLINE
 
-        if acct['acct_type'] == UserConst.ACCTTYPE_KERNEL:
+        if acct.is_kernel():
             return ProService.STATUS_OFFLINE
         else:
             return ProService.STATUS_ONLINE

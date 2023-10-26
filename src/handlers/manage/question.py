@@ -14,11 +14,11 @@ class ManageQuestionHandler(RequestHandler):
             err, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, True)
             asklist = {}
             for acct in acctlist:
-
-                if (ask := (await self.rs.get(f"{acct['acct_id']}_msg_ask"))) is None:
-                    asklist.update({acct['acct_id']: False})
+                acct_id = acct.acct_id
+                if (ask := (await self.rs.get(f"{acct_id}_msg_ask"))) is None:
+                    asklist.update({acct_id: False})
                 else:
-                    asklist.update({acct['acct_id']: unpackb(ask)})
+                    asklist.update({acct_id: unpackb(ask)})
 
             await self.render('manage/question/question-list', page='question', acctlist=acctlist, asklist=asklist)
 
@@ -35,7 +35,7 @@ class ManageQuestionHandler(RequestHandler):
             reqtype = self.get_argument('reqtype')
             if reqtype == 'rpl':
                 await LogService.inst.add_log(
-                    f"{self.acct['name']} replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".",
+                    f"{self.acct.name} replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".",
                     'manage.question.reply')
 
                 index = self.get_argument('index')
@@ -47,7 +47,7 @@ class ManageQuestionHandler(RequestHandler):
 
             elif reqtype == 'rrpl':
                 await LogService.inst.add_log(
-                    f"{self.acct['name']} re-replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".",
+                    f"{self.acct.name} re-replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".",
                     'manage.question.re-reply')
 
                 index = self.get_argument('index')

@@ -65,13 +65,11 @@ class ChalListHandler(RequestHandler):
             'compiler': compiler_type,
         }
 
-        err, chalstat = await ChalService.inst.get_stat(
-            min(self.acct['acct_type'], UserConst.ACCTTYPE_USER), flt)
+        _, chalstat = await ChalService.inst.get_stat(self.acct, flt)
 
-        err, challist = await ChalService.inst.list_chal(off, 20,
-                                                         min(self.acct['acct_type'], UserService.ACCTTYPE_USER), flt)
+        _, challist = await ChalService.inst.list_chal(off, 20, self.acct, flt)
 
-        isadmin = (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
+        isadmin = self.acct.is_kernel()
         chalids = []
         for chal in challist:
             chalids.append(chal['chal_id'])
@@ -133,7 +131,7 @@ class ChalHandler(RequestHandler):
             self.error(err)
             return
 
-        if self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL:
+        if self.acct.is_kernel():
             rechal = True
         else:
             rechal = False

@@ -91,7 +91,7 @@ class ManageProHandler(RequestHandler):
             err, pro_id = await ProService.inst.add_pro(
                 name, status, clas, expire, pack_token)
             await LogService.inst.add_log(
-                f"{self.acct['name']} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro')
+                f"{self.acct.name} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro')
             if err:
                 self.error(err)
                 return
@@ -116,7 +116,7 @@ class ManageProHandler(RequestHandler):
                 err, ret = await ProService.inst.update_pro(
                     pro_id, name, status, clas, expire, pack_type, pack_token, tags)
                 await LogService.inst.add_log(
-                    f"{self.acct['name']} had been send a request to update the problem #{pro_id}",
+                    f"{self.acct.name} had been send a request to update the problem #{pro_id}",
                     'manage.pro.update.pro')
                 if err:
                     self.error(err)
@@ -144,7 +144,7 @@ class ManageProHandler(RequestHandler):
 
                 err, ret = await ProService.inst.update_limit(pro_id, timelimit, memlimit)
                 await LogService.inst.add_log(
-                    f"{self.acct['name']} had been send a request to update the problem #{pro_id}",
+                    f"{self.acct.name} had been send a request to update the problem #{pro_id}",
                     'manage.pro.update.limit')
                 if err:
                     self.error(err)
@@ -192,7 +192,7 @@ class ManageProHandler(RequestHandler):
                         )
 
                 await LogService.inst.add_log(
-                    f"{self.acct['name']} had been send a request to update the problem #{pro_id}",
+                    f"{self.acct.name} had been send a request to update the problem #{pro_id}",
                     'manage.pro.update.conf')
 
                 self.finish('S')
@@ -230,7 +230,7 @@ class ManageProHandler(RequestHandler):
                     )
                     result = result[0]
                 await LogService.inst.add_log(
-                    f"{self.acct['name']} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals",
+                    f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals",
                     'manage.chal.rechal')
 
                 for chal_id in result:

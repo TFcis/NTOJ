@@ -82,44 +82,6 @@
     thead > tr {
         line-height: 48px;
     }
-
-    /*
-    table td._state-0 {
-        background-color: #DC0000;
-    }
-    table td._state-1 {
-        background-color: #DC2000;
-    }
-    table td._state-2 {
-        background-color: #DC5800;
-    }
-    table td._state-3 {
-        background-color: #DC8400;
-    }
-    table td._state-4 {
-        background-color: #DEB000;
-    }
-    table td._state-5 {
-        background-color: #DCDC00;
-    }
-    table td._state-6 {
-        background-color: #CADC00;
-    }
-    table td._state-7 {
-        background-color: #C0DC00;
-    }
-    table td._state-8 {
-        background-color: #B0DC00;
-    }
-    table td._state-9 {
-        background-color: #8DDC00;
-    }
-    table td._state-10 {
-        background-color: #00dc00;
-        font-weight: bolder;
-    }
-    */
-
 </style>
 
 <script type="text/javascript" id="contjs">
@@ -199,11 +161,11 @@
 
             <tbody>
                 {% for acct in acctlist %}
-                {% set acct_id = acct['acct_id'] %}
+                {% set acct_id = acct.acct_id %}
                 <tr>
-                    <td class="_rank">{{ acct['rank'] }}</td>
-                    <td class="_acct">&nbsp<a href="/oj/acct/{{ acct_id }}/">{{ acct['name'] }}</a></td>
-                    <td class="_score"><a href="/oj/chal/?acctid={{ acct_id }}">{{ acct['rate'] }} / {{ acct_submit[acct_id] }}</a></td>
+                    <td class="_rank">{{ acct.rank }}</td>
+                    <td class="_acct">&nbsp<a href="/oj/acct/{{ acct_id }}/">{{ acct.name }}</a></td>
+                    <td class="_score"><a href="/oj/chal/?acctid={{ acct_id }}">{{ acct.rate }} / {{ acct_submit[acct_id] }}</a></td>
                     {% for pro in prolist %}
                         {% set pro_id = pro['pro_id'] %}
                         <!-- TODO: Is this if-statement necessary??? -->

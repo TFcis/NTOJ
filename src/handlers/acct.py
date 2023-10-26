@@ -45,12 +45,12 @@ class AcctHandler(RequestHandler):
 
             prolist2.append(tmp)
 
-        isadmin = (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
+        isadmin = self.acct.is_kernel()
         rate_data['rate'] = math.floor(rate_data['rate'])
 
         # force https, add by xiplus, 2018/8/24
-        acct['photo'] = re.sub(r'^http://', 'https://', acct['photo'])
-        acct['cover'] = re.sub(r'^http://', 'https://', acct['cover'])
+        acct.photo = re.sub(r'^http://', 'https://', acct.photo)
+        acct.cover = re.sub(r'^http://', 'https://', acct.cover)
 
         await self.render('acct', acct=acct, rate=rate_data, prolist=prolist2, isadmin=isadmin)
 
@@ -64,10 +64,10 @@ class AcctHandler(RequestHandler):
             photo = self.get_argument('photo')
             cover = self.get_argument('cover')
 
-            err, ret = await UserService.inst.update_acct(
-                self.acct['acct_id'],
-                self.acct['acct_type'],
-                self.acct['class'],
+            err, _ = await UserService.inst.update_acct(
+                self.acct.acct_id,
+                self.acct.acct_type,
+                self.acct.acct_class,
                 name,
                 photo,
                 cover
@@ -83,13 +83,11 @@ class AcctHandler(RequestHandler):
             old = self.get_argument('old')
             pw = self.get_argument('pw')
             acct_id = self.get_argument('acct_id')
-            if acct_id != self.acct['acct_id']:
-                await LogService.inst.add_log(f"{self.acct['name']} was changing the password of user #{acct_id}.",
+            if acct_id != self.acct.acct_id:
+                await LogService.inst.add_log(f"{self.acct.name} was changing the password of user #{acct_id}.",
                                               'manage.acct.update.pwd')
 
-            err, _ = await UserService.inst.update_pw(
-                acct_id, old, pw, (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
-            )
+            err, _ = await UserService.inst.update_pw(acct_id, old, pw, self.acct.is_kernel())
             if err:
                 self.error(err)
                 return
@@ -149,10 +147,10 @@ class SignHandler(RequestHandler):
             return
 
         elif reqtype == 'signout':
-            await LogService.inst.add_log(f"{self.acct['name']}(#{self.acct['acct_id']}) sign out", 'signout', {
+            await LogService.inst.add_log(f"{self.acct.name}(#{self.acct.acct_id}) sign out", 'signout', {
                 'type': 'signin.failure',
-                'name': self.acct['name'],
-                'acct_id': self.acct['acct_id'],
+                'name': self.acct.name,
+                'acct_id': self.acct.acct_id,
             })
 
             self.clear_cookie('id', path='/oj')

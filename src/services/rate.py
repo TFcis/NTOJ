@@ -2,7 +2,7 @@ import datetime
 
 from msgpack import packb, unpackb
 
-from services.user import UserConst
+from services.user import Account
 from services.chal import ChalConst
 
 
@@ -12,10 +12,10 @@ class RateService:
         self.rs = rs
         RateService.inst = self
 
-    async def get_acct_rate_and_chal_cnt(self, acct):
-        kernel = (acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
+    async def get_acct_rate_and_chal_cnt(self, acct: Account):
+        kernel = acct.is_kernel()
         key = f'rate@kernel_{kernel}'
-        acct_id = int(acct['acct_id'])
+        acct_id = acct.acct_id
 
         if (rate_data := await self.rs.hget(key, acct_id)) is None:
             async with self.db.acquire() as con:
@@ -135,7 +135,7 @@ class RateService:
 
         return None, rate_data
 
-    async def map_rate_acct(self, acct, clas=None,
+    async def map_rate_acct(self, acct: Account, clas=None,
                             starttime='1970-01-01 00:00:00.000', endtime='2100-01-01 00:00:00.000'):
 
         if clas is not None:
@@ -163,7 +163,7 @@ class RateService:
                     WHERE ("problem"."class" && $2) AND ("challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4)
                     GROUP BY "challenge"."pro_id";
                 ''',
-                int(acct['acct_id']), qclas, starttime, endtime
+                acct.acct_id, qclas, starttime, endtime
             )
 
         statemap = {}

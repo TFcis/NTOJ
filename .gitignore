@@ -1,10 +1,7 @@
 __pycache__/
 
-# 敏感文件
 src/config.py
-pgoj.sql
-NTOJ_installer/sql
-*.sql
+NTOJ_installer/
 deploy.sh
 *.map
 third/

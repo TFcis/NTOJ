@@ -89,7 +89,7 @@ var index = new function() {
                 defer = Array();
                 j_cont.find('link').each(function(i, e) {
                     defer[i] = $.Deferred();
-                    
+
                     $(e).on('load', function() {
                         defer[i].resolve();
                     });
@@ -193,6 +193,16 @@ var index = new function() {
             j_e.attr('timer', null);
             j_e.css('opacity', '0');
         }, 3000));
+    };
+
+    that.get_ws = function(wsname) {
+        let ws_link = '';
+        if (location.protocol !== 'https:') {
+            ws_link = `ws://${location.hostname}/oj/be/${wsname}`;
+        } else {
+            ws_link = `wss://${location.hostname}/oj/be/${wsname}`;
+        }
+	    return new WebSocket(ws_link);
     };
 };
 

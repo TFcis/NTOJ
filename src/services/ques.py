@@ -76,11 +76,11 @@ class QuestionService:
         asklist = {}
         ask_cnt = 0
         for acct in acctlist:
-            if (ask := (await self.rs.get(f"{acct['acct_id']}_msg_ask"))) is None:
-                asklist.update({acct['acct_id']: False})
+            if (ask := (await self.rs.get(f"{acct.acct_id}_msg_ask"))) is None:
+                asklist.update({acct.acct_id: False})
             else:
                 ask = unpackb(ask)
-                asklist.update({acct['acct_id']: ask})
+                asklist.update({acct.acct_id: ask})
                 if ask:
                     ask_cnt += 1
 

@@ -6,7 +6,7 @@
 
             $.post('/oj/be/question', {
                 'reqtype': 'ask',
-                'acct_id':{{ acct['acct_id'] }},
+                'acct_id':{{ acct.acct_id }},
                 'qtext': qtext,
             }, function(res) {
                 msg = 'Unknown';
@@ -29,7 +29,7 @@
 
         $.post('/oj/be/question', {
             'reqtype': 'rm_ques',
-            'acct_id': {{ acct['acct_id'] }},
+            'acct_id': {{ acct.acct_id }},
             'index': idx,
         }, function(res) {
             msg = 'Unknown';
@@ -45,7 +45,7 @@
 </script>
 <div class="g-lg-12">
     <div>
-    Account : {{ acct['name'] }} {{ acct['acct_id'] }}
+    Account : {{ acct.name }} {{ acct.acct_id }}
     </div>
     <div id="form">
         {% set count = 0 %}

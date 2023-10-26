@@ -147,8 +147,8 @@ class ProHandler(RequestHandler):
             if test['test_idx'] in countmap:
                 test['rate'] = math.floor(countmap[test['test_idx']])
 
-        isguest = (self.acct['acct_type'] == UserConst.ACCTTYPE_GUEST)
-        isadmin = (self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL)
+        isguest = self.acct.is_guest()
+        isadmin = self.acct.is_kernel()
 
         if isadmin:
             pass
@@ -169,19 +169,14 @@ class ProHandler(RequestHandler):
                         ON "challenge"."pro_id" = $3
                         WHERE "problem"."status" <= $2 AND "problem"."pro_id" = $3 AND "problem"."class" && $4;
                     ''',
-                    int(self.acct['acct_id']), ChalConst.STATE_AC, int(pro['pro_id']), [1, 2]
+                    self.acct.acct_id, ChalConst.STATE_AC, int(pro['pro_id']), [1, 2]
                 )
 
             if result['state'] is None or result['state'] != ChalConst.STATE_AC:
                 pro['tags'] = ''
 
-        judge_status_list = await JudgeServerClusterService.inst.get_servers_status()
-        can_submit = False
+        can_submit = await JudgeServerClusterService.inst.is_server_online()
 
-        for status in judge_status_list:
-            if status['status']:
-                can_submit = True
-                break
 
         await self.render('pro', pro={
             'pro_id': pro['pro_id'],
@@ -206,7 +201,7 @@ class ProTagsHandler(RequestHandler):
                 return
 
             await LogService.inst.add_log(
-                (self.acct['name'] + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."),
+                (self.acct.name + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."),
                 'manage.pro.update.tag')
 
             err, ret = await ProService.inst.update_pro(

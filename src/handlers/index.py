@@ -13,18 +13,18 @@ class IndexHandler(RequestHandler):
         reply = False
         ask_cnt = 0
 
-        if self.acct['acct_type'] == UserConst.ACCTTYPE_GUEST:
+        if self.acct.is_guest():
             name = ''
 
         else:
-            name = self.acct['name']
+            name = self.acct.name
 
-            if self.acct['acct_type'] == UserConst.ACCTTYPE_KERNEL:
+            if self.acct.is_kernel():
                 manage = True
                 _, _, ask_cnt = await QuestionService.inst.get_asklist()
 
             else:
-                reply = await QuestionService.inst.have_reply(self.acct['acct_id'])
+                reply = await QuestionService.inst.have_reply(self.acct.acct_id)
 
         await self.render('index', name=name, manage=manage, ask_cnt=ask_cnt, reply=reply)
         return

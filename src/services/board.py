@@ -19,7 +19,7 @@ class BoardService:
 
     async def get_boardlist(self):
         async with self.db.acquire() as con:
-            res = await con.fetch('SELECT "board_id", "name", "status", "start", "end" FROM "board";')
+            res = await con.fetch('SELECT "board_id", "name", "status", "start", "end" FROM "board" ORDER BY "board_id" ASC;')
 
         return None, res
 

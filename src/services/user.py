@@ -1,8 +1,10 @@
 import base64
+import pickle
+from typing import List, Tuple
+from dataclasses import dataclass
 
 import asyncpg
 import bcrypt
-from msgpack import packb, unpackb
 
 from services.group import GroupConst
 from services.log import LogService
@@ -23,6 +25,34 @@ class UserConst:
 
     ACCTID_GUEST = 0
 
+
+@dataclass
+class Account:
+    acct_id: int
+    acct_type: int
+    acct_class: int
+    mail: str
+    name: str
+    photo: str
+    cover: str
+    lastip: str
+
+    def is_kernel(self):
+        return self.acct_type == UserConst.ACCTTYPE_KERNEL
+
+    def is_guest(self):
+        return self.acct_type == UserConst.ACCTTYPE_GUEST
+
+GUEST_ACCOUNT = Account(
+    acct_id=0,
+    acct_type=UserConst.ACCTTYPE_GUEST,
+    acct_class=0,
+    name='',
+    mail='',
+    photo='',
+    cover='',
+    lastip=''
+)
 
 class UserService:
     MAIL_MAX = 1024
@@ -136,10 +166,8 @@ class UserService:
         else:
             try:
                 acct2 = await self.rs.get(f'account@{acct_id}')
-                acct2 = unpackb(acct2)
-                lastip = ''
-                if 'lastip' in acct2:
-                    lastip = acct2['lastip']
+                acct2 = pickle.loads(acct2)
+                lastip = acct2.lastip
 
                 if lastip != ip and ip != '':
                     await LogService.inst.add_log(f"Update acct {acct_id} lastip from {lastip} to {ip} ",
@@ -156,22 +184,14 @@ class UserService:
 
         return None, acct_id, ip
 
-    async def info_acct(self, acct_id):
+    async def info_acct(self, acct_id) -> Tuple[None, Account]:
         if acct_id is None:
-            return (None, {
-                'acct_id': 0,
-                'acct_type': UserConst.ACCTTYPE_GUEST,
-                'class': 0,
-                'name': '',
-                'photo': '',
-                'cover': '',
-                'lastip': ''
-            })
+            return None, GUEST_ACCOUNT
 
         acct_id = int(acct_id)
 
         if (acct := (await self.rs.get(f'account@{acct_id}'))) is not None:
-            acct = unpackb(acct)
+            acct = pickle.loads(acct)
 
         else:
             async with self.db.acquire() as con:
@@ -187,19 +207,20 @@ class UserService:
                 return 'Enoext', None
             result = result[0]
 
-            acct = {
-                'acct_id': acct_id,
-                'acct_type': result['acct_type'],
-                'class': result['class'][0],
-                'mail': result['mail'],
-                'name': result['name'],
-                'photo': result['photo'],
-                'cover': result['cover'],
-                'lastip': result['lastip'],
-            }
+            acct = Account(
+                acct_id=acct_id,
+                acct_type=result['acct_type'],
+                acct_class=result['class'][0],
+                mail=result['mail'],
+                name=result['name'],
+                photo=result['photo'],
+                cover=result['cover'],
+                lastip=result['lastip']
+            )
+            b_acct = pickle.dumps(acct)
 
-            await self.rs.setnx(f'account@{acct_id}', packb(acct))
-            del acct['mail']
+            await self.rs.setnx(f'account@{acct_id}', b_acct)
+            acct.mail = ''
 
         return None, acct
 
@@ -258,10 +279,10 @@ class UserService:
 
         return None, None
 
-    async def list_acct(self, min_type=UserConst.ACCTTYPE_USER, private=False, reload=False):
+    async def list_acct(self, min_type=UserConst.ACCTTYPE_USER, private=False, reload=False) -> Tuple[None, List[Account]]:
         field = f'{min_type}|{int(private)}'
         if (acctlist := (await self.rs.hget('acctlist', field))) is not None and reload is False:
-            acctlist = unpackb(acctlist)
+            acctlist = pickle.loads(acctlist)
 
         else:
 
@@ -277,19 +298,22 @@ class UserService:
 
             acctlist = []
             for (acct_id, acct_type, clas, name, mail, lastip) in result:
-                acct = {
-                    'acct_id': acct_id,
-                    'acct_type': acct_type,
-                    'name': name,
-                    'class': clas[0],
-                    'lastip': lastip
-                }
+                acct = Account(
+                    acct_id=acct_id,
+                    acct_type=acct_type,
+                    acct_class=clas[0],
+                    mail='',
+                    name=name,
+                    photo='',
+                    cover='',
+                    lastip=lastip
+                )
 
                 if private:
-                    acct['mail'] = mail
+                    acct.mail = mail
 
                 acctlist.append(acct)
 
-            await self.rs.hset('acctlist', field, packb(acctlist))
+            await self.rs.hset('acctlist', field, pickle.dumps(acctlist))
 
         return None, acctlist
