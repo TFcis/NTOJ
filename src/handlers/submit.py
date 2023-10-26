@@ -1,7 +1,7 @@
 import time
 import json
 
-from services.user import UserService, UserConst
+from services.user import UserConst
 from services.chal import ChalService, ChalConst
 from services.pro import ProService
 from services.judge import JudgeServerClusterService
@@ -22,13 +22,7 @@ class SubmitHandler(RequestHandler):
             self.error('Eacces')
             return
 
-        judge_status_list = await JudgeServerClusterService.inst.get_servers_status()
-        can_submit = False
-
-        for status in judge_status_list:
-            if status['status']:
-                can_submit = True
-                break
+        can_submit = await JudgeServerClusterService.inst.is_server_online()
 
         if not can_submit:
             self.finish('<h1 style="color: red;">All Judge Server Offline</h1>')
@@ -40,13 +34,7 @@ class SubmitHandler(RequestHandler):
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def post(self):
-        judge_status_list = await JudgeServerClusterService.inst.get_servers_status()
-        can_submit = False
-
-        for status in judge_status_list:
-            if status['status']:
-                can_submit = True
-                break
+        can_submit = await JudgeServerClusterService.inst.is_server_online()
 
         if not can_submit:
             self.error('Ejudge')
@@ -66,8 +54,8 @@ class SubmitHandler(RequestHandler):
                 self.error('Ecodemax')
                 return
 
-            if self.acct['acct_type'] != UserConst.ACCTTYPE_KERNEL:
-                last_submit_name = f"last_submit_time_{self.acct['acct_id']}"
+            if not self.acct.is_kernel():
+                last_submit_name = f"last_submit_time_{self.acct.acct_id}"
                 if (last_submit_time := (await self.rs.get(last_submit_name))) is None:
                     await self.rs.set(last_submit_name, int(time.time()), ex=600)
 
@@ -96,14 +84,13 @@ class SubmitHandler(RequestHandler):
             # TODO: code prevent '/dev/random'
             # code = code.replace('bits/stdc++.h','DontUseMe.h')
             err, chal_id = await ChalService.inst.add_chal(
-                pro_id, self.acct['acct_id'], comp_type, code)
+                pro_id, self.acct.acct_id, comp_type, code)
 
             if err:
                 self.error(err)
                 return
 
-        elif (reqtype == 'rechal'
-              and self.acct['acct_type'] == UserService.ACCTTYPE_KERNEL):
+        elif reqtype == 'rechal' and self.acct.is_kernel():
 
             chal_id = int(self.get_argument('chal_id'))
 
