@@ -60,9 +60,9 @@
         var j_reset = $('#reset');
 
         j_profile.find('button.submit').on('click', function(e) {
-            var name = j_profile.find('input#name').val();
-            var photo = j_profile.find('input#photo').val();
-            var cover = j_profile.find('input#cover').val();
+            var name = j_profile.find('input.name').val();
+            var photo = j_profile.find('input.photo').val();
+            var cover = j_profile.find('input.cover').val();
 
             $.post('/oj/be/acct', {
                 'reqtype': 'profile',
@@ -178,7 +178,7 @@
                 </tbody>
             </table>
 
-            {% if (acct.acct_id == acct_id) %}
+            {% if acct.acct_id == acct_id %}
                 <div class="mb-1">
                     <label class="form-label">Name</label>
                     <input class="name form-control" type="text" value="{{ acct.name }}" placeholder="name">
@@ -194,7 +194,7 @@
                     <input class="cover form-control" type="text" value="{{ acct.cover }}" placeholder="cover">
                 </div>
 
-                <button class="btn btn-primary submit">更新</button>
+                <button type="button" class="btn btn-primary submit">更新</button>
                 <div class="print"></div>
             {% end %}
         </form>
@@ -214,7 +214,7 @@
                 <input class="repeat form-control" type="password" placeholder="repeat">
             </div>
 
-            <button class="btn btn-warning submit">確認</button>
+            <button type="button" class="btn btn-warning submit">確認</button>
             <div class="print"></div>
         </form>
     {% end %}
