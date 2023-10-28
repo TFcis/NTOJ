@@ -2,7 +2,7 @@ import datetime
 import os
 
 import config
-from services.judge import JudgeServerClusterService, NewJudgeService
+from services.judge import JudgeServerClusterService
 from services.log import LogService
 from services.user import Account, UserConst
 from services.pro import ProService

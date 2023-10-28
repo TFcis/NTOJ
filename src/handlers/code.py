@@ -1,9 +1,6 @@
 import json
 
 import tornado.escape
-from pygments import highlight
-from pygments.lexers import get_lexer_by_name
-from pygments.formatters import HtmlFormatter
 
 from services.code import CodeService
 from handlers.base import RequestHandler, reqenv
@@ -37,10 +34,5 @@ class CodeHandler(RequestHandler):
             'comp_type': comp_type,
             'code': tornado.escape.xhtml_escape(code),
         }
-
-        # lexer = get_lexer_by_name(comp_type, encoding='utf-8', stripall=True)
-        # formatter = HtmlFormatter(linenos=True, encoding='utf-8')
-        # code = highlight(code, lexer, formatter).decode('utf-8')
-        # code = code.replace('\t', '    ')
 
         self.finish(json.dumps(res))
