@@ -60,9 +60,9 @@
         var j_reset = $('#reset');
 
         j_profile.find('button.submit').on('click', function(e) {
-            var name = j_profile.find('input#name').val();
-            var photo = j_profile.find('input#photo').val();
-            var cover = j_profile.find('input#cover').val();
+            var name = j_profile.find('input.name').val();
+            var photo = j_profile.find('input.photo').val();
+            var cover = j_profile.find('input.cover').val();
 
             $.post('/oj/be/acct', {
                 'reqtype': 'profile',
@@ -179,7 +179,6 @@
             </table>
 
             {% if acct.acct_id == acct_id %}
-            <form id="profile">
                 <div class="mb-1">
                     <label class="form-label">Name</label>
                     <input class="name form-control" type="text" value="{{ acct.name }}" placeholder="name">
