@@ -6,36 +6,36 @@ set -o allexport
 source .env set
 set +o allexport
 
-if [ -z $INSTALL_DIR ] then
-    INSTALL_DIR=/srv
+if [ -z $INSTALL_DIR ]; then
+	INSTALL_DIR=/srv
 fi
 
-if [ -z $DB_NAME ] then
-    DB_NAME=ntoj
+if [ -z $DB_NAME ]; then
+	DB_NAME=ntoj
 fi
 
-if [ -z $DB_USERNAME ] then
-    DB_USERNAME=ntoj
+if [ -z $DB_USERNAME ]; then
+	DB_USERNAME=ntoj
 fi
 
-if [ -z $DB_PASSWORD ] then
-    DB_PASSWORD=DB_PASSWORD
+if [ -z $DB_PASSWORD ]; then
+	DB_PASSWORD=DB_PASSWORD
 fi
 
-if [ -z $UNLOCK_PWD ] then
-    UNLOCK_PWD=UNLOCK_PASSWORD
+if [ -z $UNLOCK_PWD ]; then
+	UNLOCK_PWD=UNLOCK_PASSWORD
 fi
 
-if [ -z $ADMIN_NAME ] then
-    ADMIN_NAME=admin
+if [ -z $ADMIN_NAME ]; then
+	ADMIN_NAME=admin
 fi
 
-if [ -z $ADMIN_MAIL ] then
-    ADMIN_MAIL=admin@admin
+if [ -z $ADMIN_MAIL ]; then
+	ADMIN_MAIL=admin@admin
 fi
 
-if [ -z $ADMIN_PASSWORD ] then
-    ADMIN_PASSWORD=admin1234
+if [ -z $ADMIN_PASSWORD ]; then
+	ADMIN_PASSWORD=admin1234
 fi
 
 # Update and upgrade
@@ -60,11 +60,11 @@ sudo systemctl enable --now postgresql.service
 
 sudo sed -i 's/peer/trust/' /etc/postgresql/15/main/pg_hba.conf
 sudo systemctl restart postgresql.service
-sudo -u postgres psql <<< "CREATE ROLE oj LOGIN PASSWORD '${DB_PASSWORD}';"
-sudo -u postgres createdb oj
+sudo -u postgres psql <<<"CREATE ROLE ${DB_USERNAME} LOGIN PASSWORD '${DB_PASSWORD}';"
+sudo -u postgres createdb ${DB_NAME}
 ## PostgreSQL 15 or upper
-sudo -u postgres psql <<< "GRANT ALL ON DATABASE ${DB_NAME} TO ${DB_USERNAME};"
-sudo -u postgres psql <<< "ALTER DATABASE ${DB_NAME} OWNER TO ${DB_USERNAME};"
+sudo -u postgres psql <<<"GRANT ALL ON DATABASE ${DB_NAME} TO ${DB_USERNAME};"
+sudo -u postgres psql <<<"ALTER DATABASE ${DB_NAME} OWNER TO ${DB_USERNAME};"
 
 ## Replace db username and db name
 sed -i "s/db_username/${DB_USERNAME}/g" ./oj.sql
@@ -79,7 +79,7 @@ sudo rm /var/lib/postgresql/oj.sql
 
 # Install Python3
 sudo apt install python3 python3-pip dos2unix
-sudo pip3 install -r ./requirements.txt --break-system-packages
+sudo pip3 install -r ./requirements.txt
 
 # NTOJ
 sudo cp -r ../src/* ${INSTALL_DIR}/ntoj/
@@ -90,7 +90,7 @@ sudo apt install nginx
 sudo systemctl enable --now nginx.service
 
 ## Replace nginx root directory path
-INSTALL_DIR_ESCAPE=`echo ${INSTALL_DIR} | sed 's/[\/\$]/\\\&/g'`
+INSTALL_DIR_ESCAPE=$(echo ${INSTALL_DIR} | sed 's/[\/\$]/\\\&/g')
 sudo sed -i "s/INSTALL_DIR/${INSTALL_DIR_ESCAPE}/" ./ntoj.conf
 sudo cp ./ntoj.conf /etc/nginx/conf.d/
 sudo sed -i "s/www-data/root/" /etc/nginx/nginx.conf
@@ -105,8 +105,8 @@ sudo systemctl enable --now redis-server.service
 # Create config.py
 sudo apt install xxd
 COOKIE_SEC=$(head -c 32 /dev/urandom | xxd -ps -c 128)
-UNLOCK_PWD=$(python3 get_unlock_pwd.py <<< ${UNLOCK_PASSWORD})
-cat <<EOF | sudo tee ${INSTALL_DIR}/ntoj/config.py > /dev/null
+UNLOCK_PWD=$(python3 get_unlock_pwd.py <<<${UNLOCK_PASSWORD})
+cat <<EOF | sudo tee ${INSTALL_DIR}/ntoj/config.py >/dev/null
 DBNAME_OJ  = '${DB_NAME}'
 DBUSER_OJ  = '${DB_USERNAME}'
 DBPW_OJ    = '${DB_PASSWORD}'
