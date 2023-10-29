@@ -4,122 +4,122 @@
 <script type="text/javascript"> 
 </script> 
 <div class="g-lg-12"> 
-    <h2>大會公告</h2> 
-        {% if judge_server_status == False %} 
-		<h1 style="color: red;">目前TOJ不能Judge</h1>
-        {% end %}
-    <table border=2 class="table">
-        <thead>
-            <tr>
-                <td style="width:70%;"> 
-                        <span class="material-symbols-outlined">push_pin</span> 
-                        Title 
-                </td> 
-                <td style="width:15%;">Time</td> 
-                <td style="width:15%;">Author</td> 
-            </tr> 
-        </thead> 
-        <tbody> 
-    {% for bulletin in bulletin_list %} 
-            <tr> 
-                        <td> 
-                                <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/" style="color: {{ bulletin['color'] }};"> 
-                                        <font size=5> 
-                                        {% if bulletin['pinned'] %} 
-                                                <span class="material-symbols-outlined">push_pin</span> 
-                                        {% end %} 
-                                                {{ bulletin['title'] }} 
-                                        </font> 
-                                </a> 
-                        </td> 
-                        <td><font size=3>{{ bulletin['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</font></td> 
-                        <td><font size=3> 
-                                <a href="/oj/acct/{{ bulletin['acct_id'] }}/">{{ bulletin['name'] }}</a> 
-                        </font></td> 
- 
-            </tr> 
-
+  <h2>大會公告</h2> 
+    {% if judge_server_status == False %} 
+	<h1 style="color: red;">目前TOJ不能Judge</h1>
     {% end %}
-        </tbody>
-    </table>
-    <h3 style="font-weight: bolder;">狀態說明</h3>
-    <table>
-        <!-- 
-        <thead> 
-            <tr> 
-                <td colspan=2 style="font-weight: bolder; font-size: 150%;">狀態說明</td> 
-            </tr> 
-        </thead> 
-        --> 
-        <tbody> 
-            <tr> 
-                <td style="color: #00FF00">AC</td> 
-                <td>Accepted</td> 
-            </tr> 
-            <tr> 
-                <td style="color: #ED784A">WA</td> 
-                <td>Wrong Answer</td> 
-            </tr> 
-            <tr> 
-                <td style="color: #27FFF6">RE</td> 
-                <td>Runtime Error</td> 
-            </tr> 
-            <tr> 
-                <td style="color: #70649A">TLE</td> 
-                <td>Time Limit Exceeded</td> 
+  <table border=2 class="table">
+    <thead>
+      <tr>
+        <td style="width:70%;"> 
+          <span class="material-symbols-outlined">push_pin</span> 
+          Title 
+        </td> 
+        <td style="width:15%;">Time</td> 
+        <td style="width:15%;">Author</td> 
+      </tr> 
+    </thead> 
+    <tbody> 
+    {% for bulletin in bulletin_list %} 
+      <tr> 
+        <td> 
+          <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/" style="color: {{ bulletin['color'] }};"> 
+            <font size=5> 
+              {% if bulletin['pinned'] %} 
+                <span class="material-symbols-outlined">push_pin</span> 
+              {% end %} 
+              {{ bulletin['title'] }} 
+            </font> 
+          </a> 
+        </td> 
+        <td>
+          <font size=3>{{ bulletin['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</font>
+        </td> 
+        <td>
+          <font size=3> 
+            <a href="/oj/acct/{{ bulletin['acct_id'] }}/">{{ bulletin['name'] }}</a> 
+          </font>
+        </td> 
+      </tr> 
+    {% end %}
+    </tbody>
 
-	   </tr>
-            <tr>
-                <td style="color: #E83015">MLE</td>
-                <td>Memory Limit Exceeded</td>
-            </tr>
-            <tr> 
-                <td style="color: #FFEB00">CE</td> 
-                <td>Compile Error</td> 
-            </tr> 
-            <tr> 
-                <td>IE</td> 
-                <td>Internal Error</td> 
-            </tr> 
-        </tbody> 
-    </table> 
-    <br /> 
-    <h3 style="font-weight: bolder;">Question 頁面說明</h3> 
-    <ol type="1" start=1> 
-        <li>提供使用者與管理員溝通的管道 
-        <li>同時最多10筆發問，超過10筆會刪除最早的一筆發問 
-
+  </table>
+  <h3 style="font-weight: bolder;">狀態說明</h3>
+  <table>
+    <!-- 
+    <thead> 
+      <tr> 
+        <td colspan=2 style="font-weight: bolder; font-size: 150%;">狀態說明</td> 
+      </tr> 
+    </thead> 
+    --> 
+    <tbody> 
+      <tr> 
+        <td style="color: #00FF00">AC</td> 
+        <td>Accepted</td> 
+      </tr> 
+      <tr> 
+        <td style="color: #ED784A">WA</td> 
+        <td>Wrong Answer</td> 
+      </tr> 
+      <tr> 
+        <td style="color: #27FFF6">RE</td> 
+        <td>Runtime Error</td> 
+      </tr> 
+      <tr> 
+        <td style="color: #70649A">TLE</td> 
+        <td>Time Limit Exceeded</td> 
+	    </tr>
+      <tr>
+        <td style="color: #E83015">MLE</td>
+        <td>Memory Limit Exceeded</td>
+      </tr>
+      <tr> 
+        <td style="color: #FFEB00">CE</td> 
+        <td>Compile Error</td> 
+      </tr> 
+      <tr> 
+        <td>IE</td> 
+        <td>Internal Error</td> 
+      </tr> 
+    </tbody> 
+  </table> 
+  <br /> 
+  <h3 style="font-weight: bolder;">Question 頁面說明</h3> 
+  <ol type="1" start=1> 
+    <li>提供使用者與管理員溝通的管道 
+    <li>同時最多10筆發問，超過10筆會刪除最早的一筆發問 
+  </ol>
+  <h3 style="font-weight: bolder;">Challenges 頁面過濾器說明</h3>
+  <table>
+    <!--
+    <thead>
+      <tr>
+        <td colspan=2 style="font-weight: bolder; font-size: 150%;">Challenges 頁面過濾器說明</td>
+      </tr>
+    </thead>
+    -->
+    <tbody>
+      <tr>
+        <td>Problem ID: 題號</td>
+        <td>題號間以","分隔，例如:1,2,3</td>
+      </tr>
+      <tr>
+        <td>Account ID: 使用者編號</td>
+        <td>編號間以","隔開，例如:1,2,3</td>
+      </tr>
+    </tbody>
+  </table>
+  <br />
+  <h3 style="font-weight: bolder;">記分板說明</h3>
+  <p>
+    <ol type="1" start=1>
+      <li>記分板分數的顏色根據分數不同會有不一樣的顯示，以10分為一區間
+      <li>滿分時(即AC)分數會以粗體顯示
+      <li>名次排序方式: 以分數為優先，若分數相同，submit(只計算有AC的題目)數較少者名次較前
+      <li>記分板有多個板塊，每個使用者預設在Default板塊內
+      <li>若要申請進入其他板塊，可透過Question頁面向管理員申請
     </ol>
-
-    <h3 style="font-weight: bolder;">Challenges 頁面過濾器說明</h3>
-    <table>
-        <!--
-        <thead>
-            <tr>
-                <td colspan=2 style="font-weight: bolder; font-size: 150%;">Challenges 頁面過濾器說明</td>
-            </tr>
-        </thead>
-        -->
-        <tbody>
-            <tr>
-                <td>Problem ID: 題號</td>
-                <td>題號間以","分隔，例如:1,2,3</td>
-            </tr>
-            <tr>
-                <td>Account ID: 使用者編號</td>
-                <td>編號間以","隔開，例如:1,2,3</td>
-            </tr>
-        </tbody>
-    </table>
-    <br />
-    <h3 style="font-weight: bolder;">記分板說明</h3>
-    <p>
-        <ol type="1" start=1>
-            <li>記分板分數的顏色根據分數不同會有不一樣的顯示，以10分為一區間
-            <li>滿分時(即AC)分數會以粗體顯示
-            <li>名次排序方式: 以分數為優先，若分數相同，submit(只計算有AC的題目)數較少者名次較前
-            <li>記分板有多個板塊，每個使用者預設在Default板塊內
-            <li>若要申請進入其他板塊，可透過Question頁面向管理員申請
-        </ol>
-    </p> 
+  </p> 
 </div> 
