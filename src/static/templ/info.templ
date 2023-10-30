@@ -5,7 +5,7 @@
 
 </script> 
 <div class="g-lg-12"> 
-  <h3 class="col-3">大會公告</h3> 
+  <h2>大會公告</h2> 
     {% if judge_server_status == False %} 
 	<h1 style="color: red;">目前TOJ不能Judge，造成不便之處，敬請見諒</h1>
     {% end %}
@@ -13,10 +13,10 @@
     <thead>
       <tr>
         <td style="width:70%;"> 
-          <div class="material-symbols-outlined">push_pin</div> 
+          <span class="material-symbols-outlined">push_pin</span> 
           Title 
         </td> 
-        <td style="width:15%;">col-2 offset-2 time</td> 
+        <td style="width:15%;">time</td> 
         <td style="width:15%;">Author</td> 
       </tr> 
     </thead> 
@@ -27,14 +27,14 @@
           <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/" style="color: {{ bulletin['color'] }};"> 
             <font size=5> 
               {% if bulletin['pinned'] %} 
-                <div class="material-symbols-outlined">push_pin</div> 
+                <span class="material-symbols-outlined">push_pin</span> 
               {% end %} 
               {{ bulletin['title'] }} 
             </font> 
           </a> 
         </td> 
         <td>
-          <font size=3>{{ bulletin['col-2 offset-2 timestamp'].strfcol-2 offset-2 time('%Y-%m-%d %H:%M:%S') }}</font>
+          <font size=3>{{ bulletin['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</font>
         </td> 
         <td>
           <font size=3> 
