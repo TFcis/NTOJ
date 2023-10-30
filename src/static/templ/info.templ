@@ -5,9 +5,9 @@
 
 </script> 
 <div class="g-lg-12"> 
-  <h2>大會公告</h2> 
+  <h1 style="font-weight: bolder;">大會公告</h1> 
     {% if judge_server_status == False %} 
-	<h1 style="color: red;">目前TOJ不能Judge，造成不便之處，敬請見諒</h1>
+	<h1 style="color: #F0F280;">目前TOJ不能Judge，造成不便之處，敬請見諒</h1>
     {% end %}
   <table border="2" class="table">
     <thead>
@@ -46,52 +46,55 @@
     </tbody>
 
   </table>
+
+  <h2 style="font-weight: bolder;">NTOJ Guide</h2>
+  <hr>
   <div class="row">
-    <h3 class="col-3" style="font-weight: bolder;">狀態說明</h3>
+    <h3 class="col-3" style="font-weight: bolder;">Verdict</h3>
   </div>
   <div>
     <table class="table table-hover"> 
       <thead> 
         <tr> 
           <th scope="col-1">Verdict</th>
-          <th scope="col-2">Full Name</th>
+          <th scope="col-3">Full Name</th>
           <th scope="col-8">Conditions Explanation</th>
         </tr> 
       </thead> 
       <tbody> 
         <tr> 
-          <td class="col-1" style="color: #00FF00">AC</td> 
-          <td class="col-2">Accepted</td> 
-          <td></td>
+          <td class="col-1" style="color: #00FF00; background-color: #00FF0033;">AC</td> 
+          <td class="col-3" style="background-color: #00FF0033;">Accepted</td> 
+          <td style="background-color: #00FF0033;"></td>
         </tr> 
         <tr> 
-          <td class="col-1" style="color: #ED784A">WA</td> 
-          <td class="col-2">Wrong Answer</td> 
-          <td></td>
+          <td class="col-1" style="color: #ED784A; background-color: #ED784A33;">WA</td> 
+          <td class="col-3" style="background-color: #ED784A33;">Wrong Answer</td> 
+          <td style="background-color: #ED784A33;"></td>
         </tr> 
         <tr> 
-          <td class="col-1" style="color: #27FFF6">RE</td> 
-          <td class="col-2">Runtime Error</td> 
-          <td></td>
+          <td class="col-1" style="color: #27FFF6; background-color: #27FFF633;">RE</td> 
+          <td class="col-3" style="background-color: #27FFF633;">Runtime Error</td> 
+          <td style="background-color: #27FFF633;"></td>
         </tr> 
         <tr> 
-          <td class="col-1" style="color: #70649A">TLE</td> 
-          <td class="col-2">Time Limit Exceeded</td>
-          <td></td> 
+          <td class="col-1" style="color: #70649A; background-color: #70649A33;">TLE</td> 
+          <td class="col-3" style="background-color: #70649A33;">Time Limit Exceeded</td>
+          <td style="background-color: #70649A33;"></td> 
 	      </tr>
         <tr>
-          <td class="col-1" style="color: #FF2200">MLE</td>
-          <td class="col-2">Memory Limit Exceeded</td>
-          <td></td>
+          <td class="col-1" style="color: #FF2200; background-color: #FF220033;">MLE</td>
+          <td class="col-3" style="background-color: #FF220033;">Memory Limit Exceeded</td>
+          <td style="background-color: #FF220033;"></td>
         </tr>
         <tr> 
-          <td class="col-1" style="color: #FFEA00">CE</td> 
-          <td class="col-2">Compile Error</td> 
-          <td></td>
+          <td class="col-1" style="color: #FFEA00; background-color: #FFEA0033;">CE</td> 
+          <td class="col-3" style="background-color: #FFEA0033;">Compile Error</td> 
+          <td style="background-color: #FFEA0033;"></td>
         </tr> 
         <tr> 
           <td class="col-1">IE</td> 
-          <td class="col-2">Internal Error</td> 
+          <td class="col-3">Internal Error</td> 
           <td></td>
         </tr> 
       </tbody> 
@@ -100,13 +103,13 @@
   
   <br> 
   <div class="row">
-    <h3 class="col" style="font-weight: bolder;">Question 頁面說明</h3> 
+    <h3 class="col" style="font-weight: bolder;">Question Explanation</h3> 
   </div>
   <ol type="1" start=1> 
     <li>提供使用者與管理員溝通的管道 
     <li>同時最多10筆發問，超過10筆會刪除最早的一筆發問 
   </ol>
-  <h3 class="col" style="font-weight: bolder;">Challenges 頁面過濾器說明</h3>
+  <h3 class="col" style="font-weight: bolder;">Challenges Filter</h3>
   <table class="table table-borderless">
     <tbody>
       <tr>
@@ -120,12 +123,12 @@
     </tbody>
   </table>
   <br />
-  <h3 class="col-3" style="font-weight: bolder;">記分板說明</h3>
+  <h3 class="col-3" style="font-weight: bolder;">Scoreboard</h3>
   <p>
     <ol type="1" start=1>
-      <li>記分板分數的顏色根據分數不同會有不一樣的顯示，以10分為一區間
+      <li>記分板分數的顏色根據分數，以10分為一區間遞增
       <li>滿分時(即AC)分數會以粗體顯示
-      <li>名次排序方式: 以分數為優先，若分數相同，submit(只計算有AC的題目)數較少者名次較前
+      <li>名次排序方式: 以分數為優先，若分數相同，以submission count(只計算有AC的題目)較少者名次較前
       <li>記分板有多個板塊，每個使用者預設在Default板塊內
       <li>若要申請進入其他板塊，可透過Question頁面向管理員申請
     </ol>
