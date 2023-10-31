@@ -1,174 +1,264 @@
 <link rel="stylesheet" type="text/css" href="/oj/info.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+<style>
+  
+</style>
 
 <script type="text/javascript">
 function init() {
 
 }
 </script>
-<div class="g-lg-12">
-    <h2>更新日誌</h2>
-    <h3>v1.0</h3>
-        <span class="time">2022/10/05</span>
-        <pre>
-以tornado 6.2 及 asyncpg重構完成
-部分SQL query優化
-部分函數優化
-Tags必須要AC後才顯示
-登入後跳回原本頁面
-Challenge頁面一鍵複製code
-前端可以手動重連後端(可能不穩定
-後端斷線題目不能submit
-        </pre>
-    <h3>v1.1</h3>
-        <span class="time">2022/10/14</span>
-        <pre>
-SQL全部用connection pool替代
-redis也全部使用aioredis替代
-chalsub跟informsub實現完成
-        </pre>
-        <span class="time">2022/10/15</span>
-        <pre>
-Challenge頁面不會閃了 (改用WebSocket實現)
-Customize Inform Text Color
-JS Code Lint
-User AC Ratio
-        </pre>
-        <h4>v1.1 changelog</h4>
-        <span class="time">2022/10/16</span>
-        <pre>
-SQL連線全部改成Connection Pool模式
-redis模塊改成aioredis，全部使用async/await
-部份SQL query優化
-部份函數優化 (使用redis做cache
-ChalSub與InformSub實現完成
-Challenge的state改用WebSocket實現 (ChalstateSub)
-Challenge page code get once
-可以自訂Inform文字的顏色
-JS Code排版
-在acct頁面新增用戶的User AC Ratio (參考TIOJ)
-修正了登入跳轉不會正確顯示帳號名稱的問題
-JudgeServer下線時不顯示submit頁面，直接用JudgeServer Offline
-        </pre>
-    <h3>v1.2</h3>
-        <span class="time">2022/10/17</span>
-        <pre>
-Judge與Chal分離
-實現多路Judge
-重寫Judge心跳服務
-更新了Manage-Judge界面
-優化list_pro的SQL Query
-正確關閉部份redis, websocket, postgresql連線
-challenge page show information
-        </pre>
-        <span class="time">2022/10/19</span>
-        <pre>
-Log紀錄加上log type
-Log頁面可以由type分類
-把我亂改的arrow function改回來
-        </pre>
-        <span class="time">2022/10/22</span>
-        <pre>
-優化AC Ratio query
-config.py可以寫server_name了
-JudgeService優化
-        </pre>
-        <span class="time">2022/10/26</span>
-        <pre>
-fix show tags when problem didn't accepted
-fix not show tags when admin
-optimized pro tags
-fix get user ac ratio bug (didn't unpackb data)
-        </pre>
-        <span class="time">2022/10/27</span>
-        <pre>
-Record group operation to log
-        </pre>
-        <span class="time">2022/10/31</span>
-        <pre>
-change manage-judge log record message
-fix manage-judge bug (twice finish)
-        </pre>
-        <span class="time">2022/11/01</span>
-        <pre>
-fix can't submit question bug
-        </pre>
-        <span class="time">2022/11/02</span>
-        <pre>
-clean code
-remove some unnecessary redis cache del operation
-        </pre>
-        <span class="time">2022/11/04</span>
-        <pre>
-unload some unnecessary js code (such as pdf.js ...)
-        </pre>
-        <h4>v1.2.1</h3>
-        <span class="time">2022/11/07</span>
-        <pre>
-rank page fix (原code中的/oj/rank.css根本就沒有，然後舊版居然能跑???
-        </pre>
-        <h4>v1.2.2</h4>
-        <span class="time">2022/11/12</span>
-        <pre>
-fix upload problem bug, https://github.com/tobiichi3227/NTOJ/issues/1
-fix cannot rechallenge all
-fix websocket connect error
-fix cannot save problem file
-clean up code
-        </pre>
-        <h4>v1.2.3</h4>
-        <span class="time">2023/01/13</span>
-        <p>
-challenge page show CE reason
-board頁面現在會紀錄上次滾動位置
-同時平滑的滾動過去 (覺得醜可以改掉，前提是你們有看到)
+<div class="container">
+  <div class="row g-lg-12">
+    <h1>Devlog</h1>
 
-註：久違的NTOJ更新
-        </p>
-        <h4>v1.2.4</h4>
-        <span class="time">2023/01/30</span>
+    <div class="release">
+      <div class="row">
+        <h3 class="col-3">v2.0.0</h3>
+        <h5 class="col-3 offset-2"></h5>
+      </div>
+    </div>
+
+    <div class="release">
+      <div class="row">
+        <h3 class="col-3">v1.4.0</h3>
+        <h5 class="col-3 offset-2">19 Jul 2023</h5>
+      </div>
+      <br>
+      <div class="row">
+        <h5 class="col-3">Improvements</h5>
+        <div>
+          - <b>Time Zone:</b> Change to UTC+08:00
+        </div>
+      </div>
+      <br><br>
+    </div>
+
+    <div class="release">
+      <div class="row">
+        <h3 class="col-3">v1.3.0</h3> 
+        <h5 class="col-3 offset-2">16 May 2023</h5>
+      </div>
+      <br>
+      <div class="row">
+        <h5 class="col-3">Features</h5>
+        <div>
+          - <b>language:</b> 新增Python3與Rust支持 (python3較不穩定)
+        </div> 
+      </div>
+      <br><br>
+    </div>
+    
+    <div class="release">
+      <div class="row">
+        <h3 class="col-3">v1.2.10</h3>
+        <h5 class="col-3 offset-2">21 Apr 2023</h5>
+      </div>
+      <br>
+      <div class="row">
+        <h5 class="col-3">Features</h5>
+        <div>
+          - <b>Navbar:</b> add Dev Info</pre>
+        </div>
+      </div>
+      <br>
+      <div class="row g-2">
+        <h5 class="col-3">Improvements</h5>
+        <div>
+          - <b>Challenges:</b> show compile error UI
+        </div>
+      </div>
+      <br><br>
+    </div>
+
+    <div class="release">      
+      <div class="row">
+        <h3 class="col-3">v1.2.9</h3>
+        <h5 class="col-3 offset-2">02 Mar 2023</h5>
+      </div>
+      <div class="row">
+        <h5 class="col-3">Features</h5>
+        <br>
         <pre>
-修正了loglist頁面的小錯誤
-        </pre>
-        <h4>v1.2.5</h4>
-        <span class="time">2023/02/01</span>
+- 把之前的api加回來了</pre>
+      </div>
+      <div class="row">
+        <h5 class="col-3">Fixes</h5>
+        <br>
         <pre>
-修正了無法修改密碼的錯誤
+- 修復了list_pro()的bug
         </pre>
-        <h4>v1.2.6</h4>
-        <span class="time">2023/02/07</span>
+      </div>
+    </div>
+
+    <div class="release">
+      <div class="row">    
+        <h3 class="col-3">v1.2.8</h3>
+        <h5 class="col-3 offset-2">17 Feb 2023</h5>
         <pre>
-現在可以重新初始化題目了 (過往只要第一次上傳錯誤，該題就不能用了)
-題目更新頁面新增JSON線上編輯器，可以直接修改題目設定檔 (xiplus的建議)
+          主頁面加上judge offline的通知
+          修復了多judge無限迴圈的情況
+          優化了judge心跳判斷
         </pre>
-        <h4>v1.2.7</h4>
-        <span class="time">2023/02/08</span>
-        <pre>
-禁止使用者使用錯誤的查詢條件 (challist那邊的兩個欄位與proset的欄位)
-        </pre>
-        <h4>v1.2.8</h4>
-        <span class="time">2023/02/17</span>
-        <pre>
-主頁面加上judge offline的通知
-修復了多judge無限迴圈的情況
-優化了judge心跳判斷
-        </pre>
-        <h4>v1.2.9</h4>
-        <span class="time">2023/03/02</span>
-        <pre>
-把之前的api加回來了
-修復了list_pro()的bug
-        </pre>
-        <h4>v1.2.10</h4>
-        <span class="time">2023/04/21</span>
-        <pre>
-優化chal顯示編譯錯誤UI
-新增Dev-Info
-        </pre>
-        <h4>v1.3</h4>
-        <span class="time">2023/05/16</span>
-        <pre>
-新增Python3與Rust支持 (python3支持較不穩定)
-        </pre>
-        <h4>v1.4</h4>
-	<h4>made by tobiichi3227</h4>
+      </div>
+    </div>
+      
+    <h3 class="col-3">v1.2.7</h3>
+    <h5 class="col-3 offset-2">08 Feb 2023</h5>
+    <pre>
+      禁止使用者使用錯誤的查詢條件 (challist那邊的兩個欄位與proset的欄位)
+    </pre>
+    
+    <h3 class="col-3">v1.2.6</h3>
+    <h5 class="col-3 offset-2">07 Feb 2023</h5>
+    <pre>
+      現在可以重新初始化題目了 (過往只要第一次上傳錯誤，該題就不能用了)
+      題目更新頁面新增JSON線上編輯器，可以直接修改題目設定檔 (xiplus的建議)
+    </pre>ㄐ
+    
+    <h3 class="col-3">v1.2.5</h3>
+    <h5 class="col-3 offset-2">01 Feb 2023</h5>
+    <pre>
+      修正了無法修改密碼的錯誤
+  </pre>
+  
+  <h3 class="col-3">v1.2.4</h3>
+  <h5 class="col-3 offset-2">30 Jan 2023</h5>
+  <pre>
+    修正了loglist頁面的小錯誤
+  </pre>
+  
+  <h3 class="col-3">v1.2.3</h3>
+  <h5 class="col-3 offset-2">13 Jan 2023</h5>
+  <p>
+    challenge page show CE reason
+    board頁面現在會紀錄上次滾動位置
+    同時平滑的滾動過去 (覺得醜可以改掉，前提是你們有看到)
+    
+    註：久違的NTOJ更新
+  </p>
+  
+  <h3 class="col-3">v1.2.2</h3>
+  <div class="col-2 offset-2">12 Nov 2022</div>
+  <pre>
+    fix upload problem bug, https://github.com/tobiichi3227/NTOJ/issues/1
+    fix cannot rechallenge all
+    fix websocket connect error
+    fix cannot save problem file
+    clean up code
+  </pre>
+  
+  <h3 class="col-3">v1.2.1</h3>
+  <div class="col-2 offset-2">07 Nov 2022</div>
+  <pre>
+    rank page fix (原code中的/oj/rank.css根本就沒有，然後舊版居然能跑???
+  </pre>
+
+  <h3 class="col-3">v1.2.0</h3>
+  <div class="col-2 offset-2">17 Oct 2022</div>
+  <pre>
+    Judge與Chal分離
+    實現多路Judge
+    重寫Judge心跳服務
+    更新了Manage-Judge界面
+    優化list_pro的SQL Query
+    正確關閉部份redis, websocket, postgresql連線
+    challenge page show information
+  </pre>
+  <div class="col-2 offset-2">19 Oct 2022</div>
+  <pre>
+    Log紀錄加上log type
+    Log頁面可以由type分類
+      把我亂改的arrow function改回來
+    </pre>
+    <div class="col-2 offset-2">22 Oct 2022</div>
+    <pre>
+      優化AC Ratio query
+      config.py可以寫server_name了
+      JudgeService優化
+    </pre>
+    <div class="col-2 offset-2">26 Oct 2022</div>
+    <pre>
+      fix show tags when problem didn't accepted
+      fix not show tags when admin
+      optimized pro tags
+      fix get user ac ratio bug (didn't unpackb data)
+    </pre>
+    <div class="col-2 offset-2">27 Oct 2022</div>
+    <pre>
+      Record group operation to log
+    </pre>
+    <div class="col-2 offset-2">31 Oct 2022</div>
+    <pre>
+      change manage-judge log record message
+      fix manage-judge bug (twice finish)
+    </pre>
+    <div class="col-2 offset-2">01 Nov 2022</div>
+    <pre>
+      fix can't submit question bug
+    </pre>
+    <div class="col-2 offset-2">02 Nov 2022</div>
+    <pre>
+      clean code
+      remove some unnecessary redis cache del operation
+    </pre>
+    <div class="col-2 offset-2">04 Nov 2022</div>
+    <pre>
+      unload some unnecessary js code (such as pdf.js ...)
+    </pre> 
+
+  <h3 class="col-3">v1.1.0 changelog</h3>
+  <div class="col-2 offset-2">16 Oct 2022</div>
+  <pre>
+    SQL連線全部改成Connection Pool模式
+    redis模塊改成aioredis，全部使用async/await
+    部份SQL query優化
+    部份函數優化 (使用redis做cache
+    ChalSub與InformSub實現完成
+    Challenge的state改用WebSocket實現 (ChalstateSub)
+    Challenge page code get once
+    可以自訂Inform文字的顏色
+    JS Code排版
+    在acct頁面新增用戶的User AC Ratio (參考TIOJ)
+    修正了登入跳轉不會正確顯示帳號名稱的問題
+    JudgeServer下線時不顯示submit頁面，直接用JudgeServer Offline
+  </pre>
+    
+  <h3 class="col-3">v1.1.0</h3>
+    <div class="col-2 offset-2">14 Nov 2022</div>
+    <pre>
+      SQL全部用connection pool替代
+      redis也全部使用aioredis替代
+      chalsub跟informsub實現完成
+    </pre>
+    <div class="col-2 offset-2">15 Nov 2022</div>
+    <pre>
+      Challenge頁面不會閃了 (改用WebSocket實現)
+      Customize Inform Text Color
+      JS Code Lint
+      User AC Ratio
+    </pre>
+    
+    
+    <h3 class="col-3">v1.0.0</h3>
+    <div class="col-2 offset-2">05 Oct 2022</div>
+    <pre>
+      以tornado 6.2 及 asyncpg重構完成
+      部分SQL query優化
+      部分函數優化
+      Tags必須要AC後才顯示
+      登入後跳回原本頁面
+      Challenge頁面一鍵複製code
+      前端可以手動重連後端(可能不穩定
+      後端斷線題目不能submit
+    </pre>
+
+  <div class="row">
+    <h3 class="col">made by tobiichi3227</h3>
+  </div>
+  <div class="row">
+    <h3 class="col">refactor by Moon</h3>
+  </div>
+  </div>
 </div>
