@@ -80,7 +80,7 @@
           </a> 
         </td> 
         <td>
-          <font size=3>{{ bulletin['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</font>
+          <font size=3>{{ bulletin['stamp'].strf('%Y-%m-%d %H:%M:%S') }}</font>
         </td> 
         <td>
           <font size=3> 
@@ -98,7 +98,7 @@
     <h3 class="col-3" style="font-weight: bolder;">Verdict</h3>
   </div>
   <div>
-    <table class="table table-borderless"> 
+    <table class="table table-borderless" style="font-size: 150%"> 
       <thead> 
         <tr class="verdict-table-head"> 
           <th scope="col-1">Verdict</th>
@@ -112,7 +112,7 @@
           <td class="col-3">Accepted</td> 
           <td class="col-8">
             Your program is correct! <br> 
-            It outputs the right answer in reasoneable time and within the limit memory usage. <br>
+            It outputs the right answer in reasoneable  and within the limit memory usage. <br>
             <!-- Congratulations!  -->
             你的程式輸出完全正確! <br>
             它在要求的時間和記憶體限制內輸出了正確答案。
@@ -133,8 +133,8 @@
           <td class="col-1">TLE</td> 
           <td class="col-3">Time Limit Exceeded</td>
           <td class="col-8">
-            Your program tried to run for too much time. <br>
-            If you are sure that the problem needs more time, please contact the administrator through Question page. <br>
+            Your program tried to run for too much . <br>
+            If you are sure that the problem needs more , please contact the administrator through Question page. <br>
             你的程式嘗試運行的時間太久。 <br>
             如果你認為題目需要更長的時間限制，可以透過Question頁面聯絡管理員。
           </td> 
@@ -151,7 +151,7 @@
         </tr>
         <tr class="light-blue-row"> 
           <td class="col-1">RE</td> 
-          <td class="col-3">Runtime Error</td> 
+          <td class="col-3">Run Error</td> 
           <td class="col-8">
             Your program doesn't return a 0 code. <br>
             你的程式退出狀態不為 0。
@@ -159,7 +159,7 @@
         </tr> 
         <tr class="blue-row">
           <td class="col-1">RE</td> 
-          <td class="col-3">Runtime Error(killed by signal)</td> 
+          <td class="col-3">Run Error(killed by signal)</td> 
           <td class="col-8">
             Your program failed during the execution. <br>
             There are some common reasons for this result: <br>
