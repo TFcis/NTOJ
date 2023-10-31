@@ -13,9 +13,14 @@
   background-color: #fce5d9;
 }
 
-.blue-row > td {
-  color: #23c7c1; 
+.light-blue-row > td {
+  color: #1fb0ab; 
   background-color: #dcfafa;
+}
+
+.blue-row > td {
+  color: #237ac7;
+  background-color: #dceafa;
 }
 
 .purple-row > td {
@@ -32,6 +37,10 @@
   color: #b1a200; 
   background-color: #fdfce2;
 }
+
+/* li {
+  font-weight: bold;
+} */
 </style>
 
 <script type="text/javascript"> 
@@ -49,7 +58,7 @@
           <span class="material-symbols-outlined">push_pin</span> 
           Title 
         </td> 
-        <td style="width:15%;">time</td> 
+        <td style="width:15%;">Time</td> 
         <td style="width:15%;">Author</td> 
       </tr> 
     </thead> 
@@ -77,7 +86,6 @@
       </tr> 
     {% end %}
     </tbody>
-
   </table>
 
   <h1 style="font-weight: bolder;">NTOJ Guide</h1>
@@ -88,7 +96,7 @@
   <div>
     <table class="table table-borderless"> 
       <thead> 
-        <tr> 
+        <tr class="verdict-table-head"> 
           <th scope="col-1">Verdict</th>
           <th scope="col-3">Full Name</th>
           <th scope="col-8">Conditions Explanation</th>
@@ -117,14 +125,6 @@
             如果你認為你的程式碼真的正確，可以透過Question頁面聯絡管理員。
           </td>
         </tr> 
-        <tr class="blue-row"> 
-          <td class="col-1">RE</td> 
-          <td class="col-3">Runtime Error</td> 
-          <td class="col-8">
-            Your program doesn't return a 0 code. <br>
-            你的程式退出狀態不為 0。
-          </td>
-        </tr> 
         <tr class="purple-row"> 
           <td class="col-1">TLE</td> 
           <td class="col-3">Time Limit Exceeded</td>
@@ -143,6 +143,44 @@
             If you are sure that the problem needs more memory, please contact the administrator through Question page. <br>
             你的程式試圖使用的記憶體超出了題目的允許範圍。 <br>
             如果你認為題目需要更大的記憶體範圍，可以透過Question頁面聯絡管理員。
+          </td>
+        </tr>
+        <tr class="light-blue-row"> 
+          <td class="col-1">RE</td> 
+          <td class="col-3">Runtime Error</td> 
+          <td class="col-8">
+            Your program doesn't return a 0 code. <br>
+            你的程式退出狀態不為 0。
+          </td>
+        </tr> 
+        <tr class="blue-row">
+          <td class="col-1">RE</td> 
+          <td class="col-3">Runtime Error(killed by signal)</td> 
+          <td class="col-8">
+            Your program failed during the execution. <br>
+            There are some common reasons for this result: <br>
+            <ol>
+              <li>SIGSEGV - invalid memory access (segmentation fault)</li>
+              <li>SIGFPE - erroneous arithmetic operation such as divide by zero</li>
+              <li>SIGABRT - abnormal termination condition</li>
+              <ol type="i">
+                <li>double free uninitialized or wrong memory address</li>
+                <li>calling abort function</li>
+                <li>assert</li>
+              </ol>
+            </ol>
+            你的程式在執行過程中失敗了。 <br>
+            造成此結果有一些常見的原因: <br>
+            <ol>
+              <li>SIGSEGV - 無效記憶體存取 (記憶體區段錯誤) </li>
+              <li>SIGFPE - 錯誤的算術運算，例如: 除以0 </li>
+              <li>SIGABRT - 異常終止條件</li>
+              <ol type="i">
+                <li>重複 free 未初始化或錯誤的記憶體位址</li>
+                <li>呼叫 abort() 函數</li>
+                <li>assert</li>
+              </ol>
+            </ol> 
           </td>
         </tr>
         <tr class="yellow-row"> 
