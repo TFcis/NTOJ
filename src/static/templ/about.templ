@@ -1,199 +1,174 @@
 <html>
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">  
   <link href='https://fonts.googleapis.com/css?family=Orbitron:400,500,700,900' rel='stylesheet' type='text/css'>
   <link rel="stylesheet" type="text/css" href="/oj/third/normalize.css">
-  <link rel="stylesheet" type="text/css" href="/oj/blk.css">
-
+  <link rel="stylesheet" type="text/css" href="/oj/blk.css">  
   <!-- <script src="https://code.jquery.com/jquery-3.7.1.js"></script> -->
   <!-- <script src="http://localhost/src/three.min.js"></script> -->
   <script type="text/javascript">
-		/*  
-		var j_canvas;
+    /*  
+    var j_canvas;
     var scene;
     var camera;
-    var renderer;
-
+    var renderer;  
     function init(){
-			scene = new THREE.Scene();
-			camera = new THREE.PerspectiveCamera(75,j_canvas.width() / j_canvas.height(),0.1,10000000);
-			renderer = new THREE.WebGLRenderer();
-
-			renderer.setSize(j_canvas.width(),j_canvas.height());
-			j_canvas.append(renderer.domElement);
-
-			window.AudioContext = window.AudioContext || window.webkitAudioContext;
-			context = new AudioContext();
-
-			var a_master;
-			function load_master(){
-			    var request = new XMLHttpRequest();
-
-			    request.open('GET','/oj/img/master.ogg',true);
-			    request.responseType = 'arraybuffer';
-
-		    request.onload = function(){
-					context.decodeAudioData(request.response,function(buffer){
-			  	  var source = context.createBufferSource();
-
-			  	  source.buffer = buffer;
-			  	  source.loop = true;
-			  	  source.connect(context.destination);
-			  	  source.start(0);
-					});
-		    }
-		    request.send();
-			}
-			load_master();
-  	}
-  	function render(){
-			requestAnimationFrame(render);
-			renderer.render(scene,camera);
-
-			camera.rotation.y += 0.01;
-  	}
-
-  	function test(){
-			var cubeMap = new THREE.Texture([]);
-			cubeMap.format = THREE.RGBFormat;
-			cubeMap.flipY = false;
-
-			var loader = new THREE.ImageLoader();
-			loader.load( '/oj/img/skybox.png',function(image){
-			  var getSide = function(x,y){
-				var size = 720;
-				var canvas = document.createElement('canvas');
-
-				canvas.width = size;
-				canvas.height = size;
-
-				var context = canvas.getContext('2d');
-				context.drawImage(image,-x * size,-y * size);
-
-				return canvas;
-			};
-
-	  	cubeMap.image[0] = getSide(2,1); // px
-	  	cubeMap.image[1] = getSide(0,1); // nx
-	  	cubeMap.image[2] = getSide(1,0); // nx
-	  	cubeMap.image[3] = getSide(1,2); // nx
-	  	cubeMap.image[4] = getSide(1,1); // nx
-	  	cubeMap.image[5] = getSide(3,1); // nx
-	  	cubeMap.needsUpdate = true;
-		});
-
-		var shader = THREE.ShaderLib["cube"];
-		shader.uniforms['tCube'].value = cubeMap;
-
-		var material = new THREE.ShaderMaterial({
-		  'fragmentShader':shader.fragmentShader,
-		  'vertexShader':shader.vertexShader,
-		  'uniforms':shader.uniforms,
-		  'depthWrite':false,
-		  'side':THREE.BackSide
-		});
-
-		var skybox = new THREE.Mesh(
-			new THREE.BoxGeometry(10000,100000,100000),
-			material);
-
-		scene.add(skybox);
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75,j_canvas.width() / j_canvas.height(),0.1,10000000);
+      renderer = new THREE.WebGLRenderer();  
+      renderer.setSize(j_canvas.width(),j_canvas.height());
+      j_canvas.append(renderer.domElement);  
+      window.AudioContext = window.AudioContext || window.webkitAudioContext;
+      context = new AudioContext();  
+      var a_master;
+      function load_master(){
+          var request = new XMLHttpRequest();  
+          request.open('GET','/oj/img/master.ogg',true);
+          request.responseType = 'arraybuffer';  
+        request.onload = function(){
+      	  context.decodeAudioData(request.response,function(buffer){
+            var source = context.createBufferSource();  
+            source.buffer = buffer;
+            source.loop = true;
+            source.connect(context.destination);
+            source.start(0);
+          });
+        }
+        request.send();
+      }
+      load_master();
     }
-
-    $(document).ready(function(){
-			j_canvas = $('#canvas');
-
-			init();
-			render();
-
-			test();
+    function render(){
+      requestAnimationFrame(render);
+      renderer.render(scene,camera);  
+      camera.rotation.y += 0.01;
+    }
+    function test(){
+      var cubeMap = new THREE.Texture([]);
+      cubeMap.format = THREE.RGBFormat;
+      cubeMap.flipY = false;  
+      var loader = new THREE.ImageLoader();
+      loader.load( '/oj/img/skybox.png',function(image){
+        var getSide = function(x,y){
+      	var size = 720;
+      	var canvas = document.createElement('canvas');  
+      	canvas.width = size;
+      	canvas.height = size;  
+      	var context = canvas.getContext('2d');
+      	context.drawImage(image,-x * size,-y * size);  
+      	return canvas;
+      };
+      cubeMap.image[0] = getSide(2,1); // px
+      cubeMap.image[1] = getSide(0,1); // nx
+      cubeMap.image[2] = getSide(1,0); // nx
+      cubeMap.image[3] = getSide(1,2); // nx
+      cubeMap.image[4] = getSide(1,1); // nx
+      cubeMap.image[5] = getSide(3,1); // nx
+      cubeMap.needsUpdate = true;
     });
-	*/
+    var shader = THREE.ShaderLib["cube"];
+    shader.uniforms['tCube'].value = cubeMap;  
+    var material = new THREE.ShaderMaterial({
+      'fragmentShader':shader.fragmentShader,
+      'vertexShader':shader.vertexShader,
+      'uniforms':shader.uniforms,
+      'depthWrite':false,
+      'side':THREE.BackSide
+    });
+    var skybox = new THREE.Mesh(
+      new THREE.BoxGeometry(10000,100000,100000),
+      material);  
+    scene.add(skybox);
+    }
+    $(document).ready(function(){
+      j_canvas = $('#canvas');  
+      init();
+  	  render();
+      test();
+    });
+  */  
   </script>
-	<style>
-		.clearfix {
-			margin-bottom: 16px;
-			> div {
-				margin-left: 16px; 
-				float: left;
-			}
-		}
-
-		img {
-			float: left;
-		}
-	</style>
+  <style>
+    .clearfix {
+      margin-bottom: 16px;
+      > div {
+        margin-left: 16px; 
+        float: left;
+      }
+    }  
+    img {
+      float: left;
+    }
+  </style>
 </head>
 <body style="width: 100%; height: 100%;">
-
   <div style="width: 1280px; height: 960px; position:relative;">
-	  <div id="canvas" style="width: 100%; height: 100%">
+    <div id="canvas" style="width: 100%; height: 100%">
     
     </div>
-	  <div style="width: 100%; height: 100%; position:absolute; top: 0px; left: 0px;">
+    <div style="width: 100%; height: 100%; position:absolute; top: 0px; left: 0px;">
       <div style="width: 62%; margin: 64px auto; padding: 16px 16px; background-color: rgba(255,255,255,0.8); font-family: Orbitron, sans-serif; color: #0B1013;">
-	  	  <div>
-	  		  <a 
-	  			  data-bs-toggle="collapse" 
-	  			  href="#NTOJ" 
-	  			  role="button"
-	  			  style="color: var(--bs-link-color);"
-	  		  >
-	  		  <h3>NTOJ</h3>
-	  		  </a>
-	  		  <div id="NTOJ" class="collapse">
-	  			  <h3>T24</h3>
-	  			  <div class="clearfix">
-	  				  <img width=200 src="https://avatars.githubusercontent.com/u/86729076?v=4"></img>
-	  				  <div>
-	  					  <h4>tobiichi3227</h4>
-	  					  <p>NTOJ開發與新伺服器建置</p>
-	  				  </div>
-	  			  </div>
-	  			  <div class="clearfix">
-	  			  	<img width=200 src="https://avatars.githubusercontent.com/u/98439044?v=4"></img>
-	  			  	<div>
-	  			  		<h4>ccccchhhheeenng</h4>
-	  			  		<p>NTOJ新伺服器建置</p>
-	  			  	</div>
-	  			  </div>
+        <div>
+          <a 
+            data-bs-toggle="collapse" 
+            href="#NTOJ" 
+            role="button"
+            style="color: var(--bs-link-color);"
+          >
+          <h3>NTOJ</h3>
+          </a>
+          <div id="NTOJ" class="collapse">
+            <h3>T24</h3>
+            <div class="clearfix">
+              <img width=200 src="https://avatars.githubusercontent.com/u/86729076?v=4"></img>
+              <div>
+                <h4>tobiichi3227</h4>
+                <p>NTOJ開發與新伺服器建置</p>
+              </div>
+            </div>
+            <div class="clearfix">
+              <img width=200 src="https://avatars.githubusercontent.com/u/98439044?v=4"></img>
+              <div>
+                <h4>ccccchhhheeenng</h4>
+                <p>NTOJ新伺服器建置</p>
+              </div>
+            </div>
             <h3>T25</h3>
             <div class="clearfix">
-	  				  <img width=200 src="https://avatars.githubusercontent.com/u/108756201?v=4"></img>
-	  				  <div>
-	  					  <h4>Moon</h4>
-	  					  <p>NTOJ前端開發</p>
-	  				  </div>
-	  			  </div>
-	  		  </div>
-	  	  </div>
+              <img width=200 src="https://avatars.githubusercontent.com/u/108756201?v=4"></img>
+              <div>
+                <h4>Moon</h4>
+                <p>NTOJ前端開發</p>
+              </div>
+            </div>
+          </div>
+        </div>
         <h3>TOJ開発者</h3>
-	      <div class="clearfix">
-	  		  <img width=200 src="https://i.imgur.com/HDJXDNp.jpg"></img>
-	  		  <div>
-	  		    <h4>allenwhale</h4>
-	  		    <p>Exception code: C0000005 ACCESS_VIOLATION</p>
-	  		  </div>
-	      </div>
-	      <div class="clearfix">
-	  		  <img width=200 src="https://i.imgur.com/Zn9uNCu.jpg"></img>
+        <div class="clearfix">
+          <img width=200 src="https://i.imgur.com/HDJXDNp.jpg"></img>
+          <div>
+            <h4>allenwhale</h4>
+            <p>Exception code: C0000005 ACCESS_VIOLATION</p>
+          </div>
+        </div>
+        <div class="clearfix">
+          <img width=200 src="https://i.imgur.com/Zn9uNCu.jpg"></img>
           <!-- sdg https://avatars.githubusercontent.com/u/7088579?v=4 -->
-	  		  <div>
-	  		    <h4>LFsWang</h4>
-	  		    <p>java.lang.SecurityException: Permission Denial</p>
-	  		  </div>
-	      </div>
-	      <div class="clearfix">
-	  		  <img width=200 src="https://avatars2.githubusercontent.com/u/2104162?s=200"></img>
-	  		  <div>
-	  		    <h4>PZ Read</h4>
-	  		    <p>The block intentionally left blank.</p>
-	  		  </div>
-	      </div>
-	      <h3>提供</h3>
-	      <h1>TFCIS | Sprout | 217</h1>
-	    </div>
+          <div>
+            <h4>LFsWang</h4>
+            <p>java.lang.SecurityException: Permission Denial</p>
+          </div>
+        </div>
+        <div class="clearfix">
+          <img width=200 src="https://avatars2.githubusercontent.com/u/2104162?s=200"></img>
+          <div>
+            <h4>PZ Read</h4>
+            <p>The block intentionally left blank.</p>
+          </div>
+        </div>
+        <h3>提供</h3>
+        <h1>TFCIS | Sprout | 217</h1>
+      </div>
     </div>
   </div>
 </body>
