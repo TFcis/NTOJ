@@ -1,72 +1,75 @@
 <script type="text/javascript">
-    function init() {
-        var j_form = $('#form');
-        j_form.find('button.submit').on('click', function(e) {
-            var qtext = j_form.find('textarea.ques').val();
+  function init() {
+    var j_form = $('#form');
+    j_form.find('button.submit').on('click', function(e) {
+      var qtext = j_form.find('textarea.ques').val();
+      $.post('/oj/be/question', {
+        'reqtype': 'ask',
+        'acct_id':{{ acct.acct_id }},
+        'qtext': qtext,
+      }, function(res) {
+        msg = 'Unknown';
+        if (res[0] == 'E') {
+          msg = res;
+          if (res == 'Equesempty') {
+              msg = 'Do not submit empty question';
+          }
+          j_form.find('div.print').print(msg);
+        } else {
+          j_form.find('div.print').print('Done', true)
+          setTimeout(function(){
+            index.reload();
+          }, 1000);
+        }
+      });
+    });
+  }
 
-            $.post('/oj/be/question', {
-                'reqtype': 'ask',
-                'acct_id':{{ acct.acct_id }},
-                'qtext': qtext,
-            }, function(res) {
-                msg = 'Unknown';
-                if (res[0] == 'E') {
-                    msg = res;
-                    if (res == 'Equesempty') {
-                        msg = 'Do not submit empty question';
-                    }
-                    j_form.find('div.print').print(msg);
-                } else {
-                    j_form.find('div.print').print('Done', true)
-                    setTimeout(function(){index.reload();}, 1000);
-                }
-            });
-        });
-    }
+  function rm_ques(idx) {
+    var j_form = $('#form');
 
-    function rm_ques(idx) {
-        var j_form = $('#form');
-
-        $.post('/oj/be/question', {
-            'reqtype': 'rm_ques',
-            'acct_id': {{ acct.acct_id }},
-            'index': idx,
-        }, function(res) {
-            msg = 'Unknown';
-            if (res[0] == 'E') {
-                msg = res;
-                j_form.find('div.print').print(msg);
-            } else {
-                j_form.find('div.print').print('Done', true);
-                setTimeout(function(){index.reload();}, 1000);
-            }
-        });
-    }
+    $.post('/oj/be/question', {
+      'reqtype': 'rm_ques',
+      'acct_id': {{ acct.acct_id }},
+      'index': idx,
+    }, function(res) {
+      msg = 'Unknown';
+      if (res[0] == 'E') {
+        msg = res;
+        j_form.find('div.print').print(msg);
+      } else {
+        j_form.find('div.print').print('Done', true);
+        setTimeout(function(){
+          index.reload();
+        }, 1000);
+      }
+    });
+  }
 </script>
 <div class="g-lg-12">
-    <div>
-    Account : {{ acct.name }} {{ acct.acct_id }}
+  <div>
+  Account : {{ acct.name }} {{ acct.acct_id }}
+  </div>
+  <div id="form">
+    {% set count = 0 %}
+    {% for ques in ques_list %}
+    <div id="abc" style="border:2px lavander solid;">
+      <h3>Question: </h3>
+      <h5>{{ques['Q']}}</h5>
+      {% if ques['A'] == None%}
+      <p style="color:red;">Wait for Reply</p>
+      {% else %}
+      <h3>Reply:</p>
+      <h5>{{ques['A']}}</p>
+      {% end %}
+      <input type="button" id="buttom" value="Remove" onclick="rm_ques({{ count }});">
+      {% set count = count + 1 %}
     </div>
-    <div id="form">
-        {% set count = 0 %}
-        {% for ques in ques_list %}
-        <div id="abc" style="border:2px lavander solid;">
-            <h3>Question: </h3>
-            <h5>{{ques['Q']}}</h5>
-            {% if ques['A'] == None%}
-            <p style="color:red;">Wait for Reply</p>
-            {% else %}
-            <h3>Reply:</p>
-            <h5>{{ques['A']}}</p>
-            {% end %}
-            <input type="button" id="buttom" value="Remove" onclick="rm_ques({{ count }});">
-            {% set count = count + 1 %}
-        </div>
-        {% end %}
-        <br />
-        <textarea class="ques" style="width:100%; height:100px;"></textarea>
-        <br />
-        <button class="btn btn-success">Ask</button>
-        <div class="print"></div>
-    </div>
+    {% end %}
+    <br />
+    <textarea class="ques" style="width:100%; height:100px;"></textarea>
+    <br />
+    <button class="btn btn-success">Ask</button>
+    <div class="print"></div>
+  </div>
 </div>
