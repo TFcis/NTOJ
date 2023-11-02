@@ -41,7 +41,7 @@ class ManageBulletinHandler(RequestHandler):
                 pinned = False
 
             color = self.get_argument('color')
-            await BulletinService.inst.add_bulletin(title, content, self.acct.name, color, pinned)
+            await BulletinService.inst.add_bulletin(title, content, self.acct.acct_id, color, pinned)
 
             await LogService.inst.add_log(f"{self.acct.name} added a line on bulletin: \"{title}\".",
                                           'manage.inform.add')
