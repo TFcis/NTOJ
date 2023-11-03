@@ -68,7 +68,7 @@ class SubmitHandler(RequestHandler):
                     else:
                         await self.rs.set(last_submit_name, int(time.time()))
 
-            if comp_type not in ['gcc', 'g++', 'clang++', 'python3', 'rustc']:
+            if comp_type not in ['gcc', 'g++', 'clang', 'clang++', 'python3', 'rustc', 'java']:
                 self.error('Eparam')
                 return
 

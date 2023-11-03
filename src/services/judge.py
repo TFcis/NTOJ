@@ -1,6 +1,7 @@
-import asyncio
 import json
+import asyncio
 import smtplib
+from queue import PriorityQueue
 from email.header import Header
 from email.mime.text import MIMEText
 from typing import List, Union, Literal, Dict
@@ -11,59 +12,53 @@ import config
 from services.log import LogService
 
 
-class JudgeServerSerice:
+class JudgeServerService:
     def __init__(self, rs, server_name, server_url) -> None:
         self.rs = rs
         self.server_name = server_name
         self.server_url = server_url
         self.running_chal_cnt = 0
-        self.status = False
+        self.status = True
         self.ws = None
-        self.ws2 = None
 
-        self.heartbeat_task = None
         self.main_task = None
 
     async def start(self):
-        self.heartbeat_task = asyncio.create_task(self.heartbeat())
-        await asyncio.sleep(3)
-
-        if self.status:
-            self.main_task = asyncio.create_task(self.connect_server())
+        self.main_task = asyncio.create_task(self.connect_server())
 
     async def connect_server(self):
         from services.chal import ChalService
 
-        if not self.status:
-            return 'Ejudge'
-
         try:
-            self.status = False
             self.ws = await websocket_connect(self.server_url)
         except:
-            return 'Ejudge'
+            self.status = False
+            return
 
         self.status = True
-
+        self.running_chal_cnt = 0
         while self.status:
             ret = await self.ws.read_message()
             if ret is None:
+                # 這東西實際上就是個心跳包啊啊啊
+                await self.offline_notice()
+                self.status = False
+                self.running_chal_cnt = 0
                 break
 
             res = json.loads(ret)
-            if res['result'] is not None:
-                for result in res['result']:
+            if res['results'] is not None:
+                for test_idx, result in enumerate(res['results']):
                     # INFO: CE會回傳 result['verdict']
 
                     err, ret = await ChalService.inst.update_test(
                         res['chal_id'],
-                        result['test_idx'],
-                        result['state'],
-                        result['runtime'],
-                        result['peakmem'],
-                        result['verdict'][0])
+                        test_idx,
+                        result['status'],
+                        int(result['time'] / 10 ** 6),  # ns to ms
+                        result['memory'],
+                        result['verdict'])
 
-                await asyncio.sleep(0.5)
                 await self.rs.publish('chalstatesub', res['chal_id'])
                 self.running_chal_cnt -= 1
 
@@ -73,15 +68,12 @@ class JudgeServerSerice:
 
         try:
             self.status = False
-            # BUG: 這樣寫應該會出錯
             self.ws.close()
-            self.ws2.close()
             self.main_task.cancel()
-            self.heartbeat_task.cancel()
+            self.main_task = None
         except:
             return 'Ejudge'
 
-        await asyncio.sleep(3)
         return None
 
     async def get_server_status(self):
@@ -92,27 +84,9 @@ class JudgeServerSerice:
         })
 
     async def send(self, data):
-        self.running_chal_cnt += 1
-        await self.ws.write_message(data)
-
-    async def heartbeat(self):
-        # INFO: DokiDoki
-        self.status = True
-
-        try:
-            self.ws2 = await websocket_connect(self.server_url)
-        except:
-            self.status = False
-            return
-
-        while self.status:
-            try:
-                self.ws2.ping()
-            except:
-                self.status = False
-                await self.offline_notice()
-                return
-            await asyncio.sleep(1)
+        if self.status:
+            self.running_chal_cnt += 1
+            await self.ws.write_message(data)
 
     async def offline_notice(self):
         # log
@@ -129,8 +103,9 @@ class JudgeServerSerice:
 
         mail_title = "TOJ Judge Offline"
         mail_body = f'''
-            通知：偵測到Judge {self.server_name}意外離線
-            請檢查Judge狀態
+            您好，管理員
+            系統偵測到Judge {self.server_name}意外離線
+            請您檢查該Judge Server狀態
         '''
         sender_email = config.SENDER_EMAIL
 
@@ -148,8 +123,9 @@ class JudgeServerSerice:
 class JudgeServerClusterService:
     def __init__(self, rs, server_urls: List[Dict]) -> None:
         JudgeServerClusterService.inst = self
+        self.queue = PriorityQueue()
         self.rs = rs
-        self.servers: List[JudgeServerSerice] = []
+        self.servers: List[JudgeServerService] = []
         self.idx = 0
 
         for server in server_urls:
@@ -158,10 +134,11 @@ class JudgeServerClusterService:
             if name is None:
                 name = ''
 
-            self.servers.append(JudgeServerSerice(self.rs, name, url))
+            self.servers.append(JudgeServerService(self.rs, name, url))
 
     async def start(self) -> None:
-        for judge_server in self.servers:
+        for idx, judge_server in enumerate(self.servers):
+            self.queue.put([0, idx])
             await judge_server.start()
 
     async def connect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
@@ -172,12 +149,12 @@ class JudgeServerClusterService:
             pass
 
         else:
-            asyncio.create_task(self.servers[idx].start())
-            await asyncio.sleep(3)
+            await self.servers[idx].start()
 
             if not self.servers[idx].status:
                 return 'Ejudge'
 
+        self.queue.put([0, idx])
         return 'S'
 
     async def disconnect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
@@ -192,9 +169,8 @@ class JudgeServerClusterService:
 
     async def disconnect_all_server(self) -> None:
         for server in self.servers:
+            self.queue.get()
             await server.disconnect_server()
-
-        await asyncio.sleep(3)
 
     async def get_server_status(self, idx):
         if idx < 0 or idx >= self.servers.__len__():
@@ -219,29 +195,13 @@ class JudgeServerClusterService:
 
         return False
 
-    async def send(self, data) -> None:
-        # simple round-robin impl
-
-        for i in range(self.idx + 1, len(self.servers)):
-            if self.servers[i].ws is None:
+    async def send(self, data, pri) -> None:
+        # Priority impl
+        while not self.queue.empty():
+            cur_pri, idx = self.queue.get()
+            if not self.servers[idx].status:
                 continue
 
-            _, status = await self.servers[i].get_server_status()
-            if not status['status']:
-                continue
-
-            await self.servers[i].send(data)
-            self.idx = i
-            return
-
-        for i in range(0, len(self.servers)):
-            if self.servers[i].ws is None:
-                continue
-
-            _, status = await self.servers[i].get_server_status()
-            if not status['status']:
-                continue
-
-            await self.servers[i].send(data)
-            self.idx = i
+            await self.servers[idx].send(data)
+            self.queue.put([cur_pri + pri, idx])
             return

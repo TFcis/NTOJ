@@ -1,5 +1,6 @@
-import datetime
 import os
+import json
+import datetime
 
 import config
 from services.judge import JudgeServerClusterService
@@ -12,10 +13,13 @@ class ChalConst:
     STATE_AC = 1
     STATE_WA = 2
     STATE_RE = 3
+    STATE_RESIG = 9
     STATE_TLE = 4
     STATE_MLE = 5
     STATE_CE = 6
+    STATE_CLE = 10
     STATE_ERR = 7
+    STATE_OLE = 8
     STATE_JUDGE = 100
     STATE_NOTSTARTED = 101
 
@@ -23,27 +27,34 @@ class ChalConst:
         STATE_AC: 'AC',
         STATE_WA: 'WA',
         STATE_RE: 'RE',
+        STATE_RESIG: 'RE(SIG)',
         STATE_TLE: 'TLE',
         STATE_MLE: 'MLE',
         STATE_CE: 'CE',
+        STATE_CLE: 'CLE',
+        STATE_OLE: 'OLE',
         STATE_ERR: 'IE',
         STATE_JUDGE: 'JDG',
     }
 
     FILE_EXTENSION = {
         'gcc': 'c',
+        'clang': 'c',
         'g++': 'cpp',
         'clang++': 'cpp',
         'rustc': 'rs',
         'python3': 'py',
+        'java': 'java',
     }
 
     COMPILER_NAME = {
-        'gcc': 'GCC 9.4.0 C11',
-        'g++': 'G++ 9.4.0 GNU++17',
-        'clang++': 'Clang++ 10.0.0 C++17',
-        'rustc': 'Rustc 1.65',
-        'python3': 'CPython 3.8.10',
+        'gcc': 'GCC 12.2.0 GNU11',
+        'g++': 'G++ 12.2.0 GNU++17',
+        'clang': 'Clang++ 15.0.6 C11',
+        'clang++': 'Clang++ 15.0.6 C++17',
+        'rustc': 'Rustc 1.63',
+        'python3': 'CPython 3.11.2',
+        'java': 'OpenJDK 17.0.8'
     }
 
 
@@ -51,10 +62,13 @@ class ChalService:
     STATE_AC = 1
     STATE_WA = 2
     STATE_RE = 3
+    STATE_RESIG = 9
     STATE_TLE = 4
     STATE_MLE = 5
     STATE_CE = 6
+    STATE_CLE = 10
     STATE_ERR = 7
+    STATE_OLE = 8
     STATE_JUDGE = 100
     STATE_NOTSTARTED = 101
 
@@ -62,9 +76,12 @@ class ChalService:
         STATE_AC: 'Accepted',
         STATE_WA: 'Wrong Answer',
         STATE_RE: 'Runtime Error',
+        STATE_RESIG: 'Runtime Error (Killed by signal)',
         STATE_TLE: 'Time Limit Exceed',
         STATE_MLE: 'Memory Limit Exceed',
+        STATE_OLE: 'Output Limit Exceed',
         STATE_CE: 'Compile Error',
+        STATE_CLE: 'Compilation Limit Exceed',
         STATE_ERR: 'Internal Error',
         STATE_JUDGE: 'Challenging',
         STATE_NOTSTARTED: 'Not Started',
@@ -276,17 +293,18 @@ class ChalService:
 
         """
         create submission
-        chal_id, pro_id, code_path, res_path, metadata, comp_type, check_type 
+        chal_id, pro_id, code_path, res_path, metadata, comp_type, check_type, pri
         """
-        # await JudgeServerClusterService.inst.send(json.dumps({
-        #     'chal_id': chal_id,
-        #     'test': testl,
-        #     'code_path': code_path,
-        #     'res_path': res_path,
-        #     'metadata': chalmeta,
-        #     'comp_type': comp_type,
-        #     'check_type': test_conf['check_type'],
-        # }))
+        await JudgeServerClusterService.inst.send(json.dumps({
+            'pri': 1,
+            'chal_id': chal_id,
+            'test': testl,
+            'code_path': code_path,
+            'res_path': res_path,
+            'metadata': chalmeta,
+            'comp_type': comp_type,
+            'check_type': test_conf['check_type'],
+        }), 1)
 
         await self.rs.hdel('rate@kernel_True', str(acct_id))
         await self.rs.hdel('rate@kernel_False', str(acct_id))
