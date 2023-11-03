@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
         loop = asyncio.get_event_loop()
         loop.run_until_complete(db.close())
-        loop.run_until_complete(rs.close())
+        loop.run_until_complete(rs.aclose())
         loop.run_until_complete(JudgeServerClusterService.inst.disconnect_all_server())
         tornado.ioloop.IOLoop.current().stop()
         tornado.ioloop.IOLoop.current().close()

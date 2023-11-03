@@ -4,7 +4,6 @@ src/config.py
 NTOJ_installer/
 deploy.sh
 *.map
-third/
 NTOJ_installer/
 test.py
 

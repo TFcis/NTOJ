@@ -87,7 +87,7 @@
 
         chalsub_count = 0;
 
-        ws = index.go_ws('chalsub');
+        ws = index.get_ws('chalsub');
 
 	    ws.onopen = function(e) {};
 
@@ -131,10 +131,13 @@
                     <option value=0 {% if flt['state'] == 0 %}selected{% end %}>All</option>
                     <option value=1 {% if flt['state'] == 1 %}selected{% end %}>AC</option>
                     <option value=2 {% if flt['state'] == 2 %}selected{% end %}>WA</option>
-                    <option value=3 {% if flt['state'] == 3 %}selected{% end %}>RE</option>
                     <option value=4 {% if flt['state'] == 4 %}selected{% end %}>TLE</option>
                     <option value=5 {% if flt['state'] == 5 %}selected{% end %}>MLE</option>
+                    <option value=8 {% if flt['state'] == 8 %}selected{% end %}>OLE</option>
+                    <option value=3 {% if flt['state'] == 3 %}selected{% end %}>RE</option>
+                    <option value=9 {% if flt['state'] == 9 %}selected{% end %}>RE(SIG)</option>
                     <option value=6 {% if flt['state'] == 6 %}selected{% end %}>CE</option>
+                    <option value=10 {% if flt['state'] == 10 %}selected{% end %}>CLE</option>
                     <option value=7 {% if flt['state'] == 7 %}selected{% end %}>IE</option>
                     <option value=100 {% if flt['state'] == 100 %}selected{% end %}>Challenging</option>
                     <option value=101 {% if flt['state'] == 101 %}selected{% end %}>Not started</option>
@@ -145,11 +148,14 @@
                 <label class="form-label">Compiler</label>
                 <select id="compiler" class="form-select">
                     <option value="all" {% if flt['compiler'] == 'all' %}selected{% end %}>All</option>
-                    <option value="g%2B%2B" {% if flt['compiler'] == 'g++' %}selected{% end %}>G++ 9.4.0 GNU++17</option>
                     <!-- %2B means '+' -->
-                    <option value="clang%2B%2B" {% if flt['compiler'] == 'clang++' %}selected{% end %}>Clang++ 10.0.0 C++17</option>
-                    <option value="rustc" {% if flt['compiler'] == 'rustc' %}selected{% end %}>Rustc 1.65</option>
-                    <option value="python3" {% if flt['compiler'] == 'python3' %}selected{% end %}>CPython 3.8.10</option>
+                    <option value="gcc" {% if flt['compiler'] == 'gcc' %}selected{% end %}>GCC 12.2.0 GNU11</option>
+                    <option value="g%2B%2B" {% if flt['compiler'] == 'g++' %}selected{% end %}>G++ 9.4.0 GNU++17</option>
+                    <option value="clang" {% if flt['compiler'] == 'clang' %}selected{% end %}>Clang 15.0.6 C11</option>
+                    <option value="clang%2B%2B" {% if flt['compiler'] == 'clang++' %}selected{% end %}>Clang++ 15.0.6 C++17</option>
+                    <option value="rustc" {% if flt['compiler'] == 'rustc' %}selected{% end %}>Rustc 1.63</option>
+                    <option value="python3" {% if flt['compiler'] == 'python3' %}selected{% end %}>CPython 3.11.2</option>
+                    <option value="java" {% if flt['compiler'] == 'java' %}selected{% end %}>OpenJDK 17.0.6</option>
                 </select>
             </div>
 

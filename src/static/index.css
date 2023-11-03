@@ -30,6 +30,18 @@ a:hover a:visited a:link a:active {
   color: #ffeb00 !important;
 }
 
+.state-8 {
+  color: #ffeb00 !important;
+}
+
+.state-9 {
+  color: #237ac7 !important;
+}
+
+.state-10 {
+  color: #ffeb00 !important;
+}
+
 .panel {
   margin-bottom: 20px;
   border: 1px solid transparent;
