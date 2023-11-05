@@ -1,4 +1,4 @@
-{% extends 'manage.templ' %}
+{% extends 'manage.html' %}
 {% block head %}
 <script>
     function init() {
@@ -87,7 +87,7 @@
 
 		{% if gname == None %}
 			<label>Group Name</label>
-			<input class="form-control" id="gname"></input>	
+			<input class="form-control" id="gname"></input>
 
 			<label class="form-label">group type</label>
 			<select class="form-select" id="gtype">

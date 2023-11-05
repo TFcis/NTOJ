@@ -1,4 +1,4 @@
-{% extends '../manage.templ' %}
+{% extends '../manage.html' %}
 {% block head %}
 <link rel="stylesheet" type="text/css" href="/oj/manage-acct.css">
 
@@ -9,7 +9,7 @@
 		j_form.find('button.submit').on('click', function(e) {
  	           	var type = j_form.find('#type').val();
  	    		var clas = j_form.find('#class').val();
-				var group = j_form.find('#glist').val(); 
+				var group = j_form.find('#glist').val();
 
  	           	$.post('/oj/be/manage/acct/update', {
  	                'reqtype': 'update',

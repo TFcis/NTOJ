@@ -1,4 +1,4 @@
-{% extends '../manage.templ' %}
+{% extends '../manage.html' %}
 {% block head %}
 
 <script type="text/javascript">
@@ -9,7 +9,7 @@
         j_form.find("#update").on('click', (event) => {
             let name = j_form.find("#name").val();
             let list = j_form.find("#list").val();
-            
+
             if (re.test(list)) {
                 alert("請輸入數字、逗號與空白設定，範例：1, 2, 3");
                 return;
