@@ -1,4 +1,4 @@
-{% extends '../manage.templ' %}
+{% extends '../manage.html' %}
 {% block head %}
 
 <script type="text/javascript">
@@ -10,7 +10,7 @@
             let title = j_form.find("#title").val();
             let color = j_form.find("#color").val();
             let content = j_form.find("#content").val();
-            
+
             $.post('/oj/be/manage/bulletin/add', {
                 reqtype: 'add',
                 pinned: pinned,

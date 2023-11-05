@@ -1,4 +1,4 @@
-{% extends '../manage.templ' %}
+{% extends '../manage.html' %}
 {% block head %}
 <style>
     div#upload>div.prog{margin-top:8px}
@@ -6,12 +6,7 @@
 </style>
 
 <script type="text/javascript" id="contjs" async>
-	var editor;	
     function init() {
-        var scriptTag = document.createElement('script');
-        scriptTag.src = `https://cdnjs.cloudflare.com/ajax/libs/ace/1.15.0/ace.js`;
-        document.head.appendChild(scriptTag);
-
 		var j_form = $('#form');
 		var j_form2 = $('#form2');
 		var j_upload = $('div#upload');
@@ -139,40 +134,6 @@
 				}
 			});
 		});
-
-		$('#editor_button').on('click', function(e) {
-			const conf_json = editor.getValue()
-			try {
-				JSON.parse(conf_json)
-			} catch (e) {
-				alert('Syntax Error')
-				return
-			}
-
-			$.post('/oj/be/manage/pro/update', {
-				'reqtype': 'updateconf',
-				'conf': conf_json,
-				'pro_id': {{ pro['pro_id'] }}
-			}, function(res) {
-				var msg = 'Unknown';
-				if (res[0] == 'E') {
-					if (res == 'Econf') {
-						msg = 'Syntax Error';
-					} else {
-						msg = res;
-					}
-					j_form2.find('div.print').print(msg);
-				} else {
-					index.go('/oj/manage/pro/');
-				}
-			})
-		})
-
-		setTimeout(() => {
-			editor = ace.edit('editor')
-			editor.setTheme('ace/theme/monokai')
-			editor.session.setMode('ace/mode/json')
-		}, 50);
     }
 </script>
 {% end %}
@@ -182,20 +143,26 @@
 		{% if lock != None %}
 			<label class="form-label" style="color:red;">Lock!!</label>
 		{% end %}
+		<label for="" class="form-label">Problem Name</label>
 		<input type="text" class="form-control name" placeholder="Problem Name" value="{{ pro['name'] }}">
+
+		<label for="" class="form-label">Problem Tags</label>
 		<input type="text" class="form-control tags" placeholder="Tags" value="{{ pro.get('tags', '') or '' }}">
 
+		<label for="" class="form-label">Problem Status</label>
 		<select class="form-select status">
 			<option value="0" {% if pro['status'] == 0 %} selected {% end %}>Online</option>
 			<option value="1" {% if pro['status'] == 1 %} selected {% end %}>Hidden</option>
 			<option value="2" {% if pro['status'] == 2 %} selected {% end %}>Offline</option>
 		</select>
-			<select class="form-select class">
+
+		<label for="" class="form-label">Problem Class</label>
+		<select class="form-select class">
 			<option value="1" {% if pro['class'] == 1 %} selected {% end %}>Normal</option>
 			<option value="2" {% if pro['class'] == 2 %} selected {% end %}>Contest</option>
 		</select>
 
-			<label>文件</label>
+		<label for="" class="form-label">文件</label>
 			<select class="form-select packtype">
 			<option value="1">full</option>
 			<option value="2">cont.html</option>
@@ -203,14 +170,17 @@
 		</select>
 		<input type="file" class="form-control file">
 
-		<button type="button" class="btn btn-primary submit">Update</button>
-		<button type="button" class="btn btn-primary lock">Lock</button>
-		<button type="button" class="btn btn-secondary unlock">UnLock</button>
-		<button type="button" class="btn btn-secondary cancel">Cancel</button>
+		<div class="mt-3">
+			<button type="button" class="btn btn-primary submit">Update</button>
+			<button type="button" class="btn btn-primary lock">Lock</button>
+			<button type="button" class="btn btn-secondary unlock">UnLock</button>
+			<button type="button" class="btn btn-secondary cancel">Cancel</button>
+		</div>
 		<div class="print"></div>
     </form>
 	<form id="form2" class="blk-cont" style="margin-top: 60px; border: 1px solid red; padding: 3px;">
 		<label class="form-label" style="color: red;">Danger Zone</label>
+		<br>
 		<label class="form-label">Time limit (ms)</label>
 		<input type="number" class="form-control timelimit" value="{{ testl[0]['timelimit'] }}">
 		<label class="form-label">Mem limit (Kb)</label>
@@ -225,22 +195,5 @@
 			<div class="bar"></div>
 		</div>
     </div>
-	<div id="editor">{{ problem_config_json }}</div>
-	<button type="button" class="btn btn-success" id="editor_button">Update</button>
-	<style>
-		#editor {
-			position: relative;
-			bottom: 580px;
-			left: 120%;
-			width: 500px;
-			height: 400px;
-		}		
-
-		#editor_button {
-			position: relative;
-			bottom: 570px;
-			left: 120%;
-		}
-	</style>
 </div>
 {% end %}
