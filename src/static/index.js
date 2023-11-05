@@ -198,9 +198,9 @@ var index = new function() {
     that.get_ws = function(wsname) {
         let ws_link = '';
         if (location.protocol !== 'https:') {
-            ws_link = `ws://${location.hostname}/oj/be/${wsname}`;
+            ws_link = `ws://${location.host}/oj/be/${wsname}`;
         } else {
-            ws_link = `wss://${location.hostname}/oj/be/${wsname}`;
+            ws_link = `wss://${location.host}/oj/be/${wsname}`;
         }
 	    return new WebSocket(ws_link);
     };

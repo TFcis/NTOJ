@@ -1,0 +1,33 @@
+h3 {
+    color:#fcfaf2
+}
+
+#intro {
+    height:691px;
+    background-image:url('/oj/img/signin.png');
+    background-size:contain;
+    background-repeat:no-repeat;
+}
+
+#signin, #signup {
+    margin-top:64px;
+}
+
+#warning {
+    display:none;
+
+    img {
+        width: 80%;
+        height: auto;
+        margin: 0 auto 0 auto;
+    }
+
+    div.text {
+        margin-top: 16px;
+        margin-left: 108px;
+
+        span {
+            color: #ed784a;
+        }
+    }
+}

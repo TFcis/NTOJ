@@ -1,0 +1,5 @@
+div#submit {
+    & > textarea.code {
+        height:256px;font-family:monospace;
+    }
+}

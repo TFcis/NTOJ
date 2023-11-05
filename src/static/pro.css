@@ -7,7 +7,7 @@
 }
 
 .textlayer {
-  position: absolute;
+  position: absolute !important;
   left: 0;
   top: 0;
   right: 0;
@@ -17,9 +17,9 @@
   overflow: hidden;
 }
 
-.textlayer > div {
+.textlayer > span {
   color: transparent;
-  position: absolute;
+  position: absolute !important;
   line-height: 1;
   white-space: pre;
   cursor: text;
