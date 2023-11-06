@@ -1,4 +1,4 @@
-<!-- <link rel="stylesheet" type="text/css" href="/oj/acct.css"> --> 
+<!-- <link rel="stylesheet" type="text/css" href="/oj/acct.css"> -->
 <!-- exist -->
 
 <style>
@@ -184,7 +184,7 @@
                     <label class="form-label">Name</label>
                     <input class="name form-control" type="text" value="{{ acct.name }}" placeholder="name">
                 </div>
-                
+
                 <div class="mb-1">
                     <label class="form-label">Photo</label>
                     <input class="photo form-control" type="text" value="{{ acct.photo }}" placeholder="photo">
@@ -197,7 +197,6 @@
 
                 <button type="button" class="btn btn-primary submit">更新</button>
                 <div class="print"></div>
-            </form>
             {% end %}
         </form>
     {% if (acct.acct_id == acct_id) or (isadmin) %}
