@@ -54,7 +54,7 @@
 			{% elif pro['status'] == 2 %}
 			<td class="status-offline">Offline</td>
 			{% end %}
-			<td proid = {{ pro['pro_id'] }}>
+			<td proid={{ pro['pro_id'] }} class="control">
 				<a class="btn btn-secondary" href="/oj/manage/pro/update/?proid={{ pro['pro_id'] }}">&#x2699</a>
 				<button class="btn btn-warning btn-sm rechal">Rechallenge</button>
 			</td>
