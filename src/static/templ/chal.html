@@ -1,6 +1,5 @@
 {% from services.chal import ChalService %}
 <link rel="stylesheet" href="/oj/third/prism.css">
-<script src="/oj/third/prism.js"></script>
 
 <script type="text/javascript">
     var ws;
@@ -21,13 +20,7 @@
 
     function init() {
         const chal_id = {{ chal['chal_id'] }};
-        let ws_link = '';
-        if (location.protocol !== 'https:') {
-            ws_link = `ws://${location.hostname}/oj/be/chalstatesub`;
-        } else {
-            ws_link = `wss://${location.hostname}/oj/be/chalstatesub`;
-        }
-	    ws = new WebSocket(ws_link);
+        ws = index.get_ws("chalstatesub");
 
         if ((document.querySelectorAll('td.state-100').length == 0 && document.querySelectorAll('td.state-101') == 0)) {
         } else {
@@ -189,6 +182,10 @@
 </div>
 -->
 
-<pre id="code" class="line-numbers" data-language="" data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"><code class=""></code></pre>
+<pre id="code" class="line-numbers"
+    data-language=""
+    data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!">
+    <code class=""></code>
+</pre>
 {% end %}
 
