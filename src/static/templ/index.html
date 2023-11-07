@@ -47,11 +47,6 @@
     });
 </script>
 </head>
-
-<!--
-海に生き，海を守り，海を行く，それがブルーマーメード
--->
-
 <body data-bs-theme="dark">
 <nav class="navbar navbar-expand-lg">
     <div id="index-navlist" class="container-fluid">
@@ -88,22 +83,22 @@
 				{% end %}
 
 				{% if manage == True and ask_cnt > 0 %}
-					<li class="nav-item ask"><a class="nav-link" style="color:red;" href="/oj/manage/question/">get {{ ask_cnt }} ask</a></li>
+					<li class="nav-item ask"><a class="nav-link" style="color: #e74c3c;" href="/oj/manage/question/">get {{ ask_cnt }} ask</a></li>
 				{% end %}
 				
 				{% if manage == False and reply == True %}
-					<li class="nav-item"><a class="nav-link" style="color:red;" href="/oj/question/">get reply</a></li>
+					<li class="nav-item"><a class="nav-link" style="color: #e74c3c;" href="/oj/question/">get reply</a></li>
 				{% end %}
 
-				<li><a class="nav-link" style="display:none;" href="" class="message"></a></li>
+				<li><a class="nav-link" style="display: none;" href="" class="message"></a></li>
 				<li><a class="nav-link" href="http://forum.tfcis.org/forum.php?mod=forumdisplay&fid=40" target="_new">Discuss</a></li>
 				<li><a class="nav-link" href="https://github.com/TFcis/NTOJ/issues" target="_new">Make A Wish</a></li>
 				<li class="dev-info"><a class="nav-link" href="/oj/dev-info/">Dev Info</a></li>
 			</ul>
 
 			<ul class="navbar-nav ms-auto">
-				<li class="nav-link sign" style="display:none;"><a href="/oj/sign/">Reg | Log</a></li>
-				<li class="nav-link leave" style="display:none;"><a href="#">Leave</a></li>
+				<li class="nav-link sign" style="display: none;"><a href="/oj/sign/">Reg | Log</a></li>
+				<li class="nav-link leave" style="display: none;"><a href="#">Leave</a></li>
 				<a class="nav-link" href="/oj/acct/{{ acct_id }}/">{{ name }}</a>
 			</ul>
 		</div>
@@ -116,7 +111,7 @@
 </div>
 
 <footer class="text-muted py-3 me-3 float-end">
-	<small>TNFSH Online Judge 13 - HypeXky</small>
+	<small>New TNFSH Online Judge - Go-Judge</small>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.min.js" integrity="sha512-WW8/jxkELe2CAiE4LvQfwm1rajOS8PHasCCx+knHG0gBHt8EXxS6T6tJRTGuDQVnluuAvMxWF4j8SNFDKceLFg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
