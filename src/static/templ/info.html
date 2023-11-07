@@ -2,43 +2,43 @@
 
 <style>
 .green-row > td {
-  color: #00c200; 
-  background-color: #dbfcd6;
+  color: #01c201; 
+  background-color: #ddf0d8;
 }
 
 .pink-row > td {
   color: #ca673f; 
-  background-color: #fce5d9;
-}
-
-.light-blue-row > td {
-  color: #1fb0ab; 
-  background-color: #dcfafa;
-}
-
-.blue-row > td {
-  color: #237ac7;
-  background-color: #dceafa;
+  background-color: #e6d8d0;
 }
 
 .purple-row > td {
   color: #70649a; 
-  background-color: #ece7fd;
+  background-color: #dbd8e7;
 }
 
 .red-row > td {
-  color: #ab1701; 
-  background-color: #fee4e0;
+  color: #961804; 
+  background-color: #e4d6d4;
+}
+
+.light-blue-row > td {
+  color: #1fb0ab; 
+  background-color: #d6e7e7;
+}
+
+.blue-row > td {
+  color: #237ac7;
+  background-color: #d3dbe6;
 }
 
 .yellow-row > td {
   color: #b1a200; 
-  background-color: #fdfce2;
+  background-color: #e4e3d2;
 }
 
 .white-row > td {
   color: #000000;
-  background-color: #ffffff;
+  background-color: #e6e6e6;
 }
 
 /* li {
@@ -69,7 +69,7 @@
     {% for bulletin in bulletin_list %} 
       <tr> 
         <td> 
-          <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/" style="color: {{ bulletin['color'] }};"> 
+          <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/" style="color: {{ bulletin['color'] }}"> 
             <font size=5> 
               {% if bulletin['pinned'] %} 
                 <span class="material-symbols-outlined">push_pin</span> 
@@ -79,10 +79,10 @@
           </a> 
         </td> 
         <td>
-          <font size=3>{{ bulletin['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</font>
+          <font size=4>{{ bulletin['timestamp'].strftime('%Y-%m-%d') }}</font>
         </td> 
         <td>
-          <font size=3> 
+          <font size=4> 
             <a href="/oj/acct/{{ bulletin['acct_id'] }}/">{{ bulletin['name'] }}</a> 
           </font>
         </td> 
@@ -93,129 +93,133 @@
 
   <h1 style="font-weight: bolder;">NTOJ Guide</h1>
   <hr>
+  
   <div class="row">
     <h3 class="col-3" style="font-weight: bolder;">Verdicts</h3>
   </div>
-  <div>
-    <table class="table table-borderless" style="font-size: 125%"> 
-      <thead> 
-        <tr class="verdict-table-head"> 
-          <th scope="col-1">Verdict</th>
-          <th scope="col-3">Full Name</th>
-          <th scope="col-8">Conditions Explanation</th>
-        </tr> 
-      </thead> 
-      <tbody> 
-        <tr class="green-row"> 
-          <td class="col-1">AC</td> 
-          <td class="col-3">Accepted</td> 
-          <td class="col-8">
-            Your program is correct! <br> 
-            It outputs the right answer in reasoneable time and within the limit memory usage. <br>
-            <!-- Congratulations!  -->
-            你的程式輸出完全正確! <br>
+
+  <div class="card border-0">
+    <div class="card-body">
+      <table class="table table-borderless" style="font-size: 125%;"> 
+        <thead> 
+          <tr class="verdict-table-head"> 
+            <th scope="col-1">Verdict</th>
+            <th scope="col-3">Full Name</th>
+            <th scope="col-8">Conditions Explanation</th>
+          </tr> 
+        </thead> 
+        <tbody> 
+          <tr class="green-row"> 
+            <td class="col-1">AC</td> 
+            <td class="col-3">Accepted</td> 
+            <td class="col-8">
+              Your program is correct! <br> 
+              It outputs the right answer in reasoneable time and within the limit memory usage. <br>
+              <!-- Congratulations!  -->
+              你的程式輸出完全正確! <br>
             它在要求的時間和記憶體限制內輸出了正確答案。
             <!-- 恭喜! -->
-          </td>
-        </tr> 
-        <tr class="pink-row"> 
-          <td class="col-1">WA</td> 
-          <td class="col-3">Wrong Answer</td> 
-          <td class="col-8">
-            Your program didn't output the correct answer, but it terminated normally. <br> 
-            If you truly think your code is correct, contact the administrator through Question page. <br>
-            你的程式輸出了錯誤的答案，但有正常結束。<br>
-            如果你認為你的程式碼真的正確，可以透過Question頁面聯絡管理員。
-          </td>
-        </tr> 
-        <tr class="purple-row"> 
-          <td class="col-1">TLE</td> 
-          <td class="col-3">Time Limit Exceeded</td>
-          <td class="col-8">
-            Your program tried to run for too much time. <br>
-            If you are sure that the problem needs more time, please contact the administrator through Question page. <br>
-            你的程式嘗試運行的時間太久。 <br>
-            如果你認為題目需要更長的時間限制，可以透過Question頁面聯絡管理員。
-          </td> 
-	      </tr>
-        <tr class="red-row">
-          <td class="col-1">MLE</td>
-          <td class="col-3">Memory Limit Exceeded</td>
-          <td class="col-8">
-            Your program tried to use more memory than the judge allows. <br>
-            If you are sure that the problem needs more memory, please contact the administrator through Question page. <br>
-            你的程式試圖使用的記憶體超出了題目的允許範圍。 <br>
-            如果你認為題目需要更大的記憶體範圍，可以透過Question頁面聯絡管理員。
-          </td>
-        </tr>
-        <tr class="light-blue-row"> 
-          <td class="col-1">RE</td> 
-          <td class="col-3">Runtime Error</td> 
-          <td class="col-8">
-            Your program doesn't return a 0 code. <br>
-            你的程式退出狀態不為 0。
-          </td>
-        </tr> 
-        <tr class="blue-row">
-          <td class="col-1">RE</td> 
-          <td class="col-3">Runtime Error(killed by signal)</td> 
-          <td class="col-8">
-            Your program failed during the execution. <br>
-            There are some common reasons for this result: <br>
-            <ol>
-              <li>SIGSEGV - invalid memory access (segmentation fault)</li>
-              <li>SIGFPE - erroneous arithmetic operation such as divide by zero</li>
-              <li>SIGABRT - abnormal termination condition</li>
-              <ol type="i">
-                <li>double free uninitialized or wrong memory address</li>
-                <li>calling abort function</li>
-                <li>assert</li>
+            </td>
+          </tr> 
+          <tr class="pink-row"> 
+            <td class="col-1">WA</td> 
+            <td class="col-3">Wrong Answer</td> 
+            <td class="col-8">
+              Your program didn't output the correct answer, but it terminated normally. <br> 
+              If you truly think your code is correct, contact the administrator through Question page. <br>
+              你的程式輸出了錯誤的答案，但有正常結束。<br>
+              如果你認為你的程式碼真的正確，可以透過Question頁面聯絡管理員。
+            </td>
+          </tr> 
+          <tr class="purple-row"> 
+            <td class="col-1">TLE</td> 
+            <td class="col-3">Time Limit Exceeded</td>
+            <td class="col-8">
+              Your program tried to run for too much time. <br>
+              If you are sure that the problem needs more time, please contact the administrator through Question page. <br>
+              你的程式嘗試運行的時間太久。 <br>
+              如果你認為題目需要更長的時間限制，可以透過Question頁面聯絡管理員。
+            </td> 
+          </tr>
+          <tr class="red-row">
+            <td class="col-1">MLE</td>
+            <td class="col-3">Memory Limit Exceeded</td>
+            <td class="col-8">
+              Your program tried to use more memory than the judge allows. <br>
+              If you are sure that the problem needs more memory, please contact the administrator through Question page. <br>
+              你的程式試圖使用的記憶體超出了題目的允許範圍。 <br>
+              如果你認為題目需要更大的記憶體範圍，可以透過Question頁面聯絡管理員。
+            </td>
+          </tr>
+          <tr class="light-blue-row"> 
+            <td class="col-1">RE</td> 
+            <td class="col-3">Runtime Error</td> 
+            <td class="col-8">
+              Your program doesn't return a 0 code. <br>
+              你的程式退出狀態不為 0。
+            </td>
+          </tr> 
+          <tr class="blue-row">
+            <td class="col-1">RE</td> 
+            <td class="col-3">Runtime Error(killed by signal)</td> 
+            <td class="col-8">
+              Your program failed during the execution. <br>
+              There are some common reasons for this result: <br>
+              <ol>
+                <li>SIGSEGV - invalid memory access (segmentation fault)</li>
+                <li>SIGFPE - erroneous arithmetic operation such as divide by zero</li>
+                <li>SIGABRT - abnormal termination condition</li>
+                <ol type="i">
+                  <li>double free uninitialized or wrong memory address</li>
+                  <li>calling abort function</li>
+                  <li>assert</li>
+                </ol>
               </ol>
-            </ol>
-            你的程式在執行過程中失敗了。 <br>
-            造成此結果有一些常見的原因: <br>
-            <ol>
-              <li>SIGSEGV - 無效記憶體存取 (記憶體區段錯誤) </li>
-              <li>SIGFPE - 錯誤的算術運算，例如: 除以0 </li>
-              <li>SIGABRT - 異常終止條件</li>
-              <ol type="i">
-                <li>重複 free 未初始化或錯誤的記憶體位址</li>
-                <li>呼叫 abort() 函數</li>
-                <li>assert</li>
-              </ol>
-            </ol> 
-          </td>
-        </tr>
-        <tr class="yellow-row"> 
-          <td class="col-1">CE</td> 
-          <td class="col-3">Compile Error</td> 
-          <td class="col-8">
-            The compiler fails to compile your program. <br>
-            編譯器無法編譯你的程式。
-          </td>
-        </tr> 
-        <tr class="white-row"> 
-          <td class="col-1">IE</td> 
-          <td class="col-3">Internal Error</td> 
-          <td class="col-8">
-            The judge is in a state of collapse. <br>
-            Please contact the administrator through Question page. <br>
-            評測系統處於崩潰狀態。 <br>
-            請透過Question頁面聯絡管理員。
-          </td>
-        </tr> 
-        <tr class="white-row">
-          <td class="col-1">PE</td>
-          <td class="col-3">Presentation Error</td>
-          <td class="col-8">
-            Your output does not match with the test cases. <br>
-            There may be extra blank lines and spaces. <br>
-            你的輸出與測試案例不符。<br>
-            可能會有多餘的空白行和空格。
-          </td>
-        </tr>
-      </tbody> 
-    </table> 
+              你的程式在執行過程中失敗了。 <br>
+              造成此結果有一些常見的原因: <br>
+              <ol>
+                <li>SIGSEGV - 無效記憶體存取 (記憶體區段錯誤) </li>
+                <li>SIGFPE - 錯誤的算術運算，例如: 除以0 </li>
+                <li>SIGABRT - 異常終止條件</li>
+                <ol type="i">
+                  <li>重複 free 未初始化或錯誤的記憶體位址</li>
+                  <li>呼叫 abort() 函數</li>
+                  <li>assert</li>
+                </ol>
+              </ol> 
+            </td>
+          </tr>
+          <tr class="yellow-row"> 
+            <td class="col-1">CE</td> 
+            <td class="col-3">Compile Error</td> 
+            <td class="col-8">
+              The compiler fails to compile your program. <br>
+              編譯器無法編譯你的程式。
+            </td>
+          </tr> 
+          <tr class="white-row"> 
+            <td class="col-1">IE</td> 
+            <td class="col-3">Internal Error</td> 
+            <td class="col-8">
+              The judge is in a state of collapse. <br>
+              Please contact the administrator through Question page. <br>
+              評測系統處於崩潰狀態。 <br>
+              請透過Question頁面聯絡管理員。
+            </td>
+          </tr> 
+          <tr class="white-row">
+            <td class="col-1">PE</td>
+            <td class="col-3">Presentation Error</td>
+            <td class="col-8">
+              Your output does not match with the test cases. <br>
+              There may be extra blank lines and spaces. <br>
+              你的輸出與測試案例不符。<br>
+              可能會有多餘的空白行和空格。
+            </td>
+          </tr>
+        </tbody> 
+      </table> 
+    </div>
   </div>
   
   <div class="row">
