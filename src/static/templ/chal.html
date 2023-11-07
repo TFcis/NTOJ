@@ -1,4 +1,4 @@
-{% from services.chal import ChalService %}
+{% from services.chal import ChalConst %}
 <link rel="stylesheet" href="/oj/third/prism.css">
 
 <script type="text/javascript">
@@ -149,7 +149,7 @@
             {% for test in chal['testl'] %}
                 <tr class="states">
                     <td class="idx">{{ '%04d'%(test['test_idx'] + 1) }}</td>
-                    <td class="state state-{{ test['state'] }}">{{ ChalService.STATE_STR[test['state']] }}</td>
+                    <td class="state state-{{ test['state'] }}">{{ ChalConst.STATE_LONG_STR[test['state']] }}</td>
                     <td class="runtime">{{ test['runtime'] }}</td>
                     <td class="memory">{{ round(test['memory'] / 1024) }}</td>
                 </tr>
