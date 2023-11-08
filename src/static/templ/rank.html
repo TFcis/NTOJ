@@ -46,7 +46,7 @@
         <tbody>
           {% set rank = 1 %}
           {% for chal in chal_list %}
-            {% if rank is 1 %}
+            {% if rank == 1 %}
             <tr class="rank-gold">
               <td>{{ rank }}</td>
               <td><a href="/oj/chal/{{chal['chal_id']}}/">{{ chal['chal_id']}}</a></td>
@@ -55,7 +55,7 @@
               <td>{{ round(chal['memory'] / 1024) }}</td>
               <td>{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
             </tr>
-            {% elif rank is 2 %}
+            {% elif rank == 2 %}
             <tr class="rank-silver">
               <td>{{ rank }}</td>
               <td><a href="/oj/chal/{{chal['chal_id']}}/">{{ chal['chal_id']}}</a></td>
@@ -64,7 +64,7 @@
               <td>{{ round(chal['memory'] / 1024) }}</td>
               <td>{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
             </tr>
-            {% elif rank is 3 %}
+            {% elif rank == 3 %}
             <tr class="rank-copper">
               <td>{{ rank }}</td>
               <td><a href="/oj/chal/{{chal['chal_id']}}/">{{ chal['chal_id']}}</a></td>
