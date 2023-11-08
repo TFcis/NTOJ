@@ -5,7 +5,7 @@ from msgpack import packb, unpackb
 
 import config
 from handlers.base import RequestHandler, reqenv, require_permission
-from services.chal import ChalService
+from services.chal import ChalConst, ChalService
 from services.judge import JudgeServerClusterService
 from services.log import LogService
 from services.pro import ProService
@@ -75,6 +75,11 @@ class ManageProHandler(RequestHandler):
             pro_id = int(self.get_argument('proid'))
 
             await self.render('manage/pro/reinit', page='pro', pro_id=pro_id)
+
+        elif page == "updatetests":
+            pro_id = int(self.get_argument('proid'))
+
+            await self.render('manage/pro/updatetests', page='pro', pro_id=pro_id)
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
@@ -198,54 +203,6 @@ class ManageProHandler(RequestHandler):
                 self.finish('S')
                 return
 
-            elif reqtype == 'rechal':
-                pro_id = int(self.get_argument('pro_id'))
-
-                judge_status_list = await JudgeServerClusterService.inst.get_servers_status()
-                can_submit = False
-
-                for status in judge_status_list:
-                    if status['status']:
-                        can_submit = True
-                        break
-
-                if not can_submit:
-                    self.error('Ejudge')
-                    return
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    self.error(err)
-                    return
-
-                async with self.db.acquire() as con:
-                    result = await con.fetch(
-                        '''
-                            SELECT "challenge"."chal_id" FROM "challenge"
-                            LEFT JOIN "challenge_state"
-                            ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                            WHERE "pro_id" = $1 AND "challenge_state"."state" IS NULL;
-                        ''',
-                        pro_id
-                    )
-                    result = result[0]
-                await LogService.inst.add_log(
-                    f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals",
-                    'manage.chal.rechal')
-
-                for chal_id in result:
-                    err, ret = await ChalService.inst.reset_chal(chal_id)
-                    err, ret = await ChalService.inst.emit_chal(
-                        chal_id,
-                        pro_id,
-                        pro['testm_conf'],
-                        f'/nfs/code/{chal_id}/main.cpp',
-                        f'/nfs/problem/{pro_id}/res'
-                    )
-
-                self.finish('S')
-                return
-
             elif reqtype == 'pro-lock':
                 pro_id = int(self.get_argument('pro_id'))
                 await self.rs.set(f'{pro_id}_owner', packb(1))
@@ -274,5 +231,48 @@ class ManageProHandler(RequestHandler):
                 lock_list.remove(pro_id)
                 await self.rs.set('lock_list', packb(lock_list))
                 await self.rs.delete(f"{pro_id}_owner")
+                self.finish('S')
+                return
+
+        elif page is None: # pro-list
+            if reqtype == 'rechal':
+                pro_id = int(self.get_argument('pro_id'))
+
+                can_submit = await JudgeServerClusterService.inst.is_server_online()
+                if not can_submit:
+                    self.error('Ejudge')
+                    return
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
+                async with self.db.acquire() as con:
+                    result = await con.fetch(
+                        '''
+                            SELECT "challenge"."chal_id", "challenge"."compile_type" FROM "challenge"
+                            LEFT JOIN "challenge_state"
+                            ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                            WHERE "pro_id" = $1 AND "challenge_state"."state" IS NULL;
+                        ''',
+                        pro_id
+                    )
+                await LogService.inst.add_log(
+                    f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals",
+                    'manage.chal.rechal')
+
+                for chal_id, comp_type in result:
+                    file_ext = ChalConst.FILE_EXTENSION[comp_type]
+                    err, _ = await ChalService.inst.reset_chal(chal_id)
+                    err, _ = await ChalService.inst.emit_chal(
+                        chal_id,
+                        pro_id,
+                        pro['testm_conf'],
+                        comp_type,
+                        f"/nfs/code/{chal_id}/main.{file_ext}",
+                        f"/nfs/problem/{pro_id}/res"
+                    )
+
                 self.finish('S')
                 return

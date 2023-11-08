@@ -1,5 +1,5 @@
 {% import math %}
-{% from services.chal import ChalService %}
+{% from services.chal import ChalConst %}
 
 <link rel="stylesheet" type="text/css" href="/oj/proset.css">
 
@@ -21,7 +21,7 @@
             if (pubclass_id == 'None') {
                 index.go(`/oj/proset/?off=${off}`);
             } else {
-                index.go(`/oj/proset/?off=${off}&pubclass_id=${pubclass_id}`);
+                index.go(`/oj/proset/?pubclass_id=${pubclass_id}`);
             }
         });
 
@@ -87,28 +87,29 @@
                 <tr>
                     <td class="id">{{ pro['pro_id'] }}</td>
                     {% if pro['state'] is None %}
-                        <td>Todo</td> 
+                        <td>Todo</td>
                     {% else %}
-                        <td class="state-{{ pro['state'] }}">{{ChalService.STATE_STR[pro['state']]}}</td>
+                        <td class="state-{{ pro['state'] }}">{{ChalConst.STATE_LONG_STR[pro['state']]}}</td>
                     {% end %}
                     <td class="name">
                         <a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['name'] }}</a>
                     </td>
-                    
+
                     {% set rate = pro['rate_data'] %}
                     <td>
                         {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
-                            {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}% 
+                            {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}%
                         {% else %}
                             {{ '0.00%' }}
                         {% end %}
 
-                        ({{ rate['user_ac_chal_cnt'] }} / {{ rate['user_all_chal_cnt'] }})
+                        (<a href="/oj/rank/{{ pro['pro_id'] }}/">{{ rate['user_ac_chal_cnt'] }}</a>
+                        / {{ rate['user_all_chal_cnt'] }})
                     </td>
 
                     <td>
                         {% if rate['all_chal_cnt'] and rate['ac_chal_cnt'] %}
-                            {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}% 
+                            {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}%
                         {% else %}
                             {{ '0.00%' }}
                         {% end %}

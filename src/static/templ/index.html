@@ -4,12 +4,12 @@
 <title>New TNFSH Online Judge</title>
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="language" content="tw">
 <link rel="stylesheet" href="/oj/index.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="/oj/third/pdf.min.js"></script>
 <script src="/oj/index.js"></script>
 <script src="/oj/pack.js"></script>
 
@@ -18,13 +18,7 @@
         index.init();
 		var j_index = $('#index-navlist');
 
-        let ws_link = '';
-        if (location.protocol !== 'https:') {
-            ws_link = `ws://${location.hostname}/oj/be/informsub`;
-        } else {
-            ws_link = `wss://${location.hostname}/oj/be/informsub`;
-        }
-	    var msg_ws = new WebSocket(ws_link);
+		var msg_ws = index.get_ws("informsub");
 
 		var inform_count = 0;
 		var on = false;
@@ -85,7 +79,7 @@
 				{% if manage == True and ask_cnt > 0 %}
 					<li class="nav-item ask"><a class="nav-link" style="color: #e74c3c;" href="/oj/manage/question/">get {{ ask_cnt }} ask</a></li>
 				{% end %}
-				
+
 				{% if manage == False and reply == True %}
 					<li class="nav-item"><a class="nav-link" style="color: #e74c3c;" href="/oj/question/">get reply</a></li>
 				{% end %}
@@ -102,8 +96,6 @@
 				<a class="nav-link" href="/oj/acct/{{ acct_id }}/">{{ name }}</a>
 			</ul>
 		</div>
-
-			
 	</div>
 </nav>
 
@@ -114,6 +106,7 @@
 	<small>New TNFSH Online Judge - Go-Judge</small>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.8/umd/popper.min.js" integrity="sha512-TPh2Oxlg1zp+kz3nFA0C5vVC6leG/6mm1z9+mA81MI5eaUVqasPLO8Cuk4gMF4gUfP5etR73rgU/8PNMsSesoQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.min.js" integrity="sha512-WW8/jxkELe2CAiE4LvQfwm1rajOS8PHasCCx+knHG0gBHt8EXxS6T6tJRTGuDQVnluuAvMxWF4j8SNFDKceLFg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </body>
 </html>
