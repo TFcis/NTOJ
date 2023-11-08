@@ -1,5 +1,5 @@
 {% import math %}
-{% from services.chal import ChalService %}
+{% from services.chal import ChalConst %}
 
 <link rel="stylesheet" type="text/css" href="/oj/challist.css">
 
@@ -192,7 +192,7 @@
                     <td scope="row"><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
                     <td><a href="/oj/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
                     <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a></td>
-                    <td class="state-{{ chal['state'] }}">{{ ChalService.STATE_STR[chal['state']] }}</td>
+                    <td class="state-{{ chal['state'] }}">{{ ChalConst.STATE_LONG_STR[chal['state']] }}</td>
                     <td>{{ chal['runtime'] }}</td>
                     <td>{{ round(chal['memory'] / 1024) }}</td>
                     <td>{{ chal['comp_type'] }}</td>

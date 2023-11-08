@@ -37,6 +37,21 @@ class ChalConst:
         STATE_JUDGE: 'JDG',
     }
 
+    STATE_LONG_STR = {
+        STATE_AC: 'Accepted',
+        STATE_WA: 'Wrong Answer',
+        STATE_RE: 'Runtime Error',
+        STATE_RESIG: 'Runtime Error (Killed by signal)',
+        STATE_TLE: 'Time Limit Exceed',
+        STATE_MLE: 'Memory Limit Exceed',
+        STATE_OLE: 'Output Limit Exceed',
+        STATE_CE: 'Compile Error',
+        STATE_CLE: 'Compilation Limit Exceed',
+        STATE_ERR: 'Internal Error',
+        STATE_JUDGE: 'Challenging',
+        STATE_NOTSTARTED: 'Not Started',
+    }
+
     FILE_EXTENSION = {
         'gcc': 'c',
         'clang': 'c',
@@ -59,34 +74,6 @@ class ChalConst:
 
 
 class ChalService:
-    STATE_AC = 1
-    STATE_WA = 2
-    STATE_RE = 3
-    STATE_RESIG = 9
-    STATE_TLE = 4
-    STATE_MLE = 5
-    STATE_CE = 6
-    STATE_CLE = 10
-    STATE_ERR = 7
-    STATE_OLE = 8
-    STATE_JUDGE = 100
-    STATE_NOTSTARTED = 101
-
-    STATE_STR = {
-        STATE_AC: 'Accepted',
-        STATE_WA: 'Wrong Answer',
-        STATE_RE: 'Runtime Error',
-        STATE_RESIG: 'Runtime Error (Killed by signal)',
-        STATE_TLE: 'Time Limit Exceed',
-        STATE_MLE: 'Memory Limit Exceed',
-        STATE_OLE: 'Output Limit Exceed',
-        STATE_CE: 'Compile Error',
-        STATE_CLE: 'Compilation Limit Exceed',
-        STATE_ERR: 'Internal Error',
-        STATE_JUDGE: 'Challenging',
-        STATE_NOTSTARTED: 'Not Started',
-    }
-
     def __init__(self, db, rs):
         self.db = db
         self.rs = rs
@@ -240,7 +227,8 @@ class ChalService:
             return 'Enoext', None
         result = result[0]
 
-        # NOTE Recalculate problem rate
+        # NOTE: Recalculate problem rate
+        # FIXME: 併發問題，如果chal還沒有結果就去計算ac ratio會是錯的答案
         await self.rs.hdel('pro_rate', str(pro_id))
 
         acct_id, timestamp = int(result['acct_id']), result['timestamp']
@@ -261,7 +249,7 @@ class ChalService:
                         ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp")
                         VALUES ($1, $2, $3, $4, $5, $6);
                     ''',
-                    chal_id, acct_id, pro_id, int(test_idx), ChalService.STATE_JUDGE, timestamp
+                    chal_id, acct_id, pro_id, int(test_idx), ChalConst.STATE_JUDGE, timestamp
                 )
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
@@ -277,7 +265,7 @@ class ChalService:
                 _, ret = await self.update_test(
                     chal_id,
                     test['test_idx'],
-                    ChalService.STATE_ERR,
+                    ChalConst.STATE_ERR,
                     0,
                     0,
                     ''
@@ -304,7 +292,7 @@ class ChalService:
             'metadata': chalmeta,
             'comp_type': comp_type,
             'check_type': test_conf['check_type'],
-        }), 1)
+        }), 1, pro_id)
 
         await self.rs.hdel('rate@kernel_True', str(acct_id))
         await self.rs.hdel('rate@kernel_False', str(acct_id))
@@ -346,7 +334,7 @@ class ChalService:
         for (chal_id, pro_id, acct_id, comp_type, timestamp, acct_name,
              state, runtime, memory) in result:
             if state is None:
-                state = ChalService.STATE_NOTSTARTED
+                state = ChalConst.STATE_NOTSTARTED
 
             if runtime is None:
                 runtime = 0
@@ -425,7 +413,7 @@ class ChalService:
             query += ')'
 
         if flt['state'] != 0:
-            if flt['state'] == ChalService.STATE_NOTSTARTED:
+            if flt['state'] == ChalConst.STATE_NOTSTARTED:
                 query += ' AND "challenge_state"."state" IS NULL '
             else:
                 query += (' AND "challenge_state"."state" = ' + str(flt['state']) + ' ')

@@ -21,9 +21,9 @@ var pack = new function() {
     that.send = function(pack_token, file) {
         let ws_link = '';
         if (location.protocol !== 'https:') {
-            ws_link = `ws://${location.hostname}/oj/be/pack`;
+            ws_link = `ws://${location.host}/oj/be/pack`;
         } else {
-            ws_link = `wss://${location.hostname}/oj/be/pack`;
+            ws_link = `wss://${location.host}/oj/be/pack`;
         }
         var ws = new WebSocket(ws_link);
         var defer = $.Deferred();
