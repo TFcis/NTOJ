@@ -25,7 +25,7 @@ class BoardHandler(RequestHandler):
             self.error('Eacces')
             return
 
-        if (meta['status'] == BoardConst.STATUS_HIDDEN and not self.acct.is_kernel()):
+        if meta['status'] == BoardConst.STATUS_HIDDEN and not self.acct.is_kernel():
             self.error('Eacces')
             return
 
@@ -40,10 +40,8 @@ class BoardHandler(RequestHandler):
         err, acctlist = await UserService.inst.list_acct(min_type=min_type)
         err, ratemap = await RateService.inst.map_rate(starttime=meta['start'], endtime=meta['end'])
 
-        prolist2 = []
-        for pro in prolist:
-            if pro['pro_id'] in meta['pro_list']:
-                prolist2.append(pro)
+        p_list = meta['pro_list']
+        prolist = list(filter(lambda pro: pro['pro_id'] in p_list, prolist))
 
         acctlist2 = []
         submit_count = {}
@@ -53,7 +51,7 @@ class BoardHandler(RequestHandler):
                 acct_id = acct.acct_id
                 count = 0
 
-                for pro in prolist2:
+                for pro in prolist:
                     pro_id = pro['pro_id']
                     if acct_id in ratemap and pro_id in ratemap[acct_id]:
                         rate = ratemap[acct_id][pro_id]
@@ -89,7 +87,7 @@ class BoardHandler(RequestHandler):
 
         # NOTE: board最下面的score/submit那行
         pro_sc_sub = {}
-        for pro in prolist2:
+        for pro in prolist:
             pro_id = pro['pro_id']
             sc = 0
             sub = 0
@@ -103,7 +101,7 @@ class BoardHandler(RequestHandler):
             pro_sc_sub.update({pro_id: (sc, sub)})
 
         await self.render('board',
-                          prolist=prolist2,
+                          prolist=prolist,
                           acctlist=acctlist2,
                           ratemap=ratemap,
                           pro_sc_sub=pro_sc_sub,

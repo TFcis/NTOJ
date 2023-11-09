@@ -1,5 +1,6 @@
-from redis import asyncio as aioredis
 import asyncio
+
+from redis import asyncio as aioredis
 
 from handlers.base import RequestHandler, WebSocketHandler, reqenv
 from services.bulletin import BulletinService
