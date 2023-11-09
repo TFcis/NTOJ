@@ -6,34 +6,82 @@
 <script type="text/javascript">
     var re = /[^0-9]/
     function init() {
-        var j_filter = $('#filter');
+        let j_proclass = $('#proclass');
+        let j_filter = $('#filter');
 
-        j_filter.find('#publicProClass').on('change', function(e) {
-            var off = location.href.match(/off=(\d+)/);
-            var pubclass_id = $(this).val();
+        j_proclass.find('#publicProClass').on('change', function(e) {
+            let off = location.href.match(/off=(\d+)/);
+            let pubclass_id = $(this).val();
+            let order = j_filter.find("#order").val();
+            let show = j_filter.find("#show").val();
+            let is_online = j_filter.find("#online").is(":checked");
+            let is_reversed = j_filter.find("#reverse").is(":checked");
+            let url = '/oj/proset/?';
 
-            if (off == null) {
-                off = 0;
-            } else {
-                off = parseInt(off[1]);
+            if (order != '') {
+                url += `&order=${order}`;
             }
 
-            if (pubclass_id == 'None') {
-                index.go(`/oj/proset/?off=${off}`);
-            } else {
-                index.go(`/oj/proset/?pubclass_id=${pubclass_id}`);
+            if (show != '') {
+                url += `&show=${show}`;
             }
+
+            if (is_online != false) {
+                url += `&online=${is_online}`;
+            }
+
+            if (is_reversed != false) {
+                url += `&reverse=${is_reversed}`;
+            }
+
+            if (pubclass_id != 'None') {
+                url += `&pubclass_id=${pubclass_id}`;
+            }
+
+            index.go(url);
         });
 
-        var select_prob = j_filter.find('input.select_prob');
+        j_filter.find("#filter_submit").on('click', function(e) {
+            let order = j_filter.find("#order").val();
+            let show = j_filter.find("#show").val();
+            let pubclass_id = j_proclass.find("#publicProClass").val();
+            let is_online = j_filter.find("#online").is(":checked");
+            let is_reversed = j_filter.find("#reverse").is(":checked");
+            let url = '/oj/proset/?';
+
+            if (order != '') {
+                url += `&order=${order}`;
+            }
+
+            if (show != '') {
+                url += `&show=${show}`;
+            }
+
+            if (is_online != false) {
+                url += `&online=${is_online}`;
+            }
+
+            if (is_reversed != false) {
+                url += `&reverse=${is_reversed}`;
+            }
+
+            if (pubclass_id != 'None') {
+                url += `&pubclass_id=${pubclass_id}`;
+            }
+
+            index.go(url);
+        });
+
+        let select_prob = j_filter.find('input.select_prob');
         select_prob.on('keypress', function(e) {
             if (e.keyCode == 13) {
                 if (re.test(select_prob.val())) {
-                    alert('請輸入數字')
-                    select_prob.val('')
+                    alert('請輸入數字');
+                    select_prob.val('');
                     return
                 }
-                $(location).attr('href', "/oj/pro/" + select_prob.val() + "/");
+
+                index.go(`/oj/pro/${select_prob.val()}/`);
             }
         });
     }
@@ -41,8 +89,8 @@
 
 <div class="row">
     <div class="col-lg-2 col-12">
-        <form id="filter">
-            <label class="form-label">過濾器</label>
+        <form id="proclass">
+            <label class="form-label">題單</label>
 
             <div class="mb-1">
                 <label for="" class="form-label">Public Problem Class</label>
@@ -61,6 +109,44 @@
                 <select id="privateProClass" class="form-select">
                     <option value="WIP">None</option> <!-- TODO: Private Problem Set -->
                 </select>
+            </div>
+        </form>
+
+        <form id="filter">
+            <label class="form-label">過濾器</label>
+
+            <div class="mb-3">
+                <label for="order" class="form-label">Sort By</label>
+                <select id="order" class="form-select">
+                    <option value="None" {% if flt['order'] == None %} selected {% end %}>None</option>
+                    <option value="chal" {% if flt['order'] == 'chal' %} selected {% end %}>Submission AC Ratio</option>
+                    <option value="user" {% if flt['order'] == 'user' %} selected {% end %}>User AC Ratio</option>
+                    <option value="chalcnt" {% if flt['order'] == 'chalcnt' %} selected {% end %}>Submission Count</option>
+                    <option value="chalaccnt" {% if flt['order'] == 'chalaccnt' %} selected {% end %}>Submission AC Count</option>
+                    <option value="usercnt" {% if flt['order'] == 'usercnt' %} selected {% end %}>User Submission Count</option>
+                    <option value="useraccnt" {% if flt['order'] == 'useraccnt' %} selected {% end %}>User Submission AC Count</option>
+                </select>
+
+                <label for="reverse" class="form-check-label">Reverse Sort Order</label>
+                <input type="checkbox" class="form-check-input" id="reverse" {% if flt['reverse'] %} checked {% end %} />
+            </div>
+
+            <div class="mb-1">
+                <label for="show">Problem Selector</label>
+                <select id="show" class="form-select">
+                    <option value="all" {% if flt['problem_show'] == 'all' %} selected {% end %}>All</option>
+                    <option value="onlyac" {% if flt['problem_show'] == 'onlyac' %} selected {% end %}>Only AC</option>
+                    <option value="notac"{% if flt['problem_show'] == 'notac' %} selected {% end %}>Not AC</option>
+                </select>
+
+                {% if isadmin %}
+                    <label for="online" class="form-check-label">Show Only Online Problem</label>
+                    <input type="checkbox" class="form-check-input" id="online" {% if flt['online'] %} checked {% end %} />
+                {% end %}
+            </div>
+
+            <div class="mb-1">
+                <button id="filter_submit" class="btn btn-primary" type="button">Filter</button>
             </div>
 
             <div class="mb-1">
@@ -124,9 +210,22 @@
             </tbody>
         </table>
 
+        <!-- TODO: Sort By & Problem Selector -->
         {% set postfix = '' %}
         {% if cur_pubclass != None %}
         {% set postfix = postfix + '&pubclass_id=%s' % cur_pubclass['pubclass_id'] %}
+        {% end %}
+        {% if flt['problem_show'] != 'all' %}
+        {% set postfix = postfix + f"&show={flt['problem_show']}" %}
+        {% end %}
+        {% if flt['order'] != None %}
+        {% set postfix = postfix + f"&order={flt['order']}" %}
+        {% end %}
+        {% if isadmin and flt['online'] != False %}
+        {% set postfix = postfix + f"&online={flt['online']}" %}
+        {% end %}
+        {% if flt['reverse'] != False %}
+        {% set postfix = postfix + f"&reverse={flt['reverse']}" %}
         {% end %}
 
         <div class="row">
