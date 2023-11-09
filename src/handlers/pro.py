@@ -5,10 +5,32 @@ import tornado.web
 from services.chal import ChalConst
 from services.judge import JudgeServerClusterService
 from services.log import LogService
-from services.pro import ProService, ProClassService
+from services.pro import ProConst, ProService, ProClassService
 from services.rate import RateService
 from services.user import UserConst
 from handlers.base import RequestHandler, reqenv, require_permission
+
+
+def user_ac_cmp(pro):
+    user_ac_chal_cnt = pro['rate_data']['user_ac_chal_cnt']
+    user_all_chal_cnt = pro['rate_data']['user_all_chal_cnt']
+
+    if user_ac_chal_cnt and user_all_chal_cnt:
+        return user_ac_chal_cnt / user_all_chal_cnt
+
+    else:
+        return -1
+
+
+def chal_ac_cmp(pro):
+    ac_chal_cnt = pro['rate_data']['ac_chal_cnt']
+    all_chal_cnt = pro['rate_data']['all_chal_cnt']
+
+    if ac_chal_cnt and all_chal_cnt:
+        return ac_chal_cnt / all_chal_cnt
+
+    else:
+        return -1
 
 
 class ProsetHandler(RequestHandler):
@@ -19,6 +41,33 @@ class ProsetHandler(RequestHandler):
         except tornado.web.HTTPError:
             off = 0
 
+        try:
+            order = self.get_argument('order')
+        except tornado.web.HTTPError:
+            order = None
+
+        try:
+            problem_show = self.get_argument('show')
+        except tornado.web.HTTPError:
+            problem_show = 'all'
+
+        try:
+            show_only_online_pro = self.get_argument('online')
+        except tornado.web.HTTPError:
+            show_only_online_pro = False
+
+        try:
+            order_reverse = self.get_argument('reverse')
+        except tornado.web.HTTPError:
+            order_reverse = False
+
+        flt = {
+            'order': order,
+            'problem_show': problem_show,
+            'online': show_only_online_pro,
+            'reverse': order_reverse,
+        }
+
         clas = None
 
         try:
@@ -26,46 +75,60 @@ class ProsetHandler(RequestHandler):
         except tornado.web.HTTPError:
             pubclass_id = None
 
-        if pubclass_id is None:
-            pass
-
         err, prolist = await ProService.inst.list_pro(
             self.acct, state=True, clas=clas)
 
         _, pubclass_list = await ProClassService.inst.get_pubclass_list()
 
-        if pubclass_id is None:
-            pronum = len(prolist)
-            prolist = prolist[off:off + 40]
-            for pro in prolist:
-                _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'])
-                pro['rate_data'] = rate
-
-            await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pubclass_list=pubclass_list,
-                              cur_pubclass=None, pageoff=off)
-            return
-
-        else:
+        pubclass = None
+        if pubclass_id is not None:
             err, pubclass = await ProClassService.inst.get_pubclass(pubclass_id)
             if err:
                 self.error(err)
                 return
 
             p_list = pubclass['list']
-            prolist2 = []
-            for pro in prolist:
-                if pro['pro_id'] in p_list:
-                    prolist2.append(pro)
-            prolist = prolist2
-            pronum = len(prolist)
-            prolist = prolist[off:off + 40]
-            for pro in prolist:
-                _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'])
-                pro['rate_data'] = rate
+            prolist = list(filter(lambda pro: pro['pro_id'] in p_list, prolist))
 
-            await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pubclass_list=pubclass_list,
-                              cur_pubclass=pubclass, pageoff=off)
-            return
+        for pro in prolist:
+            _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'])
+            pro['rate_data'] = rate
+
+        if show_only_online_pro:
+            prolist = list(filter(lambda pro: pro['status'] == ProConst.STATUS_ONLINE, prolist))
+
+        if problem_show == "onlyac":
+            prolist = list(filter(lambda pro: pro['state'] == ChalConst.STATE_AC, prolist))
+
+        elif problem_show == "notac":
+            prolist = list(filter(lambda pro: pro['state'] != ChalConst.STATE_AC, prolist))
+
+        if order == "chal":
+            prolist.sort(key=chal_ac_cmp)
+
+        elif order == "user":
+            prolist.sort(key=user_ac_cmp)
+
+        elif order == "chalcnt":
+            prolist.sort(key=lambda pro: pro['rate_data']['all_chal_cnt'])
+
+        elif order == "chalaccnt":
+            prolist.sort(key=lambda pro: pro['rate_data']['ac_chal_cnt'])
+
+        elif order == "usercnt":
+            prolist.sort(key=lambda pro: pro['rate_data']['user_all_chal_cnt'])
+
+        elif order == "useraccnt":
+            prolist.sort(key=lambda pro: pro['rate_data']['user_ac_chal_cnt'])
+
+        if order_reverse:
+            prolist.reverse()
+
+        pronum = len(prolist)
+        prolist = prolist[off: off + 40]
+
+        await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pubclass_list=pubclass_list,
+                          cur_pubclass=pubclass, pageoff=off, flt=flt, isadmin=self.acct.is_kernel())
 
     @reqenv
     async def post(self):
@@ -139,10 +202,7 @@ class ProHandler(RequestHandler):
                 pro_id
             )
 
-        countmap = {}
-        for test_idx, count in result:
-            countmap[test_idx] = count
-
+        countmap = {test_idx: count for test_idx, count in result}
         for test in testl:
             if test['test_idx'] in countmap:
                 test['rate'] = math.floor(countmap[test['test_idx']])
@@ -176,7 +236,6 @@ class ProHandler(RequestHandler):
                 pro['tags'] = ''
 
         can_submit = await JudgeServerClusterService.inst.is_server_online()
-
 
         await self.render('pro', pro={
             'pro_id': pro['pro_id'],
