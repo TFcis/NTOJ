@@ -70,9 +70,7 @@ class ChalListHandler(RequestHandler):
         _, challist = await ChalService.inst.list_chal(off, 20, self.acct, flt)
 
         isadmin = self.acct.is_kernel()
-        chalids = []
-        for chal in challist:
-            chalids.append(chal['chal_id'])
+        chalids = [chal['chal_id'] for chal in challist]
 
         await self.render('challist',
                           chalstat=chalstat,
@@ -131,14 +129,9 @@ class ChalHandler(RequestHandler):
             self.error(err)
             return
 
-        if self.acct.is_kernel():
-            rechal = True
-        else:
-            rechal = False
-
         chal['comp_type'] = ChalConst.COMPILER_NAME[chal['comp_type']]
 
-        await self.render('chal', pro=pro, chal=chal, rechal=rechal)
+        await self.render('chal', pro=pro, chal=chal, rechal=self.acct.is_kernel())
         return
 
 

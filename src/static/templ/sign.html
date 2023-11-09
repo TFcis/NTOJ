@@ -22,7 +22,7 @@
 
         $('#signin button.signup').on('click', function(e) {
             $('#intro').hide();
-            $('#sign').hide();
+            $('#signin').hide();
 
             $('body').removeClass('dark');
             $('#warning').show();
@@ -109,29 +109,39 @@
 <div class="row">
     <div class="col-lg-2"></div>
     <div id="intro" class="col-lg-5"></div>
-    <div id="sign" class="col-lg-3">
-        <div id="signin" class="">
-            <h3>登入</h3>
-            <input class="mail" type="text" tabindex=1 placeholder="mail">
-            <input class="pw" type="password" tabindex=2 placeholder="password">
-            <br>
-            <button class="btn btn-success submit" tabindex=3 submit>登入</button>
+    <div="sign" class="col-lg-3">
+        <form id="signin">
+            <label class="form-label">登入</label>
+            <div class="mb-1">
+                <input class="mail form-control" type="text" tabindex=1 placeholder="mail">
+            </div>
+
+            <div class="mb-1">
+                <input class="pw form-control" type="password" tabindex=2 placeholder="password">
+            </div>
+            <button class="btn btn-success submit" tabindex=3 type="button">登入</button>
+
             <div class="print"></div>
             <div style="margin-top:64px;">
-                <h3>註冊</h3>
-                <button class="btn btn-primary signup" tabindex=8 submit>註冊</button>
+                <label class="form-label">註冊</label>
+                <br>
+                <button class="btn btn-primary signup" tabindex=8 type="button">註冊</button>
             </div>
-        </div>
-        <div id="signup" class="col-lg-4 blk-cont" style="display:none;">
+        </form>
+
+        <form id="signup" style="display:none;">
             <h3>註冊</h3>
-            <input class="name" type="text" tabindex=4 placeholder="name">
-            <input class="mail" type="text" tabindex=5 placeholder="mail">
-            <input class="pw" type="password" tabindex=6 placeholder="password">
-            <input class="repeat "type="password" tabindex=7 placeholder="repeat">
-            <button class="btn btn-primary submit" tabindex=8 submit>註冊</button>
-            <button class="btn btn-secondary cancel">取消</button>
+            <input class="name form-control" type="text" tabindex=4 placeholder="name">
+            <input class="mail form-control" type="text" tabindex=5 placeholder="mail">
+            <input class="pw form-control" type="password" tabindex=6 placeholder="password">
+            <input class="repeat form-control" type="password" tabindex=7 placeholder="repeat">
+
+            <div class="mb-1">
+                <button class="btn btn-primary submit" tabindex=8 type="button">註冊</button>
+                <button class="btn btn-secondary cancel" type="button">取消</button>
+            </div>
             <div class="print"></div>
-        </div>
+        </form>
     </div>
     <div id="warning" class="g-lg-6 g-off-lg-3">
         <img src="/oj/img/warning2.png"><img>
@@ -142,3 +152,4 @@
         </div>
     </div>
 </div>
+

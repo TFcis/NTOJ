@@ -69,8 +69,6 @@ class LogService:
         async with self.db.acquire() as con:
             result = await con.fetch('SELECT DISTINCT "type" FROM "log"')
 
-            log_type = []
-            for type in result:
-                log_type.append(type['type'])
+            log_type = [type['type'] for type in result]
 
         return None, log_type

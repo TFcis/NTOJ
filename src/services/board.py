@@ -38,16 +38,18 @@ class BoardService:
             'name': name,
             'status': status,
             'pro_list': pro_list,
-            'acct_list': acct_list
-        }
+            'acct_list': acct_list,
 
-        meta['start'] = start.replace(tzinfo=datetime.timezone(
-            datetime.timedelta(hours=8)))
-        meta['end'] = end.replace(tzinfo=datetime.timezone(
-            datetime.timedelta(hours=8)))
+            'start': start.replace(tzinfo=datetime.timezone(
+            datetime.timedelta(hours=8))),
+
+            'end': end.replace(tzinfo=datetime.timezone(
+            datetime.timedelta(hours=8))),
+        }
 
         return None, meta
 
+    # TODO: pro_list_str轉換請交給handler，不要給service做
     async def add_board(self, name, status, start, end, pro_list_str: str, acct_list_str: str):
         pro_list_str = pro_list_str.replace(' ', '').split(',')
         pro_list = []

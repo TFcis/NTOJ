@@ -43,7 +43,7 @@ class ManageProClassHandler(RequestHandler):
                     pass
 
             if len(p_list) == 0:
-                await self.error('E')
+                self.error('E')
                 return
 
             await LogService.inst.add_log(f"{self.acct.name} add proclass name={name} list={p_list}", 'manage.proclass.add')
@@ -68,13 +68,13 @@ class ManageProClassHandler(RequestHandler):
                     pass
 
             if len(p_list) == 0:
-                await self.error('E')
+                self.error('E')
                 return
 
             await LogService.inst.add_log(f"{self.acct.name} update proclass name={name} list={p_list}", 'manage.proclass.update')
             err = await ProClassService.inst.update_pubclass(pubclass_id, name, p_list)
             if err:
-                await self.error(err)
+                self.error(err)
                 return
 
             self.finish('S')

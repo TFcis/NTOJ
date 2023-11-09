@@ -33,15 +33,15 @@ class AcctHandler(RequestHandler):
                 max_status
             )
 
-        err, ratemap2 = await RateService.inst.map_rate_acct(acct, clas=None)
+        err, ratemap = await RateService.inst.map_rate_acct(acct, clas=None)
 
         prolist2 = []
 
         for pro in prolist:
             pro_id = pro['pro_id']
             tmp = {'pro_id': pro_id, 'score': -1}
-            if pro_id in ratemap2:
-                tmp['score'] = ratemap2[pro_id]['rate']
+            if pro_id in ratemap:
+                tmp['score'] = ratemap[pro_id]['rate']
 
             prolist2.append(tmp)
 
