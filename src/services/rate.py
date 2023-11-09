@@ -1,4 +1,5 @@
 import datetime
+from collections import defaultdict
 
 from msgpack import packb, unpackb
 
@@ -105,7 +106,7 @@ class RateService:
         WHERE "challenge"."pro_id" = $1 AND "challenge_state"."state" = {ChalConst.STATE_AC}) as user_cnt;
         """
 
-        key = f"pro_rate"
+        key = "pro_rate"
         pro_id = int(pro_id)
 
         if (rate_data := await self.rs.hget(key, str(pro_id))) is None:
@@ -183,10 +184,10 @@ class RateService:
         else:
             qclas = [1, 2]
 
-        if type(starttime) == str:
+        if isinstance(starttime, str):
             starttime = datetime.datetime.fromisoformat(starttime)
 
-        if type(endtime) == str:
+        if isinstance(endtime, str):
             endtime = datetime.datetime.fromisoformat(endtime)
 
         # TODO: performance test
@@ -206,11 +207,8 @@ class RateService:
                 qclas, starttime, endtime
             )
 
-        statemap = {}
+        statemap = defaultdict(dict)
         for acct_id, pro_id, rate, count in result:
-            if acct_id not in statemap:
-                statemap[acct_id] = {}
-
             statemap[acct_id][pro_id] = {
                 'rate': rate,
                 'count': count

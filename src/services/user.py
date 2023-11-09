@@ -43,6 +43,7 @@ class Account:
     def is_guest(self):
         return self.acct_type == UserConst.ACCTTYPE_GUEST
 
+
 GUEST_ACCOUNT = Account(
     acct_id=0,
     acct_type=UserConst.ACCTTYPE_GUEST,
@@ -53,6 +54,7 @@ GUEST_ACCOUNT = Account(
     cover='',
     lastip=''
 )
+
 
 class UserService:
     MAIL_MAX = 1024
@@ -279,7 +281,8 @@ class UserService:
 
         return None, None
 
-    async def list_acct(self, min_type=UserConst.ACCTTYPE_USER, private=False, reload=False) -> Tuple[None, List[Account]]:
+    async def list_acct(self, min_type=UserConst.ACCTTYPE_USER, private=False, reload=False) -> Tuple[
+        None, List[Account]]:
         field = f'{min_type}|{int(private)}'
         if (acctlist := (await self.rs.hget('acctlist', field))) is not None and reload is False:
             acctlist = pickle.loads(acctlist)

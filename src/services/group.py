@@ -46,9 +46,7 @@ class GroupService:
         async with self.db.acquire() as con:
             result = await con.fetch('SELECT "group_name" FROM "group";')
 
-        glist = []
-        for gname in result:
-            glist.append(str(gname['group_name']))
+        glist = [gname['group_name'] for gname in result]
 
         return glist
 
