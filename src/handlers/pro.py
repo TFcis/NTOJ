@@ -90,10 +90,6 @@ class ProsetHandler(RequestHandler):
             p_list = pubclass['list']
             prolist = list(filter(lambda pro: pro['pro_id'] in p_list, prolist))
 
-        for pro in prolist:
-            _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'])
-            pro['rate_data'] = rate
-
         if show_only_online_pro:
             prolist = list(filter(lambda pro: pro['status'] == ProConst.STATUS_ONLINE, prolist))
 
@@ -126,6 +122,10 @@ class ProsetHandler(RequestHandler):
 
         pronum = len(prolist)
         prolist = prolist[off: off + 40]
+
+        for pro in prolist:
+            _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'])
+            pro['rate_data'] = rate
 
         await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pubclass_list=pubclass_list,
                           cur_pubclass=pubclass, pageoff=off, flt=flt, isadmin=self.acct.is_kernel())
