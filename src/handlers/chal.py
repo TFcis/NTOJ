@@ -5,7 +5,6 @@ import tornado.web
 
 from services.chal import ChalService, ChalConst
 from services.pro import ProService
-from services.user import UserService, UserConst
 from handlers.base import RequestHandler, reqenv
 from handlers.base import WebSocketHandler
 
@@ -22,29 +21,27 @@ class ChalListHandler(RequestHandler):
         try:
             ppro_id = str(self.get_argument('proid'))
             tmp_pro_id = ppro_id.replace(' ', '').split(',')
-            pro_id = []
-            for p in tmp_pro_id:
-                try:
-                    pro_id.append(int(p))
-                except ValueError:
-                    pass
-
-            if len(pro_id) == 0:
-                pro_id = None
+            query_pros = [
+                int(pro_id) for pro_id in tmp_pro_id if pro_id.isnumeric()
+            ]
+            if len(query_pros) == 0:
+                query_pros = None
 
         except tornado.web.HTTPError:
-            pro_id = None
+            query_pros = None
             ppro_id = ''
 
         try:
             pacct_id = str(self.get_argument('acctid'))
             tmp_acct_id = pacct_id.replace(' ', '').split(',')
-            acct_id = []
-            for a in tmp_acct_id:
-                acct_id.append(int(a))
+            query_accts = [
+                int(acct_id) for acct_id in tmp_acct_id if acct_id.isnumeric()
+            ]
+            if len(query_accts) == 0:
+                query_accts = None
 
         except tornado.web.HTTPError:
-            acct_id = None
+            query_accts = None
             pacct_id = ''
 
         try:
@@ -59,8 +56,8 @@ class ChalListHandler(RequestHandler):
             compiler_type = 'all'
 
         flt = {
-            'pro_id': pro_id,
-            'acct_id': acct_id,
+            'pro_id': query_pros,
+            'acct_id': query_accts,
             'state': state,
             'compiler': compiler_type,
         }
