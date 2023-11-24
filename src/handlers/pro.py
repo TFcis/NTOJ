@@ -99,6 +99,10 @@ class ProsetHandler(RequestHandler):
         elif problem_show == "notac":
             prolist = list(filter(lambda pro: pro['state'] != ChalConst.STATE_AC, prolist))
 
+        for pro in prolist:
+            _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'])
+            pro['rate_data'] = rate
+
         if order == "chal":
             prolist.sort(key=chal_ac_cmp)
 
@@ -122,10 +126,6 @@ class ProsetHandler(RequestHandler):
 
         pronum = len(prolist)
         prolist = prolist[off: off + 40]
-
-        for pro in prolist:
-            _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'])
-            pro['rate_data'] = rate
 
         await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pubclass_list=pubclass_list,
                           cur_pubclass=pubclass, pageoff=off, flt=flt, isadmin=self.acct.is_kernel())
