@@ -34,13 +34,7 @@ class ManageProClassHandler(RequestHandler):
             name = self.get_argument('name')
             p_list_str = self.get_argument('list')
             p_list_str = p_list_str.replace(' ', '').split(',')
-            p_list = []
-            for p_id in p_list_str:
-                try:
-                    p_list.append(int(p_id))
-
-                except ValueError:
-                    pass
+            p_list = [int(pro_id) for pro_id in p_list_str if pro_id.isnumeric()]
 
             if len(p_list) == 0:
                 self.error('E')
@@ -59,13 +53,7 @@ class ManageProClassHandler(RequestHandler):
             name = self.get_argument('name')
             p_list_str = self.get_argument('list')
             p_list_str = p_list_str.replace(' ', '').split(',')
-            p_list = []
-            for p_id in p_list_str:
-                try:
-                    p_list.append(int(p_id))
-
-                except ValueError:
-                    pass
+            p_list = [int(pro_id) for pro_id in p_list_str if pro_id.isnumeric()]
 
             if len(p_list) == 0:
                 self.error('E')

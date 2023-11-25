@@ -29,7 +29,7 @@ class BoardService:
         async with self.db.acquire() as con:
             res = await con.fetchrow('SELECT * FROM "board" WHERE "board_id" = $1', board_id)
 
-            if res.__len__() == 0:
+            if len(res) == 0:
                 return 'Enoext', None
 
         name, status, start, end, pro_list, acct_list = res['name'], res['status'], res['start'], res['end'], res['pro_list'], res['acct_list']
@@ -49,28 +49,7 @@ class BoardService:
 
         return None, meta
 
-    # TODO: pro_list_str轉換請交給handler，不要給service做
-    async def add_board(self, name, status, start, end, pro_list_str: str, acct_list_str: str):
-        pro_list_str = pro_list_str.replace(' ', '').split(',')
-        pro_list = []
-        for pro in pro_list_str:
-            try:
-                pro_list.append(int(pro))
-            except ValueError:
-                pass
-
-        acct_list_str = acct_list_str.replace(' ', '').split(',')
-        acct_list = []
-        for acct in acct_list_str:
-            if acct != '':
-                if acct.isnumeric():
-                    acct_list.append(int(acct))
-
-                elif acct.find("_group") != -1:
-                    gacct = await GroupService.inst.list_acct_in_group(acct[:-6])
-                    for ga in gacct:
-                        acct_list.append(int(ga['acct_id']))
-
+    async def add_board(self, name, status, start, end, pro_list: list[int], acct_list: list[int]):
         pro_list = list(set(pro_list))
         acct_list = list(set(acct_list))
 
@@ -85,28 +64,8 @@ class BoardService:
 
         return None, None
 
-    async def update_board(self, board_id, name, status, start, end, pro_list_str, acct_list_str):
+    async def update_board(self, board_id, name, status, start, end, pro_list: list[int], acct_list: list[int]):
         board_id = int(board_id)
-
-        pro_list_str = pro_list_str.replace(' ', '').split(',')
-        pro_list = []
-        for pro in pro_list_str:
-            try:
-                pro_list.append(int(pro))
-            except ValueError:
-                pass
-
-        acct_list_str = acct_list_str.replace(' ', '').split(',')
-        acct_list = []
-        for acct in acct_list_str:
-            if acct != '':
-                if acct.isnumeric():
-                    acct_list.append(int(acct))
-
-                elif acct.find("_group") != -1:
-                    gacct = await GroupService.inst.list_acct_in_group(acct[:-6])
-                    for ga in gacct:
-                        acct_list.append(int(ga['acct_id']))
 
         pro_list = list(set(pro_list))
         acct_list = list(set(acct_list))
@@ -119,7 +78,7 @@ class BoardService:
                 ''',
                 name, status, start, end, pro_list, acct_list, board_id
             )
-            if res.__len__() != 1:
+            if len(res) != 1:
                 return 'Enoext', None
 
         return None, None

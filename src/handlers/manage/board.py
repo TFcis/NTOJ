@@ -4,6 +4,7 @@ from handlers.base import RequestHandler, reqenv, require_permission
 from services.board import BoardService
 from services.log import LogService
 from services.user import UserConst
+from services.group import GroupService
 
 
 def trantime(time):
@@ -35,7 +36,7 @@ class ManageBoardHandler(RequestHandler):
 
         elif page == "update":
             board_id = int(self.get_argument('boardid'))
-            err, board = await BoardService.inst.get_board(board_id)
+            _, board = await BoardService.inst.get_board(board_id)
             await self.render('manage/board/update', page='add', board_id=board_id, board=board)
 
     @reqenv
@@ -48,8 +49,8 @@ class ManageBoardHandler(RequestHandler):
             status = int(self.get_argument('status'))
             start = self.get_argument('start')
             end = self.get_argument('end')
-            pro_list = str(self.get_argument('pro_list'))
-            acct_list = str(self.get_argument('acct_list'))
+            pro_list_str = str(self.get_argument('pro_list'))
+            acct_list_str = str(self.get_argument('acct_list'))
 
             await LogService.inst.add_log(f"{self.acct.name} was added the contest \"{name}\".",
                                           'manage.board.add')
@@ -62,6 +63,9 @@ class ManageBoardHandler(RequestHandler):
             if err:
                 self.error(err)
                 return
+
+            acct_list = await self._get_acct_list(acct_list_str)
+            pro_list = self._get_pro_list(pro_list_str)
 
             await BoardService.inst.add_board(name, status, start, end, pro_list, acct_list)
 
@@ -86,8 +90,11 @@ class ManageBoardHandler(RequestHandler):
                 self.error(err)
                 return
 
-            pro_list = str(self.get_argument('pro_list'))
-            acct_list = str(self.get_argument('acct_list'))
+            pro_list_str = str(self.get_argument('pro_list'))
+            acct_list_str = str(self.get_argument('acct_list'))
+            acct_list = await self._get_acct_list(acct_list_str)
+            pro_list = self._get_pro_list(pro_list_str)
+
             await BoardService.inst.update_board(board_id, name, status, start, end, pro_list, acct_list)
 
             self.finish('S')
@@ -100,3 +107,23 @@ class ManageBoardHandler(RequestHandler):
             await LogService.inst.add_log(f"{self.acct.name} was removed the contest \"{board_id}\".",
                                           'manage.board.remove')
             return
+
+    async def _get_acct_list(self, acct_list_str: str) -> list[int]:
+        acct_list = acct_list_str.replace(' ', '').split(',')
+
+        res = []
+        for acct in acct_list:
+            if acct != '':
+                if acct.isnumeric():
+                    res.append(int(acct))
+
+                elif acct.find("_group") != -1:
+                    gacct = await GroupService.inst.list_acct_in_group(acct[:-6])
+                    for ga in gacct:
+                        res.append(ga['acct_id'])
+
+        return res
+
+    def _get_pro_list(self, pro_list_str: str) -> list[int]:
+        pro_list = pro_list_str.replace(' ', '').split(',')
+        return [int(pro) for pro in pro_list if pro.isnumeric()]
