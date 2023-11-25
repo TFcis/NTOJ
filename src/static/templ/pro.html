@@ -173,17 +173,20 @@
         </div>
 
         <div class="my-lg-1">
-            <a class="btn btn-warning my-lg-1" style="display:none; width:156px; text-align:center;" id="pdfbtn">Download PDF</a>
-            <a class="btn btn-warning my-lg-1" id="switchviewer" style="display:none; width:156px; text-align:center;">Switch Viewer</a>
+            <a class="btn btn-warning my-lg-1" style="display: none; width: 156px; text-align: center;" id="pdfbtn">Download PDF</a>
+            <a class="btn btn-warning my-lg-1" id="switchviewer" style="display: none; width: 156px; text-align: center;">Switch Viewer</a>
         </div>
         {% if (isadmin) %}
-            <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="add tags here">
+            <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width: 190px" placeholder="add tags here">
         {% else %}
-            <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width:190px" placeholder="no tags" disabled>
+            <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width: 190px" placeholder="no tags" disabled>
         {% end %}
-        <div></div>
-        <span id="tags-invalid" style="color:red; display:none">TAGS INVALID!</span>
-        <span id="tags-done" style="color:green; display:none">SET TAGS SUCCESS</span>
+        <div>
+
+        </div>
+        <span id="tags-invalid" style="color:#e74c3c; display: none">TAGS INVALID!</span>
+        <span id="tags-done" style="color: green; display: none">SET TAGS SUCCESS</span>
+        <br>
         <table class="table">
             <thead>
                 <tr>
@@ -198,7 +201,7 @@
                 </tr>
                 <tr>
                     <td>mem</td>
-                    <td>{{ round(testl[0]['memlimit'] / 1024) }} Kb</td>
+                    <td>{{ round(testl[0]['memlimit'] / 1024) }} KB</td>
                 </tr>
             </tbody>
         </table>
