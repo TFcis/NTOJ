@@ -84,8 +84,6 @@ class ChalService:
         pro_id = int(pro_id)
         acct_id = int(acct_id)
 
-        # TODO: Refactor ContestService
-
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
@@ -94,7 +92,7 @@ class ChalService:
                 ''',
                 pro_id, acct_id, comp_type
             )
-        if result.__len__() != 1:
+        if len(result) != 1:
             return 'Eunk', None
         result = result[0]
 
@@ -103,9 +101,8 @@ class ChalService:
         file_ext = ChalConst.FILE_EXTENSION[comp_type]
 
         os.mkdir(f'code/{chal_id}')
-        code_f = open(f'code/{chal_id}/main.{file_ext}', 'wb')
-        code_f.write(code.encode('utf-8'))
-        code_f.close()
+        with open(f"code/{chal_id}/main.{file_ext}", 'wb') as code_f:
+            code_f.write(code.encode('utf-8'))
 
         return None, chal_id
 
@@ -156,8 +153,9 @@ class ChalService:
                 ''',
                 chal_id
             )
-        if result.__len__() != 1:
+        if len(result) != 1:
             return 'Enoext', None
+
         result = result[0]
 
         pro_id, acct_id, timestamp, comp_type, acct_name = result['pro_id'], result['acct_id'], result['timestamp'], result['compiler_type'], result['acct_name']
@@ -223,13 +221,9 @@ class ChalService:
                 ''',
                 chal_id
             )
-        if result.__len__() != 1:
+        if len(result) != 1:
             return 'Enoext', None
         result = result[0]
-
-        # NOTE: Recalculate problem rate
-        # FIXME: 併發問題，如果chal還沒有結果就去計算ac ratio會是錯的答案
-        await self.rs.hdel('pro_rate', str(pro_id))
 
         acct_id, timestamp = int(result['acct_id']), result['timestamp']
 
@@ -249,7 +243,7 @@ class ChalService:
                         ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp")
                         VALUES ($1, $2, $3, $4, $5, $6);
                     ''',
-                    chal_id, acct_id, pro_id, int(test_idx), ChalConst.STATE_JUDGE, timestamp
+                    chal_id, acct_id, pro_id, test_idx, ChalConst.STATE_JUDGE, timestamp
                 )
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
@@ -277,13 +271,7 @@ class ChalService:
         if test_conf['comp_type'] == 'makefile':
             comp_type = 'makefile'
 
-        # await JudgeServerClusterService.inst.new_judge.send_to_compile(chal_id, code_path, file_ext, comp_type)
-
-        """
-        create submission
-        chal_id, pro_id, code_path, res_path, metadata, comp_type, check_type, pri
-        """
-        await JudgeServerClusterService.inst.send(json.dumps({
+        await JudgeServerClusterService.inst.send({
             'pri': 1,
             'chal_id': chal_id,
             'test': testl,
@@ -292,7 +280,7 @@ class ChalService:
             'metadata': chalmeta,
             'comp_type': comp_type,
             'check_type': test_conf['check_type'],
-        }), 1, pro_id)
+        }, 1, pro_id)
 
         await self.rs.hdel('rate@kernel_True', str(acct_id))
         await self.rs.hdel('rate@kernel_False', str(acct_id))
@@ -374,7 +362,7 @@ class ChalService:
                                       'ON "challenge"."chal_id"="challenge_state"."chal_id" '
                                       f'WHERE "account"."acct_type" >= {min_accttype}' + fltquery + ';'))
 
-        if result.__len__() != 1:
+        if len(result) != 1:
             return 'Eunk', None
 
         total_chal = result[0]['count']
