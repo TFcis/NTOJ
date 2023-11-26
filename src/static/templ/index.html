@@ -41,8 +41,10 @@
     });
 </script>
 </head>
+<!-- #eaf1ff #314783  -->
 <body data-bs-theme="dark">
-<nav class="navbar navbar-expand-lg">
+<!-- style="background-color: #314783;" -->
+<nav class="navbar navbar-expand-lg"> 
     <div id="index-navlist" class="container-fluid">
         <a class="navbar-brand" href="/oj/info/">NTOJ</a>
 
@@ -65,29 +67,27 @@
 				<li class="nav-item board"><a class="nav-link" href="/oj/board/">Board</a></li>
 				<li class="nav-item chal"><a class="nav-link" href="/oj/chal/">Challenges</a></li>
 				<li class="nav-item proset"><a class="nav-link" href="/oj/proset/">ProblemSet</a></li>
-
-				{% if manage == True %}
-					<li class="nav-item manage"><a class="nav-link" href="/oj/manage/dash/">Manage</a></li>
-				{% end %}
-
-				<li class="nav-item about"><a class="nav-link" href="/oj/about/">About</a></li>
-
+				
 				{% if manage != True %}
-					<li class="nav-item question"><a class="nav-link" href="/oj/question/">Question</a></li>
+				<li class="nav-item question"><a class="nav-link" href="/oj/question/">Question</a></li>
 				{% end %}
-
+				
 				{% if manage == True and ask_cnt > 0 %}
-					<li class="nav-item ask"><a class="nav-link" style="color: #e74c3c;" href="/oj/manage/question/">get {{ ask_cnt }} ask</a></li>
+				<li class="nav-item ask"><a class="nav-link" style="color: #e74c3c;" href="/oj/manage/question/">get {{ ask_cnt }} ask</a></li>
 				{% end %}
-
+				
 				{% if manage == False and reply == True %}
-					<li class="nav-item"><a class="nav-link" style="color: #e74c3c;" href="/oj/question/">get reply</a></li>
+				<li class="nav-item"><a class="nav-link" style="color: #e74c3c;" href="/oj/question/">get reply</a></li>
 				{% end %}
-
+				
 				<li><a class="nav-link" style="display: none;" href="" class="message"></a></li>
 				<li><a class="nav-link" href="http://forum.tfcis.org/forum.php?mod=forumdisplay&fid=40" target="_new">Discuss</a></li>
 				<li><a class="nav-link" href="https://github.com/TFcis/NTOJ/issues" target="_new">Make A Wish</a></li>
+				<li class="nav-item about"><a class="nav-link" href="/oj/about/">About</a></li>
 				<li class="dev-info"><a class="nav-link" href="/oj/dev-info/">Devlog</a></li>
+				{% if manage == True %}
+				<li class="nav-item manage"><a class="nav-link" href="/oj/manage/dash/">Manage</a></li>
+				{% end %}
 			</ul>
 
 			<ul class="navbar-nav ms-auto">
