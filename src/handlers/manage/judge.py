@@ -1,9 +1,11 @@
 import base64
+import asyncio
 
+from redis import asyncio as aioredis
 from msgpack import packb, unpackb
 
 import config
-from handlers.base import RequestHandler, reqenv, require_permission
+from handlers.base import RequestHandler, reqenv, require_permission, WebSocketHandler
 from services.judge import JudgeServerClusterService
 from services.log import LogService
 from services.user import UserConst
@@ -64,3 +66,29 @@ class ManageJudgeHandler(RequestHandler):
 
             self.finish('S')
             return
+
+
+class JudgeChalCntSub(WebSocketHandler):
+    async def open(self):
+        self.ars = aioredis.Redis(host='localhost', port=6379, db=1)
+        self.p = self.ars.pubsub()
+        await self.p.subscribe('judgechalcnt_sub')
+
+        async def loop():
+            async for msg in self.p.listen():
+                if msg['type'] != 'message':
+                    continue
+
+                await self.on_message(msg['data'].decode('utf-8'))
+
+        self.task = asyncio.tasks.Task(loop())
+
+    async def on_message(self, msg):
+        await self.write_message(msg)
+
+    def on_close(self) -> None:
+        self.task.cancel()
+
+    def check_origin(self, origin):
+        # TODO: secure
+        return True

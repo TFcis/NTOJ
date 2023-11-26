@@ -13,13 +13,16 @@ from services.log import LogService
 
 
 class JudgeServerService:
-    def __init__(self, rs, server_name, server_url) -> None:
+    def __init__(self, rs, server_name, server_url, judge_id) -> None:
         self.rs = rs
         self.server_name = server_name
         self.server_url = server_url
-        self.running_chal_cnt = 0
+        self.judge_id = judge_id
         self.status = True
         self.ws = None
+
+        self.chal_map = {}
+        self.running_chal_cnt = 0
 
         self.main_task = None
 
@@ -27,8 +30,6 @@ class JudgeServerService:
         self.main_task = asyncio.create_task(self.connect_server())
 
     async def connect_server(self):
-        from services.chal import ChalService
-
         try:
             self.ws = await websocket_connect(self.server_url)
         except:
@@ -40,27 +41,42 @@ class JudgeServerService:
         while self.status:
             ret = await self.ws.read_message()
             if ret is None:
-                # 這東西實際上就是個心跳包啊啊啊
                 await self.offline_notice()
                 self.status = False
                 self.running_chal_cnt = 0
                 break
 
-            res = json.loads(ret)
-            if res['results'] is not None:
-                for test_idx, result in enumerate(res['results']):
-                    # INFO: CE會回傳 result['verdict']
+            await self.response_handle(ret)
 
-                    err, ret = await ChalService.inst.update_test(
-                        res['chal_id'],
-                        test_idx,
-                        result['status'],
-                        int(result['time'] / 10 ** 6),  # ns to ms
-                        result['memory'],
-                        result['verdict'])
+    async def response_handle(self, ret):
+        from services.chal import ChalService
 
-                await self.rs.publish('chalstatesub', res['chal_id'])
-                self.running_chal_cnt -= 1
+        res = json.loads(ret)
+
+        if res['results'] is not None:
+            for test_idx, result in enumerate(res['results']):
+                # INFO: CE會回傳 result['verdict']
+
+                _, ret = await ChalService.inst.update_test(
+                    res['chal_id'],
+                    test_idx,
+                    result['status'],
+                    int(result['time'] / 10 ** 6),  # ns to ms
+                    result['memory'],
+                    result['verdict'])
+
+            self.running_chal_cnt -= 1
+
+            await self.rs.publish('chalstatesub', res['chal_id'])
+            await self.rs.publish('judgechalcnt_sub', json.dumps({
+                "judge_id": self.judge_id,
+                "chal_cnt": self.running_chal_cnt,
+            }))
+
+            pro_id = self.chal_map[res['chal_id']]['pro_id']
+            # NOTE: Recalculate problem rate
+            await self.rs.hdel('pro_rate', str(pro_id))
+            self.chal_map.pop(res['chal_id'])
 
     async def disconnect_server(self) -> Union[str, None]:
         if not self.status:
@@ -79,6 +95,7 @@ class JudgeServerService:
     async def get_server_status(self):
         return (None, {
             'name': self.server_name,
+            'judge_id': self.judge_id,
             'status': self.status,
             'running_chal_cnt': self.running_chal_cnt
         })
@@ -86,6 +103,11 @@ class JudgeServerService:
     async def send(self, data):
         if self.status:
             self.running_chal_cnt += 1
+            await self.rs.publish('judgechalcnt_sub', json.dumps({
+                "judge_id": self.judge_id,
+                "chal_cnt": self.running_chal_cnt,
+            }))
+
             await self.ws.write_message(data)
 
     async def offline_notice(self):
@@ -128,13 +150,13 @@ class JudgeServerClusterService:
         self.servers: List[JudgeServerService] = []
         self.idx = 0
 
-        for server in server_urls:
+        for judge_id, server in enumerate(server_urls):
             url = server.get('url')
             name = server.get('name')
             if name is None:
                 name = ''
 
-            self.servers.append(JudgeServerService(self.rs, name, url))
+            self.servers.append(JudgeServerService(self.rs, name, url, judge_id))
 
     async def start(self) -> None:
         for idx, judge_server in enumerate(self.servers):
@@ -142,7 +164,7 @@ class JudgeServerClusterService:
             await judge_server.start()
 
     async def connect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
-        if idx < 0 or idx >= self.servers.__len__():
+        if idx < 0 or idx >= len(self.servers):
             return 'Eparam'
 
         if self.servers[idx].status:
@@ -158,7 +180,7 @@ class JudgeServerClusterService:
         return 'S'
 
     async def disconnect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
-        if idx < 0 or idx >= self.servers.__len__():
+        if idx < 0 or idx >= len(self.servers):
             return 'Eparam'
 
         err = await self.servers[idx].disconnect_server()
@@ -173,35 +195,59 @@ class JudgeServerClusterService:
             await server.disconnect_server()
 
     async def get_server_status(self, idx):
-        if idx < 0 or idx >= self.servers.__len__():
+        if idx < 0 or idx >= len(self.servers):
             return 'Eparam'
 
-        err, status = await self.servers[idx].get_server_status()
+        _, status = await self.servers[idx].get_server_status()
         return None, status
 
     async def get_servers_status(self) -> List[Dict]:
         status_list: List[Dict] = []
         for server in self.servers:
-            err, status = await server.get_server_status()
+            _, status = await server.get_server_status()
             status_list.append(status)
 
         return status_list
 
     async def is_server_online(self) -> bool:
         for server in self.servers:
-            err, status = await server.get_server_status()
+            _, status = await server.get_server_status()
             if status['status']:
                 return True
 
         return False
 
-    async def send(self, data, pri) -> None:
-        # Priority impl
-        while not self.queue.empty():
-            cur_pri, idx = self.queue.get()
-            if not self.servers[idx].status:
+    async def send(self, data, pri, pro_id) -> None:
+        # simple round-robin impl
+
+        for i in range(self.idx + 1, len(self.servers)):
+            if self.servers[i].ws is None:
                 continue
 
-            await self.servers[idx].send(data)
-            self.queue.put([cur_pri + pri, idx])
+            _, status = await self.servers[i].get_server_status()
+            if not status['status']:
+                continue
+
+            await self.servers[i].send(json.dumps(data))
+            self.servers[i].chal_map[data['chal_id']] = {
+                "pro_id": pro_id
+            }
+
+            self.idx = i
+            return
+
+        for i in range(0, len(self.servers)):
+            if self.servers[i].ws is None:
+                continue
+
+            _, status = await self.servers[i].get_server_status()
+            if not status['status']:
+                continue
+
+            await self.servers[i].send(json.dumps(data))
+            self.servers[i].chal_map[data['chal_id']] = {
+                "pro_id": pro_id
+            }
+
+            self.idx = i
             return
