@@ -87,6 +87,16 @@
     }
 </script>
 
+<style>
+    
+@media only screen and (min-width: 992px){
+    .pagination {
+        justify-content: center;
+    }
+}
+
+</style>
+
 <div class="row">
     <div class="col-lg-2 col-12">
         <form id="proclass">
@@ -232,7 +242,7 @@
             <div class="col-1"></div>
             <div class="col pt-3">
                 <nav aria-label="Page navigation example">
-                    <ul class="pagination justify-content-center">
+                    <ul class="pagination">
                         <!-- this algorithm from toj -->
                         <!-- 我沒研究怎麼實現的，但能用 -->
                         <li class="page-item"><a class="page-link" href="?off=0{{ postfix }}">&#x21e4;</a></li>
