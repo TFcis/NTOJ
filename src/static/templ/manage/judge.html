@@ -3,7 +3,16 @@
 
 <script type="text/javascript" id="contjs">
     var j_form = $('#form');
+    var ws;
     function init() {
+        ws = index.get_ws('manage/judgecntws');
+
+	    ws.onopen = function(e) {};
+
+	    ws.onmessage = function(e) {
+            let res = JSON.parse(e['data']);
+            $(`#${res.judge_id}`).text(res.chal_cnt);
+        };
     }
 
     function connect_sever(index) {
@@ -77,7 +86,7 @@
                     {% else %}
                         <td>{{ judge_status['name'] }}</td>
                     {% end %}
-                    <td>{{ judge_status['running_chal_cnt'] }}</td>
+                    <td id="{{ judge_status['judge_id']}}">{{ judge_status['running_chal_cnt'] }}</td>
                     {% if judge_status['status'] == True %}
                         <td style="color: green !important;">Online</td>
                     {% else %}
