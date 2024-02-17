@@ -16,7 +16,7 @@ class CodeHandler(RequestHandler):
     async def post(self):
         chal_id = int(self.get_argument('chal_id'))
 
-        err, code, comp_type = await CodeService.inst.get_code(chal_id, self.acct)
+        _, code, comp_type = await CodeService.inst.get_code(chal_id, self.acct)
         if code is None:
             await self.finish('')
             return

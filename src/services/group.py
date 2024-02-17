@@ -117,7 +117,7 @@ class GroupService:
                 gtype, [gclas], gname
             )
 
-        if result.__len__() != 1:
+        if len(result) != 1:
             return 'Eexist'
 
         return None

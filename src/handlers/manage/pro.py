@@ -134,7 +134,7 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 pack_token = self.get_argument('pack_token')
                 pack_type = ProService.inst.PACKTYPE_FULL
-                err, _ = await ProService.inst._unpack_pro(pro_id, pack_type, pack_token)
+                err, _ = await ProService.inst.unpack_pro(pro_id, pack_type, pack_token)
                 if err:
                     self.error(err)
                     return
@@ -259,7 +259,7 @@ class ManageProHandler(RequestHandler):
                         pro_id
                     )
                 await LogService.inst.add_log(
-                    f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals",
+                    f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
                     'manage.chal.rechal')
 
                 for chal_id, comp_type in result:

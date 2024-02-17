@@ -15,7 +15,7 @@ class CodeService:
         async with self.db.acquire() as con:
             result = await con.fetch('SELECT "challenge"."acct_id", "challenge"."pro_id", "challenge"."compiler_type" '
                                      'FROM "challenge" WHERE "chal_id" = $1;', chal_id)
-            if result.__len__() != 1:
+            if len(result) != 1:
                 return 'Enoext', None, None
 
             acct_id, pro_id, comp_type = int(result[0]['acct_id']), int(result[0]['pro_id']), result[0]['compiler_type']

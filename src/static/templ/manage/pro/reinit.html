@@ -21,7 +21,7 @@
 
                 j_upload.show();
 				pack.send(pack_token, files[0]).done(function() {
-					$.post('/oj/be/manage/pro/reinit', {
+					$.post('/oj/be/manage/pro/update', {
 						'reqtype': 'reinitpro',
 						'pro_id': {{ pro_id }},
 						'pack_token': pack_token,
