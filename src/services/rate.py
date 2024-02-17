@@ -60,7 +60,7 @@ class RateService:
                                           'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
                                           'AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";'),
                                          acct_id, int(ChalConst.STATE_AC))
-                if result.__len__() != 1:
+                if len(result) != 1:
                     return 'Eunk', None
 
                 if (rate := result[0]['rate']) is None:

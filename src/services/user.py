@@ -1,6 +1,6 @@
 import base64
 import pickle
-from typing import List, Tuple
+from typing import List, Tuple, Literal
 from dataclasses import dataclass
 
 import asyncpg
@@ -84,7 +84,7 @@ class UserService:
                 ''',
                 mail
             )
-        if result.__len__() != 1:
+        if len(result) != 1:
             return 'Esign', None
 
         acct_id = result[0]['acct_id']
@@ -131,7 +131,7 @@ class UserService:
         except asyncpg.IntegrityConstraintViolationError:
             return 'Eexist', None
 
-        if result.__len__() != 1:
+        if len(result) != 1:
             return 'Eexist', None
 
         await self.rs.delete('acctlist')
@@ -154,7 +154,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch('SELECT "acct_id","lastip" FROM "account" WHERE "acct_id" = $1;', acct_id)
 
-                if result.__len__() != 1:
+                if len(result) != 1:
                     return 'Esign', None, ip
                 result = result[0]
 
@@ -186,7 +186,7 @@ class UserService:
 
         return None, acct_id, ip
 
-    async def info_acct(self, acct_id) -> Tuple[None, Account]:
+    async def info_acct(self, acct_id) -> Tuple[None, Account] | Tuple[Literal['Enoext'], None]:
         if acct_id is None:
             return None, GUEST_ACCOUNT
 
@@ -205,8 +205,9 @@ class UserService:
                     ''',
                     acct_id
                 )
-            if result.__len__() != 1:
+            if len(result) != 1:
                 return 'Enoext', None
+
             result = result[0]
 
             acct = Account(
@@ -247,7 +248,7 @@ class UserService:
                 ''',
                 acct_type, name, photo, cover, [clas], acct_id
             )
-            if result.__len__() != 1:
+            if len(result) != 1:
                 return 'Enoext', None
 
             await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
@@ -267,7 +268,7 @@ class UserService:
 
         async with self.db.acquire() as con:
             result = await con.fetch('SELECT "password" FROM "account" WHERE "acct_id" = $1;', acct_id)
-            if result.__len__() != 1:
+            if len(result) != 1:
                 return 'Eexist', None
             result = result[0]
 

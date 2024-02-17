@@ -12,7 +12,7 @@ class BulletinService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "bulletin"."bulletin_id", "bulletin"."title", "bulletin"."timestamp", 
+                    SELECT "bulletin"."bulletin_id", "bulletin"."title", "bulletin"."timestamp",
                     "bulletin"."color", "bulletin"."pinned", "account"."name", "account"."acct_id"
                     FROM "bulletin" INNER JOIN "account" ON "account"."acct_id" = "bulletin"."author_id";
                 '''
@@ -38,14 +38,14 @@ class BulletinService:
                 '''
                     SELECT "bulletin"."title", "bulletin"."content", "bulletin"."timestamp", "account"."name",
                     "bulletin"."color", "bulletin"."pinned", "account"."name", "account"."acct_id"
-                    FROM "bulletin" 
+                    FROM "bulletin"
                     INNER JOIN "account" ON "account"."acct_id" = "bulletin"."author_id"
                     WHERE "bulletin"."bulletin_id" = $1
                 ''',
                 int(bulletin_id)
             )
 
-        if result.__len__() != 1:
+        if len(result) != 1:
             return 'Noext', None
         result = result[0]
         result = {
@@ -69,7 +69,7 @@ class BulletinService:
                 ''',
                 title, content, color, pinned, acct_id
             )
-        if result.__len__() != 1:
+        if len(result) != 1:
             return 'Eunk', None
 
         await self.rs.publish('bulletinsub', 1)
@@ -78,7 +78,7 @@ class BulletinService:
         async with self.db.acquire() as con:
             await con.execute(
                 '''
-                    UPDATE "bulletin" SET "title" = $1, "content" = $2, "author_id" = $3, "color" = $4, "pinned" = $5 
+                    UPDATE "bulletin" SET "title" = $1, "content" = $2, "author_id" = $3, "color" = $4, "pinned" = $5
                     WHERE "bulletin_id" = $6;
                 ''',
                 title, content, int(acct_id), color, pinned, int(bulletin_id)

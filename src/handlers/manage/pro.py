@@ -259,7 +259,7 @@ class ManageProHandler(RequestHandler):
                         pro_id
                     )
                 await LogService.inst.add_log(
-                    f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {result.__len__()} chals",
+                    f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
                     'manage.chal.rechal')
 
                 for chal_id, comp_type in result:
