@@ -276,7 +276,7 @@ class ProService:
 
             pro_id = int(result[0]["pro_id"])
 
-            _, _ = await self._unpack_pro(pro_id, ProService.PACKTYPE_FULL, pack_token)
+            _, _ = await self.unpack_pro(pro_id, ProService.PACKTYPE_FULL, pack_token)
 
             await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
 
@@ -324,7 +324,7 @@ class ProService:
                 return "Enoext", None
 
             if pack_token is not None:
-                err, _ = await self._unpack_pro(pro_id, pack_type, pack_token)
+                err, _ = await self.unpack_pro(pro_id, pack_type, pack_token)
                 if err:
                     return err, None
 
@@ -368,7 +368,7 @@ class ProService:
         else:
             return ProService.STATUS_ONLINE
 
-    async def _unpack_pro(self, pro_id, pack_type, pack_token):
+    async def unpack_pro(self, pro_id, pack_type, pack_token):
         def _clean_cont(prefix):
             try:
                 os.remove(f"{prefix}cont.html")
@@ -400,7 +400,7 @@ class ProService:
             await PackService.inst.direct_copy(pack_token, f"{prefix}cont.pdf")
 
         elif pack_type == ProService.PACKTYPE_FULL:
-            err = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
+            err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
             await asyncio.sleep(5)
             if err:
                 return err, None
