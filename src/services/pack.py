@@ -1,7 +1,6 @@
 import os
 import uuid
-
-import tornado.process
+import asyncio
 
 
 class PackService:
@@ -39,34 +38,13 @@ class PackService:
 
         os.remove(f'tmp/{pack_token}')
 
+    async def _run_and_wait_process(self, program, *args):
+        process = await asyncio.create_subprocess_exec(program, *args)
+        returncode = await process.wait()
+
+        return returncode
+
     async def unpack(self, pack_token, dst, clean=False):
-        def _unpack():
-            def __rm_cb(code):
-                os.makedirs(dst, 0o700)
-                __tar()
-
-            def __tar():
-                sub = tornado.process.Subprocess(
-                    ['/bin/tar', '-Jxf', f'tmp/{pack_token}', '-C', dst])
-                sub.set_exit_callback(__tar_cb)
-
-            def __tar_cb(code):
-                if code != 0:
-                    return ('Eunk', None)
-
-                # os.remove('tmp/%s'%pack_token)
-
-                sub = tornado.process.Subprocess(
-                    ['/bin/bash', 'newline.sh', f'{dst}/res/testdata'])
-
-            if not clean:
-                __tar()
-
-            else:
-                sub = tornado.process.Subprocess(
-                    ['/bin/rm', '-Rf', dst])
-                sub.set_exit_callback(__rm_cb)
-
         pack_token = str(uuid.UUID(pack_token))
 
         ret = await self.rs.get(f'PACK_TOKEN@{pack_token}')
@@ -75,5 +53,19 @@ class PackService:
 
         await self.rs.delete(f'PACK_TOKEN@{pack_token}')
 
-        ret = _unpack()
-        return ret
+        if clean:
+            if not os.path.exists(dst):
+                os.makedirs(dst, 0o700)
+
+            else:
+                await self._run_and_wait_process('/bin/rm', '-Rf', dst)
+                os.makedirs(dst, 0o700)
+
+        returncode = await self._run_and_wait_process('/bin/tar', '-Jxf', f'tmp/{pack_token}', '-C', dst)
+        if returncode != 0:
+            return 'Eunk', None
+
+        os.remove(f'tmp/{pack_token}')
+        await self._run_and_wait_process('/bin/bash', 'newline.sh', f'{dst}/res/testdata')
+
+        return None, None

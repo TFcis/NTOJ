@@ -401,7 +401,6 @@ class ProService:
 
         elif pack_type == ProService.PACKTYPE_FULL:
             err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
-            await asyncio.sleep(5)
             if err:
                 return err, None
 
