@@ -129,6 +129,7 @@
                 newstate_ws.send(JSON.stringify({
                     acct_id: '{{ acct.acct_id }}',
                     last_chal_id: "{{ challist[0]['chal_id'] if len(challist) > 0 else -1 }}",
+                    first_chal_id: "{{ challist[-1]['chal_id'] if len(challist) > 0 else -1 }}"
                 }));
             };
 

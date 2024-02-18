@@ -262,8 +262,10 @@ class ChalService:
                     ChalConst.STATE_ERR,
                     0,
                     0,
-                    ''
+                    '',
+                    refresh_db=False
                 )
+            await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
             return None, None
 
         chalmeta = test_conf['chalmeta']
@@ -401,7 +403,7 @@ class ChalService:
             'total_chal': total_chal
         })
 
-    async def update_test(self, chal_id, test_idx, state, runtime, memory, response):
+    async def update_test(self, chal_id, test_idx, state, runtime, memory, response, refresh_db=True):
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             await con.execute(
@@ -413,7 +415,8 @@ class ChalService:
                 state, runtime, memory, response, chal_id, test_idx
             )
 
-        await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
+        if refresh_db:
+            await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
 
         return None, None
 

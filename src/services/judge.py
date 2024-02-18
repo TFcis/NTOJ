@@ -63,11 +63,14 @@ class JudgeServerService:
                     result['status'],
                     int(result['time'] / 10 ** 6),  # ns to ms
                     result['memory'],
-                    result['verdict'])
+                    result['verdict'],
+                    refresh_db=False)
 
             self.running_chal_cnt -= 1
+            await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
 
             await self.rs.publish('chalstatesub', res['chal_id'])
+            await self.rs.publish('challiststatesub', res['chal_id'])
             await self.rs.publish('judgechalcnt_sub', json.dumps({
                 "judge_id": self.judge_id,
                 "chal_cnt": self.running_chal_cnt,

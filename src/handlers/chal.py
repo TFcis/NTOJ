@@ -131,6 +131,7 @@ class ChalListNewChalHandler(WebSocketHandler):
 
 class ChalListNewStateHandler(WebSocketHandler):
     async def open(self):
+        self.first_chal_id = -1
         self.last_chal_id = -1
         self.acct = None
 
@@ -144,11 +145,9 @@ class ChalListNewStateHandler(WebSocketHandler):
                     continue
 
                 chal_id = int(msg['data'])
-                if chal_id > self.last_chal_id:
-                    continue
-
-                _, new_state = await ChalService.inst.get_single_chal_state_in_list(chal_id, self.acct)
-                await self.write_message(json.dumps(new_state))
+                if self.first_chal_id <= chal_id <= self.last_chal_id:
+                    _, new_state = await ChalService.inst.get_single_chal_state_in_list(chal_id, self.acct)
+                    await self.write_message(json.dumps(new_state))
 
         self.task = asyncio.tasks.Task(listen_challiststate())
 
@@ -156,6 +155,7 @@ class ChalListNewStateHandler(WebSocketHandler):
         if self.acct is None:
             j = json.loads(msg)
 
+            self.first_chal_id = int(j["first_chal_id"])
             self.last_chal_id = int(j["last_chal_id"])
             err, acct = await UserService.inst.info_acct(acct_id=int(j["acct_id"]))
             if err:
