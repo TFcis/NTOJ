@@ -20,7 +20,7 @@
 
     function init() {
         const chal_id = {{ chal['chal_id'] }};
-        ws = index.get_ws("chalstatesub");
+        ws = index.get_ws("chalnewstatesub");
 
         if ((document.querySelectorAll('td.state-100').length == 0 && document.querySelectorAll('td.state-101') == 0)) {
         } else {

@@ -4,7 +4,21 @@
 <link rel="stylesheet" type="text/css" href="/oj/challist.css">
 
 <script type="text/javascript">
-    var ws;
+    var newchal_ws, newstate_ws;
+    var state_map = {
+        1: 'Accepted',
+        2: 'Wrong Answer',
+        3: 'Runtime Error',
+        4: 'Time Limit Exceed',
+        5: 'Memory Limit Exceed',
+        6: 'Compile Error',
+        7: 'Internal Error',
+        8: 'Output Limit Exceed',
+        9: 'Runtime Error (Killed by signal)',
+        10: 'Compilation Limit Exceed',
+        100: 'Challenging',
+        101: 'Not Started'
+    };
     var chalsub_count;
     var re = /[^0-9,\ ]/
 
@@ -85,32 +99,63 @@
             index.reload();
         });
 
-        chalsub_count = 0;
 
-        ws = index.get_ws('chalsub');
+        (() => {
+            chalsub_count = 0;
 
-	    ws.onopen = function(e) {};
+            newchal_ws = index.get_ws('challistnewchalsub');
+            newchal_ws.onopen = function(e) {};
+            newchal_ws.onmessage = function(e) {
+                chalsub_count += 1;
+                j_chalsub.find('a').text(chalsub_count + ' new challenges');
+                j_chalsub.show();
+            };
+        })();
 
-	    ws.onmessage = function(e) {
-            chalsub_count += 1;
-            j_chalsub.find('a').text(chalsub_count + ' new challenges');
-            j_chalsub.show();
-        };
+        (() => {
+            let update_state = ({chal_id, state, runtime, memory}) => {
+                let tr = document.querySelector(`#chal${chal_id}`);
+                tr.querySelector('#runtime').innerText = parseInt(runtime);
+                tr.querySelector('#memory').innerText = Math.round(memory / 1024);
 
-        var chalids = {{ chalids }};
-        $('#rechalall').on('click', function(e) {
-            chalids.forEach(function(chalid) {
-                $.post('/oj/be/submit', {
-                    'reqtype': 'rechal',
-                    'chal_id': chalid,
+                let state_el = tr.querySelector('#state');
+                state_el.className = `state-${state}`
+                state_el.innerText = state_map[state];
+            };
+
+            newstate_ws = index.get_ws('challistnewstatesub');
+
+            newstate_ws.onopen = (e) => {
+                newstate_ws.send(JSON.stringify({
+                    acct_id: '{{ acct.acct_id }}',
+                    last_chal_id: "{{ challist[0]['chal_id'] if len(challist) > 0 else -1 }}",
+                }));
+            };
+
+            newstate_ws.onmessage = (e) => {
+                // let newstate = JSON.parse(e['data']);
+                // update_state(newstate.chal_id, newstate.state, newstate.runtime, newstate.memory);
+                update_state(JSON.parse(e['data']));
+            };
+        })();
+
+        {% if (flt['state'] == 100 or flt['state'] == 101) and isadmin %}
+            var chalids = {{ chalids }};
+            $('#rechalall').on('click', function(e) {
+                chalids.forEach(function(chalid) {
+                    $.post('/oj/be/submit', {
+                        'reqtype': 'rechal',
+                        'chal_id': chalid,
+                    });
                 });
+                index.reload();
             });
-            index.reload();
-        });   
+        {% end %}
     }
 
     function destroy() {
-        ws.close();
+        newchal_ws.close();
+        newstate_ws.close();
     }
 </script>
 
@@ -198,13 +243,13 @@
                     <td colspan=4><a href="" style="color:#58B2DC"></a></td>
                 </tr>
             {% for chal in challist %}
-                <tr>
+                <tr id="chal{{ chal['chal_id'] }}">
                     <td scope="row"><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
                     <td><a href="/oj/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
                     <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a></td>
-                    <td class="state-{{ chal['state'] }}">{{ ChalConst.STATE_LONG_STR[chal['state']] }}</td>
-                    <td>{{ chal['runtime'] }}</td>
-                    <td>{{ round(chal['memory'] / 1024) }}</td>
+                    <td id="state" class="state-{{ chal['state'] }}">{{ ChalConst.STATE_LONG_STR[chal['state']] }}</td>
+                    <td id="runtime">{{ chal['runtime'] }}</td>
+                    <td id="memory">{{ round(chal['memory'] / 1024) }}</td>
                     <td>{{ chal['comp_type'] }}</td>
                     <td class="time">{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
                 </tr>
@@ -227,7 +272,7 @@
         {% if flt['compiler'] != 'all' %}
         {% set postfix = postfix + f"&compiler_type={url_escape(flt['compiler'], False)}" %}
         {% end %}
-        
+
         <div class="row">
             <!-- <div class="col-1"></div> -->
             <div class="col pt-3">
