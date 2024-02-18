@@ -362,12 +362,10 @@ class ChalService:
                 '''
                     SELECT "challenge"."chal_id", "challenge_state"."state", "challenge_state"."runtime", "challenge_state"."memory"
                     FROM "challenge"
-                    INNER JOIN "account"
-                    ON "account"."acct_type" >= $1
-                    INNER JOIN "problem"
-                    ON "challenge"."pro_id" = "problem"."pro_id" AND "problem"."status" <= $2
-                    INNER JOIN "challenge_state"
-                    ON "challenge_state"."chal_id" = $3 AND "challenge"."chal_id" = "challenge_state"."chal_id";
+                    INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
+                    INNER JOIN "problem" ON "challenge"."pro_id" = "problem"."pro_id"
+                    INNER JOIN "challenge_state" ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                    WHERE "account"."acct_type" >= $1 AND "problem"."status" <= $2 AND "challenge_state"."chal_id" = $3;
                 ''',
                 min_accttype, max_status, chal_id
             )
