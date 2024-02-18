@@ -195,12 +195,12 @@ var index = new function() {
         }, 3000));
     };
 
-    that.get_ws = function(wsname) {
+    that.get_ws = function(ws_url) {
         let ws_link = '';
         if (location.protocol !== 'https:') {
-            ws_link = `ws://${location.host}/oj/be/${wsname}`;
+            ws_link = `ws://${location.host}/oj/be/${ws_url}`;
         } else {
-            ws_link = `wss://${location.host}/oj/be/${wsname}`;
+            ws_link = `wss://${location.host}/oj/be/${ws_url}`;
         }
 	    return new WebSocket(ws_link);
     };

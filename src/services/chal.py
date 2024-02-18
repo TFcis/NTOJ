@@ -262,8 +262,10 @@ class ChalService:
                     ChalConst.STATE_ERR,
                     0,
                     0,
-                    ''
+                    '',
+                    refresh_db=False
                 )
+            await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
             return None, None
 
         chalmeta = test_conf['chalmeta']
@@ -350,6 +352,37 @@ class ChalService:
 
         return None, challist
 
+    async def get_single_chal_state_in_list(self, chal_id: int, acct: Account,):
+        chal_id = int(chal_id)
+        max_status = ProService.inst.get_acct_limit(acct)
+        min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
+
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT "challenge"."chal_id", "challenge_state"."state", "challenge_state"."runtime", "challenge_state"."memory"
+                    FROM "challenge"
+                    INNER JOIN "account"
+                    ON "account"."acct_type" >= $1
+                    INNER JOIN "problem"
+                    ON "challenge"."pro_id" = "problem"."pro_id" AND "problem"."status" <= $2
+                    INNER JOIN "challenge_state"
+                    ON "challenge_state"."chal_id" = $3 AND "challenge"."chal_id" = "challenge_state"."chal_id";
+                ''',
+                min_accttype, max_status, chal_id
+            )
+
+        if len(result) != 1:
+            return 'Enoext', None
+        result = result[0]
+
+        return None, {
+            'chal_id': chal_id,
+            'state': result['state'],
+            'runtime': int(result['runtime']),
+            'memory': int(result['memory']),
+        }
+
     async def get_stat(self, acct: Account, flt=None):
         fltquery = await self._get_fltquery(flt)
         min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
@@ -370,7 +403,7 @@ class ChalService:
             'total_chal': total_chal
         })
 
-    async def update_test(self, chal_id, test_idx, state, runtime, memory, response):
+    async def update_test(self, chal_id, test_idx, state, runtime, memory, response, refresh_db=True):
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             await con.execute(
@@ -382,7 +415,8 @@ class ChalService:
                 state, runtime, memory, response, chal_id, test_idx
             )
 
-        await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
+        if refresh_db:
+            await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
 
         return None, None
 
