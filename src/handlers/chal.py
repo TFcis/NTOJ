@@ -80,7 +80,6 @@ class ChalListHandler(RequestHandler):
                           acct=self.acct,
                           chalids=json.dumps(chalids),
                           isadmin=isadmin)
-        return
 
 class ChalHandler(RequestHandler):
     @reqenv

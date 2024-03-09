@@ -66,7 +66,6 @@ class ManageProHandler(RequestHandler):
 
             await self.render('manage/pro/update', page='pro', pro=pro, lock=lock, testl=testl,
                               problem_config_json=conf_content)
-            return
 
         elif page == "add":
             await self.render('manage/pro/add', page='pro')
@@ -102,7 +101,6 @@ class ManageProHandler(RequestHandler):
                 return
 
             self.finish(json.dumps(pro_id))
-            return
 
         elif page == "update":
             if reqtype == 'updatepro':
@@ -118,7 +116,7 @@ class ManageProHandler(RequestHandler):
                 if pack_token == '':
                     pack_token = None
 
-                err, ret = await ProService.inst.update_pro(
+                err, _ = await ProService.inst.update_pro(
                     pro_id, name, status, clas, expire, pack_type, pack_token, tags)
                 await LogService.inst.add_log(
                     f"{self.acct.name} had been send a request to update the problem #{pro_id}",
@@ -128,7 +126,6 @@ class ManageProHandler(RequestHandler):
                     return
 
                 self.finish('S')
-                return
 
             elif reqtype == 'reinitpro':
                 pro_id = int(self.get_argument('pro_id'))
@@ -140,14 +137,13 @@ class ManageProHandler(RequestHandler):
                     return
 
                 self.finish('S')
-                return
 
             elif reqtype == 'updatelimit':
                 pro_id = int(self.get_argument('pro_id'))
                 timelimit = int(self.get_argument('timelimit'))
                 memlimit = int(self.get_argument('memlimit'))
 
-                err, ret = await ProService.inst.update_limit(pro_id, timelimit, memlimit)
+                err, _ = await ProService.inst.update_limit(pro_id, timelimit, memlimit)
                 await LogService.inst.add_log(
                     f"{self.acct.name} had been send a request to update the problem #{pro_id}",
                     'manage.pro.update.limit')
@@ -156,7 +152,6 @@ class ManageProHandler(RequestHandler):
                     return
 
                 self.finish('S')
-                return
 
             elif reqtype == 'updateconf':
                 pro_id = int(self.get_argument('pro_id'))
@@ -201,7 +196,6 @@ class ManageProHandler(RequestHandler):
                     'manage.pro.update.conf')
 
                 self.finish('S')
-                return
 
             elif reqtype == 'pro-lock':
                 pro_id = int(self.get_argument('pro_id'))
@@ -217,7 +211,6 @@ class ManageProHandler(RequestHandler):
 
                 await self.rs.set('lock_list', packb(lock_list))
                 self.finish('S')
-                return
 
             elif reqtype == 'pro-unlock':
                 pro_id = int(self.get_argument('pro_id'))
@@ -232,7 +225,6 @@ class ManageProHandler(RequestHandler):
                 await self.rs.set('lock_list', packb(lock_list))
                 await self.rs.delete(f"{pro_id}_owner")
                 self.finish('S')
-                return
 
         elif page is None: # pro-list
             if reqtype == 'rechal':
@@ -275,4 +267,3 @@ class ManageProHandler(RequestHandler):
                     )
 
                 self.finish('S')
-                return

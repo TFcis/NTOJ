@@ -16,7 +16,6 @@ class QuestionHandler(RequestHandler):
 
         await self.rs.set(f"{self.acct.acct_id}_have_reply", packb(False))
         await self.render('question', acct=self.acct, ques_list=ques_list)
-        return
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER])
@@ -35,7 +34,6 @@ class QuestionHandler(RequestHandler):
                 return
 
             self.finish('S')
-            return
 
         elif reqtype == 'rm_ques':
             index = int(self.get_argument('index'))
@@ -45,5 +43,3 @@ class QuestionHandler(RequestHandler):
                 return
 
             self.finish('S')
-            return
-        return

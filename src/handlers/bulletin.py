@@ -12,14 +12,14 @@ class BulletinHandler(RequestHandler):
     async def get(self, bulletin_id=None):
         if bulletin_id is None:
             can_submit = await JudgeServerClusterService.inst.is_server_online()
-            err, bulletin_list = await BulletinService.inst.list_bulletin()
+            _, bulletin_list = await BulletinService.inst.list_bulletin()
             bulletin_list.sort(key=lambda b: (b['pinned'], b['timestamp']), reverse=True)
 
             await self.render('info', bulletin_list=bulletin_list, judge_server_status=can_submit)
             return
 
         bulletin_id = int(bulletin_id)
-        err, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
+        _, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
         await self.render('bulletin', bulletin=bulletin)
 
 

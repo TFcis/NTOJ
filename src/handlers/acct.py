@@ -96,14 +96,12 @@ class AcctHandler(RequestHandler):
             return
 
         self.error('Eunk')
-        return
 
 
 class SignHandler(RequestHandler):
     @reqenv
     async def get(self):
         await self.render('sign')
-        return
 
     @reqenv
     async def post(self):
@@ -130,7 +128,6 @@ class SignHandler(RequestHandler):
 
             self.set_secure_cookie('id', str(acct_id), path='/oj', httponly=True)
             self.finish('S')
-            return
 
         elif reqtype == 'signup':
             mail = self.get_argument('mail')
@@ -144,7 +141,6 @@ class SignHandler(RequestHandler):
 
             self.set_secure_cookie('id', str(acct_id), path='/oj', httponly=True)
             self.finish('S')
-            return
 
         elif reqtype == 'signout':
             await LogService.inst.add_log(f"{self.acct.name}(#{self.acct.acct_id}) sign out", 'signout', {
@@ -155,4 +151,3 @@ class SignHandler(RequestHandler):
 
             self.clear_cookie('id', path='/oj')
             self.finish('S')
-            return

@@ -9,4 +9,3 @@ class ReportHandler(RequestHandler):
         chal_id = int(self.get_argument('chal_id'))
 
         await self.render('report-problem', chal_id=chal_id, acct=self.acct)
-        return

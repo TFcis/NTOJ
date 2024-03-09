@@ -70,7 +70,6 @@ class ManageBoardHandler(RequestHandler):
             await BoardService.inst.add_board(name, status, start, end, pro_list, acct_list)
 
             self.finish('S')
-            return
 
         elif page == "update" and reqtype == 'update':
             board_id = int(self.get_argument('board_id'))
@@ -98,7 +97,6 @@ class ManageBoardHandler(RequestHandler):
             await BoardService.inst.update_board(board_id, name, status, start, end, pro_list, acct_list)
 
             self.finish('S')
-            return
 
         elif page == "update" and reqtype == 'remove':
             board_id = int(self.get_argument('board_id'))
@@ -106,7 +104,6 @@ class ManageBoardHandler(RequestHandler):
             self.finish('S')
             await LogService.inst.add_log(f"{self.acct.name} was removed the contest \"{board_id}\".",
                                           'manage.board.remove')
-            return
 
     async def _get_acct_list(self, acct_list_str: str) -> list[int]:
         acct_list = acct_list_str.replace(' ', '').split(',')

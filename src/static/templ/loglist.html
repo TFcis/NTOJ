@@ -38,7 +38,7 @@
             <tbody>
             {% for log in loglist %}
                 <tr>
-                    <td scope="row" class="id">{{ log['log_id'] }}</td>
+                    <td class="id">{{ log['log_id'] }}</td>
                     <td>{% raw log['message'] %}</td>
                     <td>{{ log['timestamp'] }}</td>
                 </tr>

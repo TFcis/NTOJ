@@ -10,13 +10,13 @@ class ManageAcctHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page=None):
         if page is None:
-            err, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, True)
+            _, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, True)
             await self.render('manage/acct/acct-list', page='acct', acctlist=acctlist)
 
         elif page == 'update':
             acct_id = int(self.get_argument('acctid'))
 
-            err, acct = await UserService.inst.info_acct(acct_id)
+            _, acct = await UserService.inst.info_acct(acct_id)
             glist = await GroupService.inst.list_group()
             group = await GroupService.inst.group_of_acct(acct_id)
             await self.render('manage/acct/update', page='acct', acct=acct, glist=glist, group=group)
@@ -49,5 +49,5 @@ class ManageAcctHandler(RequestHandler):
                 self.error(err)
                 return
 
-            err = await GroupService.inst.set_acct_group(acct_id, group)
+            _ = await GroupService.inst.set_acct_group(acct_id, group)
             self.finish('S')

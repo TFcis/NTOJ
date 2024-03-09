@@ -36,7 +36,6 @@ class PackHandler(WebSocketHandler):
                 self.output = None
 
             self.write_message('S')
-            return
 
         elif self.state == PackHandler.STATE_HDR:
             hdr = json.loads(msg)
@@ -47,7 +46,6 @@ class PackHandler(WebSocketHandler):
             self.state = PackHandler.STATE_DTAT
 
             self.write_message('S')
-            return
 
     def on_close(self) -> None:
         if self.output is not None:

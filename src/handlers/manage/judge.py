@@ -41,7 +41,6 @@ class ManageJudgeHandler(RequestHandler):
                                           'manage.judge.connect')
 
             self.finish('S')
-            return
 
         elif reqtype == 'disconnect':
             index = int(self.get_argument('index'))
@@ -65,7 +64,6 @@ class ManageJudgeHandler(RequestHandler):
                 return
 
             self.finish('S')
-            return
 
 
 class JudgeChalCntSub(WebSocketHandler):

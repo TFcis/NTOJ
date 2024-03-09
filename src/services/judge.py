@@ -116,34 +116,6 @@ class JudgeServerService:
     async def offline_notice(self):
         # log
         await LogService.inst.add_log(f"Judge {self.server_name} offline", "judge.offline")
-        return
-
-        # send email notify
-
-        # setup smtp
-        smtp = smtplib.SMTP()
-        smtp.connect(config.SMTP_SERVER, config.SMTP_SERVER_PORT)
-        smtp.starttls()
-        smtp.login(config.SENDER_EMAIL, config.SENDER_APPLICATION_PASSWORD)
-
-        mail_title = "TOJ Judge Offline"
-        mail_body = f'''
-            您好，管理員
-            系統偵測到Judge {self.server_name}意外離線
-            請您檢查該Judge Server狀態
-        '''
-        sender_email = config.SENDER_EMAIL
-
-        message = MIMEText(mail_body, 'plain', 'utf-8')
-        message['From'] = sender_email
-        message['Subject'] = Header(mail_title, 'utf-8')
-
-        for receiver in config.RECEIVER_LIST:
-            message['To'] = receiver
-            smtp.sendmail(sender_email, receiver, message.as_string())
-
-        smtp.quit()
-
 
 class JudgeServerClusterService:
     def __init__(self, rs, server_urls: List[Dict]) -> None:
@@ -170,10 +142,7 @@ class JudgeServerClusterService:
         if idx < 0 or idx >= len(self.servers):
             return 'Eparam'
 
-        if self.servers[idx].status:
-            pass
-
-        else:
+        if not self.servers[idx].status:
             await self.servers[idx].start()
 
             if not self.servers[idx].status:

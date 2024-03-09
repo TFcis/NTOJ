@@ -71,7 +71,7 @@ class QuestionService:
         return unpackb(reply)
 
     async def get_asklist(self):
-        err, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_USER, True)
+        _, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_USER, True)
 
         asklist = {}
         ask_cnt = 0

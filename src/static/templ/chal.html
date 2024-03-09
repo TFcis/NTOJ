@@ -3,7 +3,7 @@
 
 <script type="text/javascript">
     var ws;
-    var state_map = {
+    const state_map = {
         1: 'Accepted',
         2: 'Wrong Answer',
         3: 'Runtime Error',
@@ -126,10 +126,8 @@
 
     {% if rechal == True and chal['code'] == True %}
         <button id="rechal" class="btn btn-warning">Rechallenge</button>
-        <!-- <button id="compile_info_button" class="btn btn-primary">Hidden Compile Info</button> -->
         <div class="print"></div>
     {% elif chal['code'] == True %}
-        <!-- <button id="compile_info_button" class="btn btn-primary">Hidden Compile Info</button> -->
         <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
         <div class="print"></div>
     {% end %}
@@ -176,11 +174,6 @@
         </div>
     </div>
 {% end %}
-
-<!-- <div class="g-r" style="margin-top:32px;">
-    <div id="_code"></div>
-</div>
--->
 
 <pre id="code" class="line-numbers"
     data-language=""

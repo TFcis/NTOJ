@@ -29,4 +29,3 @@ class LogHandler(RequestHandler):
 
         await self.render('loglist', pageoff=off, lognum=log['lognum'], loglist=log['loglist'],
                           logtype_list=logtype_list, cur_logtype=logtype)
-        return

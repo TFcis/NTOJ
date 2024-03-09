@@ -5,7 +5,7 @@
 
 <script type="text/javascript">
     var newchal_ws, newstate_ws;
-    var state_map = {
+    const state_map = {
         1: 'Accepted',
         2: 'Wrong Answer',
         3: 'Runtime Error',
@@ -20,7 +20,7 @@
         101: 'Not Started'
     };
     var chalsub_count;
-    var re = /[^0-9,\ ]/
+    const re = /[^0-9,\ ]/
 
     function init() {
         var j_filter = $('#filter');
@@ -104,7 +104,6 @@
             chalsub_count = 0;
 
             newchal_ws = index.get_ws('challistnewchalsub');
-            newchal_ws.onopen = function(e) {};
             newchal_ws.onmessage = function(e) {
                 chalsub_count += 1;
                 j_chalsub.find('a').text(chalsub_count + ' new challenges');
@@ -134,8 +133,6 @@
             };
 
             newstate_ws.onmessage = (e) => {
-                // let newstate = JSON.parse(e['data']);
-                // update_state(newstate.chal_id, newstate.state, newstate.runtime, newstate.memory);
                 update_state(JSON.parse(e['data']));
             };
         })();
@@ -245,7 +242,7 @@
                 </tr>
             {% for chal in challist %}
                 <tr id="chal{{ chal['chal_id'] }}">
-                    <td scope="row"><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
+                    <td><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
                     <td><a href="/oj/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
                     <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a></td>
                     <td id="state" class="state-{{ chal['state'] }}">{{ ChalConst.STATE_LONG_STR[chal['state']] }}</td>
