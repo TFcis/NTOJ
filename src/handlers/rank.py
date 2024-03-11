@@ -3,13 +3,6 @@ import datetime
 from handlers.base import RequestHandler, reqenv
 
 
-class RankService:
-    def __init__(self, db, rs) -> None:
-        self.db = db
-        self.rs = rs
-        RankService.inst = self
-
-
 class RankHandler(RequestHandler):
     @reqenv
     async def get(self, pro_id):
@@ -53,8 +46,3 @@ class RankHandler(RequestHandler):
             })
 
         await self.render('rank', pro_id=pro_id, chal_list=chal_list)
-        return
-
-    @reqenv
-    async def post(self):
-        return

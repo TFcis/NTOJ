@@ -11,7 +11,7 @@ class ManageQuestionHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page=None):
         if page is None:
-            err, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, True)
+            _, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, True)
             asklist = {}
             for acct in acctlist:
                 acct_id = acct.acct_id
@@ -24,9 +24,8 @@ class ManageQuestionHandler(RequestHandler):
 
         elif page == "reply":
             qacct_id = int(self.get_argument('qacct'))
-            err, ques_list = await QuestionService.inst.get_queslist(acct_id=qacct_id)
+            _, ques_list = await QuestionService.inst.get_queslist(acct_id=qacct_id)
             await self.render('manage/question/reply', page='question', qacct_id=qacct_id, ques_list=ques_list)
-            return
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
@@ -43,7 +42,6 @@ class ManageQuestionHandler(RequestHandler):
                 qacct_id = int(self.get_argument('qacct_id'))
                 await QuestionService.inst.reply(qacct_id, index, rtext)
                 self.finish('S')
-                return
 
             elif reqtype == 'rrpl':
                 await LogService.inst.add_log(
@@ -55,4 +53,3 @@ class ManageQuestionHandler(RequestHandler):
                 qacct_id = int(self.get_argument('qacct_id'))
                 await QuestionService.inst.reply(qacct_id, index, rtext)
                 self.finish('S')
-                return

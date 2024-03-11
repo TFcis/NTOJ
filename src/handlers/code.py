@@ -10,7 +10,6 @@ class CodeHandler(RequestHandler):
     @reqenv
     async def get(self):
         await self.finish('Eacces')
-        return
 
     @reqenv
     async def post(self):

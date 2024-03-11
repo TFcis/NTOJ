@@ -29,8 +29,6 @@ class BoardHandler(RequestHandler):
             self.error('Eacces')
             return
 
-        # delta = meta['end'] - datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))
-
         min_type = UserConst.ACCTTYPE_USER
         if self.acct.is_kernel():
             min_type = UserConst.ACCTTYPE_KERNEL

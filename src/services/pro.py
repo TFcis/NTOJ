@@ -217,16 +217,12 @@ class ProService:
             pro_id = pro["pro_id"]
             pro["state"] = statemap.get(pro_id)
 
-            if isadmin:
-                pass
-
-            elif isguest:
-                # NOTE: Guest user cannot see problem tags
+            if isguest:
                 pro["tags"] = ""
 
-            else:
+            elif not isadmin:
+                # NOTE: No AC user
                 if pro["state"] is None:
-                    # NOTE: No AC user
                     pro["tags"] = ""
 
             if pro["expire"] is None:

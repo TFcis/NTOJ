@@ -149,7 +149,7 @@ class ProStaticHandler(RequestHandler):
             self.error('Eacces')
             return
 
-        if path[-3:] == 'pdf':
+        if path.endswith('pdf'):
             self.set_header('Pragma', 'public')
             self.set_header('Expires', '0')
             self.set_header('Cache-Control', 'must-revalidate, post-check=0, pre-check=0')
@@ -166,7 +166,6 @@ class ProStaticHandler(RequestHandler):
                 self.set_header('Content-Disposition', 'inline')
 
         self.set_header('X-Accel-Redirect', f'/oj/problem/{pro_id}/{path}')
-        return
 
 
 class ProHandler(RequestHandler):
@@ -210,13 +209,14 @@ class ProHandler(RequestHandler):
         isguest = self.acct.is_guest()
         isadmin = self.acct.is_kernel()
 
-        if isadmin:
-            pass
+        # NOTE: Guest cannot see tags
+        # NOTE: Admin can see tags
+        # NOTE: User get ac can see tags
 
-        elif isguest or pro['tags'] is None or pro['tags'] == '':
+        if isguest or pro['tags'] is None or pro['tags'] == '':
             pro['tags'] = ''
 
-        else:
+        elif not isadmin:
             async with self.db.acquire() as con:
                 result = await con.fetchrow(
                     '''
@@ -243,7 +243,6 @@ class ProHandler(RequestHandler):
             'status': pro['status'],
             'tags': pro['tags'],
         }, testl=testl, isadmin=isadmin, can_submit=can_submit)
-        return
 
 
 class ProTagsHandler(RequestHandler):
@@ -263,7 +262,7 @@ class ProTagsHandler(RequestHandler):
                 (self.acct.name + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."),
                 'manage.pro.update.tag')
 
-            err, ret = await ProService.inst.update_pro(
+            err, _ = await ProService.inst.update_pro(
                 pro_id, pro['name'], pro['status'], pro['class'], pro['expire'], '', None, tags)
 
             if err:
@@ -275,4 +274,3 @@ class ProTagsHandler(RequestHandler):
             return
 
         self.finish('setting tags done')
-        return

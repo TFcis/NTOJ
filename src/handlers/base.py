@@ -38,12 +38,6 @@ class RequestHandler(tornado.web.RequestHandler):
                 else:
                     return json.JSONEncoder.default(self, obj)
 
-        def _mp_encoder(obj):
-            if isinstance(obj, datetime.datetime):
-                return obj.isoformat()
-
-            return obj
-
         from services.user import UserConst
         if not self.acct.is_guest():
             kwargs['acct_id'] = self.acct.acct_id
@@ -58,8 +52,6 @@ class RequestHandler(tornado.web.RequestHandler):
             data = self.tpldr.load(templ + '.html').generate(**kwargs)
             self.finish(data)
 
-        return
-
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def __init__(self, *args, **kwargs):
@@ -72,8 +64,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 def reqenv(func):
     # @tornado.gen.coroutine
     async def wrap(self, *args, **kwargs):
-        err, acct_id, ip = await UserService.inst.info_sign(self)
-        err, self.acct = await UserService.inst.info_acct(acct_id)
+        _, acct_id, _ = await UserService.inst.info_sign(self)
+        _, self.acct = await UserService.inst.info_acct(acct_id)
 
         ret = await func(self, *args, **kwargs)
         return ret

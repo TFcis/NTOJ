@@ -29,8 +29,6 @@ def services_init(db, rs):
     Service.Inform = BulletinService(db, rs)
     Service.Pack = PackService(db, rs)
     Service.Code = CodeService(db, rs)
-    # Service.Rank     = RankService(db, rs)
-    # Service.Auto     = AutoService(db, rs)
     Service.Group = GroupService(db, rs)
     Service.Log = LogService(db, rs)
     Service.Rate = RateService(db, rs)

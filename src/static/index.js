@@ -110,7 +110,6 @@ var index = new function() {
     }
 
     that.init = function() {
-        var s_viewpoint = document.createElement("style");
         var j_navlist = $('#index-navlist');
         var acct_id;
 
@@ -122,11 +121,12 @@ var index = new function() {
         });
 
         $(document).on('keypress', 'input', function(e) {
-            var idx;
+            let idx;
             var j_next;
 
             if (e.which == 13) {
-                if (!isNaN(idx = parseInt($(this).attr('tabindex')))) {
+                idx = parseInt($(this).attr('tabindex'));
+                if (!isNaN(idx)) {
                     j_next = $('[tabindex="' + (idx + 1) + '"]');
 
                     if (j_next.attr('submit') != undefined) {

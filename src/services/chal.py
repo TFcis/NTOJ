@@ -159,7 +159,7 @@ class ChalService:
         result = result[0]
 
         pro_id, acct_id, timestamp, comp_type, acct_name = result['pro_id'], result['acct_id'], result['timestamp'], result['compiler_type'], result['acct_name']
-        response = ""
+        final_response = ""
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -173,7 +173,7 @@ class ChalService:
 
         testl = []
         for (test_idx, state, runtime, memory, response) in result:
-            response = response
+            final_response = response
             testl.append({
                 'test_idx': test_idx,
                 'state': state,
@@ -205,7 +205,7 @@ class ChalService:
             'timestamp': timestamp.astimezone(tz),
             'testl': testl,
             'code': can_see_code,
-            'response': response,
+            'response': final_response,
             'comp_type': comp_type,
         })
 
@@ -256,7 +256,7 @@ class ChalService:
 
         except FileNotFoundError:
             for test in testl:
-                _, ret = await self.update_test(
+                await self.update_test(
                     chal_id,
                     test['test_idx'],
                     ChalConst.STATE_ERR,

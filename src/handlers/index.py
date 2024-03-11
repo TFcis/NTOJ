@@ -1,8 +1,6 @@
 import msgpack
 
-from services.user import UserConst
 from services.ques import QuestionService
-from services.judge import JudgeServerClusterService
 from handlers.base import RequestHandler, reqenv
 
 
@@ -27,7 +25,6 @@ class IndexHandler(RequestHandler):
                 reply = await QuestionService.inst.have_reply(self.acct.acct_id)
 
         await self.render('index', name=name, manage=manage, ask_cnt=ask_cnt, reply=reply)
-        return
 
 
 class AbouotHandler(RequestHandler):
@@ -46,11 +43,9 @@ class OnlineCounterHandler(RequestHandler):
         set_cnt = await self.rs.scard('online_counter_set')
 
         self.finish(f"<h1>{cnt}</h1> <br> <h1>{set_cnt}</h1>")
-        return
 
 
 class DevInfoHandler(RequestHandler):
     @reqenv
     async def get(self):
         await self.render('dev-info')
-        return

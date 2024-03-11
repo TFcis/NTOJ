@@ -38,7 +38,6 @@ class ManageGroupHandler(RequestHandler):
 
         await self.render('manage/group', page='group', gname=gname, glist=glist, gacct=gacct, gtype=gtype,
                           gclas=gclas)
-        return
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
@@ -61,7 +60,6 @@ class ManageGroupHandler(RequestHandler):
                 return
 
             self.finish('S')
-            return
 
         elif reqtype == 'add_group':
             gname = str(self.get_argument('gname'))
@@ -77,7 +75,6 @@ class ManageGroupHandler(RequestHandler):
                 return
 
             self.finish('S')
-            return
 
         elif reqtype == 'del_group':
             gname = str(self.get_argument('gname'))

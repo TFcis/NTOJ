@@ -26,7 +26,6 @@ class ApiHandler(RequestHandler):
                     if rate['rate'] >= 100:
                         prolist2.append(pro_id)
             self.finish(str(json.dumps({'ac': prolist2})))
-            return
 
         elif reqtype == 'NA':
             acct_id = int(self.get_argument('acct_id'))
@@ -47,11 +46,10 @@ class ApiHandler(RequestHandler):
             prolist2 = []
             for pro in prolist:
                 pro_id = pro['pro_id']
-                if (rate := ratemap.get(pro_id)) != None:
-                    if rate['rate'] < 100:
-                        prolist2.append(pro_id)
+                if (rate := ratemap.get(pro_id)) is not None and rate['rate'] < 100:
+                    prolist2.append(pro_id)
+
             self.finish(str(json.dumps({'na': prolist2})))
-            return
 
         elif reqtype == 'INFO':
             acct_id = int(self.get_argument('acct_id'))
@@ -63,7 +61,6 @@ class ApiHandler(RequestHandler):
             err, rate = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
             rate = rate['rate']
 
-            if rate == None:
+            if rate is None:
                 rate = 0
             self.finish(str(json.dumps({'nick': acct.name, 'score': rate})))
-            return
