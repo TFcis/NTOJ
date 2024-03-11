@@ -8,3 +8,9 @@ NTOJ_installer/
 test.py
 
 .idea/
+
+venv/
+
+wget-log
+
+.env

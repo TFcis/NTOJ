@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "ntoj"
+version = "v2.1.2"
+description = "New TNFSH Online Judge"
+authors = [
+    "LifeAdventurer <life0adventurer@gmail.com>",
+    "tobiichi3227 <cz1346219@gmail.com>"
+]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+tornado = "6.3.3"
+asyncpg = "0.28.0"
+redis = "5.0.1"
+msgpack = "1.0.7"
+bcrypt = "4.0.1"
+termcolor = "2.3.0"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.2.0"
+isort = "^5.13.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
