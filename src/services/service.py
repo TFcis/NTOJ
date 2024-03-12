@@ -1,17 +1,18 @@
 import config
+
 from .board import BoardService
-from .user import UserService
-from .pro import ProService, ProClassService
-from .chal import ChalService
-from .contest import ContestService
-from .ques import QuestionService
 from .bulletin import BulletinService
-from .pack import PackService
+from .chal import ChalService
 from .code import CodeService
+from .contest import ContestService
 from .group import GroupService
-from .log import LogService
-from .rate import RateService
 from .judge import JudgeServerClusterService
+from .log import LogService
+from .pack import PackService
+from .pro import ProClassService, ProService
+from .ques import QuestionService
+from .rate import RateService
+from .user import UserService
 
 
 class Service:

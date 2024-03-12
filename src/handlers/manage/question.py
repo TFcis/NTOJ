@@ -35,7 +35,8 @@ class ManageQuestionHandler(RequestHandler):
             if reqtype == 'rpl':
                 await LogService.inst.add_log(
                     f"{self.acct.name} replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".",
-                    'manage.question.reply')
+                    'manage.question.reply',
+                )
 
                 index = self.get_argument('index')
                 rtext = self.get_argument('rtext')
@@ -46,7 +47,8 @@ class ManageQuestionHandler(RequestHandler):
             elif reqtype == 'rrpl':
                 await LogService.inst.add_log(
                     f"{self.acct.name} re-replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".",
-                    'manage.question.re-reply')
+                    'manage.question.re-reply',
+                )
 
                 index = self.get_argument('index')
                 rtext = self.get_argument('rtext')

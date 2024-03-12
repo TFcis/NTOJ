@@ -1,6 +1,6 @@
 from msgpack import packb, unpackb
 
-from services.user import UserService, UserConst
+from services.user import UserConst, UserService
 
 
 class QuestionService:
@@ -32,10 +32,12 @@ class QuestionService:
 
         await self.rs.set(f'{acct_id}_msg_ask', packb(True))
         ques_list = unpackb((await self.rs.get(f'{acct_id}_msg_list')))
-        ques_list.append({
-            'Q': ques_text,
-            'A': None,
-        })
+        ques_list.append(
+            {
+                'Q': ques_text,
+                'A': None,
+            }
+        )
 
         while len(ques_list) > 10:
             ques_list.pop(0)

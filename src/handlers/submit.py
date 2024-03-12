@@ -1,11 +1,11 @@
-import time
 import json
+import time
 
-from services.user import UserConst
-from services.chal import ChalService, ChalConst
-from services.pro import ProService
-from services.judge import JudgeServerClusterService
 from handlers.base import RequestHandler, reqenv, require_permission
+from services.chal import ChalConst, ChalService
+from services.judge import JudgeServerClusterService
+from services.pro import ProService
+from services.user import UserConst
 
 
 class SubmitHandler(RequestHandler):
@@ -83,8 +83,7 @@ class SubmitHandler(RequestHandler):
 
             # TODO: code prevent '/dev/random'
             # code = code.replace('bits/stdc++.h','DontUseMe.h')
-            err, chal_id = await ChalService.inst.add_chal(
-                pro_id, self.acct.acct_id, comp_type, code)
+            err, chal_id = await ChalService.inst.add_chal(pro_id, self.acct.acct_id, comp_type, code)
 
             if err:
                 self.error(err)
@@ -116,7 +115,8 @@ class SubmitHandler(RequestHandler):
             pro['testm_conf'],
             comp_type,
             f'/nfs/code/{chal_id}/main.{file_ext}',
-            f'/nfs/problem/{pro_id}/res')
+            f'/nfs/problem/{pro_id}/res',
+        )
         if err:
             self.error(err)
             return

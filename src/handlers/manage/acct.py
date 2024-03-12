@@ -1,7 +1,6 @@
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.group import GroupService
 from services.log import LogService
-
 from services.user import UserConst, UserService
 
 
@@ -36,13 +35,15 @@ class ManageAcctHandler(RequestHandler):
             if err:
                 await LogService.inst.add_log(
                     f"{self.acct.name}(#{self.acct.acct_id}) had been send a request to update the account #{acct_id} but not found",
-                    'manage.acct.update.failure')
+                    'manage.acct.update.failure',
+                )
                 self.error(err)
                 return
 
             await LogService.inst.add_log(
                 f"{self.acct.name}(#{self.acct.acct_id}) had been send a request to update the account {acct.name}(#{acct.acct_id})",
-                'manage.acct.update')
+                'manage.acct.update',
+            )
 
             err, _ = await UserService.inst.update_acct(acct_id, acct_type, clas, acct.name, acct.photo, acct.cover)
             if err:

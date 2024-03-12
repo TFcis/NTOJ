@@ -1,9 +1,9 @@
 import json
 
+from handlers.base import RequestHandler, reqenv
 from services.pro import ProService
 from services.rate import RateService
 from services.user import UserService
-from handlers.base import RequestHandler, reqenv
 
 
 class ApiHandler(RequestHandler):
@@ -39,7 +39,7 @@ class ApiHandler(RequestHandler):
                         WHERE "status" <= $1
                         ORDER BY "pro_id" ASC;
                     ''',
-                    max_status
+                    max_status,
                 )
 
             err, ratemap = await RateService.inst.map_rate_acct(acct=acct, clas=1)

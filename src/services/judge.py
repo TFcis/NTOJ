@@ -1,14 +1,14 @@
-import json
 import asyncio
+import json
 import smtplib
-from queue import PriorityQueue
 from email.header import Header
 from email.mime.text import MIMEText
-from typing import List, Union, Literal, Dict
-
-from tornado.websocket import websocket_connect
+from queue import PriorityQueue
+from typing import Dict, List, Literal, Union
 
 import config
+from tornado.websocket import websocket_connect
+
 from services.log import LogService
 
 
@@ -61,20 +61,26 @@ class JudgeServerService:
                     res['chal_id'],
                     test_idx,
                     result['status'],
-                    int(result['time'] / 10 ** 6),  # ns to ms
+                    int(result['time'] / 10**6),  # ns to ms
                     result['memory'],
                     result['verdict'],
-                    refresh_db=False)
+                    refresh_db=False,
+                )
 
             self.running_chal_cnt -= 1
             await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
 
             await self.rs.publish('chalstatesub', res['chal_id'])
             await self.rs.publish('challiststatesub', res['chal_id'])
-            await self.rs.publish('judgechalcnt_sub', json.dumps({
-                "judge_id": self.judge_id,
-                "chal_cnt": self.running_chal_cnt,
-            }))
+            await self.rs.publish(
+                'judgechalcnt_sub',
+                json.dumps(
+                    {
+                        "judge_id": self.judge_id,
+                        "chal_cnt": self.running_chal_cnt,
+                    }
+                ),
+            )
 
             pro_id = self.chal_map[res['chal_id']]['pro_id']
             # NOTE: Recalculate problem rate
@@ -96,26 +102,35 @@ class JudgeServerService:
         return None
 
     async def get_server_status(self):
-        return (None, {
-            'name': self.server_name,
-            'judge_id': self.judge_id,
-            'status': self.status,
-            'running_chal_cnt': self.running_chal_cnt
-        })
+        return (
+            None,
+            {
+                'name': self.server_name,
+                'judge_id': self.judge_id,
+                'status': self.status,
+                'running_chal_cnt': self.running_chal_cnt,
+            },
+        )
 
     async def send(self, data):
         if self.status:
             self.running_chal_cnt += 1
-            await self.rs.publish('judgechalcnt_sub', json.dumps({
-                "judge_id": self.judge_id,
-                "chal_cnt": self.running_chal_cnt,
-            }))
+            await self.rs.publish(
+                'judgechalcnt_sub',
+                json.dumps(
+                    {
+                        "judge_id": self.judge_id,
+                        "chal_cnt": self.running_chal_cnt,
+                    }
+                ),
+            )
 
             await self.ws.write_message(data)
 
     async def offline_notice(self):
         # log
         await LogService.inst.add_log(f"Judge {self.server_name} offline", "judge.offline")
+
 
 class JudgeServerClusterService:
     def __init__(self, rs, server_urls: List[Dict]) -> None:
@@ -201,9 +216,7 @@ class JudgeServerClusterService:
                 continue
 
             await self.servers[i].send(json.dumps(data))
-            self.servers[i].chal_map[data['chal_id']] = {
-                "pro_id": pro_id
-            }
+            self.servers[i].chal_map[data['chal_id']] = {"pro_id": pro_id}
 
             self.idx = i
             return
@@ -217,9 +230,7 @@ class JudgeServerClusterService:
                 continue
 
             await self.servers[i].send(json.dumps(data))
-            self.servers[i].chal_map[data['chal_id']] = {
-                "pro_id": pro_id
-            }
+            self.servers[i].chal_map[data['chal_id']] = {"pro_id": pro_id}
 
             self.idx = i
             return

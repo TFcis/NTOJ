@@ -16,6 +16,7 @@ redis = "5.0.1"
 msgpack = "1.0.7"
 bcrypt = "4.0.1"
 termcolor = "2.3.0"
+mkdocs-material = "^9.5.13"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -25,3 +26,10 @@ isort = "^5.13.2"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"

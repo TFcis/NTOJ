@@ -24,7 +24,9 @@ class GroupService:
                     ("group_name", "group_type", "group_class")
                     VALUES ($1, $2, $3);
                 ''',
-                gname, gtype, gclas
+                gname,
+                gtype,
+                gclas,
             )
 
         return None
@@ -58,15 +60,17 @@ class GroupService:
                     WHERE "account"."group" = $1
                     ORDER BY "account"."acct_id";
                 ''',
-                gname
+                gname,
             )
 
         acct_list = []
-        for (acct_id, acct_name) in result:
-            acct_list.append({
-                'acct_id': int(acct_id),
-                'acct_name': str(acct_name),
-            })
+        for acct_id, acct_name in result:
+            acct_list.append(
+                {
+                    'acct_id': int(acct_id),
+                    'acct_name': str(acct_name),
+                }
+            )
 
         return acct_list
 
@@ -89,7 +93,7 @@ class GroupService:
                     SELECT "group_type", "group_class" FROM "group"
                     WHERE "group_name" = $1;
                 ''',
-                gname
+                gname,
             )
 
             await con.execute(
@@ -97,7 +101,10 @@ class GroupService:
                     UPDATE "account" SET "group" = $1, "acct_type" = $2, "class" = $3
                     WHERE "account"."acct_id" = $4;
                 ''',
-                gname, result['group_type'], [result['group_class']], acct_id
+                gname,
+                result['group_type'],
+                [result['group_class']],
+                acct_id,
             )
 
             await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
@@ -114,7 +121,9 @@ class GroupService:
                     SET "group_type" = $1, "group_class" = $2
                     WHERE "group_name" = $3 RETURNING "group_name";
                 ''',
-                gtype, [gclas], gname
+                gtype,
+                [gclas],
+                gname,
             )
 
         if len(result) != 1:

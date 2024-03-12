@@ -1,6 +1,6 @@
 import json
 
-from handlers.base import require_permission, reqenv, RequestHandler
+from handlers.base import RequestHandler, reqenv, require_permission
 from services.pack import PackService
 from services.user import UserConst
 

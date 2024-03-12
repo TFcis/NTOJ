@@ -1,5 +1,5 @@
-import json
 import datetime
+import json
 
 
 class LogService:
@@ -21,7 +21,9 @@ class LogService:
                     ("message", "type", "params")
                     VALUES ($1, $2, $3) RETURNING "log_id";
                 ''',
-                message, log_type, params
+                message,
+                log_type,
+                params,
             )
         return None, result[0]['log_id']
 
@@ -35,7 +37,8 @@ class LogService:
                         FROM "log"
                         ORDER BY "log"."timestamp" DESC OFFSET $1 LIMIT $2;
                     ''',
-                    off, num
+                    off,
+                    num,
                 )
 
                 count = await con.fetch('SELECT COUNT(*) FROM "log"')
@@ -49,19 +52,23 @@ class LogService:
                         WHERE "log"."type" = $1
                         ORDER BY "log"."timestamp" DESC OFFSET $2 LIMIT $3;
                     ''',
-                    log_type, off, num
+                    log_type,
+                    off,
+                    num,
                 )
 
                 count = await con.fetch('SELECT COUNT(*) FROM "log" WHERE "log"."type" = $1', log_type)
                 count = count[0]['count']
 
             loglist = []
-            for (log_id, message, timestamp) in result:
-                loglist.append({
-                    'log_id': log_id,
-                    'message': message,
-                    'timestamp': timestamp.astimezone(tz).isoformat(timespec="seconds"),
-                })
+            for log_id, message, timestamp in result:
+                loglist.append(
+                    {
+                        'log_id': log_id,
+                        'message': message,
+                        'timestamp': timestamp.astimezone(tz).isoformat(timespec="seconds"),
+                    }
+                )
 
         return None, {'loglist': loglist, 'lognum': count}
 

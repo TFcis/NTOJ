@@ -1,7 +1,7 @@
 import base64
 import pickle
-from typing import List, Tuple, Literal
 from dataclasses import dataclass
+from typing import List, Literal, Tuple
 
 import asyncpg
 import bcrypt
@@ -45,14 +45,7 @@ class Account:
 
 
 GUEST_ACCOUNT = Account(
-    acct_id=0,
-    acct_type=UserConst.ACCTTYPE_GUEST,
-    acct_class=0,
-    name='',
-    mail='',
-    photo='',
-    cover='',
-    lastip=''
+    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, acct_class=0, name='', mail='', photo='', cover='', lastip=''
 )
 
 
@@ -82,7 +75,7 @@ class UserService:
                     SELECT "acct_id","password" FROM "account"
                     WHERE "mail" = $1;
                 ''',
-                mail
+                mail,
             )
         if len(result) != 1:
             return 'Esign', None
@@ -124,8 +117,12 @@ class UserService:
                         ("mail", "password", "name", "acct_type", "class", "group")
                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING "acct_id";
                     ''',
-                    mail, base64.b64encode(hpw).decode('utf-8'), name, UserConst.ACCTTYPE_USER, [1],
-                    GroupConst.DEFAULT_GROUP
+                    mail,
+                    base64.b64encode(hpw).decode('utf-8'),
+                    name,
+                    UserConst.ACCTTYPE_USER,
+                    [1],
+                    GroupConst.DEFAULT_GROUP,
                 )
 
         except asyncpg.IntegrityConstraintViolationError:
@@ -159,8 +156,9 @@ class UserService:
                 result = result[0]
 
                 if (lastip := result['lastip']) != ip and ip != '':
-                    await LogService.inst.add_log(f"Update acct {acct_id} lastip from {lastip} to {ip} ",
-                                                  'acct.updateip')
+                    await LogService.inst.add_log(
+                        f"Update acct {acct_id} lastip from {lastip} to {ip} ", 'acct.updateip'
+                    )
                     await con.execute('UPDATE "account" SET "lastip" = $1 WHERE "acct_id" = $2;', ip, acct_id)
                     await self.rs.delete(f'account@{acct_id}')
                     await self.rs.delete('acctlist')
@@ -172,8 +170,9 @@ class UserService:
                 lastip = acct2.lastip
 
                 if lastip != ip and ip != '':
-                    await LogService.inst.add_log(f"Update acct {acct_id} lastip from {lastip} to {ip} ",
-                                                  'acct.updateip')
+                    await LogService.inst.add_log(
+                        f"Update acct {acct_id} lastip from {lastip} to {ip} ", 'acct.updateip'
+                    )
 
                     async with self.db.acquire() as con:
                         await con.execute('UPDATE "account" SET "lastip" = $1 WHERE "acct_id" = $2;', ip, acct_id)
@@ -203,7 +202,7 @@ class UserService:
                         "class", "photo", "cover", "lastip"
                         FROM "account" WHERE "acct_id" = $1;
                     ''',
-                    acct_id
+                    acct_id,
                 )
             if len(result) != 1:
                 return 'Enoext', None
@@ -218,7 +217,7 @@ class UserService:
                 name=result['name'],
                 photo=result['photo'],
                 cover=result['cover'],
-                lastip=result['lastip']
+                lastip=result['lastip'],
             )
             b_acct = pickle.dumps(acct)
 
@@ -246,7 +245,12 @@ class UserService:
                     SET "acct_type" = $1, "name" = $2,
                     "photo" = $3, "cover" = $4, "class" = $5 WHERE "acct_id" = $6 RETURNING "acct_id";
                 ''',
-                acct_type, name, photo, cover, [clas], acct_id
+                acct_type,
+                name,
+                photo,
+                cover,
+                [clas],
+                acct_id,
             )
             if len(result) != 1:
                 return 'Enoext', None
@@ -277,13 +281,17 @@ class UserService:
                 return 'Epwold', None
 
             hpw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
-            await con.execute('UPDATE "account" SET "password" = $1 WHERE "acct_id" = $2',
-                              base64.b64encode(hpw).decode('utf-8'), acct_id)
+            await con.execute(
+                'UPDATE "account" SET "password" = $1 WHERE "acct_id" = $2',
+                base64.b64encode(hpw).decode('utf-8'),
+                acct_id,
+            )
 
         return None, None
 
-    async def list_acct(self, min_type=UserConst.ACCTTYPE_USER, private=False, reload=False) -> Tuple[
-        None, List[Account]]:
+    async def list_acct(
+        self, min_type=UserConst.ACCTTYPE_USER, private=False, reload=False
+    ) -> Tuple[None, List[Account]]:
         field = f'{min_type}|{int(private)}'
         if (acctlist := (await self.rs.hget('acctlist', field))) is not None and reload is False:
             acctlist = pickle.loads(acctlist)
@@ -297,11 +305,11 @@ class UserService:
                         FROM "account" WHERE "acct_type" >= $1
                         ORDER BY "acct_id" ASC;
                     ''',
-                    min_type
+                    min_type,
                 )
 
             acctlist = []
-            for (acct_id, acct_type, clas, name, mail, lastip) in result:
+            for acct_id, acct_type, clas, name, mail, lastip in result:
                 acct = Account(
                     acct_id=acct_id,
                     acct_type=acct_type,
@@ -310,7 +318,7 @@ class UserService:
                     name=name,
                     photo='',
                     cover='',
-                    lastip=lastip
+                    lastip=lastip,
                 )
 
                 if private:

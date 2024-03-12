@@ -1,5 +1,6 @@
-from termcolor import colored
 import datetime
+
+from termcolor import colored
 
 
 def dbg_print(file='', line=0, **kwargs):

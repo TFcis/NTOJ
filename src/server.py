@@ -2,23 +2,25 @@ import asyncio
 from multiprocessing import Process
 
 import asyncpg
-from redis import asyncio as aioredis
-import tornado.ioloop
-import tornado.netutil
-import tornado.process
-import tornado.httpserver
-import tornado.web
-import tornado.log
-import tornado.options
-
 import config
+import tornado.httpserver
+import tornado.ioloop
+import tornado.log
+import tornado.netutil
+import tornado.options
+import tornado.process
+import tornado.web
+from redis import asyncio as aioredis
+
 import url as ur
-from services.service import services_init
 from services.judge import JudgeServerClusterService
+from services.service import services_init
 
 
 async def materialized_view_task():
-    db = await asyncpg.connect(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost')
+    db = await asyncpg.connect(
+        database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost'
+    )
     rs = await aioredis.Redis(host='localhost', port=6379, db=1)
     p = rs.pubsub()
     await p.subscribe('materialized_view_req')
@@ -39,8 +41,10 @@ async def materialized_view_task():
 
         counter = await _update()
 
+
 if __name__ == "__main__":
     httpsock = tornado.netutil.bind_sockets(5500)
+
     def run_materialized_view_task():
         try:
             loop = asyncio.new_event_loop()
@@ -55,7 +59,9 @@ if __name__ == "__main__":
     view_task_process.start()
 
     # tornado.process.fork_processes(4)
-    db = asyncio.get_event_loop().run_until_complete(asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost'))
+    db = asyncio.get_event_loop().run_until_complete(
+        asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost')
+    )
     rs = aioredis.Redis(host='localhost', port=6379, db=1)
 
     services_init(db, rs)

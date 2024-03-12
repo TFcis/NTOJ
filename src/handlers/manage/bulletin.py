@@ -1,10 +1,9 @@
 import tornado.web
 
 from handlers.base import RequestHandler, reqenv, require_permission
-
-from services.user import UserConst
 from services.bulletin import BulletinService
 from services.log import LogService
+from services.user import UserConst
 
 
 class ManageBulletinHandler(RequestHandler):
@@ -43,8 +42,9 @@ class ManageBulletinHandler(RequestHandler):
             color = self.get_argument('color')
             await BulletinService.inst.add_bulletin(title, content, self.acct.acct_id, color, pinned)
 
-            await LogService.inst.add_log(f"{self.acct.name} added a line on bulletin: \"{title}\".",
-                                          'manage.inform.add')
+            await LogService.inst.add_log(
+                f"{self.acct.name} added a line on bulletin: \"{title}\".", 'manage.inform.add'
+            )
 
         elif page == 'update' and reqtype == 'update':
             bulletin_id = int(self.get_argument('bulletin_id'))
@@ -61,12 +61,13 @@ class ManageBulletinHandler(RequestHandler):
 
             await LogService.inst.add_log(
                 f"{self.acct.name} updated a line on bulletin: \"{title}\" which id is #{bulletin_id}.",
-                'manage.inform.update')
+                'manage.inform.update',
+            )
             await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct.acct_id, color, pinned)
 
         elif page == 'update' and reqtype == 'remove':
             bulletin_id = int(self.get_argument('bulletin_id'))
             await LogService.inst.add_log(
-                f"{self.acct.name} removed a line on bulletin which id is #{bulletin_id}.",
-                'manage.inform.remove')
+                f"{self.acct.name} removed a line on bulletin which id is #{bulletin_id}.", 'manage.inform.remove'
+            )
             await BulletinService.inst.del_bulletin(bulletin_id)

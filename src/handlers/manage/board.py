@@ -2,9 +2,9 @@ import datetime
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.board import BoardService
+from services.group import GroupService
 from services.log import LogService
 from services.user import UserConst
-from services.group import GroupService
 
 
 def trantime(time):
@@ -13,8 +13,7 @@ def trantime(time):
 
     else:
         try:
-            time = datetime.datetime.strptime(time,
-                                              '%Y-%m-%dT%H:%M:%S.%fZ')
+            time = datetime.datetime.strptime(time, '%Y-%m-%dT%H:%M:%S.%fZ')
             time = time.replace(tzinfo=datetime.timezone.utc)
 
         except ValueError:
@@ -52,8 +51,7 @@ class ManageBoardHandler(RequestHandler):
             pro_list_str = str(self.get_argument('pro_list'))
             acct_list_str = str(self.get_argument('acct_list'))
 
-            await LogService.inst.add_log(f"{self.acct.name} was added the contest \"{name}\".",
-                                          'manage.board.add')
+            await LogService.inst.add_log(f"{self.acct.name} was added the contest \"{name}\".", 'manage.board.add')
             err, start = trantime(start)
             if err:
                 self.error(err)
@@ -77,8 +75,9 @@ class ManageBoardHandler(RequestHandler):
             status = int(self.get_argument('status'))
             start = self.get_argument('start')
             end = self.get_argument('end')
-            await LogService.inst.add_log(f"{self.acct.name} was updated the contest \"{name}\".",
-                                          'manage.board.update')
+            await LogService.inst.add_log(
+                f"{self.acct.name} was updated the contest \"{name}\".", 'manage.board.update'
+            )
             err, start = trantime(start)
             if err:
                 self.error(err)
@@ -102,8 +101,9 @@ class ManageBoardHandler(RequestHandler):
             board_id = int(self.get_argument('board_id'))
             await BoardService.inst.remove_board(board_id)
             self.finish('S')
-            await LogService.inst.add_log(f"{self.acct.name} was removed the contest \"{board_id}\".",
-                                          'manage.board.remove')
+            await LogService.inst.add_log(
+                f"{self.acct.name} was removed the contest \"{board_id}\".", 'manage.board.remove'
+            )
 
     async def _get_acct_list(self, acct_list_str: str) -> list[int]:
         acct_list = acct_list_str.replace(' ', '').split(',')

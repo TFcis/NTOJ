@@ -2,13 +2,13 @@ import math
 
 import tornado.web
 
+from handlers.base import RequestHandler, reqenv, require_permission
 from services.chal import ChalConst
 from services.judge import JudgeServerClusterService
 from services.log import LogService
-from services.pro import ProConst, ProService, ProClassService
+from services.pro import ProClassService, ProConst, ProService
 from services.rate import RateService
 from services.user import UserConst
-from handlers.base import RequestHandler, reqenv, require_permission
 
 
 def user_ac_cmp(pro):
@@ -75,8 +75,7 @@ class ProsetHandler(RequestHandler):
         except tornado.web.HTTPError:
             pubclass_id = None
 
-        err, prolist = await ProService.inst.list_pro(
-            self.acct, state=True, clas=clas)
+        err, prolist = await ProService.inst.list_pro(self.acct, state=True, clas=clas)
 
         _, pubclass_list = await ProClassService.inst.get_pubclass_list()
 
@@ -125,10 +124,19 @@ class ProsetHandler(RequestHandler):
             prolist.reverse()
 
         pronum = len(prolist)
-        prolist = prolist[off: off + 40]
+        prolist = prolist[off : off + 40]
 
-        await self.render('proset', pronum=pronum, prolist=prolist, clas=clas, pubclass_list=pubclass_list,
-                          cur_pubclass=pubclass, pageoff=off, flt=flt, isadmin=self.acct.is_kernel())
+        await self.render(
+            'proset',
+            pronum=pronum,
+            prolist=prolist,
+            clas=clas,
+            pubclass_list=pubclass_list,
+            cur_pubclass=pubclass,
+            pageoff=off,
+            flt=flt,
+            isadmin=self.acct.is_kernel(),
+        )
 
     @reqenv
     async def post(self):
@@ -184,13 +192,15 @@ class ProHandler(RequestHandler):
 
         testl = []
         for test_idx, test_conf in pro['testm_conf'].items():
-            testl.append({
-                'test_idx': test_idx,
-                'timelimit': test_conf['timelimit'],
-                'memlimit': test_conf['memlimit'],
-                'weight': test_conf['weight'],
-                'rate': 2000
-            })
+            testl.append(
+                {
+                    'test_idx': test_idx,
+                    'timelimit': test_conf['timelimit'],
+                    'memlimit': test_conf['memlimit'],
+                    'weight': test_conf['weight'],
+                    'rate': 2000,
+                }
+            )
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -198,7 +208,7 @@ class ProHandler(RequestHandler):
                     SELECT "test_idx", "rate" FROM "test_valid_rate"
                     WHERE "pro_id" = $1 ORDER BY "test_idx" ASC;
                 ''',
-                pro_id
+                pro_id,
             )
 
         countmap = {test_idx: count for test_idx, count in result}
@@ -229,7 +239,10 @@ class ProHandler(RequestHandler):
                         ON "challenge"."pro_id" = $3
                         WHERE "problem"."status" <= $2 AND "problem"."pro_id" = $3 AND "problem"."class" && $4;
                     ''',
-                    self.acct.acct_id, ChalConst.STATE_AC, int(pro['pro_id']), [1, 2]
+                    self.acct.acct_id,
+                    ChalConst.STATE_AC,
+                    int(pro['pro_id']),
+                    [1, 2],
                 )
 
             if result['state'] is None or result['state'] != ChalConst.STATE_AC:
@@ -237,12 +250,18 @@ class ProHandler(RequestHandler):
 
         can_submit = await JudgeServerClusterService.inst.is_server_online()
 
-        await self.render('pro', pro={
-            'pro_id': pro['pro_id'],
-            'name': pro['name'],
-            'status': pro['status'],
-            'tags': pro['tags'],
-        }, testl=testl, isadmin=isadmin, can_submit=can_submit)
+        await self.render(
+            'pro',
+            pro={
+                'pro_id': pro['pro_id'],
+                'name': pro['name'],
+                'status': pro['status'],
+                'tags': pro['tags'],
+            },
+            testl=testl,
+            isadmin=isadmin,
+            can_submit=can_submit,
+        )
 
 
 class ProTagsHandler(RequestHandler):
@@ -260,10 +279,12 @@ class ProTagsHandler(RequestHandler):
 
             await LogService.inst.add_log(
                 (self.acct.name + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."),
-                'manage.pro.update.tag')
+                'manage.pro.update.tag',
+            )
 
             err, _ = await ProService.inst.update_pro(
-                pro_id, pro['name'], pro['status'], pro['class'], pro['expire'], '', None, tags)
+                pro_id, pro['name'], pro['status'], pro['class'], pro['expire'], '', None, tags
+            )
 
             if err:
                 self.error(err)

@@ -98,13 +98,15 @@ class BoardHandler(RequestHandler):
 
             pro_sc_sub.update({pro_id: (sc, sub)})
 
-        await self.render('board',
-                          prolist=prolist,
-                          acctlist=acctlist2,
-                          ratemap=ratemap,
-                          pro_sc_sub=pro_sc_sub,
-                          acct_submit=acct_submit,
-                          name=meta['name'],
-                          board_list=board_list,
-                          end=str(meta['end']).split('+')[0].replace('-', '/'),
-                          timestamp=int(time.time()))
+        await self.render(
+            'board',
+            prolist=prolist,
+            acctlist=acctlist2,
+            ratemap=ratemap,
+            pro_sc_sub=pro_sc_sub,
+            acct_submit=acct_submit,
+            name=meta['name'],
+            board_list=board_list,
+            end=str(meta['end']).split('+')[0].replace('-', '/'),
+            timestamp=int(time.time()),
+        )

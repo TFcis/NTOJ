@@ -19,7 +19,9 @@ class BoardService:
 
     async def get_boardlist(self):
         async with self.db.acquire() as con:
-            res = await con.fetch('SELECT "board_id", "name", "status", "start", "end" FROM "board" ORDER BY "board_id" ASC;')
+            res = await con.fetch(
+                'SELECT "board_id", "name", "status", "start", "end" FROM "board" ORDER BY "board_id" ASC;'
+            )
 
         return None, res
 
@@ -32,19 +34,22 @@ class BoardService:
             if len(res) == 0:
                 return 'Enoext', None
 
-        name, status, start, end, pro_list, acct_list = res['name'], res['status'], res['start'], res['end'], res['pro_list'], res['acct_list']
+        name, status, start, end, pro_list, acct_list = (
+            res['name'],
+            res['status'],
+            res['start'],
+            res['end'],
+            res['pro_list'],
+            res['acct_list'],
+        )
 
         meta = {
             'name': name,
             'status': status,
             'pro_list': pro_list,
             'acct_list': acct_list,
-
-            'start': start.replace(tzinfo=datetime.timezone(
-            datetime.timedelta(hours=8))),
-
-            'end': end.replace(tzinfo=datetime.timezone(
-            datetime.timedelta(hours=8))),
+            'start': start.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8))),
+            'end': end.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8))),
         }
 
         return None, meta
@@ -59,7 +64,12 @@ class BoardService:
                     INSERT INTO "board" ("name", "status", "start", "end", "pro_list", "acct_list")
                     VALUES ($1, $2, $3, $4, $5, $6);
                 ''',
-                name, status, start, end, pro_list, acct_list
+                name,
+                status,
+                start,
+                end,
+                pro_list,
+                acct_list,
             )
 
         return None, None
@@ -76,7 +86,13 @@ class BoardService:
                     UPDATE "board" SET "name" = $1, "status" = $2, "start" = $3, "end" = $4, "pro_list" = $5,
                     "acct_list" = $6 WHERE "board_id" = $7 RETURNING "board_id";
                 ''',
-                name, status, start, end, pro_list, acct_list, board_id
+                name,
+                status,
+                start,
+                end,
+                pro_list,
+                acct_list,
+                board_id,
             )
             if len(res) != 1:
                 return 'Enoext', None
