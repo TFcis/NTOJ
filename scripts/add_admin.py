@@ -1,13 +1,14 @@
-import os
-import base64
-import shutil
-import asyncio
-import logging
 import argparse
+import asyncio
+import base64
+import logging
+import os
+import shutil
 
-import bcrypt
 import asyncpg
+import bcrypt
 from redis import asyncio as aioredis
+
 
 class UserConst:
     MAIL_MAX = 1024
@@ -19,8 +20,10 @@ class UserConst:
 
     ACCTTYPE_KERNEL = 0
 
+
 class GroupConst:
     KERNEL_GROUP = 'kernel'
+
 
 async def sign_up(mail, pw, name, db, rs):
     tmp_len = len(mail)
@@ -59,8 +62,12 @@ async def sign_up(mail, pw, name, db, rs):
                     ("mail", "password", "name", "acct_type", "class", "group")
                     VALUES ($1, $2, $3, $4, $5, $6) RETURNING "acct_id";
                 ''',
-                mail, base64.b64encode(hpw).decode('utf-8'), name, UserConst.ACCTTYPE_KERNEL, [1],
-                GroupConst.KERNEL_GROUP
+                mail,
+                base64.b64encode(hpw).decode('utf-8'),
+                name,
+                UserConst.ACCTTYPE_KERNEL,
+                [1],
+                GroupConst.KERNEL_GROUP,
             )
 
     except asyncpg.IntegrityConstraintViolationError:
@@ -73,11 +80,13 @@ async def sign_up(mail, pw, name, db, rs):
     await rs.delete('acctlist')
     return None, result[0]['acct_id']
 
+
 def copyfile(source, target):
     source = os.path.join(*source)
     target = os.path.join(*target)
     if not os.path.exists(target):
         shutil.copyfile(source, target)
+
 
 """
 mail
@@ -97,13 +106,15 @@ args_parser.add_argument('-d', '--debug', action='store_const', dest='loglevel',
 args_parser.set_defaults(loglevel=logging.INFO)
 
 args = args_parser.parse_args()
-copyfile((args.config_path, ), ('./config.py', ))
+copyfile((args.config_path,), ('./config.py',))
 
 logging.basicConfig(level=args.loglevel, format='%(asctime)s %(levelname)s %(message)s')
 
 import config
 
-db = asyncio.get_event_loop().run_until_complete(asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost'))
+db = asyncio.get_event_loop().run_until_complete(
+    asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost')
+)
 rs = aioredis.Redis(host='localhost', port=6379, db=1)
 err, acct_id = asyncio.get_event_loop().run_until_complete(sign_up(args.mail, args.password, args.username, db, rs))
 

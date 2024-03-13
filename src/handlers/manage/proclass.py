@@ -3,7 +3,6 @@ import tornado
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
 from services.pro import ProClassService
-
 from services.user import UserConst
 
 
@@ -13,8 +12,7 @@ class ManageProClassHandler(RequestHandler):
     async def get(self, page=None):
         if page is None:
             _, pubclass_list = await ProClassService.inst.get_pubclass_list()
-            await self.render('manage/proclass/proclass-list', page='proclass',
-                              pubclass_list=pubclass_list)
+            await self.render('manage/proclass/proclass-list', page='proclass', pubclass_list=pubclass_list)
 
         elif page == "add":
             await self.render('manage/proclass/add', page='proclass')
@@ -23,8 +21,7 @@ class ManageProClassHandler(RequestHandler):
             pubclass_id = int(self.get_argument('pubclassid'))
             _, pubclass = await ProClassService.inst.get_pubclass(pubclass_id)
 
-            await self.render('manage/proclass/update', page='proclass', pubclass_id=pubclass_id,
-                              pubclass=pubclass)
+            await self.render('manage/proclass/update', page='proclass', pubclass_id=pubclass_id, pubclass=pubclass)
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
@@ -40,7 +37,9 @@ class ManageProClassHandler(RequestHandler):
                 self.error('E')
                 return
 
-            await LogService.inst.add_log(f"{self.acct.name} add proclass name={name} list={p_list}", 'manage.proclass.add')
+            await LogService.inst.add_log(
+                f"{self.acct.name} add proclass name={name} list={p_list}", 'manage.proclass.add'
+            )
             err, pubclass_id = await ProClassService.inst.add_pubclass(name, p_list)
             if err:
                 self.error(err)
@@ -59,7 +58,9 @@ class ManageProClassHandler(RequestHandler):
                 self.error('E')
                 return
 
-            await LogService.inst.add_log(f"{self.acct.name} update proclass name={name} list={p_list}", 'manage.proclass.update')
+            await LogService.inst.add_log(
+                f"{self.acct.name} update proclass name={name} list={p_list}", 'manage.proclass.update'
+            )
             err = await ProClassService.inst.update_pubclass(pubclass_id, name, p_list)
             if err:
                 self.error(err)
@@ -72,7 +73,8 @@ class ManageProClassHandler(RequestHandler):
             _, pubclass = await ProClassService.inst.get_pubclass(pubclass_id)
 
             await LogService.inst.add_log(
-                f"{self.acct.name} remove proclass name={pubclass['name']}.", 'manage.proclass.remove')
+                f"{self.acct.name} remove proclass name={pubclass['name']}.", 'manage.proclass.remove'
+            )
             await ProClassService.inst.remove_pubclass(pubclass_id)
 
             self.finish('S')

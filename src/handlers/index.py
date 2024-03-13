@@ -1,7 +1,7 @@
 import msgpack
 
-from services.ques import QuestionService
 from handlers.base import RequestHandler, reqenv
+from services.ques import QuestionService
 
 
 class IndexHandler(RequestHandler):
@@ -31,6 +31,7 @@ class AbouotHandler(RequestHandler):
     @reqenv
     async def get(self):
         await self.render('about')
+
 
 class OnlineCounterHandler(RequestHandler):
     @reqenv

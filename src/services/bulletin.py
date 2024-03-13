@@ -19,16 +19,18 @@ class BulletinService:
             )
 
         bulletin_list = []
-        for (b_id, title, timestamp, color, pinned, name, acct_id) in result:
-            bulletin_list.append({
-                "bulletin_id": b_id,
-                "title": title,
-                "timestamp": timestamp.astimezone(self.tz),
-                "color": color,
-                "pinned": pinned,
-                "acct_id": acct_id,
-                "name": name,
-            })
+        for b_id, title, timestamp, color, pinned, name, acct_id in result:
+            bulletin_list.append(
+                {
+                    "bulletin_id": b_id,
+                    "title": title,
+                    "timestamp": timestamp.astimezone(self.tz),
+                    "color": color,
+                    "pinned": pinned,
+                    "acct_id": acct_id,
+                    "name": name,
+                }
+            )
 
         return None, bulletin_list
 
@@ -42,7 +44,7 @@ class BulletinService:
                     INNER JOIN "account" ON "account"."acct_id" = "bulletin"."author_id"
                     WHERE "bulletin"."bulletin_id" = $1
                 ''',
-                int(bulletin_id)
+                int(bulletin_id),
             )
 
         if len(result) != 1:
@@ -67,7 +69,11 @@ class BulletinService:
                     INSERT INTO "bulletin" ("title", "content", "color", "pinned", "author_id")
                     VALUES ($1, $2, $3, $4, $5) RETURNING "bulletin_id";
                 ''',
-                title, content, color, pinned, acct_id
+                title,
+                content,
+                color,
+                pinned,
+                acct_id,
             )
         if len(result) != 1:
             return 'Eunk', None
@@ -81,7 +87,12 @@ class BulletinService:
                     UPDATE "bulletin" SET "title" = $1, "content" = $2, "author_id" = $3, "color" = $4, "pinned" = $5
                     WHERE "bulletin_id" = $6;
                 ''',
-                title, content, int(acct_id), color, pinned, int(bulletin_id)
+                title,
+                content,
+                int(acct_id),
+                color,
+                pinned,
+                int(bulletin_id),
             )
 
         await self.rs.publish('bulletinsub', 1)

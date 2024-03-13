@@ -1,9 +1,9 @@
 import base64
 import json
 
+import config
 from msgpack import packb, unpackb
 
-import config
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.chal import ChalConst, ChalService
 from services.judge import JudgeServerClusterService
@@ -50,13 +50,15 @@ class ManageProHandler(RequestHandler):
 
             testl = []
             for test_idx, test_conf in pro['testm_conf'].items():
-                testl.append({
-                    'test_idx': test_idx,
-                    'timelimit': test_conf['timelimit'],
-                    'memlimit': test_conf['memlimit'],
-                    'weight': test_conf['weight'],
-                    'rate': 2000
-                })
+                testl.append(
+                    {
+                        'test_idx': test_idx,
+                        'timelimit': test_conf['timelimit'],
+                        'memlimit': test_conf['memlimit'],
+                        'weight': test_conf['weight'],
+                        'rate': 2000,
+                    }
+                )
 
             try:
                 with open(f"problem/{pro_id}/conf.json", 'r') as conf_file:
@@ -64,8 +66,9 @@ class ManageProHandler(RequestHandler):
             except FileNotFoundError:
                 conf_content = ''
 
-            await self.render('manage/pro/update', page='pro', pro=pro, lock=lock, testl=testl,
-                              problem_config_json=conf_content)
+            await self.render(
+                'manage/pro/update', page='pro', pro=pro, lock=lock, testl=testl, problem_config_json=conf_content
+            )
 
         elif page == "add":
             await self.render('manage/pro/add', page='pro')
@@ -92,10 +95,10 @@ class ManageProHandler(RequestHandler):
             expire = None
             pack_token = self.get_argument('pack_token')
 
-            err, pro_id = await ProService.inst.add_pro(
-                name, status, clas, expire, pack_token)
+            err, pro_id = await ProService.inst.add_pro(name, status, clas, expire, pack_token)
             await LogService.inst.add_log(
-                f"{self.acct.name} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro')
+                f"{self.acct.name} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro'
+            )
             if err:
                 self.error(err)
                 return
@@ -117,10 +120,11 @@ class ManageProHandler(RequestHandler):
                     pack_token = None
 
                 err, _ = await ProService.inst.update_pro(
-                    pro_id, name, status, clas, expire, pack_type, pack_token, tags)
+                    pro_id, name, status, clas, expire, pack_type, pack_token, tags
+                )
                 await LogService.inst.add_log(
-                    f"{self.acct.name} had been send a request to update the problem #{pro_id}",
-                    'manage.pro.update.pro')
+                    f"{self.acct.name} had been send a request to update the problem #{pro_id}", 'manage.pro.update.pro'
+                )
                 if err:
                     self.error(err)
                     return
@@ -146,7 +150,8 @@ class ManageProHandler(RequestHandler):
                 err, _ = await ProService.inst.update_limit(pro_id, timelimit, memlimit)
                 await LogService.inst.add_log(
                     f"{self.acct.name} had been send a request to update the problem #{pro_id}",
-                    'manage.pro.update.limit')
+                    'manage.pro.update.limit',
+                )
                 if err:
                     self.error(err)
                     return
@@ -186,14 +191,22 @@ class ManageProHandler(RequestHandler):
                                 "timelimit", "memlimit", "weight", "metadata", "chalmeta")
                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
                             ''',
-                            int(pro_id), int(test_idx), comp_type, score_type, check_type,
-                            int(timelimit), int(memlimit), int(test_conf['weight']), json.dumps(metadata),
-                            json.dumps(chalmeta)
+                            int(pro_id),
+                            int(test_idx),
+                            comp_type,
+                            score_type,
+                            check_type,
+                            int(timelimit),
+                            int(memlimit),
+                            int(test_conf['weight']),
+                            json.dumps(metadata),
+                            json.dumps(chalmeta),
                         )
 
                 await LogService.inst.add_log(
                     f"{self.acct.name} had been send a request to update the problem #{pro_id}",
-                    'manage.pro.update.conf')
+                    'manage.pro.update.conf',
+                )
 
                 self.finish('S')
 
@@ -226,7 +239,7 @@ class ManageProHandler(RequestHandler):
                 await self.rs.delete(f"{pro_id}_owner")
                 self.finish('S')
 
-        elif page is None: # pro-list
+        elif page is None:  # pro-list
             if reqtype == 'rechal':
                 pro_id = int(self.get_argument('pro_id'))
 
@@ -248,11 +261,12 @@ class ManageProHandler(RequestHandler):
                             ON "challenge"."chal_id" = "challenge_state"."chal_id"
                             WHERE "pro_id" = $1 AND "challenge_state"."state" IS NULL;
                         ''',
-                        pro_id
+                        pro_id,
                     )
                 await LogService.inst.add_log(
                     f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
-                    'manage.chal.rechal')
+                    'manage.chal.rechal',
+                )
 
                 for chal_id, comp_type in result:
                     file_ext = ChalConst.FILE_EXTENSION[comp_type]
@@ -263,7 +277,7 @@ class ManageProHandler(RequestHandler):
                         pro['testm_conf'],
                         comp_type,
                         f"/nfs/code/{chal_id}/main.{file_ext}",
-                        f"/nfs/problem/{pro_id}/res"
+                        f"/nfs/problem/{pro_id}/res",
                     )
 
                 self.finish('S')

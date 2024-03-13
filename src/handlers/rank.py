@@ -10,7 +10,8 @@ class RankHandler(RequestHandler):
         pro_id = int(pro_id)
 
         async with self.db.acquire() as con:
-            result = await con.fetch('SELECT *'
+            result = await con.fetch(
+                'SELECT *'
                 'FROM ('
                 'SELECT DISTINCT ON ("challenge"."acct_id")'
                 '"challenge"."chal_id",'
@@ -32,17 +33,21 @@ class RankHandler(RequestHandler):
                 ') temp '
                 'ORDER BY "runtime" ASC, "memory" ASC,'
                 '"timestamp" ASC, "acct_id" ASC;',
-                self.acct.acct_type, pro_id)
+                self.acct.acct_type,
+                pro_id,
+            )
 
         chal_list = []
-        for (chal_id, acct_id, timestamp, acct_name, runtime, memory) in result:
-            chal_list.append({
-                'chal_id'   : chal_id,
-                'acct_id'   : acct_id,
-                'acct_name' : acct_name,
-                'runtime'   : int(runtime),
-                'memory'    : int(memory),
-                'timestamp' : timestamp.astimezone(tz),
-            })
+        for chal_id, acct_id, timestamp, acct_name, runtime, memory in result:
+            chal_list.append(
+                {
+                    'chal_id': chal_id,
+                    'acct_id': acct_id,
+                    'acct_name': acct_name,
+                    'runtime': int(runtime),
+                    'memory': int(memory),
+                    'timestamp': timestamp.astimezone(tz),
+                }
+            )
 
         await self.render('rank', pro_id=pro_id, chal_list=chal_list)

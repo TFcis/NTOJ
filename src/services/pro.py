@@ -1,15 +1,15 @@
-import os
-import re
-import json
 import asyncio
 import datetime
+import json
+import os
+import re
 from collections import OrderedDict
 
+import config
 from msgpack import packb, unpackb
 
-import config
-from services.user import Account
 from services.pack import PackService
+from services.user import Account
 
 
 class ProConst:
@@ -169,9 +169,7 @@ class ProService:
             for pro in prolist:
                 if (expire := pro["expire"]) is not None:
                     expire = datetime.datetime.fromtimestamp(expire)
-                    expire = expire.replace(
-                        tzinfo=datetime.timezone(datetime.timedelta(hours=8))
-                    )
+                    expire = expire.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))
 
                 pro["expire"] = expire
 
@@ -251,9 +249,7 @@ class ProService:
             return "Eparam", None
 
         if expire is None:
-            expire = datetime.datetime(
-                2099, 12, 31, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
-            )
+            expire = datetime.datetime(2099, 12, 31, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -281,9 +277,7 @@ class ProService:
         return None, pro_id
 
     # TODO: Too many args
-    async def update_pro(
-        self, pro_id, name, status, clas, expire, pack_type, pack_token=None, tags=""
-    ):
+    async def update_pro(self, pro_id, name, status, clas, expire, pack_type, pack_token=None, tags=""):
         name_len = len(name)
         if name_len < ProService.NAME_MIN:
             return "Enamemin", None
@@ -298,9 +292,7 @@ class ProService:
             return "Etags", None
 
         if expire is None:
-            expire = datetime.datetime(
-                2099, 12, 31, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
-            )
+            expire = datetime.datetime(2099, 12, 31, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -425,9 +417,7 @@ class ProService:
             chalmeta = conf["metadata"]  # INFO: ioredir data
 
             async with self.db.acquire() as con:
-                await con.execute(
-                    'DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id)
-                )
+                await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
 
                 for test_idx, test_conf in enumerate(conf["test"]):
                     metadata = {"data": test_conf["data"]}
@@ -493,9 +483,7 @@ class ProClassService:
 
     async def remove_pubclass(self, pubclass_id):
         async with self.db.acquire() as con:
-            await con.execute(
-                'DELETE FROM "pubclass" WHERE "pubclass_id" = $1', int(pubclass_id)
-            )
+            await con.execute('DELETE FROM "pubclass" WHERE "pubclass_id" = $1', int(pubclass_id))
 
     async def update_pubclass(self, pubclass_id, pubclass_name, p_list):
         pubclass_id = int(pubclass_id)

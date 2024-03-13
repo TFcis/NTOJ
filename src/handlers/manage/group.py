@@ -1,7 +1,7 @@
 import tornado
 
 from handlers.base import RequestHandler, reqenv, require_permission
-from services.group import GroupService, GroupConst
+from services.group import GroupConst, GroupService
 from services.log import LogService
 from services.user import UserConst
 
@@ -20,7 +20,7 @@ class ManageGroupHandler(RequestHandler):
                         FROM "group"
                         WHERE "group"."group_name" = $1
                     ''',
-                    gname
+                    gname,
                 )
             gtype = int(result['group_type'])
             gclas = int(result['group_class'])
@@ -36,8 +36,7 @@ class ManageGroupHandler(RequestHandler):
         else:
             gacct = None
 
-        await self.render('manage/group', page='group', gname=gname, glist=glist, gacct=gacct, gtype=gtype,
-                          gclas=gclas)
+        await self.render('manage/group', page='group', gname=gname, glist=glist, gacct=gacct, gtype=gtype, gclas=gclas)
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
@@ -52,8 +51,8 @@ class ManageGroupHandler(RequestHandler):
                 return
 
             await LogService.inst.add_log(
-                f"{self.acct.name} updated group={gname} group_type={gtype} group_class={gclas}.",
-                'manage.group.update')
+                f"{self.acct.name} updated group={gname} group_type={gtype} group_class={gclas}.", 'manage.group.update'
+            )
             err = await GroupService.inst.update_group(gname, gtype, gclas)
             if err:
                 self.error(err)
@@ -67,8 +66,8 @@ class ManageGroupHandler(RequestHandler):
             gclas = int(self.get_argument('gclas'))
 
             await LogService.inst.add_log(
-                f"{self.acct.name} added group={gname} group_type={gtype} group_class={gclas}.",
-                'manage.group.add')
+                f"{self.acct.name} added group={gname} group_type={gtype} group_class={gclas}.", 'manage.group.add'
+            )
             err = await GroupService.inst.add_group(gname, gtype, gclas)
             if err:
                 self.error(err)

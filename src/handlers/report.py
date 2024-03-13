@@ -1,5 +1,5 @@
-from services.user import UserConst
 from handlers.base import RequestHandler, reqenv, require_permission
+from services.user import UserConst
 
 
 class ReportHandler(RequestHandler):

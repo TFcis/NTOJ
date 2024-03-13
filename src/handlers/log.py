@@ -1,7 +1,7 @@
 import tornado.web
 
-from services.log import LogService
 from handlers.base import RequestHandler, reqenv, require_permission
+from services.log import LogService
 
 
 class LogHandler(RequestHandler):
@@ -27,5 +27,11 @@ class LogHandler(RequestHandler):
             self.error(err)
             return
 
-        await self.render('loglist', pageoff=off, lognum=log['lognum'], loglist=log['loglist'],
-                          logtype_list=logtype_list, cur_logtype=logtype)
+        await self.render(
+            'loglist',
+            pageoff=off,
+            lognum=log['lognum'],
+            loglist=log['loglist'],
+            logtype_list=logtype_list,
+            cur_logtype=logtype,
+        )

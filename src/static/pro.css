@@ -16,7 +16,6 @@
   font-family: sans-serif;
   overflow: hidden;
 }
-
 .textlayer > span {
   color: transparent;
   position: absolute !important;
@@ -24,26 +23,21 @@
   white-space: pre;
   cursor: text;
 }
-
 .textlayer .highlight {
   margin: -1px;
   padding: 1px;
   background-color: rgba(180, 0, 170, 0.2);
   border-radius: 4px;
 }
-
 .textlayer .highlight.begin {
   border-radius: 4px 0px 0px 4px;
 }
-
 .textlayer .highlight.end {
   border-radius: 0px 4px 4px 0px;
 }
-
 .textlayer .highlight.middle {
   border-radius: 0px;
 }
-
 .textlayer .highlight.selected {
   background-color: rgba(0, 100, 0, 0.2);
 }

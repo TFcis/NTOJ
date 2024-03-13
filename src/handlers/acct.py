@@ -1,11 +1,11 @@
 import math
 import re
 
+from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
 from services.pro import ProService
 from services.rate import RateService
-from services.user import UserService, UserConst
-from handlers.base import RequestHandler, reqenv, require_permission
+from services.user import UserConst, UserService
 
 
 class AcctHandler(RequestHandler):
@@ -30,7 +30,7 @@ class AcctHandler(RequestHandler):
                     WHERE "status" <= $1
                     ORDER BY "pro_id" ASC;
                 ''',
-                max_status
+                max_status,
             )
 
         err, ratemap = await RateService.inst.map_rate_acct(acct, clas=None)
@@ -65,12 +65,7 @@ class AcctHandler(RequestHandler):
             cover = self.get_argument('cover')
 
             err, _ = await UserService.inst.update_acct(
-                self.acct.acct_id,
-                self.acct.acct_type,
-                self.acct.acct_class,
-                name,
-                photo,
-                cover
+                self.acct.acct_id, self.acct.acct_type, self.acct.acct_class, name, photo, cover
             )
             if err:
                 self.error(err)
@@ -84,8 +79,9 @@ class AcctHandler(RequestHandler):
             pw = self.get_argument('pw')
             acct_id = self.get_argument('acct_id')
             if acct_id != self.acct.acct_id:
-                await LogService.inst.add_log(f"{self.acct.name} was changing the password of user #{acct_id}.",
-                                              'manage.acct.update.pwd')
+                await LogService.inst.add_log(
+                    f"{self.acct.name} was changing the password of user #{acct_id}.", 'manage.acct.update.pwd'
+                )
 
             err, _ = await UserService.inst.update_pw(acct_id, old, pw, self.acct.is_kernel())
             if err:
@@ -113,18 +109,21 @@ class SignHandler(RequestHandler):
 
             err, acct_id = await UserService.inst.sign_in(mail, pw)
             if err:
-                await LogService.inst.add_log(f'{mail} try to sign in but failed: {err}', 'signin.failure', {
-                    'type': 'signin.failure',
-                    'mail': mail,
-                    'err': err,
-                })
+                await LogService.inst.add_log(
+                    f'{mail} try to sign in but failed: {err}',
+                    'signin.failure',
+                    {
+                        'type': 'signin.failure',
+                        'mail': mail,
+                        'err': err,
+                    },
+                )
                 self.error(err)
                 return
 
-            await LogService.inst.add_log(f'#{acct_id} sign in successfully', 'signin.success', {
-                'type': 'signin.success',
-                'acct_id': acct_id
-            })
+            await LogService.inst.add_log(
+                f'#{acct_id} sign in successfully', 'signin.success', {'type': 'signin.success', 'acct_id': acct_id}
+            )
 
             self.set_secure_cookie('id', str(acct_id), path='/oj', httponly=True)
             self.finish('S')
@@ -143,11 +142,15 @@ class SignHandler(RequestHandler):
             self.finish('S')
 
         elif reqtype == 'signout':
-            await LogService.inst.add_log(f"{self.acct.name}(#{self.acct.acct_id}) sign out", 'signout', {
-                'type': 'signin.failure',
-                'name': self.acct.name,
-                'acct_id': self.acct.acct_id,
-            })
+            await LogService.inst.add_log(
+                f"{self.acct.name}(#{self.acct.acct_id}) sign out",
+                'signout',
+                {
+                    'type': 'signin.failure',
+                    'name': self.acct.name,
+                    'acct_id': self.acct.acct_id,
+                },
+            )
 
             self.clear_cookie('id', path='/oj')
             self.finish('S')

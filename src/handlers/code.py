@@ -2,8 +2,8 @@ import json
 
 import tornado.escape
 
-from services.code import CodeService
 from handlers.base import RequestHandler, reqenv
+from services.code import CodeService
 
 
 class CodeHandler(RequestHandler):
