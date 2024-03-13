@@ -61,12 +61,12 @@ class GroupService:
                 gname
             )
 
-        acct_list = []
-        for (acct_id, acct_name) in result:
-            acct_list.append({
+        acct_list = [
+            {
                 'acct_id': int(acct_id),
                 'acct_name': str(acct_name),
-            })
+            } for acct_id, acct_name in result
+        ]
 
         return acct_list
 
