@@ -1,0 +1,11 @@
+site_name: NTOJ docs
+site_author: LifeAdventurer <life0adventurer@gmail.com>
+site_url: https://tfcis.github.io/NTOJ
+repo_url: https://gihub.com/tfcis/NTOJ
+repo_name: tfcis/NTOJ
+
+nav:
+  - Home: index.md
+
+theme:
+  name: material
