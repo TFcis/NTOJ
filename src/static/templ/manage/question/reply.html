@@ -4,7 +4,7 @@
 <script type="text/javascript">
     function reply(index) {
 		var j_form = $('#form');
-		var rtext = j_form.find(`input.${index}`).val();
+		var rtext = j_form.find(`textarea#${index}`).val();
 
 		$.post('/oj/be/manage/question/reply', {
 		    'reqtype': 'rpl',
@@ -25,7 +25,7 @@
 
     function rreply(index) {
 		var j_form = $('#form');
-		var rtext = j_form.find(`input.${index}`).val();
+        var rtext = j_form.find(`textarea#${index}`).val();
 
 		$.post('/oj/be/manage/question/reply', {
 		    'reqtype': 'rrpl',
@@ -48,9 +48,11 @@
 {% block content%}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <div id="form">
-		<div>
-			{{str(qacct_id)}}
-		</div>
+		<p>
+		    <a href="/oj/acct/{{ str(qacct_id) }}/">
+                Account ID: {{ str(qacct_id) }}
+            </a>
+		</p>
 		<table border=1 class="table">
 			<thead>
 				<tr>
@@ -63,13 +65,21 @@
 			{% set count = 0 %}
 			{% for ques in ques_list %}
 			<tr>
-				<td style="width:46%;">{{ ques['Q'] }}</td>
+			    <td style="width:46%;">{{ ques['Q'] }}</td>
+              
 				{% if ques['A'] == None %}
-				<td style="width:46%;"><input class="{{ count }}"></input></td>
-				<td style="width:8%;"><input class="btn btn-success" type="button" value="Reply" onclick="reply({{ count }});"></input></td>
-				{% else %}
-				<td style="width:46%;"><input class="{{ count }}" value="{{ ques['A'] }}"></input></td>
-				<td style="width:8%;"><input class="btn btn-success" type="button" value="Re Reply" onclick="rreply({{ count }});"></input></td>
+				    <td style="width:46%;">
+                        <textarea class="form-control" cols="10" rows="10" id="{{ count }}" style="white-space: pre-line;"></textarea>
+                    </td>
+				    <td style="width:8%;"><input class="btn btn-success" type="button" value="Reply" onclick="reply({{ count }});"></input></td>
+
+                {% else %}
+				    <td style="width:46%;">
+                        <textarea class="form-control" cols="10" rows="10" id="{{ count }}" style="white-space: pre-line;">
+                            {{ ques['A'] }}
+                        </textarea>
+                    </td>
+				    <td style="width:8%;"><input class="btn btn-success" type="button" value="Re Reply" onclick="rreply({{ count }});"></input></td>
 				{% end %}
 			</tr>
 			{% set count = count + 1 %}
