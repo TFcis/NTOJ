@@ -184,7 +184,9 @@ class ChalService:
 
         testl = []
         for test_idx, state, runtime, memory, response in result:
-            final_response = response
+            if final_response == "":
+                final_response = response
+
             testl.append(
                 {
                     'test_idx': test_idx,
