@@ -20,7 +20,7 @@ mkdocs-material = "^9.5.13"
 
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.2.0"
+black = "^24.3.0"
 isort = "^5.13.2"
 
 [build-system]
