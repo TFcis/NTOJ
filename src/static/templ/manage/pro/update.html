@@ -39,6 +39,19 @@
 		    });
 		});
 
+        j_form.find('input.file').on('change', function(e) {
+            let pack_type_select = j_form.find('select.packtype');
+            let filename = $(this)[0].files[0].name;
+
+            if (filename.endsWith(".tar.xz")) {
+                pack_type_select.val('1');
+            } else if (filename.endsWith(".html")) {
+                pack_type_select.val('2');
+            } else if (filename.endsWith(".pdf")) {
+                pack_type_select.val('3');
+            }
+        });
+
 		j_form.find('button.submit').on('click', function(e) {
 		    var name = j_form.find('input.name').val();
 		    var tags = j_form.find('input.tags').val();
