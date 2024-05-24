@@ -3,6 +3,8 @@ import datetime
 import tornado.web
 
 from handlers.base import RequestHandler, reqenv
+from services.user import UserService, UserConst
+from services.rate import RateService
 
 
 class ProRankHandler(RequestHandler):
@@ -84,3 +86,52 @@ class ProRankHandler(RequestHandler):
             )
 
         await self.render('pro-rank', pro_id=pro_id, chal_list=chal_list, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt)
+
+class UserRankHandler(RequestHandler):
+    @reqenv
+    async def get(self):
+        try:
+            pageoff = int(self.get_argument('pageoff'))
+
+        except tornado.web.HTTPError:
+            pageoff = 0
+
+        try:
+            pagenum = int(self.get_argument('pagenum'))
+
+        except tornado.web.HTTPError:
+            pagenum = 20
+
+        err, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL)
+        if err:
+            self.error(err)
+            return
+
+        err, ratemap = await RateService.inst.map_rate(clas=None)
+        if err:
+            self.error(err)
+            return
+
+        for acct in acctlist:
+            err, t_acct = await UserService.inst.info_acct(acct.acct_id)
+            if err:
+                self.error(err)
+                return
+
+            err, rate_data = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
+            if err:
+                self.error(err)
+                return
+
+
+            rate_data['ac_pro_cnt'] = sum(1 for r in ratemap[acct.acct_id].values() if r['rate'] == 100)
+            acct.rate_data = rate_data
+            acct.photo = t_acct.photo
+
+        total_cnt = len(acctlist)
+        acctlist.sort(key=lambda acct: (acct.rate_data['ac_pro_cnt'], acct.rate_data['ac_cnt'], acct.rate_data['all_cnt'], acct.rate_data['rate']), reverse=True)
+        acctlist = acctlist[pageoff: pageoff + pagenum]
+        for rank, acct in enumerate(acctlist):
+            acct.rank = rank + 1 + pageoff
+
+        await self.render('user-rank', acctlist=acctlist, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt)
