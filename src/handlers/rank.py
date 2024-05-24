@@ -71,6 +71,25 @@ class ProRankHandler(RequestHandler):
             )
             total_cnt = total_cnt[0]['count']
 
+            total_cnt = await con.fetch(
+                '''
+                SELECT COUNT(*)
+                FROM (
+                SELECT DISTINCT ON ("challenge"."acct_id")
+                "challenge"."chal_id",
+                FROM "challenge"
+                INNER JOIN "account"
+                ON "challenge"."acct_id"="account"."acct_id"
+                LEFT JOIN "challenge_state"
+                ON "challenge"."chal_id"="challenge_state"."chal_id"
+                WHERE "account"."acct_type">= $1 AND "challenge"."pro_id"= $2
+                AND "challenge_state"."state"=1
+                ) AS temp;
+                ''',
+                self.acct.acct_type, pro_id,
+            )
+            total_cnt = total_cnt[0]['count']
+
         chal_list = []
         for rank, (chal_id, acct_id, timestamp, acct_name, runtime, memory) in enumerate(result):
             chal_list.append(
