@@ -122,7 +122,7 @@ var index = new function() {
 
         $(document).on('keypress', 'input', function(e) {
             let idx;
-            var j_next;
+            let j_next;
 
             if (e.which == 13) {
                 idx = parseInt($(this).attr('tabindex'));
@@ -172,7 +172,7 @@ var index = new function() {
     };
 
     $.fn.print = function(msg, succ) {
-        var j_e = this;
+        let j_e = this;
 
         j_e.text(msg);
 
