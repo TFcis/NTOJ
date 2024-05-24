@@ -46,30 +46,20 @@
             </tbody>
         </table>
 
+
+        {% set postfix = '' %}
+        {% if cur_logtype is not None %}
+            {% set postfix = postfix + '&logtype=%s' % cur_logtype %}
+        {% end %}
+
         <div class="row">
             <div class="col-1"></div>
             <div class="col pt-3">
-                <nav aria-label="Page navigation example">
-                    <ul class="pagination justify-content-center">
-                        <!-- this algorithm from toj -->
-                        <!-- 我沒研究怎麼實現的，但能用 -->
-                        {% set postfix = '' %}
-                        {% if cur_logtype is not None %}
-                            {% set postfix = postfix + '&logtype=%s' % cur_logtype %}
-                        {% end %}
-
-                        <li class="page-item"><a class="page-link" href="?off=0{{ postfix }}">&#x21e4;</a></li>
-                        {% import math %}
-                        {% set limit = 50 %}
-                        {% set ct = math.floor(pageoff / limit) %}
-                        {% set st = min(max(0, ct - 9), max(0, math.ceil(lognum / limit) - 19)) %}
-                        {% for i, off in enumerate(range(st * limit, min(lognum, st * limit + 950), limit)) %}
-                        <li class="page-item {% if ct == (i + st) %} active {% end %}">
-                            <a class="page-link {% if ct == (i + st) %} active{% end %}" href="?off={{ str(off) + postfix }}">{{i + 1 + st}}</a>
-                        </li>
-                        {% end %}
-                    </ul>
-                </nav>
+                {% set _p_pageoff = pageoff %}
+                {% set _p_pagenum = 50 %}
+                {% set _p_total_cnt = lognum %}
+                {% set _p_postfix = postfix %}
+                {% include "pagination.html" %}
             </div>
         </div>
 
