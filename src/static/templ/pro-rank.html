@@ -44,9 +44,9 @@
           </tr>
         </thead>
         <tbody>
-          {% set rank = 1 %}
           {% set rank_display_class = "" %}
           {% for chal in chal_list %}
+            {% set rank = chal['rank'] %}
             {% if rank == 1 %}
               {% set rank_display_class = "rank-gold" %}
             {% elif rank == 2 %}
@@ -64,10 +64,23 @@
               <td>{{ round(chal['memory'] / 1024) }}</td>
               <td>{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
             </tr>
-          {% set rank = rank + 1 %}
           {% end %}
         </tbody>
       </table>
+
+      {% set postfix = f'&pagenum={pagenum}' %}
+
+      <div class="row">
+          <div class="col"></div>
+          <div class="col-6 pt-3">
+            {% set _p_pageoff = pageoff %}
+            {% set _p_pagenum = pagenum %}
+            {% set _p_total_cnt = total_cnt %}
+            {% set _p_postfix = postfix %}
+            {% include "pagination.html" %}
+          <div class="col"></div>
+          </div>
+      </div>
     </div>
   </div>
 </div>
