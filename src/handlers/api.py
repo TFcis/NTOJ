@@ -8,10 +8,6 @@ from services.user import UserService
 
 class ApiHandler(RequestHandler):
     @reqenv
-    async def get(self):
-        pass
-
-    @reqenv
     async def post(self):
         reqtype = str(self.get_argument('reqtype'))
         if reqtype == 'AC':

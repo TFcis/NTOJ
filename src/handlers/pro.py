@@ -138,10 +138,6 @@ class ProsetHandler(RequestHandler):
             isadmin=self.acct.is_kernel(),
         )
 
-    @reqenv
-    async def post(self):
-        pass
-
 
 class ProStaticHandler(RequestHandler):
     @reqenv
