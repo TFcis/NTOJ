@@ -88,8 +88,8 @@
 </script>
 
 <style>
-    
-@media only screen and (min-width: 992px){
+
+@media only screen and (min-width: 992px) {
     .pagination {
         justify-content: center;
     }
@@ -241,22 +241,11 @@
         <div class="row">
             <div class="col-1"></div>
             <div class="col pt-3">
-                <nav aria-label="Page navigation example">
-                    <ul class="pagination">
-                        <!-- this algorithm from toj -->
-                        <!-- 我沒研究怎麼實現的，但能用 -->
-                        <li class="page-item"><a class="page-link" href="?off=0{{ postfix }}">&#x21e4;</a></li>
-                        {% import math %}
-                        {% set limit = 40 %}
-                        {% set ct = math.floor(pageoff / limit) %}
-                        {% set st = min(max(0, ct - 9), max(0, math.ceil(pronum / limit) - 39)) %}
-                        {% for i, off in enumerate(range(st * limit, pronum, limit)) %}
-                        <li class="page-item {% if ct == (i + st) %} active {% end %}">
-                            <a class="page-link {% if ct == (i + st) %} active{% end %}" href="?off={{ str(off) + postfix }}">{{i + 1 + st}}</a>
-                        </li>
-                        {% end %}
-                    </ul>
-                </nav>
+                {% set _p_pageoff = pageoff %}
+                {% set _p_pagenum = 40 %}
+                {% set _p_total_cnt = pro_total_cnt %}
+                {% set _p_postfix = postfix %}
+                {% include "pagination.html" %}
             </div>
         </div>
 

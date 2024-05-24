@@ -13,10 +13,10 @@ class ChalListHandler(RequestHandler):
     @reqenv
     async def get(self):
         try:
-            off = int(self.get_argument('off'))
+            pageoff = int(self.get_argument('pageoff'))
 
         except tornado.web.HTTPError:
-            off = 0
+            pageoff = 0
 
         try:
             ppro_id = str(self.get_argument('proid'))
@@ -60,7 +60,7 @@ class ChalListHandler(RequestHandler):
 
         _, chalstat = await ChalService.inst.get_stat(self.acct, flt)
 
-        _, challist = await ChalService.inst.list_chal(off, 20, self.acct, flt)
+        _, challist = await ChalService.inst.list_chal(pageoff, 20, self.acct, flt)
 
         isadmin = self.acct.is_kernel()
         chalids = [chal['chal_id'] for chal in challist]
@@ -70,7 +70,7 @@ class ChalListHandler(RequestHandler):
             chalstat=chalstat,
             challist=challist,
             flt=flt,
-            pageoff=off,
+            pageoff=pageoff,
             ppro_id=ppro_id,
             pacct_id=pacct_id,
             acct=self.acct,

@@ -37,9 +37,9 @@ class ProsetHandler(RequestHandler):
     @reqenv
     async def get(self):
         try:
-            off = int(self.get_argument('off'))
+            pageoff = int(self.get_argument('pageoff'))
         except tornado.web.HTTPError:
-            off = 0
+            pageoff = 0
 
         try:
             order = self.get_argument('order')
@@ -123,17 +123,17 @@ class ProsetHandler(RequestHandler):
         if order_reverse:
             prolist.reverse()
 
-        pronum = len(prolist)
-        prolist = prolist[off : off + 40]
+        pro_total_cnt = len(prolist)
+        prolist = prolist[pageoff : pageoff + 40]
 
         await self.render(
             'proset',
-            pronum=pronum,
+            pro_total_cnt=pro_total_cnt,
             prolist=prolist,
             clas=clas,
             pubclass_list=pubclass_list,
             cur_pubclass=pubclass,
-            pageoff=off,
+            pageoff=pageoff,
             flt=flt,
             isadmin=self.acct.is_kernel(),
         )

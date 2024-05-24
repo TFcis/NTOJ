@@ -11,9 +11,9 @@ class LogHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
         try:
-            off = int(self.get_argument('off'))
+            pageoff = int(self.get_argument('pageoff'))
         except tornado.web.HTTPError:
-            off = 0
+            pageoff = 0
 
         try:
             logtype = str(self.get_argument('logtype'))
@@ -22,14 +22,14 @@ class LogHandler(RequestHandler):
 
         err, logtype_list = await LogService.inst.get_log_type()
 
-        err, log = await LogService.inst.list_log(off, 50, logtype)
+        err, log = await LogService.inst.list_log(pageoff, 50, logtype)
         if err:
             self.error(err)
             return
 
         await self.render(
             'loglist',
-            pageoff=off,
+            pageoff=pageoff,
             lognum=log['lognum'],
             loglist=log['loglist'],
             logtype_list=logtype_list,
