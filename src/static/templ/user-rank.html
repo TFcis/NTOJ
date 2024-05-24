@@ -1,0 +1,101 @@
+<link rel="stylesheet" type="text/css" href="/oj/blk.css">
+
+<style type="text/css">
+/* #ligr{
+  background:linear-gradient(#332F8D,#141E23);
+  background:-moz-linear-gradient(#332F8D,#141E23);
+  background:-o-linear-gradient(#332F8D,#141E23);
+  background:-webkit-gradient(linear,left top,left bottom,from(#332F8D),to(#141E23));
+} */
+
+.rank-gold > td {
+  background-color: #cab03b;
+}
+
+.rank-silver > td {
+  background-color: #7e7d73;
+}
+
+.rank-copper > td {
+  background-color: #b67335;
+}
+
+</style>
+
+<script type="text/javascript">
+    function init() {
+        document.querySelectorAll('img').forEach(function(img) {
+            img.onerror = function() {
+                this.style.display = 'none';
+            };
+        });
+    }
+</script>
+<body>
+<div class="col-lg-12">
+    <div class="row">
+      <table class="table table-borderless table-striped table-hover table-responsive">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th></th> <!-- for avatar -->
+            <th>Account</th>
+            <th>Accepted</th>
+            <th>AC Ratio</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set rank_display_class = "" %}
+          {% for acct in acctlist %}
+            {% set rank = chal.rank %}
+            {% if rank == 1 %}
+              {% set rank_display_class = "rank-gold" %}
+            {% elif rank == 2 %}
+              {% set rank_display_class = "rank-silver" %}
+            {% elif rank == 3 %}
+              {% set rank_display_class = "rank-copper" %}
+            {% else %}
+              {% set rank_display_class = "" %}
+            {% end %}
+            <tr class="{{ rank_display_class }}">
+              <td>{{ rank }}</td>
+              {% if acct.photo == "" %}
+                {% set acct.photo = f"https://www.gravatar.com/avatar/{ acct.acct_id }?d=identicon&f=y&s=480;" %}
+              {% end %}
+              <td><img class="img-fluid" width="30" height="30" src="{{ acct.photo }}" /></td>
+              <td><a href="/oj/acct/{{ acct.acct_id }}/"></a>{{ acct.name }}</td>
+              <td>{{ acct.rate_data['ac_pro_cnt'] }}</td>
+              <td>
+                {% if acct.rate_data['all_cnt'] != 0 %}
+                    {{ '%.2f' % (acct.rate_data['ac_cnt'] / acct.rate_data['all_cnt'] * 100) }}%
+                {% else %}
+                    {{ '0.00%' }}
+                {% end %}
+
+                (
+                <a style="color: #0F0;" href="/oj/chal/?acctid={{ acct.acct_id }}&state=1">{{ acct.rate_data['ac_cnt'] }}</a>
+                /
+                <a style="color: #0F0" href="/oj/chal/?acctid={{ acct.acct_id }}">{{ acct.rate_data['all_cnt'] }}</a>
+                )
+              </td>
+            </tr>
+          {% end %}
+        </tbody>
+      </table>
+
+      {% set postfix = f'&pagenum={pagenum}' %}
+
+      <div class="row">
+          <div class="col"></div>
+          <div class="col-6 pt-3">
+            {% set _p_pageoff = pageoff %}
+            {% set _p_pagenum = pagenum %}
+            {% set _p_total_cnt = total_cnt %}
+            {% set _p_postfix = postfix %}
+            {% include "pagination.html" %}
+          </div>
+          <div class="col"></div>
+      </div>
+    </div>
+</div>
+</body>
