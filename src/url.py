@@ -24,7 +24,7 @@ from handlers.pack import PackHandler
 # from handlers.manage import ManageHandler
 from handlers.pro import ProHandler, ProsetHandler, ProStaticHandler, ProTagsHandler
 from handlers.ques import QuestionHandler
-from handlers.rank import RankHandler
+from handlers.rank import ProRankHandler
 from handlers.report import ReportHandler
 from handlers.submit import SubmitHandler
 
@@ -59,7 +59,7 @@ def get_url(db, rs):
         (r'/question', QuestionHandler, args),
         (r'/set-tags', ProTagsHandler, args),
         (r'/log', LogHandler, args),
-        (r'/rank/(\d+)', RankHandler, args),
+        (r'/rank/(\d+)', ProRankHandler, args),
         # ('/auto',                 AutoHandler,args),
         (r'/code', CodeHandler, args),
         (r'/informsub', BulletinSub, args),
