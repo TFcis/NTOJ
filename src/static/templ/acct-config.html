@@ -1,0 +1,171 @@
+{{ htmlgen.set_page_title("Edit Account") }}
+
+{% if acct.acct_id != acct_id and not isadmin %}
+    You don't have permission.
+{% else %}
+<script id="contjs" type="text/javascript">
+    function init() {
+        let j_profile = $('#profile');
+        let j_reset = $('#reset');
+        let acct_id = "{{ acct.acct_id }}";
+
+        j_profile.find('button.submit').on('click', function(e) {
+            let name = j_profile.find('input.name').val();
+            let photo = j_profile.find('input.photo').val();
+            let cover = j_profile.find('input.cover').val();
+            
+            try {
+                new URL(photo);
+            } catch {
+                if (photo != "") {
+                    alert("Photo url is invalid");
+                    return;
+                }
+            }
+            
+            try {
+                new URL(cover);
+            } catch {
+                if (cover != "") {
+                    alert("Cover url is invalid");
+                    return;
+                }
+            }
+
+            $.post('/oj/be/acctedit', {
+                'reqtype': 'profile',
+                'acct_id': acct_id,
+                'name': name,
+                'photo': photo,
+                'cover': cover
+            }, function(res) {
+                let msg = 'Unknown';
+
+                if(res[0] == 'E') {
+                    if(res == 'Enamemin') {
+                        msg = 'Name length < min';
+                    } else if (res == 'Enamemax') {
+                        msg = 'Name length > max';
+                    }
+
+                    j_profile.find('div.print').print(res);
+
+                } else {
+                    j_profile.find('div.print').print('Success', true);
+                    index.reload();
+                }
+            });
+
+        });
+
+        j_reset.find('button.submit').on('click', function(e) {
+            let old = j_reset.find('input.old').val();
+            let pw = j_reset.find('input.pw').val();
+            let repeat = j_reset.find('input.repeat').val();
+
+            if (pw != repeat) {
+		        j_reset.find('div.print').print('Repeat incorrect');
+		        return;
+	        }
+
+            $.post('/oj/be/acctedit', {
+                'reqtype': 'reset',
+                'acct_id': acct_id,
+                'old': old,
+                'pw': pw,
+            }, function(res) {
+		        let msg = 'Unknown';
+
+                if (res[0] == 'E') {
+		            if (res == 'Epwmin') {
+			            msg = 'Password length < min';
+		            } else if (res == 'Epwmax') {
+			            msg = 'Password length > max';
+                    } else if (res == 'Epwold') {
+                        msg = 'Previous incorrect';
+                    }
+
+		            j_reset.find('div.print').print(msg);
+                } else {
+		            j_reset.find('div.print').print('Success', true);
+                    j_reset.find('input').val('');
+                }
+            });
+        });
+    }
+</script>
+
+<div class="row">
+    <div class="col-6">
+        <span>
+            <h1>Edit User <a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.name }}</a></h1>
+        </span>
+
+        {% if acct.acct_id == acct_id %}
+        <form id="profile">
+            <div class="mb-1">
+                <label class="form-label">Name</label>
+                <input class="name form-control" type="text" value="{{ acct.name }}" placeholder="name">
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">Email(WIP)</label>
+                <input class="name form-control" type="text" value="WIP (Email)" placeholder="email" disabled>
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">Motto(WIP)</label>
+                <input class="name form-control" type="text" value="WIP (Motto)" placeholder="motto" disabled>
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">Photo</label>
+                <input class="photo form-control" type="text" value="{{ acct.photo }}" placeholder="photo">
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">Cover</label>
+                <input class="cover form-control" type="text" value="{{ acct.cover }}" placeholder="cover">
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">Theme (WIP)</label>
+                <select class="form-select" disabled>
+                    <option value="dark">Dark Theme</option>
+                    <option value="light">Light Theme</option>
+                    <option value="classic">TOJ Classic Theme</option>
+                </select>
+            </div>
+            
+            <button type="button" class="btn btn-primary submit">更新</button>
+            <div class="print"></div>
+        </form>
+        {% end %}
+
+        {% if acct.acct_id == acct_id or isadmin %}
+        <form id="reset">
+            <h3>更改密碼</h3>
+
+            <div class="mb-1">
+                <label class="form-label">Current Password</label>
+                <input class="old form-control" type="password">
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">New Password</label>
+                <input class="pw form-control" type="password">
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">New Password Confirmation</label>
+                <input class="repeat form-control" type="password">
+            </div>
+
+            <button type="button" class="btn btn-warning submit">確認</button>
+            <div class="print"></div>
+        </form>
+        {% end %}
+    </div>
+</div>
+
+{% end %}

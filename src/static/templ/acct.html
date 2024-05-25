@@ -55,77 +55,8 @@
 
 <script id="contjs" type="text/javascript" photo="{{ acct.photo }}" cover="{{ acct.cover }}">
     function init() {
-        var photo = $('#contjs').attr('photo');
-        var cover = $('#contjs').attr('cover');
-        var j_profile = $('#profile');
-        var j_reset = $('#reset');
-
-        j_profile.find('button.submit').on('click', function(e) {
-            var name = j_profile.find('input.name').val();
-            var photo = j_profile.find('input.photo').val();
-            var cover = j_profile.find('input.cover').val();
-
-            $.post('/oj/be/acct', {
-                'reqtype': 'profile',
-                'acct_id': {{ acct.acct_id }},
-                'name': name,
-                'photo': photo,
-                'cover': cover
-            }, function(res) {
-                var msg = 'Unknown';
-
-                if(res[0] == 'E') {
-                    if(res == 'Enamemin') {
-                        msg = 'Name length < min';
-                    } else if (res == 'Enamemax') {
-                        msg = 'Name length > max';
-                    }
-
-                    // j_profile.find('div.print').print(msg);
-                    j_profile.find('div.print').print(res);
-
-                } else {
-                    j_profile.find('div.print').print('Success', true);
-                    index.reload();
-                }
-            });
-
-        });
-
-        j_reset.find('button.submit').on('click', function(e) {
-            var old = j_reset.find('input.old').val();
-            var pw = j_reset.find('input.pw').val();
-            var repeat = j_reset.find('input.repeat').val();
-
-            if (pw != repeat) {
-		        j_reset.find('div.print').print('Repeat incorrect');
-		        return;
-	        }
-
-            $.post('/oj/be/acct', {
-                'reqtype': 'reset',
-                'acct_id': {{ acct.acct_id }},
-                'old': old,
-                'pw': pw,
-            }, function(res) {
-		        var msg = 'Unknown';
-
-                if(res[0] == 'E') {
-		            if (res == 'Epwmin') {
-			            msg = 'Password length < min';
-		            } else if (res == 'Epwmax') {
-			            msg = 'Password length > max';
-                    } else if (res == 'Epwold') {
-                        msg = 'Previous incorrect';
-                    }
-
-		            j_reset.find('div.print').print(msg);
-                } else {
-		            j_reset.find('div.print').print('Success', true);
-                    j_reset.find('input').val('');
-                }
-            });
-        });
+        let photo = $('#contjs').attr('photo');
+        let cover = $('#contjs').attr('cover');
 
         if (photo == '') {
             photo = 'https://www.gravatar.com/avatar/{{ acct.acct_id }}?d=identicon&f=y&s=480;'
@@ -162,6 +93,10 @@
                         <td style="text-align: right;">{{ rate['rate'] }}</td>
                     </tr>
                     <tr>
+                        <td>Accepted</td> 
+                        <td style="text-align: right;">{{ rate['ac_pro_cnt'] }}</td>
+                    </tr>
+                    <tr>
                         <td>AC Ratio</td>
                         <td style="text-align: right;">
                             {% if rate['all_cnt'] == 0 %}
@@ -178,47 +113,12 @@
                     </tr>
                 </tbody>
             </table>
-
             {% if acct.acct_id == acct_id %}
-                <div class="mb-1">
-                    <label class="form-label">Name</label>
-                    <input class="name form-control" type="text" value="{{ acct.name }}" placeholder="name">
-                </div>
-
-                <div class="mb-1">
-                    <label class="form-label">Photo</label>
-                    <input class="photo form-control" type="text" value="{{ acct.photo }}" placeholder="photo">
-                </div>
-
-                <div class="mb-1">
-                    <label class="form-label">Cover</label>
-                    <input class="cover form-control" type="text" value="{{ acct.cover }}" placeholder="cover">
-                </div>
-
-                <button type="button" class="btn btn-primary submit">更新</button>
-                <div class="print"></div>
+                <a class="btn btn-primary" href="/oj/acctedit/{{ acct_id }}/">Edit My Account</a>
+            {% elif isadmin %}
+                <a class="btn btn-primary" href="/oj/acctedit/{{ acct_id }}/">Edit Account Password</a>
             {% end %}
         </form>
-    {% if (acct.acct_id == acct_id) or (isadmin) %}
-        <form id="reset">
-            <h3>更改密碼</h3>
-
-            <div class="mb-1">
-                <input class="old form-control" type="password" placeholder="previous">
-            </div>
-
-            <div class="mb-1">
-                <input class="pw form-control" type="password" placeholder="password">
-            </div>
-
-            <div class="mb-1">
-                <input class="repeat form-control" type="password" placeholder="repeat">
-            </div>
-
-            <button type="button" class="btn btn-warning submit">確認</button>
-            <div class="print"></div>
-        </form>
-    {% end %}
     </div>
     <div class="col-lg-9">
         <table class="table" style="font-size: 130%;" border="1px" bordercolor="gray">
