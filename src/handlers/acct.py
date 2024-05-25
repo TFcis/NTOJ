@@ -47,12 +47,25 @@ class AcctHandler(RequestHandler):
 
         isadmin = self.acct.is_kernel()
         rate_data['rate'] = math.floor(rate_data['rate'])
+        rate_data['ac_pro_cnt'] = sum(t.get('rate') == 100 for t in ratemap.values())
 
         # force https, add by xiplus, 2018/8/24
         acct.photo = re.sub(r'^http://', 'https://', acct.photo)
         acct.cover = re.sub(r'^http://', 'https://', acct.cover)
 
         await self.render('acct', acct=acct, rate=rate_data, prolist=prolist2, isadmin=isadmin)
+
+
+class AcctConfigHandler(RequestHandler):
+    @reqenv
+    async def get(self, acct_id):
+        acct_id = int(acct_id)
+        err, acct = await UserService.inst.info_acct(acct_id)
+        if err:
+            self.error(err)
+            return
+
+        await self.render('acct-config', acct=acct, isadmin=self.acct.is_kernel())
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
@@ -63,10 +76,13 @@ class AcctHandler(RequestHandler):
             name = self.get_argument('name')
             photo = self.get_argument('photo')
             cover = self.get_argument('cover')
+            acct_id = self.get_argument('acct_id')
 
-            err, _ = await UserService.inst.update_acct(
-                self.acct.acct_id, self.acct.acct_type, self.acct.acct_class, name, photo, cover
-            )
+            if acct_id != str(self.acct.acct_id):
+                self.error('Eacces')
+                return
+
+            err, _ = await UserService.inst.update_acct(self.acct.acct_id, self.acct.acct_type, self.acct.acct_class, name, photo, cover)
             if err:
                 self.error(err)
                 return
@@ -92,7 +108,6 @@ class AcctHandler(RequestHandler):
             return
 
         self.error('Eunk')
-
 
 class SignHandler(RequestHandler):
     @reqenv
