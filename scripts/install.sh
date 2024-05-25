@@ -38,6 +38,10 @@ if [ -z $ADMIN_PASSWORD ]; then
 	ADMIN_PASSWORD=admin1234
 fi
 
+if [ -z $SITE_TITLE ]; then
+    SITE_TITLE="New TNFSH Online Judge"
+fi
+
 # Update and upgrade
 sudo apt update
 sudo apt upgrade
@@ -111,6 +115,7 @@ DBNAME_OJ  = '${DB_NAME}'
 DBUSER_OJ  = '${DB_USERNAME}'
 DBPW_OJ    = '${DB_PASSWORD}'
 COOKIE_SEC = '${COOKIE_SEC}'
+SITE_TITLE = '${SITE_TITLE}'
 lock_user_list = []
 can_see_code_user = [1]
 unlock_pwd = ${UNLOCK_PWD}
