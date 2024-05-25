@@ -11,13 +11,13 @@
       {% set ct = math.floor(_p_pageoff / _p_pagenum) %}
       {% set st = min(max(0, ct - 9), max(0, math.ceil(_p_total_cnt / _p_pagenum) - LI_ITEM_CNT)) %}
 
-      <li class="page-item"><a class="page-link" href="?_p_pageoff=0{{ _p_postfix }}">&#x21e4;</a></li>
+      <li class="page-item"><a class="page-link" href="?pageoff=0{{ _p_postfix }}">&#x21e4;</a></li>
       {% for i, off in enumerate(range(st * _p_pagenum, min(_p_total_cnt, st * _p_pagenum + LI_ITEM_CNT * _p_pagenum), _p_pagenum)) %}
           <li class="page-item {% if ct == (i + st) %} active {% end %}">
-              <a class="page-link {% if ct == (i + st) %} active{% end %}" href="?_p_pageoff={{ str(off) + _p_postfix }}">{{i + 1 + st}}</a>
+              <a class="page-link {% if ct == (i + st) %} active {% end %}" href="?pageoff={{ str(off) + _p_postfix }}">{{i + 1 + st}}</a>
           </li>
       {% end %}
 
-      <li class="page-item"><a class="page-link" href="?_p_pageoff={{ math.floor(_p_total_cnt / _p_pagenum) * _p_pagenum }}{{ _p_postfix }}">&#x21e5;</a></li>
+      <li class="page-item"><a class="page-link" href="?pageoff={{ math.floor(_p_total_cnt / _p_pagenum) * _p_pagenum }}{{ _p_postfix }}">&#x21e5;</a></li>
   </ul>
 </nav>
