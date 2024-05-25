@@ -47,7 +47,7 @@ class AcctHandler(RequestHandler):
 
         isadmin = self.acct.is_kernel()
         rate_data['rate'] = math.floor(rate_data['rate'])
-        rate_data['ac_pro_cnt'] = sum(1 for t in ratemap.values() if t['rate'] == 100)
+        rate_data['ac_pro_cnt'] = sum(t.get('rate') == 100 for t in ratemap.values())
 
         # force https, add by xiplus, 2018/8/24
         acct.photo = re.sub(r'^http://', 'https://', acct.photo)
