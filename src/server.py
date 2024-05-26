@@ -1,4 +1,7 @@
+import functools
+import signal
 import asyncio
+import time
 from multiprocessing import Process
 
 import asyncpg
@@ -15,6 +18,41 @@ from redis import asyncio as aioredis
 import url as ur
 from services.judge import JudgeServerClusterService
 from services.service import services_init
+
+MAX_WAIT_SECONDS_BEFORE_SHUTDOWN = 3
+
+
+def sig_handler(server, db, rs, pool, sig, frame):
+    io_loop = tornado.ioloop.IOLoop.current()
+
+    def stop_loop(deadline):
+        now = time.time()
+        if now < deadline and io_loop.time:
+            print('Waiting for next tick')
+            io_loop.add_timeout(now + 1, stop_loop, deadline)
+        else:
+            view_task_process.kill()
+
+            for task in asyncio.all_tasks():
+                task.cancel()
+
+            io_loop.run_in_executor(func=db.close, executor=None)
+            io_loop.run_in_executor(func=rs.aclose, executor=None)
+            io_loop.run_in_executor(func=pool.aclose, executor=None)
+            io_loop.run_in_executor(func=JudgeServerClusterService.inst.disconnect_all_server, executor=None)
+            io_loop.stop()
+
+            print('Shutdown finally')
+
+    def shutdown():
+        print('Stopping http server')
+        server.stop()
+        print('Will shutdown in %s seconds ...',
+              MAX_WAIT_SECONDS_BEFORE_SHUTDOWN)
+        stop_loop(time.time() + MAX_WAIT_SECONDS_BEFORE_SHUTDOWN)
+
+    print('Caught signal: %s' % sig)
+    io_loop.add_callback_from_signal(shutdown)
 
 
 async def materialized_view_task():
@@ -46,6 +84,8 @@ if __name__ == "__main__":
     httpsock = tornado.netutil.bind_sockets(5500)
 
     def run_materialized_view_task():
+        signal.signal(signal.SIGINT, lambda _, __: loop.stop())
+        signal.signal(signal.SIGTERM, lambda _, __: loop.stop())
         try:
             loop = asyncio.new_event_loop()
             loop.run_until_complete(materialized_view_task())
@@ -54,6 +94,7 @@ if __name__ == "__main__":
         finally:
             loop.stop()
             loop.close()
+
 
     view_task_process = Process(target=run_materialized_view_task)
     view_task_process.start()
@@ -79,18 +120,10 @@ if __name__ == "__main__":
 
     tornado.ioloop.IOLoop.current().run_sync(JudgeServerClusterService.inst.start)
 
+    signal.signal(signal.SIGINT, functools.partial(sig_handler, httpsrv, db, rs, pool))
+    signal.signal(signal.SIGTERM, functools.partial(sig_handler, httpsrv, db, rs, pool))
+
     try:
         tornado.ioloop.IOLoop.current().start()
     except:
         pass
-
-    finally:
-        view_task_process.kill()
-
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(db.close())
-        loop.run_until_complete(rs.aclose())
-        loop.run_until_complete(pool.aclose())
-        loop.run_until_complete(JudgeServerClusterService.inst.disconnect_all_server())
-        tornado.ioloop.IOLoop.current().stop()
-        tornado.ioloop.IOLoop.current().close()
