@@ -17,9 +17,7 @@ def get_manage_url(db, rs, pool):
         'rs': rs,
     }
 
-    sub_args = {
-        'pool': pool
-    }
+    sub_args = {'pool': pool}
 
     return [
         ('/manage/dash', ManageDashHandler, args),

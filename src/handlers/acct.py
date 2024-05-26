@@ -82,7 +82,9 @@ class AcctConfigHandler(RequestHandler):
                 self.error('Eacces')
                 return
 
-            err, _ = await UserService.inst.update_acct(self.acct.acct_id, self.acct.acct_type, self.acct.acct_class, name, photo, cover)
+            err, _ = await UserService.inst.update_acct(
+                self.acct.acct_id, self.acct.acct_type, self.acct.acct_class, name, photo, cover
+            )
             if err:
                 self.error(err)
                 return
@@ -108,6 +110,7 @@ class AcctConfigHandler(RequestHandler):
             return
 
         self.error('Eunk')
+
 
 class SignHandler(RequestHandler):
     @reqenv

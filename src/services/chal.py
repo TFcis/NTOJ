@@ -3,7 +3,6 @@ import json
 import os
 
 import config
-
 from services.judge import JudgeServerClusterService
 from services.log import LogService
 from services.pro import ProService

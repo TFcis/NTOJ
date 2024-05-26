@@ -1,11 +1,10 @@
+import asyncio
 import functools
 import signal
-import asyncio
 import time
 from multiprocessing import Process
 
 import asyncpg
-import config
 import tornado.httpserver
 import tornado.ioloop
 import tornado.log
@@ -15,6 +14,7 @@ import tornado.process
 import tornado.web
 from redis import asyncio as aioredis
 
+import config
 import url as ur
 from services.judge import JudgeServerClusterService
 from services.service import services_init
@@ -47,8 +47,7 @@ def sig_handler(server, db, rs, pool, sig, frame):
     def shutdown():
         print('Stopping http server')
         server.stop()
-        print('Will shutdown in %s seconds ...',
-              MAX_WAIT_SECONDS_BEFORE_SHUTDOWN)
+        print('Will shutdown in %s seconds ...', MAX_WAIT_SECONDS_BEFORE_SHUTDOWN)
         stop_loop(time.time() + MAX_WAIT_SECONDS_BEFORE_SHUTDOWN)
 
     print('Caught signal: %s' % sig)
@@ -94,7 +93,6 @@ if __name__ == "__main__":
         finally:
             loop.stop()
             loop.close()
-
 
     view_task_process = Process(target=run_materialized_view_task)
     view_task_process.start()

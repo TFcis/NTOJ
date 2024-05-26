@@ -1,10 +1,15 @@
 import asyncio
 import base64
 
-import config
 from msgpack import packb, unpackb
 
-from handlers.base import RequestHandler, WebSocketSubHandler, reqenv, require_permission
+import config
+from handlers.base import (
+    RequestHandler,
+    WebSocketSubHandler,
+    reqenv,
+    require_permission,
+)
 from services.judge import JudgeServerClusterService
 from services.log import LogService
 from services.user import UserConst

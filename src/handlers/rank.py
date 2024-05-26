@@ -3,8 +3,8 @@ import datetime
 import tornado.web
 
 from handlers.base import RequestHandler, reqenv
-from services.user import UserService, UserConst
 from services.rate import RateService
+from services.user import UserConst, UserService
 
 
 class ProRankHandler(RequestHandler):
@@ -49,7 +49,10 @@ class ProRankHandler(RequestHandler):
                 ') temp '
                 'ORDER BY "runtime" ASC, "memory" ASC,'
                 '"timestamp" ASC, "acct_id" ASC OFFSET $3 LIMIT $4;',
-                self.acct.acct_type, pro_id, pageoff, pagenum,
+                self.acct.acct_type,
+                pro_id,
+                pageoff,
+                pagenum,
             )
 
             total_cnt = await con.fetch(
@@ -67,7 +70,8 @@ class ProRankHandler(RequestHandler):
                 AND "challenge_state"."state"=1
                 ) AS temp;
                 ''',
-                self.acct.acct_type, pro_id,
+                self.acct.acct_type,
+                pro_id,
             )
             total_cnt = total_cnt[0]['count']
 
@@ -86,7 +90,8 @@ class ProRankHandler(RequestHandler):
                 AND "challenge_state"."state"=1
                 ) AS temp;
                 ''',
-                self.acct.acct_type, pro_id,
+                self.acct.acct_type,
+                pro_id,
             )
             total_cnt = total_cnt[0]['count']
 
@@ -104,7 +109,10 @@ class ProRankHandler(RequestHandler):
                 }
             )
 
-        await self.render('pro-rank', pro_id=pro_id, chal_list=chal_list, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt)
+        await self.render(
+            'pro-rank', pro_id=pro_id, chal_list=chal_list, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt
+        )
+
 
 class UserRankHandler(RequestHandler):
     @reqenv
@@ -142,14 +150,21 @@ class UserRankHandler(RequestHandler):
                 self.error(err)
                 return
 
-
             rate_data['ac_pro_cnt'] = sum(1 for r in ratemap[acct.acct_id].values() if r['rate'] == 100)
             acct.rate_data = rate_data
             acct.photo = t_acct.photo
 
         total_cnt = len(acctlist)
-        acctlist.sort(key=lambda acct: (acct.rate_data['ac_pro_cnt'], acct.rate_data['ac_cnt'], acct.rate_data['all_cnt'], acct.rate_data['rate']), reverse=True)
-        acctlist = acctlist[pageoff: pageoff + pagenum]
+        acctlist.sort(
+            key=lambda acct: (
+                acct.rate_data['ac_pro_cnt'],
+                acct.rate_data['ac_cnt'],
+                acct.rate_data['all_cnt'],
+                acct.rate_data['rate'],
+            ),
+            reverse=True,
+        )
+        acctlist = acctlist[pageoff : pageoff + pagenum]
         for rank, acct in enumerate(acctlist):
             acct.rank = rank + 1 + pageoff
 

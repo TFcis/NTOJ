@@ -1,5 +1,5 @@
 # from auto import AutoHandler
-from handlers.acct import AcctHandler, AcctConfigHandler, SignHandler
+from handlers.acct import AcctConfigHandler, AcctHandler, SignHandler
 from handlers.api import ApiHandler
 from handlers.board import BoardHandler
 from handlers.bulletin import BulletinHandler, BulletinSub
@@ -35,9 +35,7 @@ def get_url(db, rs, pool):
         'rs': rs,
     }
 
-    sub_args = {
-        'pool': pool
-    }
+    sub_args = {'pool': pool}
 
     return [
         (r'/index', IndexHandler, args),
