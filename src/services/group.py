@@ -67,7 +67,8 @@ class GroupService:
             {
                 'acct_id': int(acct_id),
                 'acct_name': str(acct_name),
-            } for acct_id, acct_name in result
+            }
+            for acct_id, acct_name in result
         ]
 
         return acct_list

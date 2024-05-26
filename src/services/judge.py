@@ -6,9 +6,9 @@ from email.mime.text import MIMEText
 from queue import PriorityQueue
 from typing import Dict, List, Literal, Union
 
-import config
 from tornado.websocket import websocket_connect
 
+import config
 from services.log import LogService
 
 

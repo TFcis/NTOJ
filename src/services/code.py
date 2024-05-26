@@ -1,5 +1,4 @@
 import config
-
 from services.chal import ChalConst
 from services.user import Account
 

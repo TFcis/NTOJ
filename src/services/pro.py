@@ -5,9 +5,9 @@ import os
 import re
 from collections import OrderedDict
 
-import config
 from msgpack import packb, unpackb
 
+import config
 from services.pack import PackService
 from services.user import Account
 
