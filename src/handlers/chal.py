@@ -3,7 +3,7 @@ import json
 
 import tornado.web
 
-from handlers.base import RequestHandler, WebSocketHandler, reqenv
+from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
 from services.chal import ChalConst, ChalService
 from services.pro import ProService
 from services.user import UserService
@@ -103,52 +103,42 @@ class ChalHandler(RequestHandler):
 from redis import asyncio as aioredis
 
 
-class ChalListNewChalHandler(WebSocketHandler):
+class ChalListNewChalHandler(WebSocketSubHandler):
+    async def listen_challistnewchal(self):
+        async for msg in self.p.listen():
+            if msg['type'] != 'message':
+                continue
+
+            await self.on_message(str(int(msg['data'])))
+
     async def open(self):
-        self.ars = aioredis.Redis(host='localhost', port=6379, db=1)
-        self.p = self.ars.pubsub()
         await self.p.subscribe('challist_sub')
 
-        async def test():
-            async for msg in self.p.listen():
-                if msg['type'] != 'message':
-                    continue
-
-                await self.on_message(str(int(msg['data'])))
-
-        self.task = asyncio.tasks.Task(test())
+        self.task = asyncio.tasks.Task(self.listen_challistnewchal())
 
     async def on_message(self, msg):
-        self.write_message(msg)
-
-    def on_close(self) -> None:
-        self.task.cancel()
-
-    def check_origin(self, _):
-        return True
+        await self.write_message(msg)
 
 
-class ChalListNewStateHandler(WebSocketHandler):
+class ChalListNewStateHandler(WebSocketSubHandler):
+    async def listen_challiststate(self):
+        async for msg in self.p.listen():
+            if msg['type'] != 'message':
+                continue
+
+            chal_id = int(msg['data'])
+            if self.first_chal_id <= chal_id <= self.last_chal_id:
+                _, new_state = await ChalService.inst.get_single_chal_state_in_list(chal_id, self.acct)
+                await self.write_message(json.dumps(new_state))
+
     async def open(self):
         self.first_chal_id = -1
         self.last_chal_id = -1
         self.acct = None
 
-        self.ars = aioredis.Redis(host='localhost', port=6379, db=1)
-        self.p = self.ars.pubsub()
         await self.p.subscribe('challiststatesub')
 
-        async def listen_challiststate():
-            async for msg in self.p.listen():
-                if msg['type'] != 'message':
-                    continue
-
-                chal_id = int(msg['data'])
-                if self.first_chal_id <= chal_id <= self.last_chal_id:
-                    _, new_state = await ChalService.inst.get_single_chal_state_in_list(chal_id, self.acct)
-                    await self.write_message(json.dumps(new_state))
-
-        self.task = asyncio.tasks.Task(listen_challiststate())
+        self.task = asyncio.tasks.Task(self.listen_challiststate())
 
     async def on_message(self, msg):
         if self.acct is None:
@@ -162,37 +152,23 @@ class ChalListNewStateHandler(WebSocketHandler):
 
             self.acct = acct
 
-    def on_close(self) -> None:
-        self.task.cancel()
 
-    def check_origin(self, _):
-        return True
+class ChalNewStateHandler(WebSocketSubHandler):
 
+    async def listen_chalstate(self):
+        async for msg in self.p.listen():
+            if msg['type'] != 'message':
+                continue
 
-class ChalNewStateHandler(WebSocketHandler):
+            if int(msg['data']) == self.chal_id:
+                _, chal_states = await ChalService.inst.get_chal_state(self.chal_id)
+                await self.write_message(json.dumps(chal_states))
+
     async def open(self):
         self.chal_id = -1
-        self.ars = aioredis.Redis(host='localhost', port=6379, db=1)
-        self.p = self.ars.pubsub()
         await self.p.subscribe('chalstatesub')
-
-        async def listen_chalstate():
-            async for msg in self.p.listen():
-                if msg['type'] != 'message':
-                    continue
-
-                if int(msg['data']) == self.chal_id:
-                    _, chal_states = await ChalService.inst.get_chal_state(self.chal_id)
-                    await self.write_message(json.dumps(chal_states))
-
-        self.task = asyncio.tasks.Task(listen_chalstate())
+        self.task = asyncio.tasks.Task(self.listen_chalstate())
 
     async def on_message(self, msg):
         if self.chal_id == -1 and msg.isdigit():
             self.chal_id = int(msg)
-
-    def on_close(self) -> None:
-        self.task.cancel()
-
-    def check_origin(self, _):
-        return True

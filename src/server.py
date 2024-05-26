@@ -59,13 +59,14 @@ if __name__ == "__main__":
     view_task_process.start()
 
     # tornado.process.fork_processes(4)
-    db = asyncio.get_event_loop().run_until_complete(
+    db: asyncpg.Pool = asyncio.get_event_loop().run_until_complete(
         asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost')
     )
-    rs = aioredis.Redis(host='localhost', port=6379, db=1)
+    pool = aioredis.ConnectionPool.from_url("redis://localhost", db=1)
+    rs = aioredis.Redis.from_pool(pool)
 
     services_init(db, rs)
-    app = tornado.web.Application(ur.get_url(db, rs), autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC)
+    app = tornado.web.Application(ur.get_url(db, rs, pool), autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC)
     # NOTE: for dev
     # app = tornado.web.Application(ur.get_url(db, rs), autoescape='xhtml_escape', cookie_secret=config.COOKIE_SEC, debug=True, autoreload=True)
 
@@ -89,6 +90,7 @@ if __name__ == "__main__":
         loop = asyncio.get_event_loop()
         loop.run_until_complete(db.close())
         loop.run_until_complete(rs.aclose())
+        loop.run_until_complete(pool.aclose())
         loop.run_until_complete(JudgeServerClusterService.inst.disconnect_all_server())
         tornado.ioloop.IOLoop.current().stop()
         tornado.ioloop.IOLoop.current().close()

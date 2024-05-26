@@ -11,10 +11,14 @@ from handlers.manage.proclass import ManageProClassHandler
 from handlers.manage.question import ManageQuestionHandler
 
 
-def get_manage_url(db, rs):
+def get_manage_url(db, rs, pool):
     args = {
         'db': db,
         'rs': rs,
+    }
+
+    sub_args = {
+        'pool': pool
     }
 
     return [
@@ -34,6 +38,6 @@ def get_manage_url(db, rs):
         ('/manage/question/(.+)', ManageQuestionHandler, args),
         ('/manage/group', ManageGroupHandler, args),
         ('/manage/judge', ManageJudgeHandler, args),
-        ('/manage/judgecntws', JudgeChalCntSub, args),
+        ('/manage/judgecntws', JudgeChalCntSub, sub_args),
         ('/manage/pack', ManagePackHandler, args),
     ]

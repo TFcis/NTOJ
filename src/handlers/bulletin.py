@@ -2,7 +2,7 @@ import asyncio
 
 from redis import asyncio as aioredis
 
-from handlers.base import RequestHandler, WebSocketHandler, reqenv
+from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
 from services.bulletin import BulletinService
 from services.judge import JudgeServerClusterService
 
@@ -23,31 +23,25 @@ class BulletinHandler(RequestHandler):
         await self.render('bulletin', bulletin=bulletin)
 
 
-class BulletinSub(WebSocketHandler):
+class BulletinSub(WebSocketSubHandler):
+    async def listen_newbulletin(self):
+        async for msg in self.p.listen():
+            if msg['type'] != 'message':
+                continue
+
+            await self.on_message(str(int(msg['data'])))
+
     async def open(self):
-        self.ars = aioredis.Redis(host='localhost', port=6379, db=1)
-        await self.ars.incr('online_counter', 1)
-        await self.ars.sadd('online_counter_set', self.request.remote_ip)
-        self.p = self.ars.pubsub()
+        await self.rs.incr('online_counter', 1)
+        await self.rs.sadd('online_counter_set', self.request.remote_ip)
         await self.p.subscribe('bulletinsub')
 
-        async def test():
-            async for msg in self.p.listen():
-                if msg['type'] != 'message':
-                    continue
-
-                await self.on_message(str(int(msg['data'])))
-
-        self.task = asyncio.tasks.Task(test())
+        self.task = asyncio.tasks.Task(self.listen_newbulletin())
 
     async def on_message(self, msg):
-        self.write_message(msg)
+        await self.write_message(msg)
 
     def on_close(self) -> None:
-        asyncio.create_task(self.ars.decr('online_counter', 1))
-        asyncio.create_task(self.ars.srem('online_counter_set', self.request.remote_ip))
-        self.task.cancel()
-
-    def check_origin(self, origin):
-        # TODO: secure
-        return True
+        super().on_close()
+        asyncio.create_task(self.rs.decr('online_counter', 1))
+        asyncio.create_task(self.rs.srem('online_counter_set', self.request.remote_ip))

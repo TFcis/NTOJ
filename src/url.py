@@ -29,10 +29,14 @@ from handlers.report import ReportHandler
 from handlers.submit import SubmitHandler
 
 
-def get_url(db, rs):
+def get_url(db, rs, pool):
     args = {
         'db': db,
         'rs': rs,
+    }
+
+    sub_args = {
+        'pool': pool
     }
 
     return [
@@ -52,9 +56,9 @@ def get_url(db, rs):
         (r'/submit', SubmitHandler, args),
         (r'/chal/(\d+)', ChalHandler, args),
         (r'/chal', ChalListHandler, args),
-        (r'/challistnewchalsub', ChalListNewChalHandler, args),
-        (r'/challistnewstatesub', ChalListNewStateHandler, args),
-        (r'/chalnewstatesub', ChalNewStateHandler, args),
+        (r'/challistnewchalsub', ChalListNewChalHandler, sub_args),
+        (r'/challistnewstatesub', ChalListNewStateHandler, sub_args),
+        (r'/chalnewstatesub', ChalNewStateHandler, sub_args),
         (r'/pack', PackHandler, args),
         (r'/about', AbouotHandler, args),
         (r'/question', QuestionHandler, args),
@@ -64,9 +68,9 @@ def get_url(db, rs):
         (r'/users', UserRankHandler, args),
         # ('/auto',                 AutoHandler,args),
         (r'/code', CodeHandler, args),
-        (r'/informsub', BulletinSub, args),
+        (r'/informsub', BulletinSub, sub_args),
         (r'/online_count', OnlineCounterHandler, args),
         (r'/api', ApiHandler, args),
         (r'/dev-info', DevInfoHandler, args),
         (r'/report', ReportHandler, args),
-    ] + get_manage_url(db, rs)
+    ] + get_manage_url(db, rs, pool)

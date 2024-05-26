@@ -1,18 +1,21 @@
 import datetime
+import asyncio
 import json
 
+import asyncpg
 import tornado.gen
 import tornado.template
 import tornado.web
 import tornado.websocket
+from redis import asyncio as aioredis
 
 from services.user import UserService
 
 
 class RequestHandler(tornado.web.RequestHandler):
     def __init__(self, *args, **kwargs):
-        self.db = kwargs.pop('db')
-        self.rs = kwargs.pop('rs')
+        self.db: asyncpg.Pool = kwargs.pop('db')
+        self.rs: aioredis.Redis = kwargs.pop('rs')
         self.tpldr = tornado.template.Loader('static/templ')
 
         super().__init__(*args, **kwargs)
@@ -56,10 +59,27 @@ class RequestHandler(tornado.web.RequestHandler):
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def __init__(self, *args, **kwargs):
-        self.db = kwargs.pop('db')
-        self.rs = kwargs.pop('rs')
+        self.db: asyncpg.Pool = kwargs.pop('db')
+        self.rs: aioredis.Redis = kwargs.pop('rs')
 
         super().__init__(*args, **kwargs)
+
+
+class WebSocketSubHandler(tornado.websocket.WebSocketHandler):
+    def __init__(self, *args, **kwargs):
+        pool = kwargs.pop('pool')
+        self.rs: aioredis.Redis = aioredis.Redis(connection_pool=pool)
+        self.p = self.rs.pubsub()
+        self.task: asyncio.Task = None
+
+        super().__init__(*args, **kwargs)
+
+    def check_origin(self, origin: str) -> bool:
+        return True
+
+    def on_close(self) -> None:
+        self.task.cancel()
+        asyncio.create_task(self.rs.aclose())
 
 
 def reqenv(func):
