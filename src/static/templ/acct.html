@@ -93,7 +93,7 @@
                         <td style="text-align: right;">{{ rate['rate'] }}</td>
                     </tr>
                     <tr>
-                        <td>Accepted</td> 
+                        <td>Accepted</td>
                         <td style="text-align: right;">{{ rate['ac_pro_cnt'] }}</td>
                     </tr>
                     <tr>
@@ -114,9 +114,9 @@
                 </tbody>
             </table>
             {% if acct.acct_id == acct_id %}
-                <a class="btn btn-primary" href="/oj/acctedit/{{ acct_id }}/">Edit My Account</a>
+                <a class="btn btn-primary" href="/oj/acctedit/{{ acct.acct_id }}/">Edit My Account</a>
             {% elif isadmin %}
-                <a class="btn btn-primary" href="/oj/acctedit/{{ acct_id }}/">Edit Account Password</a>
+                <a class="btn btn-primary" href="/oj/acctedit/{{ acct.acct_id }}/">Edit Account Password</a>
             {% end %}
         </form>
     </div>
