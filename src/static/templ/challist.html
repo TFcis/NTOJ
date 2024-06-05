@@ -5,7 +5,7 @@
 
 <script type="text/javascript">
     var newchal_ws, newstate_ws;
-    const state_map = {
+    var state_map = {
         1: 'Accepted',
         2: 'Wrong Answer',
         3: 'Runtime Error',
@@ -20,7 +20,7 @@
         101: 'Not Started'
     };
     var chalsub_count;
-    const re = /[^0-9,\ ]/
+    var re = /[^0-9,\ ]/
 
     function init() {
         var j_filter = $('#filter');
