@@ -1,9 +1,10 @@
+import asyncio
 import base64
 import json
 
-import config
 from msgpack import packb, unpackb
 
+import config
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.chal import ChalConst, ChalService
 from services.judge import JudgeServerClusterService
@@ -187,7 +188,7 @@ class ManageProHandler(RequestHandler):
                         await con.execute(
                             '''
                                 INSERT INTO "test_config"
-                                ("pro_id", "test_idx", "compile_type", "score_type", "check_type",
+                                ("pro_id", "test_idx", "compiler_type", "score_type", "check_type",
                                 "timelimit", "memlimit", "weight", "metadata", "chalmeta")
                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
                             ''',
@@ -240,44 +241,63 @@ class ManageProHandler(RequestHandler):
                 self.finish('S')
 
         elif page is None:  # pro-list
+            is_all_chal = False
             if reqtype == 'rechal':
-                pro_id = int(self.get_argument('pro_id'))
+                pass
 
-                can_submit = await JudgeServerClusterService.inst.is_server_online()
-                if not can_submit:
-                    self.error('Ejudge')
+            elif reqtype == 'rechalall':
+                pwd = self.get_argument('pwd')
+                if config.unlock_pwd != base64.b64encode(packb(pwd)):
+                    self.error('Eacces')
                     return
+                is_all_chal = True
 
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    self.error(err)
-                    return
+            else:
+                self.error('Eunk')
+                return
 
-                async with self.db.acquire() as con:
-                    result = await con.fetch(
-                        '''
-                            SELECT "challenge"."chal_id", "challenge"."compile_type" FROM "challenge"
-                            LEFT JOIN "challenge_state"
-                            ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                            WHERE "pro_id" = $1 AND "challenge_state"."state" IS NULL;
-                        ''',
-                        pro_id,
-                    )
-                await LogService.inst.add_log(
-                    f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
-                    'manage.chal.rechal',
+            pro_id = int(self.get_argument('pro_id'))
+            can_submit = await JudgeServerClusterService.inst.is_server_online()
+            if not can_submit:
+                self.error('Ejudge')
+                return
+
+            err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            if err:
+                self.error(err)
+                return
+
+            async with self.db.acquire() as con:
+                if is_all_chal:
+                    sql = ""
+                else:
+                    sql = '''AND "challenge_state"."state" IS NULL'''
+                result = await con.fetch(
+                    f'''
+                        SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"
+                        LEFT JOIN "challenge_state"
+                        ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                        WHERE "pro_id" = $1 {sql};
+                    ''',
+                    pro_id,
                 )
+            await LogService.inst.add_log(
+                f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
+                'manage.chal.rechal',
+            )
 
-                for chal_id, comp_type in result:
+            async def _rechal(rechals):
+                for chal_id, comp_type in rechals:
                     file_ext = ChalConst.FILE_EXTENSION[comp_type]
-                    err, _ = await ChalService.inst.reset_chal(chal_id)
-                    err, _ = await ChalService.inst.emit_chal(
+                    _, _ = await ChalService.inst.reset_chal(chal_id)
+                    _, _ = await ChalService.inst.emit_chal(
                         chal_id,
                         pro_id,
                         pro['testm_conf'],
                         comp_type,
-                        f"/nfs/code/{chal_id}/main.{file_ext}",
-                        f"/nfs/problem/{pro_id}/res",
+                        f"/srv/ntoj/code/{chal_id}/main.{file_ext}",
+                        f"/srv/ntoj/problem/{pro_id}/res",
                     )
+            await asyncio.create_task(_rechal(rechals=result))
 
-                self.finish('S')
+            self.finish('S')
