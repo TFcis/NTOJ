@@ -1,0 +1,44 @@
+name: Update requirement.txt
+
+on:
+  push:
+    paths:
+      - 'poetry.lock'
+  
+jobs:
+  update-requirements:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'  # Specify your desired Python version
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+      
+      - name: Install dependencies
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry install
+
+      - name: Export requirements.txt
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry export -f requirements.txt -o scripts/requirements.txt --without-hashes
+
+      - name: Commit changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add scripts/requirements.txt
+          git commit -m 'Chore: Update requirements.txt'
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
