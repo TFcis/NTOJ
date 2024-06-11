@@ -31,7 +31,7 @@ jobs:
       - name: Export requirements.txt
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          poetry export --without-hashes --format=requirements.txt > requirements.txt
+          poetry export --without-hashes --format=requirements.txt > scripts/requirements.txt
 
       - name: Commit changes
         run: |
