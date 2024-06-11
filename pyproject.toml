@@ -10,7 +10,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-tornado = "6.3.3"
+tornado = "6.4.1"
 asyncpg = "0.28.0"
 redis = "5.0.1"
 msgpack = "1.0.7"
