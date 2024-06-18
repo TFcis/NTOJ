@@ -31,13 +31,13 @@ jobs:
       - name: Export requirements.txt
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          poetry export --without-hashes --format=requirements.txt > scripts/requirements.txt
+          poetry export -f requirements.txt -o scripts/requirements.txt --without-hashes
 
       - name: Commit changes
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add requirements.txt
+          git add scripts/requirements.txt
           git commit -m 'Chore: Update requirements.txt'
           git push
         env:
