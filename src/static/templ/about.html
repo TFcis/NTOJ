@@ -1,12 +1,13 @@
 <html>
+
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <link href='https://fonts.googleapis.com/css?family=Orbitron:400,500,700,900' rel='stylesheet' type='text/css'>
-  <link rel="stylesheet" type="text/css" href="/oj/blk.css">  
+  <link rel="stylesheet" type="text/css" href="/oj/blk.css">
   <!-- <script src="https://code.jquery.com/jquery-3.7.1.js"></script> -->
   <!-- <script src="http://localhost/src/three.min.js"></script> -->
   <script type="text/javascript">
-    /*  
+    /*
     var j_canvas;
     var scene;
     var camera;
@@ -25,7 +26,7 @@
           request.open('GET','/oj/img/master.ogg',true);
           request.responseType = 'arraybuffer';  
         request.onload = function(){
-      	  context.decodeAudioData(request.response,function(buffer){
+          context.decodeAudioData(request.response,function(buffer){
             var source = context.createBufferSource();  
             source.buffer = buffer;
             source.loop = true;
@@ -49,13 +50,13 @@
       var loader = new THREE.ImageLoader();
       loader.load( '/oj/img/skybox.png',function(image){
         var getSide = function(x,y){
-      	var size = 720;
-      	var canvas = document.createElement('canvas');  
-      	canvas.width = size;
-      	canvas.height = size;  
-      	var context = canvas.getContext('2d');
-      	context.drawImage(image,-x * size,-y * size);  
-      	return canvas;
+        var size = 720;
+        var canvas = document.createElement('canvas');  
+        canvas.width = size;
+        canvas.height = size;  
+        var context = canvas.getContext('2d');
+        context.drawImage(image,-x * size,-y * size);  
+        return canvas;
       };
       cubeMap.image[0] = getSide(2,1); // px
       cubeMap.image[1] = getSide(0,1); // nx
@@ -82,31 +83,35 @@
     $(document).ready(function(){
       j_canvas = $('#canvas');  
       init();
-  	  render();
+      render();
       test();
     });
-  */  
+  */
   </script>
   <style>
     .clearfix {
       margin-bottom: 16px;
-      > div {
-        margin-left: 16px; 
+
+      >div {
+        margin-left: 16px;
         float: left;
       }
-    }  
+    }
+
     img {
       float: left;
     }
   </style>
 </head>
+
 <body style="width: 100%; height: 100%;">
   <div style="width: 1280px; height: 960px; position:relative;">
     <div id="canvas" style="width: 100%; height: 100%">
-    
+
     </div>
     <div style="width: 100%; height: 100%; position:absolute; top: 0px; left: 0px;">
-      <div style="width: 62%; margin: 64px auto; padding: 16px 16px; background-color: rgba(255,255,255,0.8); font-family: Orbitron, sans-serif; color: #0B1013;">
+      <div
+        style="width: 62%; margin: 64px auto; padding: 16px 16px; background-color: rgba(255,255,255,0.8); font-family: Orbitron, sans-serif; color: #0B1013;">
         <div>
           <!-- <a 
             data-bs-toggle="collapse" 
@@ -117,30 +122,30 @@
           <h3>NTOJ</h3>
           </a>
           <!-- <div id="NTOJ" class="collapse"> -->
-            <h3>T24</h3>
-            <div class="clearfix">
-              <img width=200 src="https://avatars.githubusercontent.com/u/86729076?v=4"></img>
-              <div>
-                <h4>tobiichi3227</h4>
-                <!-- <a href="https://github.com/tobiichi3227/">github</a> -->
-                <p>前後端開發與新伺服器建置</p>
-              </div>
+          <h3>T24</h3>
+          <div class="clearfix">
+            <img width=200 src="https://avatars.githubusercontent.com/u/86729076?v=4"></img>
+            <div>
+              <h4>tobiichi3227</h4>
+              <!-- <a href="https://github.com/tobiichi3227/">github</a> -->
+              <p>前後端開發與新伺服器建置</p>
             </div>
-            <div class="clearfix">
-              <img width=200 src="https://avatars.githubusercontent.com/u/98439044?v=4"></img>
-              <div>
-                <h4>ccccchhhheeenng</h4>
-                <p>新伺服器建置</p>
-              </div>
+          </div>
+          <div class="clearfix">
+            <img width=200 src="https://avatars.githubusercontent.com/u/98439044?v=4"></img>
+            <div>
+              <h4>ccccchhhheeenng</h4>
+              <p>新伺服器建置</p>
             </div>
-            <h3>T25</h3>
-            <div class="clearfix">
-              <img width=200 src="https://avatars.githubusercontent.com/u/108756201?v=4"></img>
-              <div>
-                <h4>Moon</h4>
-                <p>前端開發</p>
-              </div>
+          </div>
+          <h3>T25</h3>
+          <div class="clearfix">
+            <img width=200 src="https://avatars.githubusercontent.com/u/108756201?v=4"></img>
+            <div>
+              <h4>Moon</h4>
+              <p>前端開發</p>
             </div>
+          </div>
           <!-- </div> -->
         </div>
         <h3>TOJ開発者</h3>
