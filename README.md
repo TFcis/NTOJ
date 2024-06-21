@@ -1,5 +1,5 @@
-TFCIS Online Judge - TOJ
-========================
+# New TNFSH Online Judge - NTOJ
 
-## Install
-請參閱[Wiki](https://github.com/TFCIS/NTOJ/wiki)
+## Installation
+
+For detailed installation instructions, please visit our [Installation Guide](https://github.com/TFCIS/NTOJ/wiki/Installation) in the Wiki.
