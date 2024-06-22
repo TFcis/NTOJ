@@ -78,15 +78,15 @@ class ProService:
 
         testm_conf = OrderedDict()
         for (
-            test_idx,
-            comp_type,
-            score_type,
-            check_type,
-            timelimit,
-            memlimit,
-            weight,
-            metadata,
-            chalmeta,
+                test_idx,
+                comp_type,
+                score_type,
+                check_type,
+                timelimit,
+                memlimit,
+                weight,
+                metadata,
+                chalmeta,
         ) in result:
             testm_conf[test_idx] = {
                 "comp_type": comp_type,
@@ -322,6 +322,32 @@ class ProService:
 
         return None, None
 
+    async def update_testcases(self, pro_id, testm_conf):
+        with open(f'problem/{pro_id}/conf.json', 'r') as f:
+            conf_json = json.load(f)
+
+        for test_idx, test_conf in testm_conf.items():
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    """
+                        UPDATE "test_config"
+                        SET "metadata" = $1
+                        WHERE "pro_id" = $2 AND "test_idx" = $3 RETURNING "pro_id";
+                    """,
+                    json.dumps(test_conf['metadata']),
+                    int(pro_id),
+                    test_idx
+                )
+                if len(result) == 0:
+                    return "Enoext", None
+
+                conf_json['test'][test_idx]['data'] = test_conf['metadata']['data']
+
+        with open(f'problem/{pro_id}/conf.json', 'w') as f:
+            f.write(json.dumps(conf_json))
+
+        return None, None
+
     async def update_limit(self, pro_id, timelimit, memlimit):
         if timelimit <= 0:
             return "Etimelimitmin", None
@@ -371,9 +397,9 @@ class ProService:
                 pass
 
         if (
-            pack_type != ProService.PACKTYPE_FULL
-            and pack_type != ProService.PACKTYPE_CONTHTML
-            and pack_type != ProService.PACKTYPE_CONTPDF
+                pack_type != ProService.PACKTYPE_FULL
+                and pack_type != ProService.PACKTYPE_CONTHTML
+                and pack_type != ProService.PACKTYPE_CONTPDF
         ):
             return "Eparam", None
 

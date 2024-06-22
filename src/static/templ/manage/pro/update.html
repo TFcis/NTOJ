@@ -7,15 +7,16 @@
 
 <script type="text/javascript" id="contjs" async>
     function init() {
-		var j_form = $('#form');
-		var j_form2 = $('#form2');
-		var j_upload = $('div#upload');
+		let pro_id = "{{ pro['pro_id'] }}"
+		let j_form = $('#form');
+		let j_form2 = $('#form2');
+		let j_upload = $('div#upload');
 
 		j_form.find('button.unlock').on('click', function(e) {
-		    pwd = prompt('unlock password');
+		    let pwd = prompt('unlock password');
 		    $.post('/oj/be/manage/pro/update', {
 				'reqtype': 'pro-unlock',
-				'pro_id': {{ pro['pro_id'] }},
+				'pro_id': pro_id,
 				'pwd': pwd,
 		    }, function(res) {
 				if (res[0] == 'E') {
@@ -29,7 +30,7 @@
 		j_form.find('button.lock').on('click', function(e) {
 		    $.post('/oj/be/manage/pro', {
 				'reqtype': 'pro-lock',
-				'pro_id': {{ pro['pro_id'] }},
+				'pro_id': pro_id,
 		    }, function(res) {
 				if (res[0] == 'E') {
  	 	            j_form.find('div.print').print(res);
@@ -53,18 +54,18 @@
         });
 
 		j_form.find('button.submit').on('click', function(e) {
-		    var name = j_form.find('input.name').val();
-		    var tags = j_form.find('input.tags').val();
-		    var status = j_form.find('select.status').val();
- 	       	var clas = j_form.find('select.class').val();
- 	       	var pack_type = j_form.find('select.packtype').val();
-		    var files = j_form.find('input.file')[0].files;
-		    var pack_token = '';
+		    let name = j_form.find('input.name').val();
+		    let tags = j_form.find('input.tags').val();
+		    let status = j_form.find('select.status').val();
+ 	       	let clas = j_form.find('select.class').val();
+ 	       	let pack_type = j_form.find('select.packtype').val();
+		    let files = j_form.find('input.file')[0].files;
+		    let pack_token = '';
 
 		    function _update() {
 				$.post('/oj/be/manage/pro/update', {
 				    'reqtype': 'updatepro',
-				    'pro_id': {{ pro['pro_id'] }},
+				    'pro_id': pro_id,
 				    'name': name,
 				    'tags': tags,
 				    'status': status,
@@ -72,7 +73,7 @@
  	 	          	'pack_type': pack_type,
 				    'pack_token': pack_token,
 				}, function(res) {
- 	 	          	var msg = 'Unknown';
+ 	 	          	let msg = 'Unknown';
 
  	 	          	if (res[0] == 'E') {
  	 	          	    if (res == 'Enamemin') {
@@ -99,21 +100,22 @@
 		    }
 
 		    if (files.length == 0) {
-				_update();
+				// TODO: Why need call _update();
+				// _update();
 		    } else {
 				pack.get_token().done(function(token) {
- 	           	var j_bar = j_upload.find('div.prog > div.bar');
+					let j_bar = j_upload.find('div.prog > div.bar');
 
-			    	j_form.hide();
+					j_form.hide();
 					j_form2.hide();
-			    	j_upload.show();
+					j_upload.show();
 
- 	           	pack_token = token;
-			    	pack.send(pack_token,files[0]).done(function() {
+					pack_token = token;
+					pack.send(pack_token,files[0]).done(function() {
 						_update();
-			    	}).progress(function(prog) {
+					}).progress(function(prog) {
 						j_bar.css('width',(prog * 100) + '%');
-			    	});
+					});
 				});
 		    }
 		});
@@ -123,16 +125,16 @@
 		});
 
 		j_form2.find('button.submit').on('click', function(e) {
-		    var timelimit = j_form2.find('input.timelimit').val();
-		    var memlimit = j_form2.find('input.memlimit').val();
+		    let timelimit = j_form2.find('input.timelimit').val();
+		    let memlimit = j_form2.find('input.memlimit').val();
 
 			$.post('/oj/be/manage/pro/update', {
 			    'reqtype': 'updatelimit',
-			    'pro_id': {{ pro['pro_id'] }},
+			    'pro_id': pro_id,
 			    'timelimit': timelimit,
 			    'memlimit': memlimit,
 			}, function(res) {
-				var msg = 'Unknown';
+				let msg = 'Unknown';
 				if (res[0] == 'E') {
 					if (res == 'Etimelimitmin') {
 						msg = 'Time limit is too short';
@@ -201,6 +203,9 @@
 		<button type="button" class="btn btn-danger submit">Update</button>
 		<div class="print"></div>
     </form>
+		
+	<a class="btn btn-primary" href="/oj/manage/pro/updatetests/?proid={{ pro['pro_id'] }}">Edit Testcases</a>
+
     <div id="upload" style="display: none;">
 		<strong>Uploading ...</strong>
 		<div class="print"></div>

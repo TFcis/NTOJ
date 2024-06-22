@@ -1,0 +1,309 @@
+{% extends '../manage.html' %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
+<link rel="stylesheet" href="/oj/third/prism.css">
+
+<script type="text/javascript" id="contjs">
+	function init() {
+		$.getScript('/oj/third/prism.js');
+
+		let pro_id = "{{ pro_id }}";
+		let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
+
+		document.querySelectorAll('a.preview-file').forEach(el => {
+			el.addEventListener('click', function (e) {
+				let tr = $(this).parents('tr');
+				let idx = tr.attr('idx');
+
+				let t = '';
+				if ($(this).hasClass('input')) {
+					t = 'in';
+				} else {
+					t = 'out';
+				}
+
+				let file_content = '';
+				$.post('/oj/be/manage/pro/updatetests', {
+					'reqtype': 'preview',
+					'pro_id': pro_id,
+					'idx': idx,
+					'type': t,
+				}, function (res) {
+					if (res[0] == 'E') {
+						if (res == 'Efile') {
+							file_content = 'File is too large or not utf-8';
+						} else if (res == 'Enoext') {
+							file_content = 'File not found';
+						}
+					} else {
+						file_content = JSON.parse(res);
+					}
+
+					$("#code").find("code").html(file_content);
+					preview_modal.show();
+				});
+
+			});
+		});
+
+		$('button.reorder').on('click', function(e) {
+			$.post('/oj/be/manage/pro/updatetests', {
+				'reqtype': 'reorder',
+				'pro_id': pro_id,
+			}, function (res) {
+				let msg = '';
+				let dialog_type = null;
+				if (res[0] == 'E') {
+					dialog_type = index.DIALOG_TYPE.error;
+					if (res[0] == 'Enoext') {
+						msg = 'File not found';
+					} else {
+						msg = res;
+					}
+				} else {
+					dialog_type = index.DIALOG_TYPE.success;
+					msg = `Reorder all testcases file successfully.`;
+				}
+
+				index.show_notify_dialog(msg, dialog_type);
+				setTimeout(() => index.reload(), 2000);
+			});
+		});
+
+		// document.querySelectorAll('').forEach(el => {
+		// 	// TODO : Update weight
+		// 	el.addEventListener('click', function (e) {
+		// 		let group = $(this).parents('accordion-collapse').attr('group');
+
+		// 		let weight = parseInt(prompt('new weight'));
+		// 		if (isNaN(weight)) {
+		// 			alert('請輸入數字');
+		// 			return;
+		// 		} else if (weight < 0 || weight > 100) {
+		// 			alert('範圍在0到100之間');
+		// 			return;
+		// 		}
+
+		// 		$.post('/oj/be/manage/pro/updatetests', {
+		// 			'reqtype': 'updateweight',
+		// 			'pro_id': pro_id,
+		// 			'group': group,
+		// 			'weight': weight,
+		// 		}, function (res) {
+		// 			if (res[0] == 'E') {
+		// 				if (res == 'Eparam') {
+		// 				}
+		// 			} else {
+		// 				index.reload();
+		// 			}
+		// 		});
+		// 	});
+		// });
+
+		document.querySelectorAll('button.delete-single-testcase').forEach(el => {
+			console.log(el);
+			el.addEventListener('click', function (e) {
+				let idx = $(this).parents('tr').attr('idx');
+
+				$.post('/oj/be/manage/pro/updatetests', {
+					'reqtype': 'deletesingletestcase',
+					'pro_id': pro_id,
+					'idx': idx,
+				}, function (res) {
+					let msg = '';
+					let dialog_type = null;
+					if (res[0] == 'E') {
+						dialog_type = index.DIALOG_TYPE.error;
+						if (res[0] == 'Enoext') {
+							msg = 'File not found';
+						} else {
+							msg = res;
+						}
+					} else {
+						dialog_type = index.DIALOG_TYPE.success;
+						msg = `Delete #${idx} in & out successfully.`;
+					}
+
+					index.show_notify_dialog(msg, dialog_type);
+					setTimeout(() => index.reload(), 2000);
+				});
+			});
+		});
+
+		document.querySelectorAll('button.update-single-testcase').forEach(el => {
+			let type = null;
+			let j_input = $(el).siblings('input');
+
+			function _update(pack_token, idx) {
+				if (pack_token == null) {
+					return;
+				}
+
+				if (type == null) {
+					return;
+				}
+
+				$.post('/oj/be/manage/pro/updatetests', {
+					'reqtype': 'updatesingletestcase',
+					'pack_token': pack_token,
+					'pro_id': pro_id,
+					'idx': idx,
+					'type': type,
+				}, function (res) {
+					let msg = '';
+					let dialog_type = null;
+					if (res[0] == 'E') {
+						dialog_type = index.DIALOG_TYPE.error;
+						if (res[0] == 'Enoext') {
+							msg = 'File not found';
+						} else {
+							msg = res;
+						}
+					} else {
+						dialog_type = index.DIALOG_TYPE.success;
+						msg = `Update #${idx} ${type} successfully.`;
+					}
+
+					index.show_notify_dialog(msg, dialog_type);
+				});
+			}
+
+			el.addEventListener('click', function (e) {
+				j_input.click();
+				if ($(this).hasClass('input')) {
+					type = 'in';
+				} else {
+					type = 'out';
+				}
+				e.preventDefault();
+				e.stopPropagation();
+			});
+
+			j_input.on('change', function (e) {
+				if (e.target.files.length == 0) {
+					return;
+				}
+
+				let idx = $(this).parents('tr').attr('idx');
+				let file = e.target.files[0];
+				pack.get_token().done(function(token) {
+					index.create_progress_bar('Uploading...');
+
+					pack.send(token, file).done(function () {
+						index.update_progress_bar_progress(100);
+						index.remove_progress_bar();
+						_update(token, idx);
+						j_input.val(''); // for the same file upload
+
+					}).progress(function(prog) {
+						index.update_progress_bar_progress(prog * 100);
+					});
+				});
+			});
+		})
+	}
+</script>
+{% end %}
+
+{% block content %}
+<div class="modal fade" id="previewModal" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Preview Testcase File</h5>
+			</div>
+
+			<div class="modal-body">
+				<pre id="code"
+					data-language="markup"
+					data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"
+				>
+					<code class="language-markup"></code>
+				</pre>
+			</div>
+
+			<div class="modal-footer">
+				<button class="btn btn-primary">Download(WIP)</button>
+			</div>
+		</div>
+
+	</div>
+</div>
+
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+	<!-- <button class="btn btn-primary">New Task Group(WIP)</button> -->
+	<button class="btn btn-primary reorder">Reorder All Testcases</button>
+
+	<div class="accordion" id="tests">
+	{% for test_idx, test_conf in tests.items() %}
+		<div class="accordion-item">
+			<h2 class="accordion-header">
+					<button
+						class="accordion-button"
+						type="button"
+						data-bs-toggle="collapse"
+						data-bs-target="#collapse{{ test_idx }}"
+						aria-expanded="true"
+						aria-controls="collapseOne"
+					>
+						Task Group {{ test_idx }} Weight: {{ test_conf['weight'] }}
+					</button>
+			</h2>
+			<div id="collapse{{ test_idx }}" class="accordion-collapse collapse" data-bs-parent="#tests" group="{{ test_idx }}">
+				<div class="accordion-body">
+
+					<!-- <button class="btn btn-primary">Add Single File (WIP)</button>
+					<button class="btn btn-primary">Add Multiple Files (WIP)</button>
+					<button class="btn btn-danger">Delete All Files (WIP)</button>
+					<button class="btn btn-primary">Download All Files (WIP)</button> -->
+					<!-- <button class="btn btn-primary edit-weight">Edit Task Group Weight(WIP)</button> -->
+
+					<table class="table table-hover table-sm table-responsive-sm my-3">
+						<thead>
+							<tr>
+								<th scope="col">#</th>
+								<th scope="col">Input</th>
+								<th scope="col">Output</th>
+								<th scope="col">Operation</th>
+							</tr>
+						</thead>
+
+						<tbody>
+							{% for test in test_conf['metadata']['data'] %}
+								<tr idx="{{ test }}">
+									<th scope="row">{{ test }}</th>
+									<td><a href="" class="preview-file input">Show Input</a></td>
+									<td><a href="" class="preview-file output">Show Output</a></td>
+									<td>
+										<div class="btn-toolbar">
+											<div class="dropdown me-2">
+												<button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+													Update
+												</button>
+												<ul class="dropdown-menu">
+													<li>
+														<input type="file" style="display: none;">
+														<button class="btn btn-primary dropdown-item update-single-testcase input">Input</button>
+													</li>
+
+													<li>
+														<input type="file" style="display: none;">
+														<button class="btn btn-primary dropdown-item update-single-testcase output">Output</button>
+													</li>
+												</ul>
+											</div>
+
+											<button class="btn btn-danger me-2 delete-single-testcase">Delete</button>
+										</div>
+									</td>
+								</tr>
+							{% end %}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	{% end %}
+	</div>
+</div>
+{% end %}
