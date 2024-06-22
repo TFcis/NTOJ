@@ -1,15 +1,19 @@
+import asyncio
 import base64
 import json
+import os
+import shutil
 
-import config
 from msgpack import packb, unpackb
 
+import config
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.chal import ChalConst, ChalService
 from services.judge import JudgeServerClusterService
 from services.log import LogService
 from services.pro import ProService
 from services.user import UserConst
+from services.pack import PackService
 
 
 class ManageProHandler(RequestHandler):
@@ -60,14 +64,8 @@ class ManageProHandler(RequestHandler):
                     }
                 )
 
-            try:
-                with open(f"problem/{pro_id}/conf.json", 'r') as conf_file:
-                    conf_content = conf_file.read()
-            except FileNotFoundError:
-                conf_content = ''
-
             await self.render(
-                'manage/pro/update', page='pro', pro=pro, lock=lock, testl=testl, problem_config_json=conf_content
+                'manage/pro/update', page='pro', pro=pro, lock=lock, testl=testl
             )
 
         elif page == "add":
@@ -80,8 +78,9 @@ class ManageProHandler(RequestHandler):
 
         elif page == "updatetests":
             pro_id = int(self.get_argument('proid'))
+            err, pro = await ProService.inst.get_pro(pro_id, self.acct)
 
-            await self.render('manage/pro/updatetests', page='pro', pro_id=pro_id)
+            await self.render('manage/pro/updatetests', page='pro', pro_id=pro_id, tests=pro['testm_conf'])
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
@@ -104,6 +103,105 @@ class ManageProHandler(RequestHandler):
                 return
 
             self.finish(json.dumps(pro_id))
+
+        elif page == "updatetests":
+            if reqtype == "preview":
+                pro_id = int(self.get_argument('pro_id'))
+                idx = int(self.get_argument('idx'))
+                type = self.get_argument('type')
+
+                if type not in ["in", "out"]:
+                    self.error('Eparam')
+                    return
+
+                path = f'problem/{pro_id}/res/testdata/{idx}.{type}'
+                if not os.path.isfile(path):
+                    self.error('Enoext')
+                    return
+
+                with open(f'problem/{pro_id}/res/testdata/{idx}.{type}', 'r') as testcase_f:
+                    content = testcase_f.readlines()
+                    if len(content) > 25:
+                        self.error('Efile')
+                        return
+
+                    self.finish(json.dumps(''.join(content)))
+
+            elif reqtype == "updateweight":
+                # TODO
+                return NotImplemented
+                pro_id = int(self.get_argument('pro_id'))
+                group = int(self.get_argument('group'))
+                weight = int(self.get_argument('weight'))
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+
+                await LogService.inst.add_log(
+                    f"{self.acct.name} had been send a request to add the problem #{pro_id}", 'manage.pro.update.tests'
+                )
+
+            elif reqtype == "updatesingletestcase":
+                pro_id = int(self.get_argument('pro_id'))
+                idx = int(self.get_argument('idx'))
+                test_type = self.get_argument('type')
+                pack_token = self.get_argument('pack_token')
+
+                path = f'problem/{pro_id}/res/testdata/{idx}.{test_type}'
+                if not os.path.isfile(path):
+                    self.error('Enoext')
+                    return
+
+                _ = await PackService.inst.direct_copy(pack_token, path)
+                await LogService.inst.add_log(
+                    f"{self.acct.name} had been send a request to update a single testcase of the problem #{pro_id}",
+                    'manage.pro.update.tests'
+                )
+
+                self.finish('S')
+
+            elif reqtype == "deletesingletestcase":
+                pro_id = int(self.get_argument('pro_id'))
+                idx = int(self.get_argument('idx'))
+
+                path = f'problem/{pro_id}/res/testdata'
+                if not os.path.exists(f'{path}/{idx}.in') or not os.path.exists(f'{path}/{idx}.out'):
+                    self.error('Enoext')
+                    return
+
+                await LogService.inst.add_log(
+                    f"{self.acct.name} had been send a request to delete a single testcase of the problem #{pro_id}",
+                    'manage.pro.update.tests'
+                )
+                os.remove(f'{path}/{idx}.in')
+                os.remove(f'{path}/{idx}.out')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                for test_idx, test_conf in pro['testm_conf'].items():
+                    tests = test_conf['metadata']['data']
+                    if tests[0] <= idx <= tests[-1]:
+                        tests.remove(idx)
+                        break
+
+                await ProService.inst.update_testcases(pro_id, pro['testm_conf'])
+
+                self.finish('S')
+
+            elif reqtype == "reorder":
+                pro_id = int(self.get_argument('pro_id'))
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
+                await self._reorder_testcases(pro_id, pro['testm_conf'])
+                await ProService.inst.update_testcases(pro_id, pro['testm_conf'])
+                await LogService.inst.add_log(
+                    f"{self.acct.name} had been send a request to reorder all testcases of the problem #{pro_id}",
+                    'manage.pro.update.tests'
+                )
+
+                self.finish('S')
 
         elif page == "update":
             if reqtype == 'updatepro':
@@ -158,58 +256,6 @@ class ManageProHandler(RequestHandler):
 
                 self.finish('S')
 
-            elif reqtype == 'updateconf':
-                pro_id = int(self.get_argument('pro_id'))
-                conf_json_text = self.get_argument('conf')
-
-                try:
-                    conf_json = json.loads(conf_json_text)
-                except json.decoder.JSONDecodeError:
-                    self.error('Econf')
-                    return
-
-                with open(f'problem/{pro_id}/conf.json', 'w') as conf_f:
-                    conf_f.write(conf_json_text)
-
-                comp_type = conf_json['compile']
-                score_type = conf_json['score']
-                check_type = conf_json['check']
-                timelimit = conf_json['timelimit']
-                memlimit = conf_json['memlimit'] * 1024
-                chalmeta = conf_json['metadata']
-
-                async with self.db.acquire() as con:
-                    await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
-
-                    for test_idx, test_conf in enumerate(conf_json['test']):
-                        metadata = {'data': test_conf['data']}
-
-                        await con.execute(
-                            '''
-                                INSERT INTO "test_config"
-                                ("pro_id", "test_idx", "compile_type", "score_type", "check_type",
-                                "timelimit", "memlimit", "weight", "metadata", "chalmeta")
-                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
-                            ''',
-                            int(pro_id),
-                            int(test_idx),
-                            comp_type,
-                            score_type,
-                            check_type,
-                            int(timelimit),
-                            int(memlimit),
-                            int(test_conf['weight']),
-                            json.dumps(metadata),
-                            json.dumps(chalmeta),
-                        )
-
-                await LogService.inst.add_log(
-                    f"{self.acct.name} had been send a request to update the problem #{pro_id}",
-                    'manage.pro.update.conf',
-                )
-
-                self.finish('S')
-
             elif reqtype == 'pro-lock':
                 pro_id = int(self.get_argument('pro_id'))
                 await self.rs.set(f'{pro_id}_owner', packb(1))
@@ -240,44 +286,89 @@ class ManageProHandler(RequestHandler):
                 self.finish('S')
 
         elif page is None:  # pro-list
+            is_all_chal = False
             if reqtype == 'rechal':
-                pro_id = int(self.get_argument('pro_id'))
+                pass
 
-                can_submit = await JudgeServerClusterService.inst.is_server_online()
-                if not can_submit:
-                    self.error('Ejudge')
+            elif reqtype == 'rechalall':
+                pwd = self.get_argument('pwd')
+                if config.unlock_pwd != base64.b64encode(packb(pwd)):
+                    self.error('Eacces')
                     return
+                is_all_chal = True
 
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    self.error(err)
-                    return
+            else:
+                self.error('Eunk')
+                return
 
-                async with self.db.acquire() as con:
-                    result = await con.fetch(
-                        '''
-                            SELECT "challenge"."chal_id", "challenge"."compile_type" FROM "challenge"
-                            LEFT JOIN "challenge_state"
-                            ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                            WHERE "pro_id" = $1 AND "challenge_state"."state" IS NULL;
-                        ''',
-                        pro_id,
-                    )
-                await LogService.inst.add_log(
-                    f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
-                    'manage.chal.rechal',
+            pro_id = int(self.get_argument('pro_id'))
+            can_submit = await JudgeServerClusterService.inst.is_server_online()
+            if not can_submit:
+                self.error('Ejudge')
+                return
+
+            err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            if err:
+                self.error(err)
+                return
+
+            async with self.db.acquire() as con:
+                if is_all_chal:
+                    sql = ""
+                else:
+                    sql = '''AND "challenge_state"."state" IS NULL'''
+                result = await con.fetch(
+                    f'''
+                        SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"
+                        LEFT JOIN "challenge_state"
+                        ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                        WHERE "pro_id" = $1 {sql};
+                    ''',
+                    pro_id,
                 )
+            await LogService.inst.add_log(
+                f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
+                'manage.chal.rechal',
+            )
 
-                for chal_id, comp_type in result:
+            async def _rechal(rechals):
+                for chal_id, comp_type in rechals:
                     file_ext = ChalConst.FILE_EXTENSION[comp_type]
-                    err, _ = await ChalService.inst.reset_chal(chal_id)
-                    err, _ = await ChalService.inst.emit_chal(
+                    _, _ = await ChalService.inst.reset_chal(chal_id)
+                    _, _ = await ChalService.inst.emit_chal(
                         chal_id,
                         pro_id,
                         pro['testm_conf'],
                         comp_type,
-                        f"/nfs/code/{chal_id}/main.{file_ext}",
-                        f"/nfs/problem/{pro_id}/res",
+                        f"/srv/ntoj/code/{chal_id}/main.{file_ext}",
+                        f"/srv/ntoj/problem/{pro_id}/res",
                     )
 
-                self.finish('S')
+            await asyncio.create_task(_rechal(rechals=result))
+
+            self.finish('S')
+
+    async def _reorder_testcases(self, pro_id, tests):
+        path = f'problem/{pro_id}/res/testdata'
+        cnt = 1
+        for test_conf in tests.values():
+            new_tests = []
+            for test in test_conf['metadata']['data']:
+                new_tests.append(cnt)
+                if test != cnt:
+                    # order changed
+
+                    shutil.move(f'{path}/{test}.in', f'{path}/{cnt}.in.tmp')
+                    shutil.move(f'{path}/{test}.out', f'{path}/{cnt}.out.tmp')
+
+                cnt += 1
+
+            test_conf['metadata']['data'] = new_tests
+
+        for i in range(1, cnt):
+            if not os.path.exists(f'{path}/{i}.in.tmp') or not os.path.exists(f'{path}/{i}.out.tmp'):
+                # order did not change
+                continue
+
+            shutil.move(f'{path}/{i}.in.tmp', f'{path}/{i}.in')
+            shutil.move(f'{path}/{i}.out.tmp', f'{path}/{i}.out')

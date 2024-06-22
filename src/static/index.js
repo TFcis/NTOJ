@@ -1,5 +1,14 @@
 'use strict';
 
+// from https://medium.com/enjoy-life-enjoy-coding/typescript-%E5%96%84%E7%94%A8-enum-%E6%8F%90%E9%AB%98%E7%A8%8B%E5%BC%8F%E7%9A%84%E5%8F%AF%E8%AE%80%E6%80%A7-%E5%9F%BA%E6%9C%AC%E7%94%A8%E6%B3%95-feat-javascript-b20d6bbbfe00
+const newEnum = (descriptions) => {
+    const result = {};
+    Object.keys(descriptions).forEach((description) => {
+        result[(result[description] = descriptions[description])] = description;
+    });
+    return Object.freeze(result);
+};
+
 var index = new function() {
     var that = this;
     var curr_url = null;
@@ -169,6 +178,133 @@ var index = new function() {
 
     that.reload = function() {
         update(true);
+    };
+
+    that.create_progress_bar = function(title) {
+        let progressbar_html = `
+        <div class="modal fade" id="indexProgressBarDialog" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-center">${title}</p>
+                <div class="progress">
+                    <div
+                        class="progress-bar"
+                        role="progressbar"
+                        style="width: 0%"
+                        aria-valuenow="0"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                    ></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('afterbegin', progressbar_html);
+        let progressbar = document.getElementById('indexProgressBarDialog');
+
+        // show modal
+        let progressbar_modal = new bootstrap.Modal(progressbar);
+        progressbar_modal.show();
+
+        // add a cleanup callback function when modal closed
+        progressbar.addEventListener('hidden.bs.modal', () => {
+            progressbar_modal.dispose();
+            progressbar.remove();
+        });
+    };
+
+    that.update_progress_bar_progress = function(prog) {
+        if (isNaN(parseInt(prog))) {
+            return;
+        }
+
+        if (parseInt(prog) < 0) {
+            return;
+        }
+        let progressbar = document.getElementById('indexProgressBarDialog');
+        if (progressbar == null) {
+            console.error('progress bar is null');
+            return;
+        }
+
+        progressbar.querySelector('.progress-bar').style.width = `${prog}%`;
+    }
+
+    that.remove_progress_bar = function () {
+        let progressbar = document.getElementById('indexProgressBarDialog');
+        if (progressbar == null) {
+            console.error('progress bar is null');
+            return;
+        }
+
+        let progressbar_modal = bootstrap.Modal.getInstance(progressbar);
+        progressbar_modal.hide();
+    };
+
+    that.DIALOG_TYPE = newEnum({
+        error: 'error',
+        warning: 'warning',
+        success: 'success',
+        info: 'info',
+    });
+
+    that.show_notify_dialog = function(msg, dialog_type) {
+        let title = '';
+        switch (dialog_type) {
+            case this.DIALOG_TYPE.error:
+                title = 'Error!!!';
+                break;
+            case this.DIALOG_TYPE.warning:
+                title = 'Warning!';
+                break;
+            case this.DIALOG_TYPE.success:
+                title = 'Success';
+                break;
+            case this.DIALOG_TYPE.info:
+                title = 'Info';
+                break;
+        }
+
+        // inject html to <body>
+        let dialog_html = `
+        <div class="modal fade" id="indexNotifyDialog" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">${title}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+            ${msg}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('afterbegin', dialog_html);
+        let dialog = document.getElementById('indexNotifyDialog');
+
+        // show modal
+        let dialog_modal = new bootstrap.Modal(dialog);
+        dialog_modal.show();
+
+        // add a cleanup callback function when modal closed
+        dialog.addEventListener('hidden.bs.modal', () => {
+            dialog_modal.dispose();
+            dialog.remove();
+        });
     };
 
     $.fn.print = function(msg, succ) {
