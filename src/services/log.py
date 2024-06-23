@@ -74,7 +74,7 @@ class LogService:
 
     async def get_log_type(self):
         async with self.db.acquire() as con:
-            result = await con.fetch('SELECT DISTINCT "type" FROM "log"')
+            result = await con.fetch('SELECT DISTINCT "type" FROM "log" ORDER BY "type"')
 
             log_type = [type['type'] for type in result]
 
