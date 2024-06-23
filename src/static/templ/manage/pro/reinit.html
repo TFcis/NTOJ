@@ -29,14 +29,14 @@
                         var msg = 'Unknown'
 
                         if (res[0] == 'E') {
-                            if(res == 'Enamemin') {
-                                msg = 'Name length < min'
+                            if (res == 'Enamemin') {
+                                msg = 'Name length < min';
                             } else if (res == 'Enamemax') {
-                                msg = 'Name length > max'
+                                msg = 'Name length > max';
                             } else if (res == 'Eparam') {
-                                msg = 'Paramater Error'
+                                msg = 'Parameter Error';
                             } else if (res == 'Econf') {
-                                msg = 'Syntax error'
+                                msg = 'Syntax error';
                             }
 
 							index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
