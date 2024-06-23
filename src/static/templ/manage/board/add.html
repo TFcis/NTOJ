@@ -1,29 +1,58 @@
 {% extends '../manage.html' %}
 {% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/css/tempus-dominus.min.css" crossorigin="anonymous">
+
+<style>
+    .svg-inline--fa {
+        display: var(--fa-display, inline-block);
+        height: 1em;
+    }
+</style>
 
 <script type="text/javascript">
     function init() {
+        var start_date_picker = null;
+        var end_date_picker = null;
+        $.getScript('https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js', () => {
+            const options = {
+                display: {
+                    calendarWeeks: true,
+                },
+
+                localization: {
+                    locale: 'zh-tw',
+                    format: 'yyyy/MM/dd HH:mm',
+                },
+            };
+            start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerStart'), options);
+            end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerEnd'), options);
+        });
+
         let j_form = $("#form");
         let re = /[^0-9,\ ]/;
 
         j_form.find("#add").on('click', (event) => {
+            let start_time = null, end_time = null;
             let name = j_form.find("#name").val();
             let status = j_form.find("#status").val();
-            let start = j_form.find("#start").val();
-            let end = j_form.find("#end").val();
             let pro_list = j_form.find("#pro_list").val();
             let acct_list = j_form.find("#acct_list").val();
 
-            if (start != '' && start != '-1') {
-                start = new Date(start + ' +0000').toISOString();
-            } else if (start == '-1') {
-                start = new Date('1970/01/01 00:00 +0000').toISOString();
+            start_time = start_date_picker.viewDate; 
+            if (start_time == '') {
+                alert("開始時間不可為空");
+                return;
             }
 
-            if (end != '' && end != '-1') {
-                end = new Date(end + ' +0000').toISOString();
-            } else if (end == '-1') {
-                end = new Date('2100/01/01 00:00 +0000').toISOString();
+            end_time = end_date_picker.viewDate;
+            if (end_time == '') {
+                alert("結束時間不可為空");
+                return;
+            }
+
+            if (start_time >= end_time) {
+                alert("結束時間必須大於開始時間");
+                return;
             }
 
             if (re.test(pro_list)) {
@@ -40,15 +69,15 @@
                 reqtype: 'add',
                 name: name,
                 status: status,
-                start: start,
-                end: end,
+                start: start_time.toISOString(),
+                end: end_time.toISOString(),
                 pro_list: pro_list,
                 acct_list: acct_list,
             }, function(res) {
                 if (res[0] == 'E') {
 
                 } else {
-                    index.go("/oj/manage/board/")
+                    index.go("/oj/manage/board/");
                 }
             });
         });
@@ -76,11 +105,21 @@
         </div>
 
         <div class="mb-1">
-            <label for="#start" class="form-label">Start</label>
-            <input type="text" class="form-control" id="start" placeholder="[Year / Month / Day Hour : Minute]">
+            <label for="#datepickerStartInput" class="form-label">Start Time</label>
+            <div id="datepickerStart" class="input-group">
+                <input id="datepickerStartInput" type="text" class="form-control">
+                <span class="input-group-text" data-td-target="#datepickerStart" data-td-toggle="datepickerStart">
+                    <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg><!-- <span class="fa-solid fa-calendar"></span> Font Awesome fontawesome.com -->
+                </span>
+            </div>
 
-            <label for="#end" class="form-label">End</label>
-            <input type="text" class="form-control" id="end" placeholder="[Year / Month / Day Hour : Minute]">
+            <label for="#datepickerEnd" class="form-label">End Time</label>
+            <div id="datepickerEnd" class="input-group">
+                <input id="datepickerEndInput" type="text" class="form-control">
+                <span class="input-group-text" data-td-target="#datepickerEnd" data-td-toggle="datepickerEnd">
+                    <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg><!-- <span class="fa-solid fa-calendar"></span> Font Awesome fontawesome.com -->
+                </span>
+            </div>
         </div>
 
         <div class="mb-1">
