@@ -6,7 +6,6 @@
 <script type="text/javascript" id="contjs">
     function init() {
 	    var j_form = $('#form');
-		var j_upload = $('#upload');
 
 	    j_form.find('button.submit').on('click', function(e) {
 	        var files = j_form.find('input.file')[0].files;
@@ -17,15 +16,16 @@
 	        }
 
 			pack.get_token().done(function(pack_token) {
-	    	    var j_bar = j_upload.find('div.prog > div.bar');
+				index.create_progress_bar('Uploading...');
 
-                j_upload.show();
 				pack.send(pack_token, files[0]).done(function() {
 					$.post('/oj/be/manage/pro/update', {
 						'reqtype': 'reinitpro',
 						'pro_id': {{ pro_id }},
 						'pack_token': pack_token,
 					}, (res) => {
+						index.update_progress_bar_progress(100);
+						index.remove_progress_bar();
                         var msg = 'Unknown'
 
                         if (res[0] == 'E') {
@@ -46,7 +46,7 @@
                         }
 					})
 				}).progress((prog) => {
-                    j_bar.css('width', (prog * 100) + '%')
+					index.update_progress_bar_progress(prog * 100);
 				});
 			});
 		});
@@ -59,12 +59,6 @@
 		<input type="file" class="file">
 		<button class="btn btn-success submit">Upload</button>
 		<button class="btn btn-secondary cancel">Cancel</button>
-    </div>
-    <div id="upload" style="display: none;">
-	<strong>Uploading ...</strong>
-		<div class="blk-prog prog">
-		    <div class="bar"></div>
-		</div>
     </div>
 </div>
 {% end %}

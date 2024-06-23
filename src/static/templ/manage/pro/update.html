@@ -1,16 +1,10 @@
 {% extends '../manage.html' %}
 {% block head %}
-<style>
-    div#upload>div.prog{margin-top:8px}
-    div.blk-prog{border:#bdc0ba 1px dashed;padding:4px 4px}div.blk-prog>div.bar{width:0;height:4px;background-color:#5dac81;transition:width 500ms}
-</style>
-
 <script type="text/javascript" id="contjs" async>
     function init() {
 		let pro_id = "{{ pro['pro_id'] }}"
 		let j_form = $('#form');
 		let j_form2 = $('#form2');
-		let j_upload = $('div#upload');
 
 		j_form.find('button.unlock').on('click', function(e) {
 		    let pwd = prompt('unlock password');
@@ -90,7 +84,7 @@
 
 						index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
  	 	          	} else {
-				       index.go('/oj/manage/pro/');
+						index.show_notify_dialog('Upload Successfully', index.DIALOG_TYPE.success);
  	 	          	}
 				});
 		    }
@@ -100,17 +94,15 @@
 				// _update();
 		    } else {
 				pack.get_token().done(function(token) {
-					let j_bar = j_upload.find('div.prog > div.bar');
-
-					j_form.hide();
-					j_form2.hide();
-					j_upload.show();
-
+					index.create_progress_bar('Uploading...');
 					pack_token = token;
 					pack.send(pack_token,files[0]).done(function() {
+						index.update_progress_bar_progress(100);
+						index.remove_progress_bar();
 						_update();
+
 					}).progress(function(prog) {
-						j_bar.css('width',(prog * 100) + '%');
+						index.update_progress_bar_progress(prog * 100);
 					});
 				});
 		    }
@@ -198,12 +190,5 @@
     </form>
 		
 	<a class="btn btn-primary" href="/oj/manage/pro/updatetests/?proid={{ pro['pro_id'] }}">Edit Testcases</a>
-
-    <div id="upload" style="display: none;">
-		<strong>Uploading ...</strong>
-		<div class="blk-prog prog">
-			<div class="bar"></div>
-		</div>
-    </div>
 </div>
 {% end %}
