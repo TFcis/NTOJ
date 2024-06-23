@@ -12,7 +12,7 @@
 	        var files = j_form.find('input.file')[0].files;
 
 	        if (files.length == 0) {
-	    	    j_form.find('div.print').print('No file selected');
+				index.show_notify_dialog('No file selected', index.DIALOG_TYPE.warning);
 	    	    return;
 	        }
 
@@ -28,7 +28,7 @@
 					}, (res) => {
                         var msg = 'Unknown'
 
-                        if(res[0] == 'E') {
+                        if (res[0] == 'E') {
                             if(res == 'Enamemin') {
                                 msg = 'Name length < min'
                             } else if (res == 'Enamemax') {
@@ -37,13 +37,12 @@
                                 msg = 'Paramater Error'
                             } else if (res == 'Econf') {
                                 msg = 'Syntax error'
-                            	j_upload.find('div.print').print(msg)
-								index.go('/oj/manage/reinitpro/?proid={{ pro_id }}')
                             }
 
-                            j_upload.find('div.print').print(msg)
+							index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
+							setTimeout(() => index.reload(), 1000);
                         } else {
-                            index.go('/oj/manage/pro/')
+                            index.go('/oj/manage/pro/');
                         }
 					})
 				}).progress((prog) => {
@@ -60,11 +59,9 @@
 		<input type="file" class="file">
 		<button class="btn btn-success submit">Upload</button>
 		<button class="btn btn-secondary cancel">Cancel</button>
-	<div class="print"></div>
     </div>
     <div id="upload" style="display: none;">
 	<strong>Uploading ...</strong>
-		<div class="print"></div>
 		<div class="blk-prog prog">
 		    <div class="bar"></div>
 		</div>

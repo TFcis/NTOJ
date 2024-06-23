@@ -40,28 +40,28 @@
 
             start_time = start_date_picker.viewDate; 
             if (start_time == '') {
-                alert("開始時間不可為空");
+                index.show_notify_dialog("開始時間不可為空", index.DIALOG_TYPE.warning);
                 return;
             }
 
             end_time = end_date_picker.viewDate;
             if (end_time == '') {
-                alert("結束時間不可為空");
+                index.show_notify_dialog("結束時間不可為空", index.DIALOG_TYPE.warning);
                 return;
             }
 
             if (start_time >= end_time) {
-                alert("結束時間必須大於開始時間");
+                index.show_notify_dialog("結束時間必須大於開始時間", index.DIALOG_TYPE.warning);
                 return;
             }
 
             if (re.test(pro_list)) {
-                alert("Problem List錯誤，請輸入數字、逗號與空白設定，範例：1, 2, 3");
+                index.show_notify_dialog("Problem List錯誤，請輸入數字、逗號與空白設定，範例：1, 2, 3", index.DIALOG_TYPE.warning);
                 return;
             }
 
             if (re.test(acct_list)) {
-                alert("Account List錯誤，請輸入數字、逗號與空白設定，範例：1, 2, 3");
+                index.show_notify_dialog("Account List錯誤，請輸入數字、逗號與空白設定，範例：1, 2, 3", index.DIALOG_TYPE.warning);
                 return;
             }
 

@@ -28,7 +28,7 @@
 	    j_filter.find('input, select').keypress(function(e) {
 
 	        if (e.keyCode == 13) {
-                //KeyCode 13 means Enter
+                // KeyCode 13 means Enter
 		        let proid = j_filter.find('#proid').val();
 		        let acctid = j_filter.find('#acctid').val();
 		        let state = j_filter.find('#state').val();
@@ -36,10 +36,10 @@
 		        let url = '/oj/chal/?';
 
                 if (re.test(proid) || re.test(acctid)) {
-                    alert('請輸入數字、逗號與空白做查詢，範例：1, 2, 3')
-                    j_filter.find('input.proid').val('')
-                    j_filter.find('input.acctid').val('')
-                    return
+                    j_filter.find('#proid').val('');
+                    j_filter.find('#acctid').val('');
+                    index.show_notify_dialog("請輸入數字、逗號與空白做查詢，範例：1, 2, 3", index.DIALOG_TYPE.warning);
+                    return;
                 }
 
                 if (proid != '') {
@@ -70,14 +70,14 @@
             let url = '/oj/chal/?';
 
             if (re.test(proid) || re.test(acctid)) {
-                alert('請輸入數字、逗號與空白做查詢，範例：1, 2, 3')
-                j_filter.find('input.proid').val('')
-                j_filter.find('input.acctid').val('')
-                return
+                j_filter.find('#proid').val('');
+                j_filter.find('#acctid').val('');
+                index.show_notify_dialog("請輸入數字、逗號與空白做查詢，範例：1, 2, 3", index.DIALOG_TYPE.warning);
+                return;
             }
 
             if (proid != '') {
-                url += `&proid=${proid}`
+                url += `&proid=${proid}`;
             }
 
             if (acctid != '') {

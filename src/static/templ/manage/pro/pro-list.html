@@ -14,15 +14,22 @@
 				'reqtype': 'rechal',
 				'pro_id': pro_id
 			}, function (res) {
+				let msg = '';
+				let dialog_type = null;
+
 				if (res[0] == 'E') {
+					dialog_type = index.DIALOG_TYPE.error;
 					if (res == 'Ejudge') {
-						$('div.print').print('All Judge Server Offline');
+						msg = 'All Judge Server Offline';
 					} else {
-						$('div.print').print('Unknown');
+						msg = 'Unknown';
 					}
 				} else {
-					$('div.print').print('Processing...', true);
+					dialog_type = index.DIALOG_TYPE.info;
+					msg = 'Processing...';
 				}
+
+				index.show_notify_dialog(msg, dialog_type);
 			});
 		});
 
@@ -36,17 +43,25 @@
 				'pro_id': pro_id,
 				'pwd': pwd,
 			}, function (res) {
+				let msg = '';
+				let dialog_type = null;
+
 				if (res[0] == 'E') {
+					dialog_type = index.DIALOG_TYPE.error;
+
 					if (res == 'Eacces') {
-						$('div.print').print('Password Wrong');
+						msg = 'Password Wrong';
 					} else if (res == 'Ejudge') {
-						$('div.print').print('All Judge Server Offline');
+						msg = 'All Judge Server Offline';
 					} else {
-						$('div.print').print('Unknown');
+						msg = 'Unknown';
 					}
 				} else {
-					$('div.print').print('Processing...', true);
+					dialog_type = index.DIALOG_TYPE.info;
+					msg = 'Processing...';
 				}
+
+				index.show_notify_dialog(msg, dialog_type);				
 			});
 		});
 	}
@@ -62,7 +77,6 @@
 				<th scope="col">Status</th>
 				<th scope="col">
 					<a class="btn btn-primary" href="/oj/manage/pro/add/">&#x271a</a>
-					<div class="print"></div>
 				</th>
 			</tr>
 		</thead>

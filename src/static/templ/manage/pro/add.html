@@ -18,7 +18,7 @@
 	        let files = j_form.find('#file')[0].files;
 
 	        if (files.length == 0) {
-	    	    j_form.find('div.print').print('No file selected');
+                index.show_notify_dialog('No file selected', index.DIALOG_TYPE.warning);
 	    	    return;
 	        }
 
@@ -36,9 +36,9 @@
                         'class': clas,
                         'pack_token': pack_token
                     }, function(res) {
-                        var msg = 'Unknown';
+                        let msg = 'Unknown';
 
-                        if(res[0] == 'E') {
+                        if (res[0] == 'E') {
                             if(res == 'Enamemin') {
                                 msg = 'Name length < min';
                             } else if (res == 'Enamemax') {
@@ -49,7 +49,7 @@
                                 msg = 'Syntax error';
                             }
 
-                            j_upload.find('div.print').print(msg);
+                            index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
                         } else {
                             index.go('/oj/manage/pro/');
                         }
@@ -90,13 +90,11 @@
         <div class="mb-1">
             <button type="button" class="btn btn-primary" id="upload">Upload</button>
             <button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
-            <div class="print"></div>
         </div>
     </form>
 
     <div id="upload" style="display: none;">
 	    <strong>Uploading ...</strong>
-	    <div class="print"></div>
 	    <div class="blk-prog prog">
 	        <div class="bar"></div>
 	    </div>

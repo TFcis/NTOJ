@@ -76,7 +76,7 @@
         select_prob.on('keypress', function(e) {
             if (e.keyCode == 13) {
                 if (re.test(select_prob.val())) {
-                    alert('請輸入數字');
+                    index.show_notify_dialog('請輸入數字', index.DIALOG_TYPE.info);
                     select_prob.val('');
                     return
                 }

@@ -26,7 +26,6 @@
         } else {
             function update_state_data(chal_state_data) {
                 var states = document.querySelectorAll('tr.states');
-                let print = document.querySelector('div.print');
                 states.forEach(function(element, idx, arr) {
                     let state = element.querySelector('td.state');
                     state.innerHTML = state_map[chal_state_data[idx]['state']];
@@ -55,7 +54,7 @@
             }, function(res) {
                 if (res[0] == 'E') {
                     if (res == 'Ejudge') {
-                        $("div.print").print('All Judge Server Offline');
+                        index.show_notify_dialog('All Judge Server Offline!!!', index.DIALOG_TYPE.warning);
                     }
                 } else {
                     index.reload();
@@ -126,10 +125,8 @@
 
     {% if rechal == True and chal['code'] == True %}
         <button id="rechal" class="btn btn-warning">Rechallenge</button>
-        <div class="print"></div>
     {% elif chal['code'] == True %}
         <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
-        <div class="print"></div>
     {% end %}
     </div>
 

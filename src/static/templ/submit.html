@@ -24,15 +24,18 @@
                 'comp_type': comp_type,
             }, function(res) {
                 if (res[0] == 'E') {
+                    let msg = '';
                     if (res == 'Einternal') {
-                        j_submit.find('div.print').print('interval < 30 sec');
+                        msg = 'interval < 30 sec';
                     } else if (res == 'Eempty') {
-                        j_submit.find('div.print').print('Do not submit empty code');
+                        msg = 'Do not submit empty code';
                     } else if (res == 'Ejudge') {
-                        j_submit.find('div.print').print('All Judge Server offline, cannot submit')
+                        msg = 'All Judge Server offline, cannot submit';
                     } else {
-                        j_submit.find('div.print').print(res);
+                        msg = res;
                     }
+
+                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
                 } else {
                     index.go('/oj/chal/' + JSON.parse(res) + '/');
                 }
@@ -70,7 +73,6 @@
             <button type="button" class="btn btn-primary submit">Submit</button>
         </form>
 
-        <div class="print"></div>
     </div>
     <div class="col-lg-2"></div>
 </div>

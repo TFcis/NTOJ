@@ -20,7 +20,7 @@
 				'pwd': pwd,
 		    }, function(res) {
 				if (res[0] == 'E') {
-				    j_form.find('div.print').print(res);
+					index.show_notify_dialog(res, index.DIALOG_TYPE.error);
 				} else {
 				    index.go('/oj/manage/pro/');
 				}
@@ -33,7 +33,7 @@
 				'pro_id': pro_id,
 		    }, function(res) {
 				if (res[0] == 'E') {
- 	 	            j_form.find('div.print').print(res);
+					index.show_notify_dialog(res, index.DIALOG_TYPE.error);
 				} else {
 					index.go('/oj/manage/pro/');
 				}
@@ -79,20 +79,16 @@
  	 	          	    if (res == 'Enamemin') {
 							msg = '	Name length < min';
  	 	          	    } else if (res == 'Enamemax') {
- 	 	          	         msg = 'Name length > max';
+ 	 	          	        msg = 'Name length > max';
  	 	          	    } else if (res == 'Eparam') {
- 	 	          	         msg = 'Paramater Error';
+ 	 	          	        msg = 'Paramater Error';
  	 	          	    } else if (res == 'Econf') {
- 	 	          	         msg = 'Syntex error';
+ 	 	          	        msg = 'Syntex error';
  	 	          	    } else {
  	 	          	        msg = res;
  	 	          	    }
 
- 	 	          	    if (pack_token == '') {
- 	 	          	        j_form.find('div.print').print(msg);
- 	 	          	    } else {
- 	 	          	        j_upload.find('div.print').print(msg);
- 	 	          	    }
+						index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
  	 	          	} else {
 				       index.go('/oj/manage/pro/');
  	 	          	}
@@ -120,9 +116,7 @@
 		    }
 		});
 
-		j_form.find('button.cancel').on('click', function(e) {
-		    index.go('/oj/manage/pro/');
-		});
+		j_form.find('button.cancel').on('click', () => index.go('/oj/manage/pro/'));
 
 		j_form2.find('button.submit').on('click', function(e) {
 		    let timelimit = j_form2.find('input.timelimit').val();
@@ -143,7 +137,8 @@
 					} else {
 						msg = res;
 					}
-					j_form2.find('div.print').print(msg);
+
+					index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
 				} else {
 					index.go('/oj/manage/pro/');
 				}
@@ -191,7 +186,6 @@
 			<button type="button" class="btn btn-secondary unlock">UnLock</button>
 			<button type="button" class="btn btn-secondary cancel">Cancel</button>
 		</div>
-		<div class="print"></div>
     </form>
 	<form id="form2" class="blk-cont" style="margin-top: 60px; border: 1px solid red; padding: 3px;">
 		<label class="form-label" style="color: red;">Danger Zone</label>
@@ -201,14 +195,12 @@
 		<label class="form-label">Mem limit (Kb)</label>
 		<input type="number" class="form-control memlimit" value="{{ round(testl[0]['memlimit'] / 1024) }}">
 		<button type="button" class="btn btn-danger submit">Update</button>
-		<div class="print"></div>
     </form>
 		
 	<a class="btn btn-primary" href="/oj/manage/pro/updatetests/?proid={{ pro['pro_id'] }}">Edit Testcases</a>
 
     <div id="upload" style="display: none;">
 		<strong>Uploading ...</strong>
-		<div class="print"></div>
 		<div class="blk-prog prog">
 			<div class="bar"></div>
 		</div>
