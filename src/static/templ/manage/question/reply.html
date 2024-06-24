@@ -15,10 +15,10 @@
 		    msg = 'Unknown';
 		    if (res[0] == 'E') {
 				msg = res;
-				j_form.find('div.print').print(msg);
+				index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
 		    } else {
-				j_form.find('div.print').print('Done', true);
-				setTimeout("index.reload()", 1000);
+				index.show_notify_dialog('Done', index.DIALOG_TYPE.success);
+				setTimeout(() => index.reload(), 1000);
 		    }
 		});
     }
@@ -36,10 +36,10 @@
 		    msg = 'Unknown';
 		    if (res[0] == 'E') {
 				msg = res;
-				j_form.find('div.print').print(msg);
+				index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
 		    } else {
-				j_form.find('div.print').print('Done', true);
-				setTimeout("index.reload()", 1000);
+				index.show_notify_dialog('Done', index.DIALOG_TYPE.success);
+				setTimeout(() => index.reload(), 1000);
 		    }
 		});
     }
@@ -86,8 +86,6 @@
 			{% end %}
 			</tbody>
 		</table>
-
-		<div class="print"></div>
     </div>
 </div>
 {% end %}

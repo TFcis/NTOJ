@@ -15,32 +15,33 @@
         };
     }
 
-    function connect_sever(index) {
+    function connect_sever(idx) {
         $.post('/oj/be/manage/judge', {
             'reqtype': 'connect',
-            'index': index,
+            'index': idx,
         }, function(res) {
             var msg = 'Unknown';
 
             if (res[0] == 'E') {
                 if (res == 'Ejudge') {
                     msg = 'Cannot connect to server';
-	    	        j_form.find('div.print').print(msg);
                 } else {
-                    j_form.find('div.print').print(res);
+                    msg = res;
                 }
+
+                index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
             } else {
-	    	    j_form.find('div.print').print('Connect Server Successfully', true);
-	    		setTimeout(function(){location.href='/oj/manage/judge/';}, 1000);
+                index.show_notify_dialog('Connect Server Successfully', index.DIALOG_TYPE.success);
+	    		setTimeout(() => index.reload(), 1000);
             }
         });
     }
 
-    function disconnect_server(index) {
-        pwd = prompt('password');
+    function disconnect_server(idx) {
+        pwd = prompt('Server Config Password');
         $.post('/oj/be/manage/judge', {
             'reqtype': 'disconnect',
-            'index': index,
+            'index': idx,
             'pwd': pwd,
         }, function(res) {
             var msg = 'Unknown';
@@ -48,16 +49,16 @@
             if (res[0] == 'E') {
                 if (res == 'Ejudge') {
                     msg = 'server was offline';
-                    j_form.find('div.print').print(msg);
                 } else if (res == 'Eacces') {
                     msg = 'password incorrect';
-                    j_form.find('div.print').print(msg);
                 } else {
-                    j_form.find('div.print').print(res);
+                    msg = res;
                 }
+
+                index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
             } else {
-	    	    j_form.find('div.print').print('Disconnect Server Successfully', true);
-	    		setTimeout(function(){location.href='/oj/manage/judge/';}, 1000);
+                index.show_notify_dialog('Connect Server Successfully', index.DIALOG_TYPE.success);
+	    		setTimeout(() => index.reload(), 1000);
             }
         });
     }
@@ -99,7 +100,6 @@
                 {% end %}
             </tbody>
         </table>
-        <div class="print"></div>
     </div>
 </div>
 {% end %}

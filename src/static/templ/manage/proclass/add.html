@@ -11,7 +11,7 @@
             let list = j_form.find("#list").val();
 
             if (re.test(list)) {
-                alert("請輸入數字、逗號與空白設定，範例：1, 2, 3");
+                index.show_notify_dialog("Problem List錯誤，請輸入數字、逗號與空白設定，範例：1, 2, 3", index.DIALOG_TYPE.warning);
                 return;
             }
 

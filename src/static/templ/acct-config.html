@@ -18,7 +18,7 @@
                 new URL(photo);
             } catch {
                 if (photo != "") {
-                    alert("Photo url is invalid");
+                    index.show_notify_dialog("Photo url is invalid", index.DIALOG_TYPE.error);
                     return;
                 }
             }
@@ -27,7 +27,7 @@
                 new URL(cover);
             } catch {
                 if (cover != "") {
-                    alert("Cover url is invalid");
+                    index.show_notify_dialog("Cover url is invalid", index.DIALOG_TYPE.error);
                     return;
                 }
             }
@@ -41,21 +41,20 @@
             }, function(res) {
                 let msg = 'Unknown';
 
-                if(res[0] == 'E') {
-                    if(res == 'Enamemin') {
+                if (res[0] == 'E') {
+                    dialog_type = index.DIALOG_TYPE.error;
+                    if (res == 'Enamemin') {
                         msg = 'Name length < min';
                     } else if (res == 'Enamemax') {
                         msg = 'Name length > max';
                     }
 
-                    j_profile.find('div.print').print(res);
-
+                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
                 } else {
-                    j_profile.find('div.print').print('Success', true);
+                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
                     index.reload();
                 }
             });
-
         });
 
         j_reset.find('button.submit').on('click', function(e) {
@@ -64,7 +63,7 @@
             let repeat = j_reset.find('input.repeat').val();
 
             if (pw != repeat) {
-		        j_reset.find('div.print').print('Repeat incorrect');
+                index.show_notify_dialog('Repeat incorrect', index.DIALOG_TYPE.error);
 		        return;
 	        }
 
@@ -85,9 +84,9 @@
                         msg = 'Previous incorrect';
                     }
 
-		            j_reset.find('div.print').print(msg);
+                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
                 } else {
-		            j_reset.find('div.print').print('Success', true);
+                    index.show_notify_dialog('Update Password Successfully', index.DIALOG_TYPE.success);
                     j_reset.find('input').val('');
                 }
             });
@@ -138,7 +137,6 @@
             </div>
             
             <button type="button" class="btn btn-primary submit">更新</button>
-            <div class="print"></div>
         </form>
         {% end %}
 
@@ -162,7 +160,6 @@
             </div>
 
             <button type="button" class="btn btn-warning submit">確認</button>
-            <div class="print"></div>
         </form>
         {% end %}
     </div>
