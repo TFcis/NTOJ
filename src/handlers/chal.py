@@ -4,7 +4,7 @@ import json
 import tornado.web
 
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
-from services.chal import ChalConst, ChalService
+from services.chal import ChalConst, ChalService, ChalSearchingParamBuilder
 from services.pro import ProService
 from services.user import UserService
 
@@ -51,12 +51,7 @@ class ChalListHandler(RequestHandler):
         except tornado.web.HTTPError:
             compiler_type = 'all'
 
-        flt = {
-            'pro_id': query_pros,
-            'acct_id': query_accts,
-            'state': state,
-            'compiler': compiler_type,
-        }
+        flt = ChalSearchingParamBuilder().pro(query_pros).acct(query_accts).state(state).compiler(compiler_type).build()
 
         _, chalstat = await ChalService.inst.get_stat(self.acct, flt)
 

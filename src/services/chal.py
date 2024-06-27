@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import datetime
 import json
 import os
@@ -71,6 +72,63 @@ class ChalConst:
         'python3': 'CPython 3.11.2',
         'java': 'OpenJDK 17.0.8',
     }
+
+
+@dataclass
+class ChalSearchingParam:
+    pro: list[int]
+    acct: list[int]
+    state: int
+    compiler: str
+
+    def get_sql_query_str(self):
+        query = ' '
+        if self.pro:
+            query += 'AND ( "challenge"."pro_id" = 0 '
+            for pro_id in self.pro:
+                query += f' OR "challenge"."pro_id" = {pro_id} '
+            query += ')'
+
+        if self.acct:
+            query += 'AND ( "challenge"."acct_id" = 0 '
+            for acct_id in self.acct:
+                query += f' OR "challenge"."acct_id" = {acct_id} '
+            query += ')'
+
+        if self.state != 0:
+            if self.state == ChalConst.STATE_NOTSTARTED:
+                query += ' AND "challenge_state"."state" IS NULL '
+            else:
+                query += f' AND "challenge_state"."state" = {self.state} '
+
+        if self.compiler != 'all':
+            query += f" AND \"challenge\".\"compiler_type\"=\'{self.compiler}\' "
+
+        return query
+
+
+class ChalSearchingParamBuilder:
+    def __init__(self):
+        self.param = ChalSearchingParam([], [], 0, "all")
+
+    def pro(self, pro: list[int]):
+        self.param.pro = pro
+        return self
+
+    def acct(self, acct: list[int]):
+        self.param.acct = acct
+        return self
+
+    def state(self, state: int):
+        self.param.state = state
+        return self
+
+    def compiler(self, compiler: str):
+        self.param.compiler = compiler
+        return self
+
+    def build(self) -> ChalSearchingParam:
+        return self.param
 
 
 class ChalService:
@@ -202,9 +260,9 @@ class ChalService:
             can_see_code = True
 
         elif (
-            acct.is_kernel()
-            and (owner is None or acct.acct_id in config.lock_user_list)
-            and acct.acct_id in config.can_see_code_user
+                acct.is_kernel()
+                and (owner is None or acct.acct_id in config.lock_user_list)
+                and acct.acct_id in config.can_see_code_user
         ):
             # INFO: owner is problem uploader. if problem was locked, only problem owner can see submit code about this problem
             await LogService.inst.add_log(f"{acct.name} view the challenge {chal_id}", 'manage.chal.view')
@@ -314,11 +372,9 @@ class ChalService:
         return None, None
 
     # TODO: Porformance test
-    async def list_chal(self, off, num, acct: Account, flt=None):
+    async def list_chal(self, off, num, acct: Account, flt: ChalSearchingParam):
 
-        if flt is None:
-            flt = {'pro_id': None, 'acct_id': None, 'state': 0, 'compiler': 'all'}
-        fltquery = await self._get_fltquery(flt)
+        fltquery = flt.get_sql_query_str()
 
         max_status = ProService.inst.get_acct_limit(acct)
         min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
@@ -378,9 +434,9 @@ class ChalService:
         return None, challist
 
     async def get_single_chal_state_in_list(
-        self,
-        chal_id: int,
-        acct: Account,
+            self,
+            chal_id: int,
+            acct: Account,
     ):
         chal_id = int(chal_id)
         max_status = ProService.inst.get_acct_limit(acct)
@@ -412,19 +468,19 @@ class ChalService:
             'memory': int(result['memory']),
         }
 
-    async def get_stat(self, acct: Account, flt=None):
-        fltquery = await self._get_fltquery(flt)
+    async def get_stat(self, acct: Account, flt: ChalSearchingParam):
+        fltquery = flt.get_sql_query_str()
         min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 (
-                    'SELECT COUNT(1) FROM "challenge" '
-                    'INNER JOIN "account" '
-                    'ON "challenge"."acct_id" = "account"."acct_id" '
-                    'LEFT JOIN "challenge_state" '
-                    'ON "challenge"."chal_id"="challenge_state"."chal_id" '
-                    f'WHERE "account"."acct_type" >= {min_accttype}' + fltquery + ';'
+                        'SELECT COUNT(1) FROM "challenge" '
+                        'INNER JOIN "account" '
+                        'ON "challenge"."acct_id" = "account"."acct_id" '
+                        'LEFT JOIN "challenge_state" '
+                        'ON "challenge"."chal_id"="challenge_state"."chal_id" '
+                        f'WHERE "account"."acct_type" >= {min_accttype}' + fltquery + ';'
                 )
             )
 
@@ -432,7 +488,7 @@ class ChalService:
             return 'Eunk', None
 
         total_chal = result[0]['count']
-        return (None, {'total_chal': total_chal})
+        return None, {'total_chal': total_chal}
 
     async def update_test(self, chal_id, test_idx, state, runtime, memory, response, refresh_db=True):
         chal_id = int(chal_id)
@@ -455,28 +511,3 @@ class ChalService:
             await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
 
         return None, None
-
-    async def _get_fltquery(self, flt):
-        query = ' '
-        if flt['pro_id'] is not None:
-            query += 'AND ( "challenge"."pro_id" = 0 '
-            for pro_id in flt['pro_id']:
-                query += f' OR "challenge"."pro_id" = {pro_id} '
-            query += ')'
-
-        if flt['acct_id'] is not None:
-            query += 'AND ( "challenge"."acct_id" = 0 '
-            for acct_id in flt['acct_id']:
-                query += f' OR "challenge"."acct_id" = {acct_id} '
-            query += ')'
-
-        if flt['state'] != 0:
-            if flt['state'] == ChalConst.STATE_NOTSTARTED:
-                query += ' AND "challenge_state"."state" IS NULL '
-            else:
-                query += ' AND "challenge_state"."state" = ' + str(flt['state']) + ' '
-
-        if flt['compiler'] != 'all':
-            query += f" AND \"challenge\".\"compiler_type\"=\'{flt['compiler']}\' "
-
-        return query
