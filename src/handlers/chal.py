@@ -20,8 +20,7 @@ class ChalListHandler(RequestHandler):
 
         try:
             ppro_id = str(self.get_argument('proid'))
-            tmp_pro_id = ppro_id.replace(' ', '').split(',')
-            query_pros = [int(pro_id) for pro_id in tmp_pro_id if pro_id.isnumeric()]
+            query_pros = parse_list_str(ppro_id)
             if len(query_pros) == 0:
                 query_pros = None
 
@@ -31,8 +30,7 @@ class ChalListHandler(RequestHandler):
 
         try:
             pacct_id = str(self.get_argument('acctid'))
-            tmp_acct_id = pacct_id.replace(' ', '').split(',')
-            query_accts = [int(acct_id) for acct_id in tmp_acct_id if acct_id.isnumeric()]
+            query_accts = parse_list_str(pacct_id)
             if len(query_accts) == 0:
                 query_accts = None
 
