@@ -90,8 +90,8 @@
 		    }
 
 		    if (files.length == 0) {
-				// TODO: Why need call _update();
-				// _update();
+				// NOTE: Update problem param
+				_update();
 		    } else {
 				pack.get_token().done(function(token) {
 					index.create_progress_bar('Uploading...');
