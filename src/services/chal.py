@@ -371,7 +371,6 @@ class ChalService:
 
         return None, None
 
-    # TODO: Porformance test
     async def list_chal(self, off, num, acct: Account, flt: ChalSearchingParam):
 
         fltquery = flt.get_sql_query_str()

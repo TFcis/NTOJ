@@ -139,7 +139,6 @@ class ProService:
             clas = [clas]
 
         statemap = {}
-        # TODO: decrease sql search times
         if state is True and isguest is False:
             async with self.db.acquire() as con:
                 result = await con.fetch(

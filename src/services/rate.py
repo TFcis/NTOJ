@@ -199,7 +199,6 @@ class RateService:
         if isinstance(endtime, str):
             endtime = datetime.datetime.fromisoformat(endtime)
 
-        # TODO: performance test
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''

@@ -61,6 +61,7 @@ class PackService:
                 await self._run_and_wait_process('/bin/rm', '-Rf', dst)
                 os.makedirs(dst, 0o700)
 
+        # FIXME: Detect zip bomb
         returncode = await self._run_and_wait_process('/bin/tar', '-Jxf', f'tmp/{pack_token}', '-C', dst)
         if returncode != 0:
             return 'Eunk', None
