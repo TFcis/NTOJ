@@ -50,19 +50,17 @@
   Account : {{ acct.name }} {{ acct.acct_id }}
   </div>
   <div id="form">
-    {% set count = 0 %}
-    {% for ques in ques_list %}
+    {% for count, ques in enumerate(ques_list) %}
     <div id="abc" style="border:2px lavander solid;">
       <h3>Question: </h3>
-      <h5>{{ques['Q']}}</h5>
-      {% if ques['A'] == None%}
+      <h5>{{ ques['Q'] }}</h5>
+      {% if ques['A'] == None %}
       <p style="color:red;">Wait for Reply</p>
       {% else %}
       <h3>Reply:</p>
-      <h5>{{ques['A']}}</p>
+      <h5>{{ ques['A'] }}</p>
       {% end %}
       <input type="button" id="buttom" value="Remove" onclick="rm_ques({{ count }});">
-      {% set count = count + 1 %}
     </div>
     {% end %}
     <br />
