@@ -74,6 +74,7 @@ class WebSocketSubHandler(tornado.websocket.WebSocketHandler):
         self.task: asyncio.Task = None
 
         super().__init__(*args, **kwargs)
+        self.settings['websocket_ping_interval'] = 10
 
     def check_origin(self, origin: str) -> bool:
         return True
