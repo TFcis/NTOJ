@@ -12,12 +12,15 @@ from redis import asyncio as aioredis
 from services.user import UserService
 import utils.htmlgen
 
+TEMPLATE_NAMESPACE = {
+    'set_page_title': utils.htmlgen.set_page_title
+}
 
 class RequestHandler(tornado.web.RequestHandler):
     def __init__(self, *args, **kwargs):
         self.db: asyncpg.Pool = kwargs.pop('db')
         self.rs: aioredis.Redis = kwargs.pop('rs')
-        self.tpldr = tornado.template.Loader('static/templ')
+        self.tpldr = tornado.template.Loader('static/templ', namespace=TEMPLATE_NAMESPACE)
 
         super().__init__(*args, **kwargs)
 

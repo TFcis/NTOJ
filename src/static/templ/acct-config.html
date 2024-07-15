@@ -1,4 +1,4 @@
-{{ htmlgen.set_page_title("Edit Account") }}
+{{ set_page_title("Edit Account") }}
 
 {% if acct.acct_id != acct_id and not isadmin %}
     You don't have permission.
@@ -13,7 +13,7 @@
             let name = j_profile.find('input.name').val();
             let photo = j_profile.find('input.photo').val();
             let cover = j_profile.find('input.cover').val();
-            
+
             try {
                 new URL(photo);
             } catch {
@@ -22,7 +22,7 @@
                     return;
                 }
             }
-            
+
             try {
                 new URL(cover);
             } catch {
@@ -135,7 +135,7 @@
                     <option value="classic">TOJ Classic Theme</option>
                 </select>
             </div>
-            
+
             <button type="button" class="btn btn-primary submit">更新</button>
         </form>
         {% end %}
