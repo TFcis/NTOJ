@@ -7,7 +7,17 @@
     });
 </script>
 <script type="text/javascript">
-    function init(){
+    var pdf_url = '';
+    var html_url = '';
+    {% if contest %}
+        pdf_url = '/oj/contests/{{ contest.contest_id }}/pro/{{ pro['pro_id'] }}/cont.pdf';
+        html_url = '/oj/contests/{{ contest.contest_id }}/pro/{{ pro['pro_id'] }}/cont.html'
+    {% else %}
+        pdf_url = '/oj/pro/{{ pro['pro_id'] }}/cont.pdf';
+        html_url = '/oj/pro/{{ pro['pro_id'] }}/cont.html';
+    {% end %}
+        
+    function init() {
         var scriptTag = document.createElement('script');
         scriptTag.src = 'https://toj.tfcis.org/oj/third/pdf_find_bar.js';
         document.head.appendChild(scriptTag);
@@ -25,7 +35,7 @@
         document.head.appendChild(scriptTag);
 
         PDFJS.workerSrc = 'https://toj.tfcis.org/oj/third/pdf.worker.js'
-        
+
         $('#tags').keydown(function(event) {
             if (event.which == 13) // return
                 $('#tags').focusout();
@@ -77,7 +87,7 @@
             scriptTag.src = 'https://toj.tfcis.org/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
             document.head.appendChild(scriptTag);
 
-            j_cont.load('/oj/pro/{{ pro['pro_id'] }}/cont.html', function(res, status, xhr) {
+            j_cont.load(html_url, function(res, status, xhr) {
                 if (status == 'error') {
                     $('#pdfbtn').show();
                     $('#switchviewer').show();
@@ -97,8 +107,9 @@
                 }
             });
         }
+
         function _load_pdf_js() {
-            PDFJS.getDocument('/oj/pro/{{ pro['pro_id'] }}/cont.pdf').then(function(pdf) {
+            PDFJS.getDocument(pdf_url).then(function(pdf) {
                 var i;
                 j_cont.empty();
                 for (i = 1; i <= pdf.numPages; i++) {
@@ -152,7 +163,7 @@
         }
         function _load_pdf_embed() {
             j_cont.empty();
-            var embed = $('<embed width="100%" height="100%" src="/oj/pro/{{ pro['pro_id'] }}/cont.pdf" type="application/pdf">');
+            var embed = $(`<embed width="100%" height="100%" src="${pdf_url}" type="application/pdf">`);
             j_cont.append(embed);
         }
         _load_html();
@@ -162,21 +173,31 @@
     <div id="side" class="col-lg-2 col-12 mt-lg-2">
         <h3>{{ pro['pro_id']}} / {{ pro['name'] }}</h3>
         {% if can_submit == True %}
-            <a class="btn btn-primary btn-lg my-lg-1" href="/oj/submit/{{ pro['pro_id'] }}/">Submit</a><br />
+            {% if contest %}
+                <a class="btn btn-primary btn-lg my-lg-1" href="/oj/contests/{{ contest.contest_id }}/submit/{{ pro['pro_id'] }}/">Submit</a><br />
+            {% else %}
+                <a class="btn btn-primary btn-lg my-lg-1" href="/oj/submit/{{ pro['pro_id'] }}/">Submit</a><br />
+            {% end %}
         {% else %}
             <a class="btn btn-warning btn-lg my-lg-1">Cannot Submit</a><br />
         {% end %}
 
         <div class="my-lg-1">
-            <a class="btn btn-success" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
-            <a class="btn btn-secondary" href="/oj/chal/?proid={{ pro['pro_id'] }}">Status</a>
+            {% if contest %}
+                <a class="btn btn-success" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}&acctid={{ acct_id }}">My Status</a>
+                <a class="btn btn-secondary" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}">Status</a>
+            {% else %}
+                <a class="btn btn-success" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
+                <a class="btn btn-secondary" href="/oj/chal/?proid={{ pro['pro_id'] }}">Status</a>
+            {% end %}
+
         </div>
 
         <div class="my-lg-1">
             <a class="btn btn-warning my-lg-1" style="display: none; width: 156px; text-align: center;" id="pdfbtn">Download PDF</a>
             <a class="btn btn-warning my-lg-1" id="switchviewer" style="display: none; width: 156px; text-align: center;">Switch Viewer</a>
         </div>
-        {% if (isadmin) %}
+        {% if (isadmin) and not contest %}
             <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width: 190px" placeholder="add tags here">
         {% else %}
             <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width: 190px" placeholder="no tags" disabled>
@@ -222,7 +243,7 @@
                 {% end %}
             </tbody>
         </table>
-        {% if (isadmin) %}
+        {% if isadmin %}
             <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro['pro_id']}}">Manage</a>
         {% end %}
     </div>

@@ -122,7 +122,7 @@ class ProsetHandler(RequestHandler):
             prolist.reverse()
 
         pro_total_cnt = len(prolist)
-        prolist = prolist[pageoff : pageoff + 40]
+        prolist = prolist[pageoff: pageoff + 40]
 
         await self.render(
             'proset',
@@ -141,15 +141,24 @@ class ProStaticHandler(RequestHandler):
     @reqenv
     async def get(self, pro_id, path):
         pro_id = int(pro_id)
+        if self.contest:
+            if pro_id not in self.contest.pro_list:
+                self.error('Enoext')
+                return
 
-        err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+        err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
         if err:
             self.error(err)
             return
 
-        if pro['status'] == ProService.STATUS_OFFLINE:
+        if pro['status'] == ProConst.STATUS_OFFLINE:
             self.error('Eacces')
             return
+
+        elif pro['status'] == ProConst.STATUS_CONTEST:
+            if not self.contest:
+                self.error('Eacces')
+                return
 
         if path.endswith('pdf'):
             self.set_header('Pragma', 'public')
@@ -175,12 +184,29 @@ class ProHandler(RequestHandler):
     async def get(self, pro_id):
         pro_id = int(pro_id)
 
-        err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+        if self.contest:
+            if not self.contest.is_member(self.acct):
+                self.error('Eacces')
+                return
+
+            if not self.contest.is_running() and not self.contest.is_admin(self.acct):
+                self.error('Eacces')
+                return
+
+            if pro_id not in self.contest.pro_list:
+                self.error('Enoext')
+                return
+
+        err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
         if err:
             self.error(err)
             return
 
-        if pro['status'] == ProService.STATUS_OFFLINE:
+        if pro['status'] == ProConst.STATUS_OFFLINE:
+            self.error('Eacces')
+            return
+
+        elif pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
             self.error('Eacces')
             return
 
@@ -255,6 +281,7 @@ class ProHandler(RequestHandler):
             testl=testl,
             isadmin=isadmin,
             can_submit=can_submit,
+            contest=self.contest
         )
 
 

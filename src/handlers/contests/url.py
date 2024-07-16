@@ -1,5 +1,7 @@
 from handlers.contests.contests import ContestInfoHandler, ContestListHandler
 from handlers.contests.manage.url import get_contests_manage_url
+from handlers.contests.proset import ContestProsetHandler
+from handlers.pro import ProHandler, ProStaticHandler
 
 
 def get_contests_url(db, rs, pool):
@@ -14,4 +16,7 @@ def get_contests_url(db, rs, pool):
         (r'/contests', ContestListHandler, args),
         (r'/contests/\d+', ContestInfoHandler, args),
         (r'/contests/\d+/info', ContestInfoHandler, args),
+        (r'/contests/\d+/pro/(\d+)/(.*)', ProStaticHandler, args),
+        (r'/contests/\d+/pro/(\d+)', ProHandler, args),
+        (r'/contests/\d+/proset', ContestProsetHandler, args),
     ] + get_contests_manage_url(db, rs, pool)
