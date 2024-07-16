@@ -1,0 +1,119 @@
+{% extends 'manage.html' %}
+
+{% block head %}
+<script type="text/javascript" id="contjs">
+	function init() {
+        let contest_id = "{{ contest_id }}";
+
+		const post_func = (reqtype, pro_id) => {
+			if (pro_id.length == 0) {
+				index.show_notify_dialog('Input cannot empty.', index.DIALOG_TYPE.warning);
+				return;
+			}
+
+			$.post('/oj/be/contests/{{ contest_id }}/manage/pro', {
+				reqtype: reqtype,
+				pro_id: pro_id,
+			}, res => {
+				if (res[0] == 'E') {
+					let msg = '';
+					if (res == 'Enoext') {
+						msg = `Problem(#${pro_id}) not found.`;
+					} else if (res == 'Eexist') {
+						msg = `Problem(#${pro_id}) already added to problem list.`;
+					} else if (res == 'Ejudge') {
+						msg = `All judge server offline`;
+					}
+
+                    $("#proID").val('');
+                    $("#proList").val('');
+					index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
+				} else {
+					if (reqtype == "add" || reqtype == "multi_add") {
+						msg = `Problem(#${pro_id}) successfully add to problem list.`;						
+					} else if (reqtype == "remove" || reqtype == "multi_remove") {
+						msg = `Problem(#${pro_id}) successfully remove from problem list.`;						
+					} else if (reqtype == "rechal") {
+						msg = `Problem(#${pro_id}) is rechallenging.`;
+					}
+
+					index.show_notify_dialog(msg, index.DIALOG_TYPE.success);	
+					setTimeout(() => index.reload(), 1000);
+				}
+			});
+		};
+	
+		document.querySelectorAll('button.remove').forEach(el => {
+			el.addEventListener('click', () => post_func('remove', $(el).attr('pro_id')));
+		});
+		
+		document.querySelectorAll('button.rechal').forEach(el => {
+			el.addEventListener('click', () => post_func('rechal', $(el).attr('pro_id')));
+		});
+
+		$("#addPro").on('click', () => post_func('add', $("#proId").val()));
+		$("#removePro").on('click', () => post_func('remove', $("#proId").val()));
+		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val()));
+		$("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val()));
+    }
+</script>
+{% end %}
+
+{% block content %}
+
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+	
+	<div class="accordion">
+		<div class="accordion-item">
+			<h2 class="accordion-header" id="headingOne">
+				<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+					Problem List
+				</button>
+			</h2>
+
+			<div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+				<div class="accordion-body">
+					<form id="form">
+						<label for="#name" class="form-label">Problem ID (Single)</label>
+						<div class="input-group mb-1">
+							<input type="number" class="form-control" placeholder="pro id" id="proId">
+							<button class="btn btn-primary" id="addPro" type="button">Add</button>
+							<button class="btn btn-warning" id="removePro" type="button">Remove</button>
+						</div>
+
+						<label for="#name" class="form-label">Problem ID List (Multi)</label>
+						<div class="input-group mb-1">
+							<input type="text" class="form-control" placeholder="pro id list" id="proList">
+							<button class="btn btn-primary" id="addProList" type="button">Add</button>
+							<button class="btn btn-warning" id="removeProList" type="button">Remove</button>
+						</div>
+					</form>
+
+					<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+					<thead>
+						<tr>
+							<th scope="col">Pro ID</th>
+							<th scope="col">Problem Name</th>
+							<th scope="col">Operation</th>
+						</tr>
+					</thead>
+					<tbody>
+					{% for pro in pro_list %}
+						<tr>
+							<th scope="row"><a href="/oj/contests/{{ contest_id }}/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }}</a></th>
+							<td>{{ pro['name'] }}</td>
+							<td>
+								<button class="btn btn-warning me-2 remove" pro_id="{{ pro['pro_id'] }}">Remove</button>
+								<button class="btn btn-danger me-2 rechal" pro_id="{{ pro['pro_id'] }}">Rechallenge</button>
+							</td>
+						</tr>
+					{% end %}
+					</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% end %}
