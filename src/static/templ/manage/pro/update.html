@@ -152,8 +152,9 @@
 		<label for="" class="form-label">Problem Status</label>
 		<select class="form-select status">
 			<option value="0" {% if pro['status'] == 0 %} selected {% end %}>Online</option>
-			<option value="1" {% if pro['status'] == 1 %} selected {% end %}>Hidden</option>
-			<option value="2" {% if pro['status'] == 2 %} selected {% end %}>Offline</option>
+			<option value="1" {% if pro['status'] == 1 %} selected {% end %}>Contest</option>
+			<option value="2" {% if pro['status'] == 2 %} selected {% end %}>Hidden</option>
+			<option value="3" {% if pro['status'] == 3 %} selected {% end %}>Offline</option>
 		</select>
 
 		<label for="" class="form-label">文件</label>

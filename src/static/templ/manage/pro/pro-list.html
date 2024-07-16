@@ -87,11 +87,14 @@
 				<td><a {% if int(pro['pro_id']) in lock_list%}style="color:red;" {% end %}
 						href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['name'] }}</a></td>
 
+
 				{% if pro['status'] == 0 %}
 				<td class="status-online">Online</td>
 				{% elif pro['status'] == 1 %}
-				<td class="status-hidden">Hidden</td>
+				<td class="status-online">Contest</td>
 				{% elif pro['status'] == 2 %}
+				<td class="status-hidden">Hidden</td>
+				{% elif pro['status'] == 3 %}
 				<td class="status-offline">Offline</td>
 				{% end %}
 
