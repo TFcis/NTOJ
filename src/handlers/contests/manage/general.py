@@ -8,7 +8,6 @@ from services.contests import ContestService, ContestMode, RegMode
 
 
 class ContestManageDashHandler(RequestHandler):
-
     @reqenv
     @contest_require_permission('admin')
     async def get(self):

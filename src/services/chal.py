@@ -292,7 +292,7 @@ class ChalService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "acct_id", "timestamp" FROM "challenge"
+                    SELECT "acct_id", "contest_id", "timestamp" FROM "challenge"
                     WHERE "chal_id" = $1;
                 ''',
                 chal_id,
@@ -301,7 +301,7 @@ class ChalService:
             return 'Enoext', None
         result = result[0]
 
-        acct_id, timestamp = int(result['acct_id']), result['timestamp']
+        acct_id, contest_id, timestamp = int(result['acct_id']), int(result['contest_id']), result['timestamp']
 
         async with self.db.acquire() as con:
             testl = []
@@ -361,6 +361,7 @@ class ChalService:
             },
             1,
             pro_id,
+            contest_id,
         )
 
         await self.rs.hdel('rate@kernel_True', str(acct_id))

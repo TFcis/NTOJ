@@ -224,3 +224,57 @@ class ContestService:
         # log
 
         return None, None
+
+    async def get_ioi_style_score_data(self, contest_id: int, acct_id: int, before_time: datetime.datetime):
+        async with self.db.acquire() as con:
+            res = await con.fetch("""
+            WITH ranked_challenges AS (
+                SELECT
+                    "challenge"."chal_id",
+                    "challenge"."pro_id",
+                    "challenge"."acct_id",
+                    "challenge"."timestamp",
+                    "challenge_state"."rate",
+
+                    ROW_NUMBER() OVER (
+                        PARTITION BY "challenge"."pro_id"
+                        ORDER BY "challenge_state"."rate" DESC, "challenge"."timestamp" ASC
+                    ) AS rank,
+
+                    COUNT(*) OVER (
+                        PARTITION BY "challenge"."pro_id"
+                        ORDER BY "challenge"."timestamp" ASC
+                        ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+                    ) AS challenge_count_before_first_max_rate_challenge
+                FROM "challenge"
+                INNER JOIN "challenge_state"
+                ON "challenge"."contest_id" = $1 AND "challenge"."acct_id" = $2 AND "challenge"."timestamp" < $3 AND "challenge"."chal_id" = "challenge_state"."chal_id"
+            )
+            SELECT
+                chal_id,
+                pro_id,
+                timestamp,
+                rate,
+                challenge_count_before_first_max_rate_challenge,
+                SUM(rate) OVER () AS total_score
+            FROM ranked_challenges
+            WHERE rank = 1 ORDER BY pro_id;
+            """,
+                                  contest_id, acct_id, before_time)
+
+        if len(res) == 0:
+            return {}, 0
+
+        total_score = 0
+        rate = {}
+        for chal_id, pro_id, timestamp, score, fail_cnt, total_s in res:
+            total_score = total_s
+            rate[pro_id] = {
+                'chal_id': chal_id,
+                'pro_id': pro_id,
+                'timestamp': timestamp,
+                'score': score,
+                'fail_cnt': fail_cnt,
+            }
+
+        return rate, total_score
