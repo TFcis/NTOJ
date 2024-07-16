@@ -68,14 +68,12 @@ class ProsetHandler(RequestHandler):
             'reverse': order_reverse,
         }
 
-        clas = None
-
         try:
             pubclass_id = int(self.get_argument('pubclass_id'))
         except tornado.web.HTTPError:
             pubclass_id = None
 
-        err, prolist = await ProService.inst.list_pro(self.acct, state=True, clas=clas)
+        err, prolist = await ProService.inst.list_pro(self.acct, state=True)
 
         _, pubclass_list = await ProClassService.inst.get_pubclass_list()
 

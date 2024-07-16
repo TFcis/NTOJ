@@ -41,7 +41,6 @@ CREATE TABLE public.account (
     name character varying,
     password character varying,
     acct_type integer DEFAULT 3,
-    class integer[] DEFAULT '{0}'::integer[],
     photo character varying DEFAULT ''::character varying,
     cover character varying DEFAULT ''::character varying,
     "group" character varying,
@@ -118,7 +117,6 @@ CREATE TABLE public.problem (
     name character varying,
     status integer,
     expire timestamp with time zone,
-    class integer[] DEFAULT '{}'::integer[],
     tags character varying
 );
 
@@ -175,7 +173,7 @@ CREATE MATERIALIZED VIEW public.test_valid_rate AS
     test_config.weight AS rate
    FROM (((public.test
      JOIN public.account ON ((test.acct_id = account.acct_id)))
-     JOIN public.problem ON (((((test.pro_id = problem.pro_id) AND (account.class && problem.class)) AND (test.state = 1)) AND (age(test."timestamp", problem.expire) < '7 days'::interval))))
+     JOIN public.problem ON (((((test.pro_id = problem.pro_id)) AND (test.state = 1)) AND (age(test."timestamp", problem.expire) < '7 days'::interval))))
      RIGHT JOIN public.test_config ON (((test.pro_id = test_config.pro_id) AND (test.test_idx = test_config.test_idx))))
   GROUP BY test_config.pro_id, test_config.test_idx, test_config.weight
   WITH NO DATA;

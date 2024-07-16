@@ -111,7 +111,7 @@ class UserRankHandler(RequestHandler):
             self.error(err)
             return
 
-        err, ratemap = await RateService.inst.map_rate(clas=None)
+        err, ratemap = await RateService.inst.map_rate()
         if err:
             self.error(err)
             return

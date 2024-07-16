@@ -7,8 +7,6 @@
 	    j_form.find('#upload').on('click', function(e) {
 	        let name = j_form.find('#name').val();
 	        let status = j_form.find('#status').val();
-            // var clas = j_form.find('select.class').val();
-            let clas = 1;
 	        let files = j_form.find('#file')[0].files;
 
 	        if (files.length == 0) {
@@ -24,7 +22,6 @@
                         'reqtype': 'addpro',
                         'name': name,
                         'status': status,
-                        'class': clas,
                         'pack_token': pack_token
                     }, function(res) {
 						index.update_progress_bar_progress(100);

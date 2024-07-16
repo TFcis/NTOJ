@@ -7,14 +7,12 @@
 
 		j_form.find('button.submit').on('click', function(e) {
  	           	var type = j_form.find('#type').val();
- 	    		var clas = j_form.find('#class').val();
 				var group = j_form.find('#glist').val();
 
  	           	$.post('/oj/be/manage/acct/update', {
  	                'reqtype': 'update',
  	                'acct_id': {{ acct.acct_id }},
  	                'acct_type': type,
- 	                'class': clas,
 					'group': group,
  	           	}, function(res) {
 					console.log(res);
@@ -44,15 +42,6 @@
 			<select class="form-select" id="type">
 				<option value=0{% if acct.is_kernel() %} selected{% end %}>Kernel</option>
 				<option value=3{% if not acct.is_kernel() %} selected{% end %}>User</option>
-			</select>
-		</div>
-
-		<div class="mb-3">
-			<label>Class</label>
-			<select class="form-select" id="class">
-				<option value=0{% if acct.acct_class == 1 %} selected{% end %}>Other</option>
-				<option value=1{% if acct.acct_class == 1 %} selected{% end %}>Normal</option>
-				<option value=2{% if acct.acct_class == 2 %} selected{% end %}>Contest</option>
 			</select>
 		</div>
 

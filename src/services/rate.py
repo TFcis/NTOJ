@@ -57,7 +57,6 @@ class RateService:
                         '    ON "test"."pro_id" = "problem"."pro_id" '
                         '    WHERE "account"."acct_id" = $1 '
                         '    AND "test"."state" = $2 '
-                        '    AND "account"."class" && "problem"."class" '
                         '    GROUP BY "test"."pro_id","test"."test_idx","problem"."expire"'
                         ') AS "valid_test" '
                         'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
@@ -143,20 +142,13 @@ class RateService:
         return None, rate_data
 
     async def map_rate_acct(
-            self, acct: Account, clas=None, contest_id: int = 0, starttime='1970-01-01 00:00:00.000',
+            self, acct: Account, contest_id: int = 0, starttime='1970-01-01 00:00:00.000',
             endtime='2100-01-01 00:00:00.000'
     ):
-
-        if clas is not None:
-            qclas = [clas]
-
-        else:
-            qclas = [1, 2]
-
-        if type(starttime) == str:
+        if isinstance(starttime, str):
             starttime = datetime.datetime.fromisoformat(starttime)
 
-        if type(endtime) == str:
+        if isinstance(endtime, str):
             endtime = datetime.datetime.fromisoformat(endtime)
 
         async with self.db.acquire() as con:
@@ -169,11 +161,10 @@ class RateService:
                     ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
                     INNER JOIN "problem"
                     ON "challenge"."pro_id" = "problem"."pro_id"
-                    WHERE ("problem"."class" && $2) AND "challenge"."contest_id" = $3 AND "challenge"."timestamp" >= $4 AND "challenge"."timestamp" <= $5
+                    WHERE "challenge"."contest_id" = $2 AND "challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4
                     GROUP BY "challenge"."pro_id";
                 ''',
                 acct.acct_id,
-                qclas,
                 contest_id,
                 starttime,
                 endtime,
@@ -188,13 +179,7 @@ class RateService:
 
         return None, statemap
 
-    async def map_rate(self, clas=None, starttime='1970-01-01 00:00:00.000', endtime='2100-01-01 00:00:00.000'):
-        if clas is not None:
-            qclas = [clas]
-
-        else:
-            qclas = [1, 2]
-
+    async def map_rate(self, starttime='1970-01-01 00:00:00.000', endtime='2100-01-01 00:00:00.000'):
         if isinstance(starttime, str):
             starttime = datetime.datetime.fromisoformat(starttime)
 
@@ -211,10 +196,9 @@ class RateService:
                     ON "challenge"."chal_id" = "challenge_state"."chal_id"
                     INNER JOIN "problem"
                     ON "challenge"."pro_id" = "problem"."pro_id"
-                    WHERE ("problem"."class" && $1) AND ("challenge"."timestamp" >= $2 AND "challenge"."timestamp" <= $3)
+                    WHERE "challenge"."timestamp" >= $1 AND "challenge"."timestamp" <= $2
                     GROUP BY "challenge"."acct_id", "challenge"."pro_id";
                 ''',
-                qclas,
                 starttime,
                 endtime,
             )

@@ -12,8 +12,8 @@ class ApiHandler(RequestHandler):
         reqtype = str(self.get_argument('reqtype'))
         if reqtype == 'AC':
             acct_id = int(self.get_argument('acct_id'))
-            err, prolist = await ProService.inst.list_pro(acct=None, clas=1)
-            err, ratemap = await RateService.inst.map_rate(clas=1)
+            err, prolist = await ProService.inst.list_pro(acct=None)
+            err, ratemap = await RateService.inst.map_rate()
             prolist2 = []
             for pro in prolist:
                 pro_id = pro['pro_id']
@@ -38,7 +38,7 @@ class ApiHandler(RequestHandler):
                     max_status,
                 )
 
-            err, ratemap = await RateService.inst.map_rate_acct(acct=acct, clas=1)
+            err, ratemap = await RateService.inst.map_rate_acct(acct=acct)
             prolist2 = []
             for pro in prolist:
                 pro_id = pro['pro_id']
