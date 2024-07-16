@@ -2,6 +2,7 @@ from handlers.chal import ChalListHandler, ChalHandler
 from handlers.contests.contests import ContestInfoHandler, ContestListHandler
 from handlers.contests.manage.url import get_contests_manage_url
 from handlers.contests.proset import ContestProsetHandler
+from handlers.contests.reg import ContestRegHandler
 from handlers.pro import ProHandler, ProStaticHandler
 from handlers.submit import SubmitHandler
 
@@ -25,4 +26,5 @@ def get_contests_url(db, rs, pool):
         (r'/contests/\d+/chal/(\d+)', ChalHandler, args),
         (r'/contests/\d+/submit/(\d+)', SubmitHandler, args),
         (r'/contests/\d+/submit', SubmitHandler, args),
+        (r'/contests/\d+/reg', ContestRegHandler, args),
     ] + get_contests_manage_url(db, rs, pool)
