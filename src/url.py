@@ -38,7 +38,7 @@ def get_url(db, rs, pool):
     sub_args = {'pool': pool}
 
     return [
-        (r'/index', IndexHandler, args),
+        (r'/index/(.*)', IndexHandler, args),
         (r'/info', BulletinHandler, args),
         (r'/bulletin/(\d+)', BulletinHandler, args),
         (r'/board', BoardHandler, args),

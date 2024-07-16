@@ -1,3 +1,4 @@
+import re
 import asyncio
 import datetime
 import json
@@ -9,7 +10,8 @@ import tornado.web
 import tornado.websocket
 from redis import asyncio as aioredis
 
-from services.user import UserService
+from services.contests import ContestService, Contest
+from services.user import UserService, Account
 import utils.htmlgen
 
 TEMPLATE_NAMESPACE = {
@@ -21,6 +23,9 @@ class RequestHandler(tornado.web.RequestHandler):
         self.db: asyncpg.Pool = kwargs.pop('db')
         self.rs: aioredis.Redis = kwargs.pop('rs')
         self.tpldr = tornado.template.Loader('static/templ', namespace=TEMPLATE_NAMESPACE)
+
+        self.acct: Account = None
+        self.contest: Contest = None
 
         super().__init__(*args, **kwargs)
 
@@ -88,8 +93,19 @@ class WebSocketSubHandler(tornado.websocket.WebSocketHandler):
 
 
 def reqenv(func):
-    # @tornado.gen.coroutine
     async def wrap(self, *args, **kwargs):
+        path = str(self.request.path)
+        if (g := re.search(r'contests/(\d+)/?', path)) is not None:
+            contest_id = g.group(1)
+            if not contest_id.isnumeric():
+                await self.finish('Enoext')
+                return
+
+            _, self.contest = await ContestService.inst.get_contest(int(contest_id))
+            if self.contest is None:
+                await self.finish('Enoext')
+                return
+
         _, acct_id, _ = await UserService.inst.info_sign(self)
         _, self.acct = await UserService.inst.info_acct(acct_id)
 
