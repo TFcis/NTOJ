@@ -1,0 +1,20 @@
+<script type="text/javascript" id="contjs">
+	function init() {
+        $("button.submit").on('click', function(e) {
+            let name = $("#name").val();
+            $.post('/oj/be/contests/manage/add', {
+                reqtype: 'add',
+                name: name,
+            }, res => {
+                index.go(`/oj/contests/${JSON.parse(res)}/manage/general/`);
+            });
+        });
+    }
+</script>
+
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h2>Add new contest</h2>
+    <label for="name">Contest Name</label>
+    <input class="form-control" type="text" id="name">
+    <button class="btn btn-primary submit">Add</button>
+</div>

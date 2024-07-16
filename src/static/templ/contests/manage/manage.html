@@ -1,0 +1,14 @@
+{% block head %}{% end %}
+<div class="row">
+<div class="col-1">
+	<nav class="nav nav-pills">
+		<a href="/oj/contests/{{ contest_id }}/manage/dash/" class="nav-link {% if page == 'dash' %} active{% end %}">Dashboard</a>
+		<a href="/oj/contests/{{ contest_id }}/manage/general/" class="nav-link {% if page == 'general' %} active{% end %}">General</a>
+		<a href="/oj/contests/{{ contest_id }}/manage/acct/" class="nav-link {% if page == 'acct' %} active{% end %}">Account</a>
+		<a href="/oj/contests/{{ contest_id }}/manage/pro/" class="nav-link {% if page == 'pro' %} active{% end %}">Problem</a>
+		<a href="/oj/contests/{{ contest_id }}/manage/reg/" class="nav-link {% if page == 'reg' %} active{% end %}">Registration</a>
+		<a href="/oj/contests/{{ contest_id }}/manage/question/" class="nav-link{% if page == 'question' %} active{% end %}">Q & A</a>
+	</nav>
+</div>
+{% block content %}{% end %}
+</div>

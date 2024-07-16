@@ -1,0 +1,268 @@
+{% extends 'manage.html' %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/css/tempus-dominus.min.css" crossorigin="anonymous">
+
+<style>
+    .svg-inline--fa {
+        display: var(--fa-display, inline-block);
+        height: 1em;
+    }
+</style>
+
+<script type="text/javascript" id="contjs">
+    function init() {
+        let contest_id = "{{ contest_id }}";
+
+        var contest_start_date_picker = null;
+        var contest_end_date_picker = null;
+        var reg_end_date_picker = null;
+        $.getScript('https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js', () => {
+            const options = {
+                display: {
+                    calendarWeeks: true,
+                },
+
+                localization: {
+                    locale: 'zh-tw',
+                    format: 'yyyy/MM/dd HH:mm',
+                },
+            };
+            contest_start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestStart'), options);
+            contest_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestEnd'), options);
+            reg_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerRegEnd'), options);
+        });
+        $("button.submit").on('click', function(e) {
+            let start_time = null, end_time = null, reg_end_time = null;
+            let contest_name = $("#contestName").val();
+            let contest_desc = $("#contestDesc").val();
+            let contest_mode = $("#contestMode").val();
+            let reg_mode = $("#regMode").val();
+            let submit_cd_time = $("#submitCdTime").val();
+            let freeze_period = $("#freezeScoreboardPeriod").val();
+            let hide_admin = $("#hideAdmin").is(":checked");
+            let public_scoreboard = $("#publicScoreboard").is(":checked");
+            let allow_view_other_page = $("#allowViewOtherPage").is(":checked");
+
+            // Allow Compilers
+            let allow_compilers = [];
+            document.querySelectorAll('.compilers').forEach(el => {
+                if ($(el).is(":checked")) {
+                    allow_compilers.push($(el).val());
+                }
+            });
+
+            if (allow_compilers.length == 0) {
+                index.show_notify_dialog("請選至少一種支援的語言", index.DIALOG_TYPE.warning);
+                return;
+            }
+
+            start_time = contest_start_date_picker.viewDate;
+            if (start_time == '') {
+                index.show_notify_dialog("開始時間不可為空", index.DIALOG_TYPE.warning);
+                return;
+            }
+
+            end_time = contest_end_date_picker.viewDate;
+            if (end_time == '') {
+                index.show_notify_dialog("結束時間不可為空", index.DIALOG_TYPE.warning);
+                return;
+            }
+
+            if (start_time >= end_time) {
+                index.show_notify_dialog("結束時間必須大於開始時間", index.DIALOG_TYPE.warning);
+                return;
+            }
+
+            reg_end_time = reg_end_date_picker.viewDate;
+ 
+            $.post("/oj/be/contests/{{ contest_id }}/manage/general", {
+                reqtype: "update",
+                name: contest_name,
+                desc: contest_desc,
+
+                contest_mode: contest_mode,
+                contest_start: start_time.toISOString(),
+                contest_end: end_time.toISOString(),
+
+                reg_mode: reg_mode,
+                reg_end: reg_end_time.toISOString(),
+
+                allow_compilers: allow_compilers,
+                is_public_scoreboard: public_scoreboard,
+                allow_view_other_page: allow_view_other_page,
+                hide_admin: hide_admin,
+                submission_cd_time: submit_cd_time,
+                freeze_scoreboard_period: freeze_period,
+            }, res => {
+                if (res[0] == 'E') {
+                    if (res == 'Eparam') {
+
+                    }
+                } else {
+                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
+                }
+            });
+        });
+    }
+</script>
+{% end %}
+
+{% block content %}
+
+{% import datetime %}
+{% from services.contests import ContestMode %}
+{% from services.contests import RegMode %}
+
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <div class="mb-1">
+        <div class="mb-1">
+            <h4 for="" class="form-label">Contest Basic Setting</h4>
+        </div>
+
+        <div class="mb-1">
+            <label for="contestName" class="form-label">Contest Name</label>
+            <input type="text" id="contestName" class="form-control" value="{{ contest.name }}">
+        </div>
+
+        <div class="mb-1">
+            <label for="contestMode" class="form-label">Contest Mode</label>
+            <select id="contestMode" class="form-select">
+                <option value="{{ ContestMode.IOI.value }}"{% if contest.contest_mode == ContestMode.IOI %} selected {% end %}>IOI</option>
+                <option value="{{ ContestMode.ACM.value }}"{% if contest.contest_mode == ContestMode.ACM %} selected {% end %}>ACM</option>
+            </select>
+        </div>
+
+        <div class="mb-1">
+            <label for="datepickerContestStart" class="form-label">Contest Start Time</label>
+            <div class="input-group" id="datepickerContestStart">
+                <input id="datepickerContestStartInput" class="form-control" value="{{ contest.contest_start.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) }}">
+                <span class="input-group-text" data-td-target="#datepickerContestStart" data-td-toggle="datepickerContestStart">
+                    <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg><!-- <span class="fa-solid fa-calendar"></span> Font Awesome fontawesome.com -->
+                </span>
+            </div>
+        </div>
+
+        <div class="mb-1">
+            <label for="datepickerContestEnd" class="form-label">Contest End Time</label>
+            <div class="input-group" id="datepickerContestEnd">
+                <input id="datepickerContestEndInput" class="form-control" value="{{ contest.contest_end.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) }}">
+                <span class="input-group-text" data-td-target="#datepickerContestEnd" data-td-toggle="datepickerContestEnd">
+                    <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg>
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mb-2">
+        <div class="mb-1">
+            <h4 for="" class="form-label">Registration</h4>
+        </div>
+        
+        <div class="mb-1">
+            <label for="regMode" class="form-label">Registration Mode</label>
+            <select id="regMode" class="form-select">
+                <option value="{{ RegMode.INVITED.value }}"{% if contest.reg_mode == RegMode.INVITED %} selected {% end %}>Invited</option>
+                <option value="{{ RegMode.FREE_REG.value }}"{% if contest.reg_mode == RegMode.FREE_REG %} selected {% end %}>Free registration</option>
+                <option value="{{ RegMode.REG_APPROVAL.value }}"{% if contest.reg_mode == RegMode.REG_APPROVAL %} selected {% end %}>Free registration but need approval</option>
+            </select>
+        </div>
+
+        <div class="mb-1">
+            <label for="datepickerRegEnd" class="form-label">Registration End Time</label>
+            <div class="input-group" id="datepickerRegEnd">
+                <input id="datepickerRegEndInput" class="form-control" value="{{ contest.reg_end.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) }}">
+                <span class="input-group-text" data-td-target="#datepickerRegEnd" data-td-toggle="datepickerRegEnd">
+                    <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-2">
+        <div class="mb-1">
+            <h4 for="" class="form-label">Limits</h4>
+        </div>
+
+        <div class="mb-1">
+            <label for="submitCdTime" class="form-label">Submission CD Time</label>
+            <div class="input-group">
+                <input type="number" id="submitCdTime" class="form-control" value="{{ contest.submission_cd_time }}">
+                <span class="input-group-text">Seconds</span>
+            </div>
+        </div>
+
+        <div class="mb-1">
+            <label for="freezeScoreboardPeriod" class="form-label">Freeze Scoreboard Period</label>
+            <div class="input-group">
+                <input type="number" id="freezeScoreboardPeriod" class="form-control" value="{{ contest.freeze_scoreboard_period }}">
+                <span class="input-group-text">Minutes</span>                
+            </div>
+        </div>
+
+        <div class="mb-1 form-check">
+            <label for="hideAdmin" class="form-check-label">Hide Admin In Challenge & Scoreboard</label>
+            <input type="checkbox" id="hideAdmin" class="form-check-input" {% if contest.hide_admin %} checked {% end %}>
+        </div>
+
+        <div class="mb-1 form-check">
+            <label for="publicScoreboard" class="form-check-label">Public Scoreboard</label>
+            <input type="checkbox" id="publicScoreboard" class="form-check-input" {% if contest.is_public_scoreboard %} checked {% end %}>
+        </div>
+
+        <div class="mb-1 form-check">
+            <label for="allowViewOtherPage" class="form-check-label">Allow View Other Page During Contest (WIP)</label>
+            <input type="checkbox" id="allowViewOtherPage" class="form-check-input" {% if contest.allow_view_other_page %} checked {% end %}>
+        </div>
+
+        <div class="mb-1">
+            <label for="" class="form-label">Allow Compilers</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox1" value="gcc"{% if 'gcc' in contest.allow_compilers %} checked {% end %}>
+            <label class="form-check-label" for="inlineCheckbox1">GCC GNU11</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox2" value="clang"{% if 'clang' in contest.allow_compilers %} checked {% end %}>
+            <label class="form-check-label" for="inlineCheckbox2">Clang C11</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox3" value="g++"{% if 'g++' in contest.allow_compilers %} checked {% end %}>
+            <label class="form-check-label" for="inlineCheckbox3">G++ GNU++17</label>
+        </div>
+
+        <div class="form-check form-check-inline">
+            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox4" value="clang++"{% if 'clang++' in contest.allow_compilers %} checked {% end %}>
+            <label class="form-check-label" for="inlineCheckbox4">Clang++ C++17</label>
+        </div>
+
+        <div class="form-check form-check-inline">
+            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox5" value="python3"{% if 'python' in contest.allow_compilers %} checked {% end %}>
+            <label class="form-check-label" for="inlineCheckbox5">CPython 3.11</label>
+        </div>
+
+        <div class="form-check form-check-inline">
+            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox6" value="rustc"{% if 'rustc' in contest.allow_compilers %} checked {% end %}>
+            <label class="form-check-label" for="inlineCheckbox6">Rustc Rust1.63</label>
+        </div>
+
+        <div class="form-check form-check-inline">
+            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox7" value="java"{% if 'java' in contest.allow_compilers %} checked {% end %}>
+            <label class="form-check-label" for="inlineCheckbox7">OpenJDK Java17</label>
+        </div>
+    </div>
+
+    <!-- TODO: desc 支援 markdown -->
+    <!-- TODO: desc markdown 預覽 -->
+    <div class="mb-1">
+        <label for="contestDesc" class="form-label">Contest Desc</label>
+        <textarea id="contestDesc" class="form-control">{{ contest.desc }}</textarea>
+    </div>
+
+    <button class="btn btn-primary submit">Update</button>
+
+</div>
+
+
+{% end %}
