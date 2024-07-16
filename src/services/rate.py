@@ -143,7 +143,8 @@ class RateService:
         return None, rate_data
 
     async def map_rate_acct(
-        self, acct: Account, clas=None, starttime='1970-01-01 00:00:00.000', endtime='2100-01-01 00:00:00.000'
+            self, acct: Account, clas=None, contest_id: int = 0, starttime='1970-01-01 00:00:00.000',
+            endtime='2100-01-01 00:00:00.000'
     ):
 
         if clas is not None:
@@ -168,11 +169,12 @@ class RateService:
                     ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
                     INNER JOIN "problem"
                     ON "challenge"."pro_id" = "problem"."pro_id"
-                    WHERE ("problem"."class" && $2) AND ("challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4)
+                    WHERE ("problem"."class" && $2) AND "challenge"."contest_id" = $3 AND "challenge"."timestamp" >= $4 AND "challenge"."timestamp" <= $5
                     GROUP BY "challenge"."pro_id";
                 ''',
                 acct.acct_id,
                 qclas,
+                contest_id,
                 starttime,
                 endtime,
             )

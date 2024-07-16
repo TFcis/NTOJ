@@ -80,6 +80,7 @@ class ChalSearchingParam:
     acct: list[int]
     state: int
     compiler: str
+    contest: int
 
     def get_sql_query_str(self):
         query = ' '
@@ -102,14 +103,19 @@ class ChalSearchingParam:
                 query += f' AND "challenge_state"."state" = {self.state} '
 
         if self.compiler != 'all':
-            query += f" AND \"challenge\".\"compiler_type\"=\'{self.compiler}\' "
+            query += f' AND \"challenge\".\"compiler_type\"=\'{self.compiler}\' '
+
+        if self.contest != 0:
+            query += f' AND "challenge"."contest_id"={self.contest} '
+        else:
+            query += f' AND "challenge"."contest_id"=0 '
 
         return query
 
 
 class ChalSearchingParamBuilder:
     def __init__(self):
-        self.param = ChalSearchingParam([], [], 0, "all")
+        self.param = ChalSearchingParam([], [], 0, "all", 0)
 
     def pro(self, pro: list[int]):
         self.param.pro = pro
@@ -127,6 +133,10 @@ class ChalSearchingParamBuilder:
         self.param.compiler = compiler
         return self
 
+    def contest(self, contest: int):
+        self.param.contest = contest
+        return self
+
     def build(self) -> ChalSearchingParam:
         return self.param
 
@@ -138,19 +148,20 @@ class ChalService:
 
         ChalService.inst = self
 
-    async def add_chal(self, pro_id, acct_id, comp_type, code):
+    async def add_chal(self, pro_id: int, acct_id: int, contest_id: int, comp_type: str, code: str):
         pro_id = int(pro_id)
         acct_id = int(acct_id)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    INSERT INTO "challenge" ("pro_id", "acct_id", "compiler_type")
-                    VALUES ($1, $2, $3) RETURNING "chal_id";
+                    INSERT INTO "challenge" ("pro_id", "acct_id", "compiler_type", "contest_id")
+                    VALUES ($1, $2, $3, $4) RETURNING "chal_id";
                 ''',
                 pro_id,
                 acct_id,
                 comp_type,
+                contest_id,
             )
         if len(result) != 1:
             return 'Eunk', None
@@ -201,13 +212,13 @@ class ChalService:
 
         return None, tests
 
-    async def get_chal(self, chal_id, acct: Account):
+    async def get_chal(self, chal_id):
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
                     SELECT "challenge"."pro_id", "challenge"."acct_id",
-                    "challenge"."timestamp", "challenge"."compiler_type", "account"."name" AS "acct_name"
+                    "challenge"."timestamp", "challenge"."compiler_type", "challenge"."contest_id", "account"."name" AS "acct_name"
                     FROM "challenge"
                     INNER JOIN "account"
                     ON "challenge"."acct_id" = "account"."acct_id"
@@ -220,11 +231,12 @@ class ChalService:
 
         result = result[0]
 
-        pro_id, acct_id, timestamp, comp_type, acct_name = (
+        pro_id, acct_id, timestamp, comp_type, contest_id, acct_name = (
             result['pro_id'],
             result['acct_id'],
             result['timestamp'],
             result['compiler_type'],
+            result['contest_id'],
             result['acct_name'],
         )
         final_response = ""
@@ -279,6 +291,7 @@ class ChalService:
                 'chal_id': chal_id,
                 'pro_id': pro_id,
                 'acct_id': acct_id,
+                'contest_id': contest_id,
                 'acct_name': acct_name,
                 'timestamp': timestamp.astimezone(tz),
                 'testl': testl,
@@ -381,7 +394,7 @@ class ChalService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 f'''
-                    SELECT "challenge"."chal_id", "challenge"."pro_id", "challenge"."acct_id",
+                    SELECT "challenge"."chal_id", "challenge"."pro_id", "challenge"."acct_id", "challenge"."contest_id",
                     "challenge"."compiler_type", "challenge"."timestamp", "account"."name" AS "acct_name",
                     "challenge_state"."state", "challenge_state"."runtime", "challenge_state"."memory"
                     FROM "challenge"
@@ -400,7 +413,7 @@ class ChalService:
             )
 
         challist = []
-        for chal_id, pro_id, acct_id, comp_type, timestamp, acct_name, state, runtime, memory in result:
+        for chal_id, pro_id, acct_id, contest_id, comp_type, timestamp, acct_name, state, runtime, memory in result:
             if state is None:
                 state = ChalConst.STATE_NOTSTARTED
 
@@ -421,6 +434,7 @@ class ChalService:
                     'chal_id': chal_id,
                     'pro_id': pro_id,
                     'acct_id': acct_id,
+                    'contest_id': contest_id,
                     'comp_type': ChalConst.COMPILER_NAME[comp_type],
                     'timestamp': timestamp.astimezone(tz),
                     'acct_name': acct_name,

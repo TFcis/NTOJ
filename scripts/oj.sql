@@ -81,7 +81,8 @@ CREATE TABLE public.challenge (
     pro_id integer,
     acct_id integer,
     "timestamp" timestamp with time zone DEFAULT now(),
-    compiler_type character varying
+    compiler_type character varying,
+    contest_id integer DEFAULT 0
 );
 
 
