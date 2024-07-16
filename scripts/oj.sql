@@ -333,6 +333,47 @@ ALTER TABLE IF EXISTS public.board OWNER TO db_username;
 ALTER SEQUENCE public.pubclass_pubclass_id_seq OWNED BY PUBLIC.board.board_id;
 --- Board end
 
+--- Contest
+CREATE SEQUENCE IF NOT EXISTS public.contest_contest_id_seq
+    INCREMENT 1
+    START 1
+    MINVALUE 1
+    MAXVALUE 9223372036854775807
+    CACHE 1;
+
+ALTER SEQUENCE IF EXISTS public.contest_contest_id_seq OWNER TO db_username;
+
+CREATE TABLE IF NOT EXISTS public.contest (
+    contest_id integer NOT NULL DEFAULT nextval('public.contest_contest_id_seq'::regclass),
+    name text COLLATE pg_catalog."default" NOT NULL,
+    "desc" character varying DEFAULT ''::character varying,
+--    contest_status integer NOT NULL,
+    contest_mode integer NOT NULL DEFAULT 0, -- 0: IOI 1: ACM
+    contest_start timestamp with time zone NOT NULL DEFAULT now(),
+    contest_end timestamp with time zone NOT NULL DEFAULT now(),
+
+    pro_list integer[] NOT NULL DEFAULT '{}'::integer[],
+    acct_list integer[] NOT NULL DEFAULT '{}'::integer[],
+    admin_list integer[] NOT NULL,
+
+    reg_mode integer NOT NULL DEFAULT 0, -- 0: INVITED 1: FREE_REG 2: REG_APPROVAL
+    reg_list integer[] DEFAULT '{}'::integer[],
+    reg_end timestamp with time zone NOT NULL DEFAULT now(),
+
+    -- limit
+    allow_compilers varchar[] NOT NULL DEFAULT array[]::varchar[],
+    is_public_scoreboard boolean NOT NULL DEFAULT true,
+    allow_view_other_page boolean NOT NULL DEFAULT false,
+    hide_admin boolean NOT NULL DEFAULT true,
+    submission_cd_time integer NOT NULL DEFAULT 30,
+    freeze_scoreboard_period integer NOT NULL DEFAULT 0,
+
+    CONSTRAINT contest_pkey PRIMARY KEY (contest_id)
+);
+ALTER TABLE IF EXISTS public.contest OWNER TO db_username;
+ALTER SEQUENCE public.contest_contest_id_seq OWNED BY PUBLIC.contest.contest_id;
+--- Contest end
+
 --
 -- Name: acct_id; Type: DEFAULT; Schema: public; Owner: db_username
 --

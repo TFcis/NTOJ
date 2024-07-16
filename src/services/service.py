@@ -4,7 +4,7 @@ from .board import BoardService
 from .bulletin import BulletinService
 from .chal import ChalService
 from .code import CodeService
-from .contest import ContestService
+from .contests import ContestService
 from .group import GroupService
 from .judge import JudgeServerClusterService
 from .log import LogService
