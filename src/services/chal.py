@@ -268,21 +268,6 @@ class ChalService:
         owner = await self.rs.get(f'{pro_id}_owner')
         unlock = [1]
 
-        if acct.acct_id == acct_id:
-            can_see_code = True
-
-        elif (
-                acct.is_kernel()
-                and (owner is None or acct.acct_id in config.lock_user_list)
-                and acct.acct_id in config.can_see_code_user
-        ):
-            # INFO: owner is problem uploader. if problem was locked, only problem owner can see submit code about this problem
-            await LogService.inst.add_log(f"{acct.name} view the challenge {chal_id}", 'manage.chal.view')
-            can_see_code = True
-
-        else:
-            can_see_code = False
-
         tz = datetime.timezone(datetime.timedelta(hours=+8))
 
         return (
@@ -295,7 +280,6 @@ class ChalService:
                 'acct_name': acct_name,
                 'timestamp': timestamp.astimezone(tz),
                 'testl': testl,
-                'code': can_see_code,
                 'response': final_response,
                 'comp_type': comp_type,
             },
@@ -388,7 +372,7 @@ class ChalService:
 
         fltquery = flt.get_sql_query_str()
 
-        max_status = ProService.inst.get_acct_limit(acct)
+        max_status = ProService.inst.get_acct_limit(acct, contest=flt.contest is not None)
         min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:

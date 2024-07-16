@@ -33,7 +33,7 @@
 		        let acctid = j_filter.find('#acctid').val();
 		        let state = j_filter.find('#state').val();
                 let compiler_type = j_filter.find("#compiler").val();
-		        let url = '/oj/chal/?';
+                let url = location.pathname.split('?')[0] + '?';
 
                 if (re.test(proid) || re.test(acctid)) {
                     j_filter.find('#proid').val('');
@@ -67,7 +67,7 @@
             let acctid = j_filter.find('#acctid').val();
 	        let state = j_filter.find('#state').val();
             let compiler_type = j_filter.find("#compiler").val();
-            let url = '/oj/chal/?';
+            let url = location.pathname.split('?')[0] + '?';
 
             if (re.test(proid) || re.test(acctid)) {
                 j_filter.find('#proid').val('');
@@ -242,8 +242,14 @@
                 </tr>
             {% for chal in challist %}
                 <tr id="chal{{ chal['chal_id'] }}">
-                    <td><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
-                    <td><a href="/oj/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
+                    {% if chal['contest_id'] == 0 %}
+                        <td><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
+                        <td><a href="/oj/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
+                    {% else %}
+                        <td><a href="/oj/contests/{{ chal['contest_id'] }}/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
+                        <td><a href="/oj/contests/{{ chal['contest_id'] }}/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
+                    {% end %}
+
                     <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a></td>
                     <td id="state" class="state-{{ chal['state'] }}">{{ ChalConst.STATE_LONG_STR[chal['state']] }}</td>
                     <td id="runtime">{{ chal['runtime'] }}</td>
