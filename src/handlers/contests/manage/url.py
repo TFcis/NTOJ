@@ -5,6 +5,7 @@ from handlers.contests.manage.general import (
     ContestManageDashHandler,
 )
 from handlers.contests.manage.pro import ContestManageProHandler
+from handlers.contests.manage.reg import ContestManageRegHandler
 
 
 def get_contests_manage_url(db, rs, pool):
@@ -20,4 +21,5 @@ def get_contests_manage_url(db, rs, pool):
         (r'/contests/\d+/manage/general', ContestManageGeneralHandler, args),
         (r'/contests/\d+/manage/acct', ContestManageAcctHandler, args),
         (r'/contests/\d+/manage/pro', ContestManageProHandler, args),
+        (r'/contests/\d+/manage/reg', ContestManageRegHandler, args),
     ]
