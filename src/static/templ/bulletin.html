@@ -1,5 +1,13 @@
+<script>
+    function init() {
+        let desc_tex = `{% raw bulletin['content'] %}`
+
+        let descEle = document.getElementById('content');
+        descEle.innerHTML = DOMPurify.sanitize(marked.parse(desc_tex));
+        MathJax.Hub.Queue(["Typeset",MathJax.Hub, descEle]);
+    }
+</script>
+
 <h2>{{bulletin['title']}}</h2>
-<p style="white-space: pre-line;">
-    {{bulletin['content']}}
-</p>
+<div id="content"></div>
 <h5>Author: {{bulletin['name']}}, {{ bulletin['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h5>

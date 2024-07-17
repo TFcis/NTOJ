@@ -3,13 +3,33 @@
 
 <script type="text/javascript">
     function init() {
+        // TODO: 有更改尚未儲存跳個通知出來
         let j_form = $("#form");
+		j_form.find("#content").val(`{% raw bulletin['content'] %}`);
+
+        let content_textarea = document.getElementById('content');
+        let desc_preview = document.getElementById('descPreviewDialog');
+        let desc_preview_modal = new bootstrap.Modal(desc_preview);
+
+        content_textarea.style.height = 'auto';
+        content_textarea.style.height = content_textarea.scrollHeight + 'px';
+        content_textarea.addEventListener('input', (event) => {
+            content_textarea.style.height = 'auto';
+            content_textarea.style.height = content_textarea.scrollHeight + 'px';
+        });
+
+        j_form.find('#preview').on('click', function(e) {
+            let body = desc_preview.querySelector('.modal-body');
+            body.innerHTML = DOMPurify.sanitize(marked.parse(content_textarea.value));
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub, body]);
+            desc_preview_modal.show();
+        });
 
         j_form.find("#update").on('click', (event) => {
             let pinned = j_form.find("#pinned").is(":checked");
             let title = j_form.find("#title").val();
             let color = j_form.find("#color").val();
-            let content = j_form.find("#content").val();
+            let content = content_textarea.value;
 
             $.post('/oj/be/manage/bulletin/update', {
                 reqtype: 'update',
@@ -22,7 +42,8 @@
                 if (res[0] == 'E') {
 
                 } else {
-                    index.go("/oj/manage/bulletin/")
+                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
                 }
             });
         });
@@ -35,20 +56,32 @@
                 if (res[0] == 'E') {
 
                 } else {
-                    index.go("/oj/manage/bulletin/")
+                    index.show_notify_dialog('Remove Successfully', index.DIALOG_TYPE.success);
+                    index.go("/oj/manage/bulletin/");
                 }
 			});
 		});
 
-        j_form.find("#cancel").on('click', (event) => {
-            index.go("/oj/manage/bulletin/")
-        });
-
-		j_form.find("#content").val(`{{ bulletin['content'] }}`);
+        j_form.find("#cancel").on('click', (event) => index.go("/oj/manage/bulletin/"));
     }
 </script>
 {% end %}
 {% block content %}
+<div class="modal fade" id="descPreviewDialog" tabindex="-1" aria-hidden="true">
+<div class="modal-dialog modal-dialog-scrollable modal-xl">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Preview Markdown Render</h2>
+        </div>
+        <div class="modal-body">
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+    </div>
+</div>
+</div>
+
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
 	<form id="form">
 		<div class="mb-1">
@@ -68,11 +101,12 @@
 
 		<div class="mb-1">
             <label for="content">Content</label>
-			<textarea class="form-control" name="content" id="content" cols="30" rows="10" style="white-space: pre-line;"></textarea>
+			<textarea class="form-control" name="content" id="content"></textarea>
 		</div>
 
 		<div class="mt-2">
 			<button type="button" class="btn btn-primary" id="update">Update</button>
+			<button type="button" class="btn btn-secondary" id="preview">Preview</button>
 			<button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
 			<button type="button" class="btn btn-danger" id="remove">Remove</button>
 		</div>
