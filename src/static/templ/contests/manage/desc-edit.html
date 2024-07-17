@@ -1,0 +1,66 @@
+{% extends 'manage.html' %}
+
+{% block head %}
+<script type="text/javascript" id="contjs">
+    function init() {
+        let desc_textarea = document.getElementById('contestDesc');
+        let desc_preview = document.getElementById('descPreviewDialog');
+        let desc_preview_modal = new bootstrap.Modal(desc_preview);
+
+        desc_textarea.style.height = 'auto';
+        desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
+
+        $("button.preview").on('click', function(e) {
+            let body = desc_preview.querySelector('.modal-body');
+            body.innerHTML = DOMPurify.sanitize(marked.parse(desc_textarea.value));
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub, body]);
+            desc_preview_modal.show();
+        });
+
+        desc_textarea.addEventListener('input', (event) => {
+            desc_textarea.style.height = 'auto';
+            desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
+        });
+
+        $("button.submit").on('click', function(e) {
+            $.post("/oj/be/contests/{{ contest_id }}/manage/desc", {
+                reqtype: 'update',
+                desc: desc_textarea.value,
+            }, res => {
+                index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+            });
+        })
+    }
+</script>
+{% end %}
+
+{% block content %}
+
+<div class="modal fade" id="descPreviewDialog" tabindex="-1" aria-hidden="true">
+<div class="modal-dialog modal-dialog-scrollable modal-xl">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Preview Markdown Render</h2>
+        </div>
+        <div class="modal-body">
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <div class="mb-1">
+        <label for="contestDesc" class="form-label">Contest Desc</label>
+        <textarea id="contestDesc" class="form-control">{% raw contest.desc %}</textarea>
+    </div>
+
+    <button class="btn btn-primary submit">Update</button>
+    <button class="btn btn-secondary preview">Preview</button>
+
+</div>
+
+
+{% end %}
