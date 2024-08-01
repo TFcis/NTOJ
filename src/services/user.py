@@ -237,8 +237,7 @@ class UserService:
             result = await con.fetch(
                 '''
                     UPDATE "account"
-                    SET "acct_type" = $1, "name" = $2,
-                    "photo" = $3, "cover" = $4, WHERE "acct_id" = $5 RETURNING "acct_id";
+                    SET "acct_type" = $1, "name" = $2, "photo" = $3, "cover" = $4 WHERE "acct_id" = $5 RETURNING "acct_id";
                 ''',
                 acct_type,
                 name,
