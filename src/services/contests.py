@@ -146,8 +146,8 @@ class ContestService:
                     "contest_id": contest_id,
                     "name": name,
                     "contest_mode": contest_mode,
-                    "contest_start": contest_start,
-                    "contest_end": contest_end,
+                    "contest_start": contest_start.astimezone(datetime.timezone(datetime.timedelta(hours=+8))),
+                    "contest_end": contest_end.astimezone(datetime.timezone(datetime.timedelta(hours=+8))),
                     "is_public_scoreboard": is_public_scoreboard
                 } for contest_id, name, contest_mode, contest_start, contest_end, is_public_scoreboard in result
             ]
