@@ -38,7 +38,7 @@ class ContestRegHandler(RequestHandler):
                     self.error('Eexist')
                     return
 
-            if datetime.datetime.now() > self.contest.reg_end:
+            if datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) > self.contest.reg_end:
                 self.error('Etime')
                 return
 
