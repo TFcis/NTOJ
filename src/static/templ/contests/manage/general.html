@@ -11,12 +11,12 @@
 </style>
 
 <script type="text/javascript" id="contjs">
+    var contest_start_date_picker = null;
+    var contest_end_date_picker = null;
+    var reg_end_date_picker = null;
     function init() {
         let contest_id = "{{ contest_id }}";
 
-        var contest_start_date_picker = null;
-        var contest_end_date_picker = null;
-        var reg_end_date_picker = null;
         $.getScript('https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js', () => {
             const options = {
                 display: {
@@ -113,6 +113,13 @@
             });
         });
     }
+
+    function destroy() {
+        contest_start_date_picker.dispose();
+        contest_end_date_picker.dispose();
+        reg_end_date_picker.dispose();
+    }
+
 </script>
 {% end %}
 

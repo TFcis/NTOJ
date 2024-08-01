@@ -10,9 +10,9 @@
 </style>
 
 <script type="text/javascript">
+    var start_date_picker = null;
+    var end_date_picker = null;
     function init() {
-        var start_date_picker = null;
-        var end_date_picker = null;
         $.getScript('https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js', () => {
             const options = {
                 display: {
@@ -38,7 +38,7 @@
             let pro_list = j_form.find("#pro_list").val();
             let acct_list = j_form.find("#acct_list").val();
 
-            start_time = start_date_picker.viewDate; 
+            start_time = start_date_picker.viewDate;
             if (start_time == '') {
                 index.show_notify_dialog("開始時間不可為空", index.DIALOG_TYPE.warning);
                 return;
@@ -85,6 +85,11 @@
         j_form.find("#cancel").on('click', (event) => {
             index.go("/oj/manage/board/")
         });
+    }
+
+    function destroy() {
+        start_date_picker.dispose();
+        end_date_picker.dispose();
     }
 </script>
 {% end %}
