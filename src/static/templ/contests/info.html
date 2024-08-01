@@ -25,7 +25,7 @@
                     {% end %}
                 </div>
             </div>
-            
+
             <div class="card mb-1">
                 <div class="card-header">Registration Before</div>
                 <div class="card-body">
@@ -43,7 +43,7 @@
 
             <div class="card mb-1">
                 <div class="card-header">Registration Status</div>
-            
+
                 <div class="card-body">
                     {% if contest.is_admin(acct_id=acct_id) %}
                         <h5>Admin, no registration needed</h5>
@@ -72,11 +72,11 @@
                             {% end %}
                         {% else %}
                             {% if acct_id in contest.reg_list %}
-                                <h5>Wait Approval</h5>
+                                <h5>Waiting Approval</h5>
                             {% elif acct_id in contest.acct_list %}
-                                <h5>Register</h5>
+                                <h5>Registered</h5>
                             {% else %}
-                                <h5>Not Register</h5>
+                                <h5>Not Registered</h5>
                                 {% if can_reg %}
                                     <a href="/oj/contests/{{ contest.contest_id }}/reg/" class="btn btn-primary">Go to Register</a>
                                 {% end %}
@@ -94,4 +94,3 @@
         </div>
     </div>
 </div>
-
