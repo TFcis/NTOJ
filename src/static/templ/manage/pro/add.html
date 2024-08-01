@@ -41,7 +41,7 @@
 
                             index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
                         } else {
-                            index.go('/oj/manage/pro/');
+                            index.go(`/oj/manage/pro/update/?proid=${JSON.parse(res)}`);
                         }
                     });
                 }).progress(function(prog) {
