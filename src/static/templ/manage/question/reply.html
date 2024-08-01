@@ -2,14 +2,14 @@
 {% block head %}
 
 <script type="text/javascript">
-    function reply(index) {
+    function reply(idx) {
 		var j_form = $('#form');
-		var rtext = j_form.find(`textarea#${index}`).val();
+		var rtext = j_form.find(`textarea#${idx}`).val();
 
 		$.post('/oj/be/manage/question/reply', {
 		    'reqtype': 'rpl',
 		    'qacct_id': {{ qacct_id }},
-		    'index': index,
+		    'index': idx,
 		    'rtext': rtext,
 		}, function(res) {
 		    msg = 'Unknown';
@@ -23,14 +23,14 @@
 		});
     }
 
-    function rreply(index) {
+    function rreply(idx) {
 		var j_form = $('#form');
-        var rtext = j_form.find(`textarea#${index}`).val();
+        var rtext = j_form.find(`textarea#${idx}`).val();
 
 		$.post('/oj/be/manage/question/reply', {
 		    'reqtype': 'rrpl',
 		    'qacct_id': {{ qacct_id }},
-		    'index': index,
+		    'index': idx,
 		    'rtext': rtext,
 		}, function(res) {
 		    msg = 'Unknown';
@@ -65,7 +65,7 @@
 			{% for count, ques in enumerate(ques_list) %}
 			<tr>
 			    <td style="width:46%;">{{ ques['Q'] }}</td>
-              
+
 				{% if ques['A'] == None %}
 				    <td style="width:46%;">
                         <textarea class="form-control" cols="10" rows="10" id="{{ count }}" style="white-space: pre-line;"></textarea>
