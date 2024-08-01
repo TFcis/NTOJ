@@ -182,8 +182,6 @@ class ContestService:
         return None, contest_id
 
     async def update_contest(self, acct: Account, contest: Contest):
-        _, old_contest = await self.get_contest(contest.contest_id)
-
         # update db
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -217,9 +215,8 @@ class ContestService:
                 contest.contest_id
             )
 
-        if old_contest.is_running():
-            b_contest = pickle.dumps(contest)
-            await self.rs.hset('contest', str(contest.contest_id), b_contest)
+        b_contest = pickle.dumps(contest)
+        await self.rs.hset('contest', str(contest.contest_id), b_contest)
 
         # log
 
