@@ -16,7 +16,7 @@
         pdf_url = '/oj/pro/{{ pro['pro_id'] }}/cont.pdf';
         html_url = '/oj/pro/{{ pro['pro_id'] }}/cont.html';
     {% end %}
-        
+
     function init() {
         var scriptTag = document.createElement('script');
         scriptTag.src = 'https://toj.tfcis.org/oj/third/pdf_find_bar.js';
@@ -60,7 +60,7 @@
         });
 
         $("#pdfbtn").on('click', function(event) {
-            let url = "/oj/pro/{{ pro['pro_id'] }}/cont.pdf?download=1";
+            let url = `${pdf_url}?download=1`;
             let downloadLink = document.createElement("a");
 
             downloadLink.href = url;
