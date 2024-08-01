@@ -38,8 +38,8 @@
             let contest_desc = $("#contestDesc").val();
             let contest_mode = $("#contestMode").val();
             let reg_mode = $("#regMode").val();
-            let submit_cd_time = $("#submitCdTime").val();
-            let freeze_period = $("#freezeScoreboardPeriod").val();
+            let submit_cd_time = parseInt($("#submitCdTime").val());
+            let freeze_period = parseInt($("#freezeScoreboardPeriod").val());
             let hide_admin = $("#hideAdmin").is(":checked");
             let public_scoreboard = $("#publicScoreboard").is(":checked");
             let allow_view_other_page = $("#allowViewOtherPage").is(":checked");
@@ -76,6 +76,13 @@
 
             reg_end_time = reg_end_date_picker.viewDate;
  
+            if (isNaN(submit_cd_time) || submit_cd_time < 0) {
+                index.show_notify_dialog("Submission CD Time必須是正整數(包含0)", index.DIALOG_TYPE.warning);
+                return;
+            } else if (isNaN(freeze_period) || freeze_period < 0) {
+                index.show_notify_dialog("Freeze Scoreboard Period必須是正整數(包含0)", index.DIALOG_TYPE.warning);
+                return;
+            }
             $.post("/oj/be/contests/{{ contest_id }}/manage/general", {
                 reqtype: "update",
                 name: contest_name,
@@ -154,12 +161,12 @@
             </div>
         </div>
     </div>
-    
+
     <div class="mb-2">
         <div class="mb-1">
             <h4 for="" class="form-label">Registration</h4>
         </div>
-        
+
         <div class="mb-1">
             <label for="regMode" class="form-label">Registration Mode</label>
             <select id="regMode" class="form-select">
@@ -197,7 +204,7 @@
             <label for="freezeScoreboardPeriod" class="form-label">Freeze Scoreboard Period</label>
             <div class="input-group">
                 <input type="number" id="freezeScoreboardPeriod" class="form-control" value="{{ contest.freeze_scoreboard_period }}">
-                <span class="input-group-text">Minutes</span>                
+                <span class="input-group-text">Minutes</span>
             </div>
         </div>
 

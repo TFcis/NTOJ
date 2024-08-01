@@ -1,9 +1,10 @@
 import datetime
 import json
 
-from services.user import UserConst
 from handlers.base import RequestHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
+from services.chal import ChalConst
+from services.user import UserConst
 from services.contests import ContestService, ContestMode, RegMode
 
 
@@ -41,8 +42,23 @@ class ContestManageGeneralHandler(RequestHandler):
             is_public_scoreboard = self.get_argument("is_public_scoreboard") == "true"
             allow_view_other_page = self.get_argument("allow_view_other_page") == "true"
             hide_admin = self.get_argument("hide_admin") == "true"
-            submission_cd_time = int(self.get_argument("submission_cd_time"))
-            freeze_scoreboard_period = int(self.get_argument("freeze_scoreboard_period"))
+            try:
+                submission_cd_time = int(self.get_argument("submission_cd_time"))
+                if submission_cd_time < 0:
+                    submission_cd_time = 30
+
+            except ValueError:
+                submission_cd_time = 30
+
+            try:
+                freeze_scoreboard_period = int(self.get_argument("freeze_scoreboard_period"))
+                if freeze_scoreboard_period < 0:
+                    freeze_scoreboard_period = 0
+
+            except ValueError:
+                freeze_scoreboard_period = 0
+
+            allow_compilers = list(filter(lambda compiler: compiler in ChalConst.ALLOW_COMPILERS, allow_compilers))
 
             err, contest_start = trantime(contest_start)
             if err:
