@@ -51,7 +51,6 @@ class RequestHandler(tornado.web.RequestHandler):
                     return json.JSONEncoder.default(self, obj)
 
         from services.user import UserConst
-        kwargs['htmlgen'] = utils.htmlgen
         if not self.acct.is_guest():
             kwargs['acct_id'] = self.acct.acct_id
 

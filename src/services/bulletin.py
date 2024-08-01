@@ -48,7 +48,7 @@ class BulletinService:
             )
 
         if len(result) != 1:
-            return 'Noext', None
+            return 'Enoext', None
         result = result[0]
         result = {
             'title': result['title'],

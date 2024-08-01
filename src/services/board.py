@@ -31,7 +31,7 @@ class BoardService:
         async with self.db.acquire() as con:
             res = await con.fetchrow('SELECT * FROM "board" WHERE "board_id" = $1', board_id)
 
-            if len(res) == 0:
+            if res is None:
                 return 'Enoext', None
 
         name, status, start, end, pro_list, acct_list = (
