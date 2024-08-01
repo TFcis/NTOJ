@@ -119,15 +119,12 @@ class ChalListNewChalHandler(WebSocketSubHandler):
             if msg['type'] != 'message':
                 continue
 
-            await self.on_message(str(int(msg['data'])))
+            await self.write_message(str(int(msg['data'])))
 
     async def open(self):
         await self.p.subscribe('challist_sub')
 
         self.task = asyncio.tasks.Task(self.listen_challistnewchal())
-
-    async def on_message(self, msg):
-        await self.write_message(msg)
 
 
 class ChalListNewStateHandler(WebSocketSubHandler):

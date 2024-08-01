@@ -80,12 +80,9 @@ class JudgeChalCntSub(WebSocketSubHandler):
             if msg['type'] != 'message':
                 continue
 
-            await self.on_message(msg['data'].decode('utf-8'))
+            await self.write_message(msg['data'].decode('utf-8'))
 
     async def open(self):
         await self.p.subscribe('judgechalcnt_sub')
 
         self.task = asyncio.tasks.Task(self.listen_newchal())
-
-    async def on_message(self, msg):
-        await self.write_message(msg)
