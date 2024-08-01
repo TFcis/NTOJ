@@ -54,7 +54,7 @@ font-weight: bolder;
     var contest_start = new Date("{{ contest.contest_start }}");
     var contest_end = new Date("{{ contest.contest_end }}");
     var contest_length = parseInt((contest_end - contest_start) / 1000);
-    var score_color_class_map 
+    var score_color_class_map
         = ["state-0", "state-1", "state-2", "state-3", "state-4", "state-5", "state-6", "state-7", "state-8", "state-9", "state-10"];
     var slider = $("#timestampSlider");
     var display_time_label = $("#displayTime");
@@ -67,9 +67,15 @@ font-weight: bolder;
      * @returns { string }
      */
     function secsToText(secs) {
-        const ss = Math.floor(secs % 60);
-        const mm = Math.floor(secs / 60) % 60;
-        const hh = Math.floor(secs / 3600);
+        let ss = 0, mm = 0, hh = 0;
+        ss = Math.floor(secs % 60);
+        if (secs >= 0) {
+            mm = Math.floor(secs / 60) % 60;
+            hh = Math.floor(secs / 3600);
+        } else {
+            mm = Math.ceil(secs / 60) % 60;
+            hh = Math.ceil(secs / 3600);
+        }
         return hh + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
     }
 
@@ -100,23 +106,23 @@ font-weight: bolder;
         q_sec = parseInt(q_sec);
         q_min = isNaN(q_min) ? 0 : q_min;
         q_sec = isNaN(q_min) ? 0 : q_sec;
-        
+
         if (p_min == q_min) return p_sec > q_sec;
         return p_min > q_min;
-    }  
+    }
 
-        
+
     function init() {
         ws = index.get_ws(`contests/${contest_id}/scoreboardsub`);
         ws.onopen = (e) => {
-            ws.send(contest_id); 
+            ws.send(contest_id);
 
             let indicator = $("#connectIndicator");
             indicator.removeClass('bg-danger');
             indicator.addClass('bg-success');
             indicator.text("Online");
         };
-       
+
         ws.onmessage = (e) => {
             if (e.data == contest_id)
                 $("#refresh").click();
@@ -146,7 +152,7 @@ font-weight: bolder;
                 slider.val(cur_length);
                 display_time_label.text(secsToText(cur_length));
                 update_scoreboard(-1);
-                
+
                 clearInterval(timer_id); // make sure only one timer running
                 timer_id = setInterval(timer, 1);
 
@@ -163,11 +169,11 @@ font-weight: bolder;
         $("#refresh").on('click', e => {
             index.reload();
         });
-        
+
         update_scoreboard(-1);
         timer_id = setInterval(timer, 1);
     }
-  
+
 
     /**
      * @argument timestamp { number|string }
@@ -175,7 +181,7 @@ font-weight: bolder;
     function update_scoreboard(timestamp) {
         let param = {};
         if (timestamp != -1) {
-            param.display_time = timestamp; 
+            param.display_time = timestamp;
         }
 
         $.post(post_url, param, res => {
@@ -200,13 +206,13 @@ font-weight: bolder;
                     for (const [_, score] of Object.entries(q.scores)) {
                         if (compare_timestamp(score.timestamp, q_max_timestamp)) q_max_timestamp = score.timestamp;
                     }
-                    
+
                     return compare_timestamp(p_max_timestamp, q_max_timestamp) ? 1 : -1;
                 }
 
                 return q.total_score - p.total_score;
             });
-                
+
             {% if contest.contest_mode is ContestMode.IOI %}
             render_ioi_style_scoreboard(scores);
             {% end %}
@@ -228,7 +234,7 @@ font-weight: bolder;
                 cur_total_score = scores.total_score;
                 cur_rank += 1;
             }
-            
+
             let each_problems_score_html = '';
             let max_timestamp = '00:00';
             for (const pro_id of pro_list) {
@@ -248,7 +254,7 @@ font-weight: bolder;
                         <p class="text-muted">${score.timestamp}</p>
                     </td>
                     `;
-                    
+
                     if (compare_timestamp(score.timestamp, max_timestamp)) {
                         max_timestamp = score.timestamp;
                     }
@@ -280,7 +286,7 @@ font-weight: bolder;
                         </th>
                         {% end %}
                         <th scope="col">Total</th>
-                    </tr> 
+                    </tr>
                 </thead>
                 <tbody>
                     ${each_ranks_html}
@@ -308,7 +314,7 @@ font-weight: bolder;
             <span>(Scoreboard will freeze at {{ fr }} minutes)</span>
             {% end %}
         </label>
-        <input type="range" class="form-range" min="0" max="5" step="1" id="timestampSlider"> 
+        <input type="range" class="form-range" min="0" max="5" step="1" id="timestampSlider">
     </div>
     <div id="scoreboard">
     </div>
