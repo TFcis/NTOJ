@@ -42,15 +42,25 @@ class ContestManageAcctHandler(RequestHandler):
                 self.error(err)
                 return
 
+            if self.contest.is_member(acct_id=acct_id):
+                self.error('Eexist')
+                return
+
             if acct_id in changed_list:
                 self.error('Eexist')
                 return
 
             changed_list.append(acct_id)
             await ContestService.inst.update_contest(self.acct, self.contest)
+            await self.finish('S')
 
         elif reqtype == "remove":
             acct_id = int(acct_id)
+
+            if not self.contest.is_member(acct_id=acct_id):
+                self.error('Enoext')
+                return
+
             err, _ = await UserService.inst.info_acct(acct_id)
             if err:
                 self.error(err)
@@ -67,11 +77,15 @@ class ContestManageAcctHandler(RequestHandler):
 
             changed_list.remove(acct_id)
             await ContestService.inst.update_contest(self.acct, self.contest)
+            await self.finish('S')
 
         elif reqtype == "multi_add":
             acct_list = []
 
             for a_id in parse_list_str(acct_id):
+                if self.contest.is_member(acct_id=a_id):
+                    continue
+
                 err, _ = await UserService.inst.info_acct(a_id)
                 if err:
                     continue
@@ -83,11 +97,13 @@ class ContestManageAcctHandler(RequestHandler):
             changed_list.sort()
 
             await ContestService.inst.update_contest(self.acct, self.contest)
+            await self.finish('S')
 
         elif reqtype == "multi_remove":
             acct_list = parse_list_str(acct_id)
 
-            changed_list = filter(lambda pro_id: pro_id not in acct_list, changed_list)
+            acct_list = filter(lambda acct_id: self.contest.is_member(acct_id=acct_id), acct_list)
+            changed_list = filter(lambda acct_id: acct_id not in acct_list, changed_list)
 
             # NOTE: Prevent admin remove self
             if self.acct.acct_id in changed_list and self.contest.is_admin(self.acct):
@@ -96,6 +112,7 @@ class ContestManageAcctHandler(RequestHandler):
             changed_list.sort()
 
             await ContestService.inst.update_contest(self.acct, self.contest)
+            await self.finish('S')
 
         else:
             self.error('Eunk')
