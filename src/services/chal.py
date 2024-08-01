@@ -373,7 +373,7 @@ class ChalService:
 
         fltquery = flt.get_sql_query_str()
 
-        max_status = ProService.inst.get_acct_limit(acct, contest=flt.contest is not None)
+        max_status = ProService.inst.get_acct_limit(acct, contest=flt.contest != 0)
         min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:
