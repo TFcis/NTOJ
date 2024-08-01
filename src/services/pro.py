@@ -123,6 +123,7 @@ class ProService:
     # TODO: Too many local var
     # TODO: Too many statement
     async def list_pro(self, acct: Account = None, is_contest=False, state=False):
+        from services.chal import ChalConst
         def _mp_encoder(obj):
             if isinstance(obj, datetime.datetime):
                 return obj.astimezone(datetime.timezone.utc).timestamp()
@@ -215,8 +216,7 @@ class ProService:
                 pro["tags"] = ""
 
             elif not isadmin:
-                # NOTE: No AC user
-                if pro["state"] is None:
+                if pro["state"] != ChalConst.STATE_AC:
                     pro["tags"] = ""
 
             if pro["expire"] is None:
