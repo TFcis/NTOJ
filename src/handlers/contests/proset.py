@@ -15,7 +15,7 @@ class ContestProsetHandler(RequestHandler):
         except tornado.web.HTTPError:
             pageoff = 0
 
-        if not self.contest.is_running() and not self.contest.is_admin(self.acct):
+        if not (self.contest.is_start() or self.contest.is_admin(self.acct)):
             prolist = []
 
         else:
@@ -34,7 +34,7 @@ class ContestProsetHandler(RequestHandler):
                         ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1 AND "challenge"."contest_id" = $2
                         INNER JOIN "problem"
                         ON "challenge"."pro_id" = "problem"."pro_id"
-                        WHERE "problem"."status" = {ProConst.STATUS_CONTEST}
+                        WHERE "problem"."status" <= {ProConst.STATUS_CONTEST}
                         GROUP BY "problem"."pro_id"
                         ORDER BY "pro_id" ASC;
                     """,
