@@ -128,7 +128,6 @@ class ProsetHandler(RequestHandler):
             'proset',
             pro_total_cnt=pro_total_cnt,
             prolist=prolist,
-            clas=clas,
             pubclass_list=pubclass_list,
             cur_pubclass=pubclass,
             pageoff=pageoff,
@@ -257,12 +256,11 @@ class ProHandler(RequestHandler):
                         AND "challenge"."acct_id" = $1
                         INNER JOIN "problem"
                         ON "challenge"."pro_id" = $3
-                        WHERE "problem"."status" <= $2 AND "problem"."pro_id" = $3 AND "problem"."class" && $4;
+                        WHERE "problem"."status" <= $2 AND "problem"."pro_id" = $3;
                     ''',
                     self.acct.acct_id,
                     ChalConst.STATE_AC,
                     int(pro['pro_id']),
-                    [1, 2],
                 )
 
             if result['state'] is None or result['state'] != ChalConst.STATE_AC:
