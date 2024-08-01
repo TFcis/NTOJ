@@ -45,6 +45,7 @@ class ManageBulletinHandler(RequestHandler):
             await LogService.inst.add_log(
                 f"{self.acct.name} added a line on bulletin: \"{title}\".", 'manage.inform.add'
             )
+            await self.finish('S')
 
         elif page == 'update' and reqtype == 'update':
             bulletin_id = int(self.get_argument('bulletin_id'))
@@ -64,6 +65,7 @@ class ManageBulletinHandler(RequestHandler):
                 'manage.inform.update',
             )
             await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct.acct_id, color, pinned)
+            await self.finish('S')
 
         elif page == 'update' and reqtype == 'remove':
             bulletin_id = int(self.get_argument('bulletin_id'))
@@ -71,3 +73,4 @@ class ManageBulletinHandler(RequestHandler):
                 f"{self.acct.name} removed a line on bulletin which id is #{bulletin_id}.", 'manage.inform.remove'
             )
             await BulletinService.inst.del_bulletin(bulletin_id)
+            await self.finish('S')
