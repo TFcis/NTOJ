@@ -41,6 +41,7 @@ class ContestManageProHandler(RequestHandler):
             self.contest.pro_list.append(pro_id)
 
             await ContestService.inst.update_contest(self.acct, self.contest)
+            await self.finish('S')
 
         elif reqtype == "remove":
             pro_id = int(pro_id)
@@ -56,6 +57,7 @@ class ContestManageProHandler(RequestHandler):
             self.contest.pro_list.remove(pro_id)
 
             await ContestService.inst.update_contest(self.acct, self.contest)
+            await self.finish('S')
 
         elif reqtype == "multi_add":
             pro_list = []
@@ -71,6 +73,7 @@ class ContestManageProHandler(RequestHandler):
             self.contest.pro_list.extend(pro_list)
 
             await ContestService.inst.update_contest(self.acct, self.contest)
+            await self.finish('S')
 
         elif reqtype == "multi_remove":
             pro_list = parse_list_str(pro_id)
@@ -78,6 +81,7 @@ class ContestManageProHandler(RequestHandler):
             self.contest.pro_list = list(filter(lambda pro_id: pro_id not in pro_list, self.contest.pro_list))
 
             await ContestService.inst.update_contest(self.acct, self.contest)
+            await self.finish('S')
 
         elif reqtype == "rechal":
             pro_id = int(pro_id)
@@ -122,6 +126,7 @@ class ContestManageProHandler(RequestHandler):
                     )
 
             await asyncio.create_task(_rechal(rechals=result))
+            await self.finish('S')
 
         else:
             self.error('Eunk')

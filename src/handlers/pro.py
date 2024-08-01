@@ -315,4 +315,4 @@ class ProTagsHandler(RequestHandler):
             self.error('Eacces')
             return
 
-        self.finish('setting tags done')
+        await self.finish('S')

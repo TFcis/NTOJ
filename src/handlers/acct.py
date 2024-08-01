@@ -58,7 +58,10 @@ class AcctHandler(RequestHandler):
 
 class AcctConfigHandler(RequestHandler):
     @reqenv
-    async def get(self, acct_id):
+    async def get(self, acct_id=None):
+        if acct_id is None:
+            self.error('Enoext')
+            return
         acct_id = int(acct_id)
         err, acct = await UserService.inst.info_acct(acct_id)
         if err:

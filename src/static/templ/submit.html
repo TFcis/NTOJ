@@ -45,9 +45,12 @@
                         msg = 'All Judge Server offline, cannot submit';
                     } else if (res == 'Ecomp') {
                         msg = 'This contest did not allow this language or compiler';
+                    } else if (res == 'Ecodemax') {
+                        msg = 'Submit code too large.';
                     } else {
                         msg = res;
                     }
+
 
                     index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
                 } else {

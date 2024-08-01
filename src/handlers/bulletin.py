@@ -19,7 +19,11 @@ class BulletinHandler(RequestHandler):
             return
 
         bulletin_id = int(bulletin_id)
-        _, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
+        err, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
+        if err:
+            self.error(err)
+            return
+
         await self.render('bulletin', bulletin=bulletin)
 
 

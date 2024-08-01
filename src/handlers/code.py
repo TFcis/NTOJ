@@ -17,7 +17,7 @@ class CodeHandler(RequestHandler):
 
         err, code, comp_type = await CodeService.inst.get_code(chal_id, self.acct)
         if err:
-            await self.error(err)
+            self.error(err)
             return
 
         if comp_type in ['gcc', 'g++', 'clang', 'clang++']:

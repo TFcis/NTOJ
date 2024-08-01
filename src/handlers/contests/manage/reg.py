@@ -43,6 +43,7 @@ class ContestManageRegHandler(RequestHandler):
             # TODO: send notify to user
 
             await ContestService.inst.update_contest(self.acct, self.contest)
+            await self.finish('S')
 
         elif reqtype == 'reject':
             acct_id = int(self.get_argument('acct_id'))
@@ -60,6 +61,7 @@ class ContestManageRegHandler(RequestHandler):
             # TODO: send notify to user
 
             await ContestService.inst.update_contest(self.acct, self.contest)
+            await self.finish('S')
 
         else:
             self.error('Eunk')
