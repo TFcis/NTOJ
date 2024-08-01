@@ -23,12 +23,12 @@ class CodeService:
                 return 'Enoext', None, None
             result = result[0]
 
-            acct_id, pro_id, contest_id, comp_type = int(result['acct_id']), int(result['pro_id']), int(
+            target_acct_id, pro_id, contest_id, comp_type = int(result['acct_id']), int(result['pro_id']), int(
                 result['contest_id']), result['compiler_type']
 
         owner = await self.rs.get(f'{pro_id}_owner')
         can_see = False
-        if query_acct.acct_id == acct_id:
+        if query_acct.acct_id == target_acct_id:
             can_see = True
         elif (contest_id == 0 and query_acct.is_kernel()
               and (owner is None or query_acct.acct_id in config.lock_user_list)

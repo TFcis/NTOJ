@@ -61,7 +61,8 @@ class ChalListHandler(RequestHandler):
                 else:
                     query_accts = list(filter(lambda acct_id: not self.contest.is_admin(acct_id=acct_id), query_accts))
 
-        flt = ChalSearchingParamBuilder().pro(query_pros).acct(query_accts).state(state).compiler(compiler_type).contest(contest_id).build()
+        flt = ChalSearchingParamBuilder().pro(query_pros).acct(query_accts).state(state).compiler(
+            compiler_type).contest(contest_id).build()
 
         _, chalstat = await ChalService.inst.get_stat(self.acct, flt)
 

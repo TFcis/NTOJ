@@ -43,7 +43,7 @@
 
         $('#tags').focusout(function(event) {
             var tags = event.target.value;
-            if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1 || tags.length==0) {
+            if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1 || tags.length == 0) {
                 // valid
                 $('#tags-invalid').hide();
                 $.post('/oj/be/set-tags', {
@@ -218,7 +218,7 @@
             <tbody>
                 <tr>
                     <td>time</td>
-                    <td>{{ testl[0]['timelimit'] }} &nbsp;ms</td>
+                    <td>{{ testl[0]['timelimit'] }} ms</td>
                 </tr>
                 <tr>
                     <td>mem</td>
