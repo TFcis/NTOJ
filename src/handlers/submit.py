@@ -96,6 +96,10 @@ class SubmitHandler(RequestHandler):
                 self.error('Eacces')
                 return
 
+            elif pro['status'] == ProService.STATUS_CONTEST and not self.contest:
+                self.error('Eacces')
+                return
+
             err, chal_id = await ChalService.inst.add_chal(pro_id, self.acct.acct_id, contest_id, comp_type, code)
             if err:
                 self.error(err)
