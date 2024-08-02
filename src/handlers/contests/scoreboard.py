@@ -73,6 +73,10 @@ class ContestScoreboardHandler(RequestHandler):
         for acct_id in acct_list:
             _, acct = await UserService.inst.info_acct(acct_id)
             scores, total_score = await ContestService.inst.get_ioi_style_score_data(contest_id, acct_id, end_time)
+
+            # Contest problems maybe change
+            total_score -= sum(score['score'] for pro_id, score in scores.items() if pro_id not in self.contest.pro_list)
+
             for score in scores.values():
                 score['timestamp'] -= start_time
 
