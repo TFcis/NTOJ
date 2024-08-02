@@ -26,7 +26,7 @@ class ContestRegHandler(RequestHandler):
 
         if reqtype == 'reg':
             if self.contest.is_admin(self.acct):
-                self.error('Eexist')
+                self.error('Eacces')
                 return
 
             else:
@@ -59,15 +59,16 @@ class ContestRegHandler(RequestHandler):
 
         elif reqtype == 'unreg':
             if self.contest.is_admin(self.acct):
-                self.error('Eexist')
+                self.error('Eacces')
                 return
             else:
                 if self.contest.reg_mode is RegMode.FREE_REG and self.acct.acct_id not in self.contest.acct_list:
-                    self.error('Eexist')
+                    self.error('Enoext')
                     return
 
-                elif self.contest.reg_mode is RegMode.REG_APPROVAL and self.acct.acct_id not in self.contest.reg_list:
-                    self.error('Eexist')
+                elif (self.contest.reg_mode is RegMode.REG_APPROVAL and
+                      (self.acct.acct_id not in self.contest.reg_list and self.acct.acct_id not in self.contest.acct_list)):
+                    self.error('Enoext')
                     return
 
             if self.contest.reg_mode is RegMode.INVITED:
