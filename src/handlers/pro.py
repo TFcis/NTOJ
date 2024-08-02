@@ -159,6 +159,10 @@ class ProStaticHandler(RequestHandler):
                 self.error('Eacces')
                 return
 
+            elif not (self.contest.is_running() or self.contest.is_admin(self.acct)):
+                self.error('Eacces')
+                return
+
         if path.endswith('pdf'):
             self.set_header('Pragma', 'public')
             self.set_header('Expires', '0')
@@ -184,16 +188,16 @@ class ProHandler(RequestHandler):
         pro_id = int(pro_id)
 
         if self.contest:
+            if pro_id not in self.contest.pro_list:
+                self.error('Enoext')
+                return
+
             if not self.contest.is_member(self.acct):
                 self.error('Eacces')
                 return
 
             if not self.contest.is_running() and not self.contest.is_admin(self.acct):
                 self.error('Eacces')
-                return
-
-            if pro_id not in self.contest.pro_list:
-                self.error('Enoext')
                 return
 
         err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
