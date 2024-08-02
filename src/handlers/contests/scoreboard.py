@@ -66,7 +66,7 @@ class ContestScoreboardHandler(RequestHandler):
 
         # TODO: 並行
         acct_list = self.contest.acct_list
-        if not self.contest.hide_admin or (self.contest.hide_admin and self.contest.is_admin(self.acct)):
+        if not self.contest.hide_admin:
             acct_list.extend(self.contest.admin_list)
 
         all_scores = []
