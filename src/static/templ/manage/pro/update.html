@@ -14,9 +14,10 @@
 				'pwd': pwd,
 		    }, function(res) {
 				if (res[0] == 'E') {
-					index.show_notify_dialog(res, index.DIALOG_TYPE.error);
+                    index.show_notify_dialog(res, index.DIALOG_TYPE.error);
 				} else {
-				    index.go('/oj/manage/pro/');
+                    index.show_notify_dialog('Unlock Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
 				}
 		    });
 		});
@@ -29,7 +30,8 @@
 				if (res[0] == 'E') {
 					index.show_notify_dialog(res, index.DIALOG_TYPE.error);
 				} else {
-					index.go('/oj/manage/pro/');
+                    index.show_notify_dialog('Lock Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
 				}
 		    });
 		});
@@ -83,6 +85,7 @@
 						index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
  	 	          	} else {
 						index.show_notify_dialog('Upload Successfully', index.DIALOG_TYPE.success);
+                        index.reload();
  	 	          	}
 				});
 		    }
@@ -96,6 +99,7 @@
 					pack_token = token;
 					pack.send(pack_token,files[0]).done(function() {
 						index.update_progress_bar_progress(100);
+                        index.update_progress_bar_title('Decompressing...');
 						index.remove_progress_bar();
 						_update();
 
@@ -130,7 +134,8 @@
 
 					index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
 				} else {
-					index.go('/oj/manage/pro/');
+                    index.show_notify_dialog('Update limit Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
 				}
 			});
 		});

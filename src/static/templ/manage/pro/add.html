@@ -24,8 +24,9 @@
                         'status': status,
                         'pack_token': pack_token
                     }, function(res) {
-						index.update_progress_bar_progress(100);
-						index.remove_progress_bar();
+                        index.update_progress_bar_progress(100);
+                        index.update_progress_bar_title('Decompressing...');
+                        index.remove_progress_bar();
                         let msg = 'Unknown';
 
                         if (res[0] == 'E') {
