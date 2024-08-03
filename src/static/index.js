@@ -196,25 +196,24 @@ var index = new function() {
         <div class="modal fade" id="indexProgressBarDialog" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-center">${title}</p>
-                <div class="progress">
-                    <div
-                        class="progress-bar"
-                        role="progressbar"
-                        style="width: 0%"
-                        aria-valuenow="0"
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                    ></div>
+                <div class="modal-header">
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
+                <div class="modal-body">
+                    <p class="text-center">${title}</p>
+                    <div class="progress">
+                        <div
+                            class="progress-bar"
+                            role="progressbar"
+                            style="width: 0%"
+                            aria-valuenow="0"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                        ></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
         </div>
@@ -248,6 +247,16 @@ var index = new function() {
         }
 
         progressbar.querySelector('.progress-bar').style.width = `${prog}%`;
+    }
+
+    that.update_progress_bar_title = function(title) {
+        let progressbar = document.getElementById('indexProgressBarDialog');
+        if (progressbar == null) {
+            console.error('progress bar is null');
+            return;
+        }
+
+        progressbar.querySelector('.modal-header').textContent = title;
     }
 
     that.remove_progress_bar = function () {
