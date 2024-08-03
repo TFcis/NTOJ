@@ -124,7 +124,13 @@ class UserService:
                     GroupConst.DEFAULT_GROUP,
                 )
 
-        except asyncpg.IntegrityConstraintViolationError:
+        except (asyncpg.IntegrityConstraintViolationError, asyncpg.UniqueViolationError):
+            async with self.db.acquire() as con:
+                # FIXME: if exist, decrease account_acct_id_seq
+                result = await con.fetch("SELECT currval('account_acct_id_seq');")
+                cur_acct_id = int(result[0]['currval'])
+                await con.execute(f"SELECT setval('account_acct_id_seq', {cur_acct_id - 1}, true);")
+
             return 'Eexist', None
 
         if len(result) != 1:
