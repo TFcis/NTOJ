@@ -128,9 +128,12 @@ var index = new function() {
             let href = $(this).attr('href');
             window.history.pushState(null, document.title, $(this).attr('href'));
 
-            if ((!cur_href.match(/contests\/\d+\//) && href.match(/contests\/\d+\//))
-                || (cur_href.match(/contests\/\d+\//) && !href.match(/contests\/\d+\//))) 
-            {
+            if (href.startsWith('?')) {
+                update(false);
+
+            } else if ((!cur_href.match(/contests\/\d+\//) && href.match(/contests\/\d+\//))
+                || (cur_href.match(/contests\/\d+\//) && !href.match(/contests\/\d+\//))) {
+
                 location.href = href;
             } else {
                 update(false);
