@@ -79,9 +79,9 @@ class AcctConfigHandler(RequestHandler):
             name = self.get_argument('name')
             photo = self.get_argument('photo')
             cover = self.get_argument('cover')
-            acct_id = self.get_argument('acct_id')
+            target_acct_id = self.get_argument('acct_id')
 
-            if acct_id != str(self.acct.acct_id):
+            if target_acct_id != str(self.acct.acct_id):
                 self.error('Eacces')
                 return
 
@@ -98,16 +98,17 @@ class AcctConfigHandler(RequestHandler):
         elif reqtype == 'reset':
             old = self.get_argument('old')
             pw = self.get_argument('pw')
-            acct_id = self.get_argument('acct_id')
-            if acct_id != self.acct.acct_id:
-                await LogService.inst.add_log(
-                    f"{self.acct.name} was changing the password of user #{acct_id}.", 'manage.acct.update.pwd'
-                )
+            target_acct_id = self.get_argument('acct_id')
 
-            err, _ = await UserService.inst.update_pw(acct_id, old, pw, self.acct.is_kernel())
+            err, _ = await UserService.inst.update_pw(target_acct_id, old, pw, self.acct.is_kernel())
             if err:
                 self.error(err)
                 return
+
+            if not err and target_acct_id != self.acct.acct_id:
+                await LogService.inst.add_log(
+                    f"{self.acct.name} was changing the password of user #{target_acct_id}.", 'manage.acct.update.pwd'
+                )
 
             self.finish('S')
             return

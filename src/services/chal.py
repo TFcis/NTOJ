@@ -63,6 +63,8 @@ class ChalConst:
         'java': 'java',
     }
 
+    ALLOW_COMPILERS = FILE_EXTENSION.keys()
+
     COMPILER_NAME = {
         'gcc': 'GCC 12.2.0 GNU11',
         'g++': 'G++ 12.2.0 GNU++17',

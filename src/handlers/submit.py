@@ -8,9 +8,6 @@ from services.judge import JudgeServerClusterService
 from services.pro import ProService
 from services.user import UserConst
 
-ALLOW_COMPILERS = ['gcc', 'g++', 'clang', 'clang++', 'python3', 'rustc', 'java']
-
-
 class SubmitHandler(RequestHandler):
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
@@ -22,7 +19,7 @@ class SubmitHandler(RequestHandler):
 
         pro_id = int(pro_id)
 
-        allow_compilers = ALLOW_COMPILERS
+        allow_compilers = ChalConst.ALLOW_COMPILERS
         if self.contest:
             if not self.contest.is_running() and not self.contest.is_admin(self.acct):
                 self.error('Eacces')
@@ -147,7 +144,7 @@ class SubmitHandler(RequestHandler):
 
     async def is_allow_submit(self, code: str, comp_type: str):
         # limits variable config
-        allow_compilers = ALLOW_COMPILERS
+        allow_compilers = ChalConst.ALLOW_COMPILERS
         submit_cd_time = 30
         if self.contest:
             allow_compilers = self.contest.allow_compilers
