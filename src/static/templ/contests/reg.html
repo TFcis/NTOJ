@@ -93,10 +93,12 @@
                 <h4 class="form-label">Registration Ended</h4>
             {% end %}
 
-            {% if not is_reged and now < contest.reg_end %}
-                <button class="btn btn-primary reg form-control">Register</button>
-            {% elif is_reged %}
-                <button class="btn btn-primary unreg form-control">Unregister</button>
+            {% if contest.reg_mode is not RegMode.INVITED %}
+                {% if not is_reged and now < contest.reg_end %}
+                    <button class="btn btn-primary reg form-control">Register</button>
+                {% elif is_reged %}
+                    <button class="btn btn-primary unreg form-control">Unregister</button>
+                {% end %}
             {% end %}
         </div>
 

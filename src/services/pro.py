@@ -366,11 +366,12 @@ class ProService:
         if contest:
             return ProService.STATUS_CONTEST
 
-        if acct is None:
+        elif acct is None:
             return ProService.STATUS_ONLINE
 
-        if acct.is_kernel():
+        elif acct.is_kernel():
             return ProService.STATUS_OFFLINE
+
         else:
             return ProService.STATUS_ONLINE
 
