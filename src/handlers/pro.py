@@ -294,27 +294,22 @@ class ProTagsHandler(RequestHandler):
         tags = self.get_argument('tags')
         pro_id = int(self.get_argument('pro_id'))
 
-        if isinstance(tags, str):
-            err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-            if err:
-                self.error(err)
-                return
+        err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+        if err:
+            self.error(err)
+            return
 
-            await LogService.inst.add_log(
-                (self.acct.name + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."),
-                'manage.pro.update.tag',
-            )
+        await LogService.inst.add_log(
+            (self.acct.name + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."),
+            'manage.pro.update.tag',
+        )
 
-            err, _ = await ProService.inst.update_pro(
-                pro_id, pro['name'], pro['status'], pro['class'], pro['expire'], '', None, tags
-            )
+        err, _ = await ProService.inst.update_pro(
+            pro_id, pro['name'], pro['status'], pro['expire'], '', None, tags
+        )
 
-            if err:
-                self.error(err)
-                return
-
-        else:
-            self.error('Eacces')
+        if err:
+            self.error(err)
             return
 
         await self.finish('S')

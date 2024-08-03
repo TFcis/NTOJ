@@ -270,7 +270,8 @@ class UserService:
             result = result[0]
 
             hpw = base64.b64decode(result['password'].encode('utf-8'))
-            if (bcrypt.hashpw(old.encode('utf-8'), hpw) != hpw) and isadmin is False:
+            # NOTE: old != current password
+            if (bcrypt.hashpw(old.encode('utf-8'), hpw) != hpw) and not isadmin:
                 return 'Epwold', None
 
             hpw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
