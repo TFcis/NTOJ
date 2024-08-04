@@ -345,7 +345,9 @@ ALTER SEQUENCE IF EXISTS public.contest_contest_id_seq OWNER TO db_username;
 CREATE TABLE IF NOT EXISTS public.contest (
     contest_id integer NOT NULL DEFAULT nextval('public.contest_contest_id_seq'::regclass),
     name text COLLATE pg_catalog."default" NOT NULL,
-    "desc" character varying DEFAULT ''::character varying,
+    "desc_before_contest" character varying DEFAULT ''::character varying,
+    "desc_during_contest" character varying DEFAULT ''::character varying,
+    "desc_after_contest" character varying DEFAULT ''::character varying,
 --    contest_status integer NOT NULL,
     contest_mode integer NOT NULL DEFAULT 0, -- 0: IOI 1: ACM
     contest_start timestamp with time zone NOT NULL DEFAULT now(),

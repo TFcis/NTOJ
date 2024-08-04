@@ -7,8 +7,60 @@
         let desc_preview = document.getElementById('descPreviewDialog');
         let desc_preview_modal = new bootstrap.Modal(desc_preview);
 
-        desc_textarea.style.height = 'auto';
-        desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
+        let desc_before_contest = `{% raw contest.desc_before_contest.replace('\\', '\\\\').replace('`', '\\`') %}`;
+        let desc_during_contest = `{% raw contest.desc_during_contest.replace('\\', '\\\\').replace('`', '\\`') %}`;
+        let desc_after_contest = `{% raw contest.desc_after_contest.replace('\\', '\\\\').replace('`', '\\`') %}`;
+
+        let cur_desc_type = 'before';
+        const is_unsaved = () => {
+            switch (cur_desc_type) {
+                case "before":
+                    return desc_textarea.value != desc_before_contest;
+                case "during":
+                    return desc_textarea.value != desc_during_contest;
+                case "after":
+                    return desc_textarea.value != desc_after_contest
+            }
+        };
+
+        const auto_scroll = () => {
+            desc_textarea.style.height = 'auto';
+            desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
+        }
+        desc_textarea.value = desc_before_contest;
+        desc_textarea.addEventListener('input', (event) => auto_scroll());
+        auto_scroll();
+
+        window.onbeforeunload = function() {
+            if (is_unsaved()) {
+                return 'There are unsaved changes';
+            }
+        }
+
+        $("#descType").on('change', function (e) {
+            let desc_type = $(this).val();
+            if (desc_type == cur_desc_type) return;
+
+            if (is_unsaved()) {
+                index.show_notify_dialog('There are unsaved changes', index.DIALOG_TYPE.warning);
+                $(this).val(cur_desc_type);
+                return;
+            }
+
+            switch (desc_type) {
+                case "before":
+                    desc_textarea.value = desc_before_contest;
+                    break;
+                case "during":
+                    desc_textarea.value = desc_during_contest;
+                    break;
+                case "after":
+                    desc_textarea.value = desc_after_contest;
+                    break;
+            }
+            cur_desc_type = desc_type;
+            auto_scroll();
+        });
 
         $("button.preview").on('click', function(e) {
             let body = desc_preview.querySelector('.modal-body');
@@ -17,16 +69,24 @@
             desc_preview_modal.show();
         });
 
-        desc_textarea.addEventListener('input', (event) => {
-            desc_textarea.style.height = 'auto';
-            desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
-        });
-
         $("button.submit").on('click', function(e) {
+            let desc_type = $("#descType").val();
             $.post("/oj/be/contests/{{ contest_id }}/manage/desc", {
                 reqtype: 'update',
+                desc_type: desc_type,
                 desc: desc_textarea.value,
             }, res => {
+                switch (desc_type) {
+                    case "before":
+                        desc_before_contest = desc_textarea.value;
+                        break;
+                    case "during":
+                        desc_during_contest = desc_textarea.value;
+                        break;
+                    case "after":
+                        desc_after_contest = desc_textarea.value;
+                        break;
+                }
                 index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
             });
         })
@@ -53,8 +113,13 @@
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <div class="mb-1">
-        <label for="contestDesc" class="form-label">Contest Desc</label>
-        <textarea id="contestDesc" class="form-control">{% raw contest.desc %}</textarea>
+        <label for="contestDesc" class="form-label">Contest Desc Type Selector</label>
+        <select id="descType" class="form-select">
+            <option value="before" selected>Before the contest start</option>
+            <option value="during">During the contest</option>
+            <option value="after">After the contest end</option>
+        </select>
+        <textarea id="contestDesc" class="form-control"></textarea>
     </div>
 
     <button class="btn btn-primary submit">Update</button>
