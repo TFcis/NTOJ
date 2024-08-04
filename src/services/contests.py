@@ -23,7 +23,9 @@ class ContestMode(enum.IntEnum):
 class Contest:
     contest_id: int
     name: str
-    desc: str = ''
+    desc_before_contest: str = ''
+    desc_during_contest: str = ''
+    desc_after_contest: str = ''
 
     # contest_status: bool
     contest_mode: ContestMode
@@ -95,7 +97,12 @@ class ContestService:
                 result = await con.fetch(
                     '''
                         SELECT "contest_id",
-                        "name", "desc",
+                        "name",
+
+                        "desc_before_contest",
+                        "desc_during_contest",
+                        "desc_after_contest",
+
                         "contest_mode", "contest_start", "contest_end",
                         "acct_list", "pro_list", "admin_list",
                         "reg_mode", "reg_end", "reg_list",
@@ -188,20 +195,27 @@ class ContestService:
                 '''
                     UPDATE "contest"
                     SET
-                    "name" = $1, "desc" = $2,
-                    "contest_mode" = $3, "contest_start" = $4, "contest_end" = $5,
-                    "acct_list" = $6, "admin_list" = $7, "pro_list" = $8,
-                    "reg_mode" = $9, "reg_end" = $10, "reg_list" = $11,
+                    "name" = $1,
+                    "desc_before_contest" = $2,
+                    "desc_during_contest" = $3,
+                    "desc_after_contest" = $4,
+                    "contest_mode" = $5, "contest_start" = $6, "contest_end" = $7,
+                    "acct_list" = $8, "admin_list" = $9, "pro_list" = $10,
+                    "reg_mode" = $11, "reg_end" = $12, "reg_list" = $13,
 
-                    "allow_compilers" = $12,
-                    "is_public_scoreboard" = $13,
-                    "allow_view_other_page" = $14,
-                    "hide_admin" = $15,
-                    "submission_cd_time" = $16,
-                    "freeze_scoreboard_period" = $17
-                    WHERE "contest_id" = $18;
+                    "allow_compilers" = $14,
+                    "is_public_scoreboard" = $15,
+                    "allow_view_other_page" = $16,
+                    "hide_admin" = $17,
+                    "submission_cd_time" = $18,
+                    "freeze_scoreboard_period" = $19
+                    WHERE "contest_id" = $20;
                 ''',
-                contest.name, contest.desc,
+                contest.name,
+                contest.desc_before_contest,
+                contest.desc_during_contest,
+                contest.desc_after_contest,
+
                 contest.contest_mode, contest.contest_start, contest.contest_end,
                 contest.acct_list, contest.admin_list, contest.pro_list,
                 contest.reg_mode, contest.reg_end, contest.reg_list,

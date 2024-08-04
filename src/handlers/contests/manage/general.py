@@ -95,6 +95,39 @@ class ContestManageGeneralHandler(RequestHandler):
             self.finish('S')
 
 
+class ContestManageDescEditHandler(RequestHandler):
+    @reqenv
+    @contest_require_permission('admin')
+    async def get(self):
+        await self.render('contests/manage/desc-edit', page='desc', contest_id=self.contest.contest_id,
+                          contest=self.contest)
+
+    @reqenv
+    @contest_require_permission('admin')
+    async def post(self):
+        reqtype = self.get_argument('reqtype')
+
+        if reqtype == "update":
+            desc = self.get_argument('desc')
+            desc_type = self.get_argument('desc_type')
+
+            if desc_type == "before":
+                self.contest.desc_before_contest = desc
+
+            elif desc_type == "during":
+                self.contest.desc_during_contest = desc
+
+            elif desc_type == "after":
+                self.contest.desc_after_contest = desc
+
+            else:
+                self.error('Eunk')
+
+            await ContestService.inst.update_contest(self.acct, self.contest)
+
+            await self.finish('S')
+
+
 class ContestManageAddHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
