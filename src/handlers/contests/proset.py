@@ -43,7 +43,9 @@ class ContestProsetHandler(RequestHandler):
                 )
 
                 statemap = {pro_id: state for pro_id, state in result}
-            prolist = list(filter(lambda pro: pro['pro_id'] in self.contest.pro_list, prolist))
+            prolist_order = {pro_id: idx for idx, pro_id in enumerate(self.contest.pro_list)}
+            prolist = list(sorted(filter(lambda pro: pro['pro_id'] in self.contest.pro_list, prolist),
+                                  key=lambda pro: prolist_order[pro['pro_id']]))
             for pro in prolist:
                 pro_id = pro["pro_id"]
                 pro["state"] = statemap.get(pro_id)
