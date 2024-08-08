@@ -4,10 +4,13 @@ import json
 from decimal import Decimal
 
 import tornado.web
+from msgpack import packb, unpackb
 
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
 from services.contests import ContestService
 from services.user import UserService
+
+UTC8 = datetime.timezone(datetime.timedelta(hours=8))
 
 
 class _JsonDatetimeEncoder(json.JSONEncoder):
@@ -29,13 +32,19 @@ class _JsonDatetimeEncoder(json.JSONEncoder):
 
 
 class ContestScoreboardHandler(RequestHandler):
+    def _encoder(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return obj.timestamp()
+
+        return obj
+
     @reqenv
     async def get(self):
         await self.render('contests/scoreboard', contest=self.contest)
 
     @reqenv
     async def post(self):
-        if self.contest.is_running() and not self.contest.is_public_scoreboard and not self.contest.is_admin(self.acct):
+        if not self.contest.is_end() and not self.contest.is_public_scoreboard and not self.contest.is_admin(self.acct):
             self.error('Eacces')
             return
 
@@ -53,14 +62,17 @@ class ContestScoreboardHandler(RequestHandler):
                 minutes = total_seconds // 60
 
                 if minutes >= self.contest.freeze_scoreboard_period:
-                    end_time = self.contest.contest_start + datetime.timedelta(minutes=self.contest.freeze_scoreboard_period)
+                    end_time = self.contest.contest_start + datetime.timedelta(
+                        minutes=self.contest.freeze_scoreboard_period)
             else:
                 now = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8)))
                 total_seconds = int((now - self.contest.contest_start).total_seconds())
                 minutes = total_seconds // 60
 
                 if minutes >= self.contest.freeze_scoreboard_period:
-                    end_time = self.contest.contest_start + datetime.timedelta(minutes=self.contest.freeze_scoreboard_period)
+                    end_time = self.contest.contest_start + datetime.timedelta(
+                        minutes=self.contest.freeze_scoreboard_period)
+        is_ended = self.contest.is_end()
 
         contest_id = self.contest.contest_id
 
@@ -69,16 +81,41 @@ class ContestScoreboardHandler(RequestHandler):
         if not self.contest.hide_admin:
             acct_list.extend(self.contest.admin_list)
 
+        s: dict[int, dict[int, dict]] = {}
+        cache_name = f'contest_{contest_id}_scores'
+        for pro_id in self.contest.pro_list:
+            if has_end_time or (scores := (await self.rs.hget(cache_name, str(pro_id)))) is None:
+                s[pro_id] = await ContestService.inst.get_ioi2017_scores(contest_id, pro_id, end_time)
+
+                if not has_end_time:
+                    await self.rs.hset(cache_name, str(pro_id), packb(s[pro_id], default=self._encoder))
+            else:
+                s[pro_id] = unpackb(scores, strict_map_key=False)
+                for pro_score in s[pro_id].values():
+                    pro_score['timestamp'] = datetime.datetime.fromtimestamp(pro_score['timestamp']).replace(
+                        tzinfo=UTC8)
+
+            if is_ended:
+                await self.rs.expire(cache_name, time=60 * 60)
+
         all_scores = []
         for acct_id in acct_list:
             _, acct = await UserService.inst.info_acct(acct_id)
-            scores, total_score = await ContestService.inst.get_ioi_style_score_data(contest_id, acct_id, end_time)
+            total_score = 0
+            scores = {}
+            for pro_id, pro_scores in s.items():
+                if acct_id not in pro_scores:
+                    continue
 
-            # Contest problems maybe change
-            total_score -= sum(score['score'] for pro_id, score in scores.items() if pro_id not in self.contest.pro_list)
-
-            for score in scores.values():
-                score['timestamp'] -= start_time
+                p = pro_scores[acct_id]
+                scores[pro_id] = {
+                    'pro_id': pro_id,
+                    'chal_id': p['chal_id'],
+                    'timestamp': p['timestamp'] - start_time,
+                    'score': p['score'],
+                    'fail_cnt': p['fail_cnt']
+                }
+                total_score += p['score']
 
             all_scores.append({
                 'acct_id': acct_id,

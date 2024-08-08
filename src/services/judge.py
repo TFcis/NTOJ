@@ -86,6 +86,7 @@ class JudgeServerService:
             contest_id = self.chal_map[res['chal_id']]['contest_id']
             if contest_id != 0:
                 await self.rs.publish('contestnewchalsub', contest_id)
+                await self.rs.hdel(f'contest_{contest_id}_scores', str(pro_id))
 
             # NOTE: Recalculate problem rate
             await self.rs.hdel('pro_rate', str(pro_id))
