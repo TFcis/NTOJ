@@ -1,5 +1,6 @@
 import json
 import time
+import zlib
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
@@ -7,6 +8,7 @@ from services.chal import ChalConst, ChalService
 from services.judge import JudgeServerClusterService
 from services.pro import ProService
 from services.user import UserConst
+
 
 class SubmitHandler(RequestHandler):
     @reqenv
@@ -159,6 +161,15 @@ class SubmitHandler(RequestHandler):
         if comp_type not in allow_compilers:
             return 'Ecomp'
 
+        name = ''
+        crc32 = ''
+        if self.contest:
+            name = f'contest_{self.contest.contest_id}_acct_{self.acct.acct_id}'
+            crc32 = str(zlib.crc32(code.encode('utf-8')))
+
+            if await self.rs.sismember(name, crc32):
+                return 'Esame'
+
         should_check_submit_cd = (
                 self.contest is None and not self.acct.is_kernel()  # not in contest
                 or
@@ -177,5 +188,9 @@ class SubmitHandler(RequestHandler):
 
                 else:
                     await self.rs.set(last_submit_name, int(time.time()))
+
+        if self.contest:
+            await self.rs.sadd(name, crc32)
+            await self.rs.expire(name, time=(self.contest.contest_end - self.contest.contest_start))
 
         return None
