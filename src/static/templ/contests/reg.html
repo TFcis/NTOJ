@@ -15,8 +15,9 @@
                         msg = 'invited mode';
                     } else if (res == 'Eexist') {
                         msg = 'Already registered';
+                    } else if (res == 'Etime') {
+                        msg = 'Over registered time';
                     } else if (res == 'Enoext') {
-                        msg = 'over registered time';
                     }
                 } else {
                     dialog_type = index.DIALOG_TYPE.success;
