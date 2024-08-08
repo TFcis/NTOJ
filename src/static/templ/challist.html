@@ -33,7 +33,7 @@
 		        let acctid = j_filter.find('#acctid').val();
 		        let state = j_filter.find('#state').val();
                 let compiler_type = j_filter.find("#compiler").val();
-		        let url = '/oj/chal/?';
+                let url = location.pathname.split('?')[0] + '?';
 
                 if (re.test(proid) || re.test(acctid)) {
                     j_filter.find('#proid').val('');
@@ -67,7 +67,7 @@
             let acctid = j_filter.find('#acctid').val();
 	        let state = j_filter.find('#state').val();
             let compiler_type = j_filter.find("#compiler").val();
-            let url = '/oj/chal/?';
+            let url = location.pathname.split('?')[0] + '?';
 
             if (re.test(proid) || re.test(acctid)) {
                 j_filter.find('#proid').val('');
@@ -137,7 +137,7 @@
             };
         })();
 
-        {% if (flt['state'] == 100 or flt['state'] == 101) and isadmin %}
+        {% if (flt.state == 100 or flt.state == 101) and isadmin %}
             var chalids = {{ chalids }};
             $('#rechalall').on('click', function(e) {
                 chalids.forEach(function(chalid) {
@@ -174,47 +174,47 @@
 
             <div class="mb-1">
                 <label class="form-label">Your ID: {{ acct.acct_id }}</label>
-                <input id="proid" class="form-control mb-1" type="text" value="{% if flt['pro_id'] != None %}{{ ppro_id }}{% end %}" placeholder="Problem ID">
-                <input id="acctid" class="form-control mb-1" type="text" value="{% if flt['acct_id'] != None %}{{ pacct_id }}{% end %}" placeholder="Account ID">
+                <input id="proid" class="form-control mb-1" type="text" value="{% if flt.pro != None %}{{ ppro_id }}{% end %}" placeholder="Problem ID">
+                <input id="acctid" class="form-control mb-1" type="text" value="{% if flt.acct != None %}{{ pacct_id }}{% end %}" placeholder="Account ID">
             </div>
 
             <div class="mb-1">
                 <label class="form-label">Status</label>
                 <select id="state" class="form-select">
-                    <option value=0 {% if flt['state'] == 0 %}selected{% end %}>All</option>
-                    <option value=1 {% if flt['state'] == 1 %}selected{% end %}>AC</option>
-                    <option value=2 {% if flt['state'] == 2 %}selected{% end %}>WA</option>
-                    <option value=4 {% if flt['state'] == 4 %}selected{% end %}>TLE</option>
-                    <option value=5 {% if flt['state'] == 5 %}selected{% end %}>MLE</option>
-                    <option value=8 {% if flt['state'] == 8 %}selected{% end %}>OLE</option>
-                    <option value=3 {% if flt['state'] == 3 %}selected{% end %}>RE</option>
-                    <option value=9 {% if flt['state'] == 9 %}selected{% end %}>RE(SIG)</option>
-                    <option value=6 {% if flt['state'] == 6 %}selected{% end %}>CE</option>
-                    <option value=10 {% if flt['state'] == 10 %}selected{% end %}>CLE</option>
-                    <option value=7 {% if flt['state'] == 7 %}selected{% end %}>IE</option>
-                    <option value=100 {% if flt['state'] == 100 %}selected{% end %}>Challenging</option>
-                    <option value=101 {% if flt['state'] == 101 %}selected{% end %}>Not started</option>
+                    <option value=0 {% if flt.state == 0 %}selected{% end %}>All</option>
+                    <option value=1 {% if flt.state == 1 %}selected{% end %}>AC</option>
+                    <option value=2 {% if flt.state == 2 %}selected{% end %}>WA</option>
+                    <option value=4 {% if flt.state == 4 %}selected{% end %}>TLE</option>
+                    <option value=5 {% if flt.state == 5 %}selected{% end %}>MLE</option>
+                    <option value=8 {% if flt.state == 8 %}selected{% end %}>OLE</option>
+                    <option value=3 {% if flt.state == 3 %}selected{% end %}>RE</option>
+                    <option value=9 {% if flt.state == 9 %}selected{% end %}>RE(SIG)</option>
+                    <option value=6 {% if flt.state == 6 %}selected{% end %}>CE</option>
+                    <option value=10 {% if flt.state == 10 %}selected{% end %}>CLE</option>
+                    <option value=7 {% if flt.state == 7 %}selected{% end %}>IE</option>
+                    <option value=100 {% if flt.state == 100 %}selected{% end %}>Challenging</option>
+                    <option value=101 {% if flt.state == 101 %}selected{% end %}>Not started</option>
                 </select>
             </div>
 
             <div class="mb-1">
                 <label class="form-label">Compiler</label>
                 <select id="compiler" class="form-select">
-                    <option value="all" {% if flt['compiler'] == 'all' %}selected{% end %}>All</option>
                     <!-- %2B means '+' -->
-                    <option value="gcc" {% if flt['compiler'] == 'gcc' %}selected{% end %}>GCC 12.2.0 GNU11</option>
-                    <option value="g%2B%2B" {% if flt['compiler'] == 'g++' %}selected{% end %}>G++ 9.4.0 GNU++17</option>
-                    <option value="clang" {% if flt['compiler'] == 'clang' %}selected{% end %}>Clang 15.0.6 C11</option>
-                    <option value="clang%2B%2B" {% if flt['compiler'] == 'clang++' %}selected{% end %}>Clang++ 15.0.6 C++17</option>
-                    <option value="rustc" {% if flt['compiler'] == 'rustc' %}selected{% end %}>Rustc 1.63</option>
-                    <option value="python3" {% if flt['compiler'] == 'python3' %}selected{% end %}>CPython 3.11.2</option>
-                    <option value="java" {% if flt['compiler'] == 'java' %}selected{% end %}>OpenJDK 17.0.6</option>
+                    <option value="all" {% if flt.compiler == 'all' %}selected{% end %}>All</option>
+                    <option value="gcc" {% if flt.compiler == 'gcc' %}selected{% end %}>GCC 12.2.0 GNU11</option>
+                    <option value="g%2B%2B" {% if flt.compiler == 'g++' %}selected{% end %}>G++ 9.4.0 GNU++17</option>
+                    <option value="clang" {% if flt.compiler == 'clang' %}selected{% end %}>Clang 15.0.6 C11</option>
+                    <option value="clang%2B%2B" {% if flt.compiler == 'clang++' %}selected{% end %}>Clang++ 15.0.6 C++17</option>
+                    <option value="rustc" {% if flt.compiler == 'rustc' %}selected{% end %}>Rustc 1.63</option>
+                    <option value="python3" {% if flt.compiler == 'python3' %}selected{% end %}>CPython 3.11.2</option>
+                    <option value="java" {% if flt.compiler == 'java' %}selected{% end %}>OpenJDK 17.0.6</option>
                 </select>
             </div>
 
             <div class="mb-1">
                 <button type="button" class="btn btn-primary mx-auto submit">Filter</button>
-                {% if (flt['state'] == 100 or flt['state'] == 101) and isadmin %}
+                {% if (flt.state == 100 or flt.state == 101) and isadmin %}
                     <button type="button" id="rechalall" class="btn btn-warning btn-sm">Rechallenge all</button>
                 {% end %}
             </div>
@@ -242,8 +242,14 @@
                 </tr>
             {% for chal in challist %}
                 <tr id="chal{{ chal['chal_id'] }}">
-                    <td><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
-                    <td><a href="/oj/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
+                    {% if chal['contest_id'] == 0 %}
+                        <td><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
+                        <td><a href="/oj/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
+                    {% else %}
+                        <td><a href="/oj/contests/{{ chal['contest_id'] }}/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
+                        <td><a href="/oj/contests/{{ chal['contest_id'] }}/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
+                    {% end %}
+
                     <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a></td>
                     <td id="state" class="state-{{ chal['state'] }}">{{ ChalConst.STATE_LONG_STR[chal['state']] }}</td>
                     <td id="runtime">{{ chal['runtime'] }}</td>
@@ -258,17 +264,17 @@
         {% from tornado.escape import url_escape %}
 
         {% set postfix = '' %}
-        {% if flt['pro_id'] != None %}
+        {% if flt.pro != None %}
             {% set postfix = postfix + f"&proid={ppro_id}" %}
         {% end %}
-        {% if flt['acct_id'] != None %}
+        {% if flt.acct != None %}
             {% set postfix = postfix + f"&acctid={pacct_id}" %}
         {% end %}
-        {% if flt['state'] != 0 %}
-            {% set postfix = postfix + f"&state={flt['state']}" %}
+        {% if flt.state != 0 %}
+            {% set postfix = postfix + f"&state={flt.state}" %}
         {% end %}
-        {% if flt['compiler'] != 'all' %}
-        {% set postfix = postfix + f"&compiler_type={url_escape(flt['compiler'], False)}" %}
+        {% if flt.compiler != 'all' %}
+        {% set postfix = postfix + f"&compiler_type={url_escape(flt.compiler, False)}" %}
         {% end %}
 
         <div class="row">

@@ -33,7 +33,7 @@ class AcctHandler(RequestHandler):
                 max_status,
             )
 
-        err, ratemap = await RateService.inst.map_rate_acct(acct, clas=None)
+        err, ratemap = await RateService.inst.map_rate_acct(acct)
 
         prolist2 = []
 
@@ -83,7 +83,7 @@ class AcctConfigHandler(RequestHandler):
                 return
 
             err, _ = await UserService.inst.update_acct(
-                self.acct.acct_id, self.acct.acct_type, self.acct.acct_class, name, photo, cover
+                self.acct.acct_id, self.acct.acct_type, name, photo, cover
             )
             if err:
                 self.error(err)

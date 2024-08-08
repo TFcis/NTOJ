@@ -121,10 +121,20 @@ var index = new function() {
     that.init = function() {
         var j_navlist = $('#index-navlist');
         var acct_id;
+        var contest_id;
 
         $(document).on('click', 'a', function(e) {
+            let cur_href = location.href;
+            let href = $(this).attr('href');
             window.history.pushState(null, document.title, $(this).attr('href'));
-            update(false);
+
+            if ((!cur_href.match(/contests\/\d+\//) && href.match(/contests\/\d+\//))
+                || (cur_href.match(/contests\/\d+\//) && !href.match(/contests\/\d+\//))) 
+            {
+                location.href = href;
+            } else {
+                update(false);
+            }
 
             return false;
         });
@@ -161,6 +171,7 @@ var index = new function() {
         });
 
         acct_id = $('#indexjs').attr('acct_id');
+        contest_id = $('#indexjs').attr('contest_id');
         if (acct_id != '') {
             that.acct_id = parseInt(acct_id);
             j_navlist.find('li.leave').show();

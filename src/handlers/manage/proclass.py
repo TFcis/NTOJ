@@ -1,9 +1,8 @@
-import tornado
-
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
 from services.pro import ProClassService
 from services.user import UserConst
+from utils.numeric import parse_list_str
 
 
 class ManageProClassHandler(RequestHandler):
@@ -30,8 +29,7 @@ class ManageProClassHandler(RequestHandler):
         if page == "add" and reqtype == 'add':
             name = self.get_argument('name')
             p_list_str = self.get_argument('list')
-            p_list_str = p_list_str.replace(' ', '').split(',')
-            p_list = [int(pro_id) for pro_id in p_list_str if pro_id.isnumeric()]
+            p_list = parse_list_str(p_list_str)
 
             if len(p_list) == 0:
                 self.error('E')
@@ -51,8 +49,7 @@ class ManageProClassHandler(RequestHandler):
             pubclass_id = int(self.get_argument('pubclass_id'))
             name = self.get_argument('name')
             p_list_str = self.get_argument('list')
-            p_list_str = p_list_str.replace(' ', '').split(',')
-            p_list = [int(pro_id) for pro_id in p_list_str if pro_id.isnumeric()]
+            p_list = parse_list_str(p_list_str)
 
             if len(p_list) == 0:
                 self.error('E')

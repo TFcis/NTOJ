@@ -15,9 +15,9 @@ class CodeHandler(RequestHandler):
     async def post(self):
         chal_id = int(self.get_argument('chal_id'))
 
-        _, code, comp_type = await CodeService.inst.get_code(chal_id, self.acct)
-        if code is None:
-            await self.finish('')
+        err, code, comp_type = await CodeService.inst.get_code(chal_id, self.acct)
+        if err:
+            await self.error(err)
             return
 
         if comp_type in ['gcc', 'g++', 'clang', 'clang++']:

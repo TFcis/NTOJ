@@ -62,8 +62,7 @@
 			</thead>
 
 			<tbody>
-			{% set count = 0 %}
-			{% for ques in ques_list %}
+			{% for count, ques in enumerate(ques_list) %}
 			<tr>
 			    <td style="width:46%;">{{ ques['Q'] }}</td>
               

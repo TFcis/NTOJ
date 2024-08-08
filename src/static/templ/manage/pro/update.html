@@ -51,7 +51,6 @@
 		    let name = j_form.find('input.name').val();
 		    let tags = j_form.find('input.tags').val();
 		    let status = j_form.find('select.status').val();
- 	       	let clas = j_form.find('select.class').val();
  	       	let pack_type = j_form.find('select.packtype').val();
 		    let files = j_form.find('input.file')[0].files;
 		    let pack_token = '';
@@ -63,7 +62,6 @@
 				    'name': name,
 				    'tags': tags,
 				    'status': status,
- 	 	          	'class': clas,
  	 	          	'pack_type': pack_type,
 				    'pack_token': pack_token,
 				}, function(res) {
@@ -90,8 +88,8 @@
 		    }
 
 		    if (files.length == 0) {
-				// TODO: Why need call _update();
-				// _update();
+				// NOTE: Update problem param
+				_update();
 		    } else {
 				pack.get_token().done(function(token) {
 					index.create_progress_bar('Uploading...');
@@ -154,14 +152,9 @@
 		<label for="" class="form-label">Problem Status</label>
 		<select class="form-select status">
 			<option value="0" {% if pro['status'] == 0 %} selected {% end %}>Online</option>
-			<option value="1" {% if pro['status'] == 1 %} selected {% end %}>Hidden</option>
-			<option value="2" {% if pro['status'] == 2 %} selected {% end %}>Offline</option>
-		</select>
-
-		<label for="" class="form-label">Problem Class</label>
-		<select class="form-select class">
-			<option value="1" {% if pro['class'] == 1 %} selected {% end %}>Normal</option>
-			<option value="2" {% if pro['class'] == 2 %} selected {% end %}>Contest</option>
+			<option value="1" {% if pro['status'] == 1 %} selected {% end %}>Contest</option>
+			<option value="2" {% if pro['status'] == 2 %} selected {% end %}>Hidden</option>
+			<option value="3" {% if pro['status'] == 3 %} selected {% end %}>Offline</option>
 		</select>
 
 		<label for="" class="form-label">文件</label>
@@ -188,7 +181,7 @@
 		<input type="number" class="form-control memlimit" value="{{ round(testl[0]['memlimit'] / 1024) }}">
 		<button type="button" class="btn btn-danger submit">Update</button>
     </form>
-		
+
 	<a class="btn btn-primary" href="/oj/manage/pro/updatetests/?proid={{ pro['pro_id'] }}">Edit Testcases</a>
 </div>
 {% end %}

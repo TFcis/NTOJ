@@ -4,9 +4,11 @@ import json
 import tornado.web
 
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
-from services.chal import ChalConst, ChalService
+from handlers.contests.base import contest_require_permission
+from services.chal import ChalConst, ChalService, ChalSearchingParamBuilder
 from services.pro import ProService
 from services.user import UserService
+from utils.numeric import parse_list_str
 
 
 class ChalListHandler(RequestHandler):
@@ -20,8 +22,7 @@ class ChalListHandler(RequestHandler):
 
         try:
             ppro_id = str(self.get_argument('proid'))
-            tmp_pro_id = ppro_id.replace(' ', '').split(',')
-            query_pros = [int(pro_id) for pro_id in tmp_pro_id if pro_id.isnumeric()]
+            query_pros = parse_list_str(ppro_id)
             if len(query_pros) == 0:
                 query_pros = None
 
@@ -31,8 +32,7 @@ class ChalListHandler(RequestHandler):
 
         try:
             pacct_id = str(self.get_argument('acctid'))
-            tmp_acct_id = pacct_id.replace(' ', '').split(',')
-            query_accts = [int(acct_id) for acct_id in tmp_acct_id if acct_id.isnumeric()]
+            query_accts = parse_list_str(pacct_id)
             if len(query_accts) == 0:
                 query_accts = None
 
@@ -51,18 +51,26 @@ class ChalListHandler(RequestHandler):
         except tornado.web.HTTPError:
             compiler_type = 'all'
 
-        flt = {
-            'pro_id': query_pros,
-            'acct_id': query_accts,
-            'state': state,
-            'compiler': compiler_type,
-        }
+        contest_id = 0
+        if self.contest:
+            contest_id = self.contest.contest_id
+
+            if self.contest.hide_admin and not self.contest.is_admin(self.acct):
+                if query_accts is None:
+                    query_accts = self.contest.acct_list
+                else:
+                    query_accts = list(filter(lambda acct_id: not self.contest.is_admin(acct_id=acct_id), query_accts))
+
+        flt = ChalSearchingParamBuilder().pro(query_pros).acct(query_accts).state(state).compiler(compiler_type).contest(contest_id).build()
 
         _, chalstat = await ChalService.inst.get_stat(self.acct, flt)
 
         _, challist = await ChalService.inst.list_chal(pageoff, 20, self.acct, flt)
 
         isadmin = self.acct.is_kernel()
+        if self.contest:
+            isadmin = self.acct.is_kernel() and self.contest.is_admin(self.acct)
+
         chalids = [chal['chal_id'] for chal in challist]
 
         await self.render(
@@ -81,26 +89,28 @@ class ChalListHandler(RequestHandler):
 
 class ChalHandler(RequestHandler):
     @reqenv
+    @contest_require_permission('all')
     async def get(self, chal_id):
         chal_id = int(chal_id)
 
-        err, chal = await ChalService.inst.get_chal(chal_id, self.acct)
+        err, chal = await ChalService.inst.get_chal(chal_id)
         if err:
             self.error(err)
             return
 
-        err, pro = await ProService.inst.get_pro(chal['pro_id'], self.acct)
+        err, pro = await ProService.inst.get_pro(chal['pro_id'], self.acct, is_contest=self.contest is not None)
         if err:
             self.error(err)
             return
 
         chal['comp_type'] = ChalConst.COMPILER_NAME[chal['comp_type']]
 
-        await self.render('chal', pro=pro, chal=chal, rechal=self.acct.is_kernel())
+        rechal = self.acct.is_kernel()
+        if self.contest:
+            rechal = rechal and self.contest.is_admin(self.acct)
+
+        await self.render('chal', pro=pro, chal=chal, rechal=rechal)
         return
-
-
-from redis import asyncio as aioredis
 
 
 class ChalListNewChalHandler(WebSocketSubHandler):
