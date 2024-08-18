@@ -80,6 +80,10 @@ class ContestManageGeneralHandler(RequestHandler):
             self.contest.contest_start = contest_start
             self.contest.contest_end = contest_end
 
+            # NOTE: when registration mode change from approval to free, we should approval all account which waiting approval
+            if self.contest.reg_mode is RegMode.REG_APPROVAL and reg_mode is RegMode.FREE_REG:
+                self.contest.acct_list.extend(self.contest.reg_list)
+
             self.contest.reg_mode = reg_mode
             self.contest.reg_end = reg_end
 
