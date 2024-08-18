@@ -50,6 +50,9 @@ class ContestManageAcctHandler(RequestHandler):
                 self.error('Eexist')
                 return
 
+            if acct_id in self.contest.reg_list:
+                self.contest.reg_list.remove(acct_id)
+
             changed_list.append(acct_id)
             await ContestService.inst.update_contest(self.acct, self.contest)
             await self.finish('S')
@@ -91,6 +94,9 @@ class ContestManageAcctHandler(RequestHandler):
                     continue
 
                 acct_list.append(a_id)
+
+                if a_id in self.contest.reg_list:
+                    self.contest.reg_list.remove(a_id)
 
             acct_list = filter(lambda pro_id: pro_id not in changed_list, acct_list)
             changed_list.extend(acct_list)
