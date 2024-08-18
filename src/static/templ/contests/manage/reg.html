@@ -33,9 +33,10 @@
 
 		document.querySelectorAll('button.reject').forEach(el => {
             el.addEventListener('click', function (e) {
+                let acct_id = $(this).attr('acct_id');
                 $.post('/oj/be/contests/{{ contest_id }}/manage/reg', {
                     'reqtype': 'reject',
-                    'acct_id': $(this).attr('acct_id'),
+                    'acct_id': acct_id,
                 }, res => {
                     let msg = '';
                     if (res[0] == 'E') {
