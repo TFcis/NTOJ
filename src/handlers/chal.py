@@ -58,6 +58,8 @@ class ChalListHandler(RequestHandler):
             if self.contest.hide_admin and not self.contest.is_admin(self.acct):
                 if query_accts is None:
                     query_accts = self.contest.acct_list
+                    if not query_accts:
+                        query_accts = [-1]
                 else:
                     query_accts = list(filter(lambda acct_id: not self.contest.is_admin(acct_id=acct_id), query_accts))
 
