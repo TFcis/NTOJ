@@ -7,14 +7,12 @@
 
 		j_form.find('button.submit').on('click', function(e) {
  	           	var type = j_form.find('#type').val();
- 	    		var clas = j_form.find('#class').val();
 				var group = j_form.find('#glist').val();
 
  	           	$.post('/oj/be/manage/acct/update', {
  	                'reqtype': 'update',
  	                'acct_id': {{ acct.acct_id }},
  	                'acct_type': type,
- 	                'class': clas,
 					'group': group,
  	           	}, function(res) {
 					console.log(res);
@@ -48,15 +46,6 @@
 		</div>
 
 		<div class="mb-3">
-			<label>Class</label>
-			<select class="form-select" id="class">
-				<option value=0{% if acct.acct_class == 1 %} selected{% end %}>Other</option>
-				<option value=1{% if acct.acct_class == 1 %} selected{% end %}>Normal</option>
-				<option value=2{% if acct.acct_class == 2 %} selected{% end %}>Contest</option>
-			</select>
-		</div>
-
-		<div class="mb-3">
 			<label>Group</label>
 			<select class="form-select" id="glist">
 				{% for g in glist %}
@@ -67,7 +56,6 @@
 
 		<button type="button" class="btn btn-primary submit">Update</button>
 		<button type="button" class="btn btn-secondary cancel">Cancel</button>
-		<div class="print"></div>
     </form>
 </div>
 {% end %}

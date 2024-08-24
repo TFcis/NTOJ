@@ -13,14 +13,16 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
     rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
     integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="/oj/index.js"></script>
   <script src="/oj/pack.js"></script>
+  <script src="/oj/third/pdf.min.js" defer=""></script>
 
-  <script id="indexjs" type="text/javascript" acct_id="{{ acct_id }}">
+  <script id="indexjs" type="text/javascript" acct_id="{{ acct_id }}" contest_id="{{ contest_id }}">
     $(document).ready(function () {
       index.init();
       var j_index = $('#index-navlist');
@@ -54,7 +56,11 @@
   <!-- style="background-color: #314783;" -->
   <nav class="navbar navbar-expand-lg">
     <div id="index-navlist" class="container-fluid">
-      <a class="navbar-brand" href="/oj/info/">NTOJ</a>
+      {% if is_in_contest %}  
+        <a class="navbar-brand" href="/oj/contests/{{ contest_id }}/info/">NTOJ</a>
+      {% else %}
+        <a class="navbar-brand" href="/oj/info/">NTOJ</a>
+      {% end %}
 
       <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
         class="navbar-toggler" data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
@@ -63,11 +69,26 @@
 
 
       <div class="navbar-collapse collapse" id="navbarSupportedContent">
+        {% if is_in_contest %}
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item info"><a class="nav-link" href="/oj/contests/{{ contest_id  }}/info/">Info</a></li>
+          <li class="nav-item proset"><a class="nav-link" href="/oj/contests/{{ contest_id }}/proset/">ProblemSet</a></li>
+          <li class="nav-item chal"><a class="nav-link" href="/oj/contests/{{ contest_id }}/chal/">Challenges</a></li>
+          <li class="nav-item scoreboard"><a class="nav-link" href="/oj/contests/{{ contest_id }}/scoreboard/">Scoreboard</a></li>
+          <li class="nav-item question"></li><a class="nav-link" href="/oj/contests/{{ contest_id }}/question/">Q & A</a></li>
+
+          {% if contest_manage %}
+            <li class="nav-item manage"><a class="nav-link" href="/oj/contests/{{ contest_id }}/manage/">Manage</a></li>
+          {% end %}
+        </ul>
+        {% else %}
+
         <ul class="navbar-nav me-auto">
           <li class="nav-item info"><a class="nav-link" href="/oj/info/">Info</a></li>
           <li class="nav-item board"><a class="nav-link" href="/oj/board/">Board</a></li>
           <li class="nav-item chal"><a class="nav-link" href="/oj/chal/">Challenges</a></li>
           <li class="nav-item proset"><a class="nav-link" href="/oj/proset/">ProblemSet</a></li>
+          <li class="nav-item contests"><a class="nav-link" href="/oj/contests/">Contests</a></li>
           <li class="nav-item users"><a class="nav-link" href="/oj/users/">Rank</a></li>
 
           {% if manage != True %}
@@ -92,6 +113,7 @@
           <li class="nav-item manage"><a class="nav-link" href="/oj/manage/dash/">Manage</a></li>
           {% end %}
         </ul>
+        {% end %}
 
         <ul class="navbar-nav ms-auto">
           <li class="nav-link sign" style="display: none;"><a href="/oj/sign/">Reg | Log</a></li>

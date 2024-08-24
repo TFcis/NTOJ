@@ -33,7 +33,6 @@ class BoardHandler(RequestHandler):
         if self.acct.is_kernel():
             min_type = UserConst.ACCTTYPE_KERNEL
 
-        # TODO: performance test
         err, prolist = await ProService.inst.list_pro(acct=self.acct)
         err, acctlist = await UserService.inst.list_acct(min_type=min_type)
         err, ratemap = await RateService.inst.map_rate(starttime=meta['start'], endtime=meta['end'])

@@ -1,0 +1,104 @@
+{% extends 'manage.html' %}
+
+{% block head %}
+<script type="text/javascript" id="contjs">
+	function init() {
+        let contest_id = "{{ contest_id }}";
+
+		document.querySelectorAll('button.approval').forEach(el => {
+            el.addEventListener('click', function (e) {
+                let acct_id = $(this).attr('acct_id');
+                $.post('/oj/be/contests/{{ contest_id }}/manage/reg', {
+                    'reqtype': 'approval',
+                    'acct_id': acct_id,
+                }, res => {
+                    let msg = '';
+                    if (res[0] == 'E') {
+                        if (res == 'Enoext') {
+                            msg = `Account(#${acct_id}) not found.`;
+                        } else if (res == 'Eexist') {
+                            msg = `Problem(#${acct_id}) already added to account list.`;
+                        }
+
+                        index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
+                    } else {
+                        msg = `Approval account(#${acct_id}) successfully.`;
+
+                        index.show_notify_dialog(msg, index.DIALOG_TYPE.success);
+                        setTimeout(() => index.reload(), 1000);
+                    }
+                });
+            });
+        });
+
+		document.querySelectorAll('button.reject').forEach(el => {
+            el.addEventListener('click', function (e) {
+                $.post('/oj/be/contests/{{ contest_id }}/manage/reg', {
+                    'reqtype': 'reject',
+                    'acct_id': $(this).attr('acct_id'),
+                }, res => {
+                    let msg = '';
+                    if (res[0] == 'E') {
+                        if (res == 'Enoext') {
+                            msg = `Account(#${acct_id}) not found.`;
+                        } else if (res == 'Eexist') {
+                            msg = `Problem(#${acct_id}) already added to account list.`;
+                        }
+
+                        index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
+                    } else {
+                        msg = `Reject account(#${acct_id}) successfully.`;
+
+                        index.show_notify_dialog(msg, index.DIALOG_TYPE.success);
+                        setTimeout(() => index.reload(), 1000);
+                    }
+                });
+            });
+        });
+    }
+</script>
+{% end %}
+
+{% block content %}
+{% from services.contests import RegMode %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    {% if contest.reg_mode == RegMode.INVITED %}
+    <p>
+        Invited Mode
+        Just add account at <a href="/oj/contests/{{ contest_id }}/manage/acct/">Account Page</a>
+    </p>
+    {% elif contest.reg_mode == RegMode.FREE_REG %}
+
+    <p>
+    Free Registration Mode
+    We don't need to approval any request.
+    </p>
+
+    {% else %}
+    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+        <thead>
+            <tr>
+                <th scope="col">Account ID</th>
+                <th scope="col">Account</th>
+                <th scope="col">Operation</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for acct in reg_list %}
+            <tr>
+                <th scope="row"><a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.acct_id }}</a></th>
+                <td>{{ acct.name }}</td>
+                <td>
+                    <div class="btn-toolbar">
+                        <button class="btn btn-primary me-2 approval" acct_id="{{ acct.acct_id }}">Approval</button>
+                        <button class="btn btn-warning me-2 reject" acct_id="{{ acct.acct_id }}">Reject</button>
+                    </div>
+                </td>
+            </tr>
+        {% end %}
+        </tbody>
+    </table>
+    {% end %}
+</div>
+
+{% end %}

@@ -1,0 +1,105 @@
+{% from services.contests import RegMode %}
+{% import datetime %}
+
+<script>
+    function init() {
+        $("button.reg").on('click', e => {
+            $.post(`/oj/be/contests/{{ contest.contest_id }}/reg`, {
+                'reqtype': 'reg',
+            }, res => {
+                let dialog_type = null;
+                let msg = '';
+                if (res[0] == 'E') {
+                    dialog_type = index.DIALOG_TYPE.error;
+                    if (res == 'Eacces') {
+                        msg = 'invited mode';
+                    } else if (res == 'Eexist') {
+                        msg = 'Already registered';
+                    } else if (res == 'Enoext') {
+                        msg = 'over registered time';
+                    }
+                } else {
+                    dialog_type = index.DIALOG_TYPE.success;
+                    msg = 'Register Successfully';
+                }
+
+                index.show_notify_dialog(msg, dialog_type);
+                index.reload();
+            })
+        });
+
+        $("button.unreg").on('click', e => {
+            $.post(`/oj/be/contests/{{ contest.contest_id }}/reg`, {
+                'reqtype': 'unreg',
+            }, res => {
+                let dialog_type = null;
+                let msg = '';
+                if (res[0] == 'E') {
+                    dialog_type = index.DIALOG_TYPE.error;
+                    dialog_type = index.DIALOG_TYPE.error;
+                    if (res == 'Eacces') {
+                        msg = 'invited mode';
+                    } else if (res == 'Eexist') {
+                        msg = 'you not registered';
+                    } else if (res == 'Enoext') {
+                        msg = 'over registered time';
+                    }
+                } else {
+                    dialog_type = index.DIALOG_TYPE.success;
+                    msg = 'Unregister Successfully';
+                }
+
+                index.show_notify_dialog(msg, dialog_type);
+                index.reload();
+            })
+        });
+    }
+</script>
+
+<!-- TODO: Show reject -->
+{% if contest.reg_mode is RegMode.INVITED %}
+    {% if acct_id in contest.acct_list %}
+        {% set status = "Invited" %}
+    {% else %}
+        {% set status = "Not Invited" %}
+    {% end %}
+{% elif contest.reg_mode is RegMode.FREE_REG %}
+    {% if acct_id in contest.acct_list %}
+        {% set status = "Registered" %}
+    {% else %}
+        {% set status = "Not Registered" %}
+    {% end %}
+{% else %}
+    {% if acct_id in contest.reg_list %}
+        {% set status = "Waiting Approval" %}
+    {% elif acct_id in contest.acct_list %}
+        {% set status = "Registered" %}
+    {% else %}
+        {% set status = "Not Registered" %}
+    {% end %}
+{% end %}
+
+<h2 class="text-center">{{ contest.name }}</h2>
+<div class="row row-cols-1 row-cols-lg-4 justify-content-center align-content-center">
+    <div class="col mt-4">
+        <div class="mb-1 text-center">
+            <label class="form-label">Status: {{ status }}</label> 
+            <label class="form-label">Registration End: {{ contest.reg_end.strftime("%Y-%m-%d %H:%M:%S") }}</label>
+            
+            {% set now = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) %}
+            {% set is_reged = not (acct_id not in contest.acct_list and acct_id not in contest.reg_list) %}
+            
+            {% if now >= contest.reg_end %} 
+                <h4 class="form-label">Registration Ended</h4>
+            {% end %}
+
+            {% if not is_reged and now < contest.reg_end %}
+                <button class="btn btn-primary reg form-control">Register</button>
+            {% elif is_reged %}
+                <button class="btn btn-primary unreg form-control">Unregister</button>
+            {% end %}
+        </div>
+
+    </div>
+</div>
+

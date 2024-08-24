@@ -83,6 +83,10 @@ class JudgeServerService:
             )
 
             pro_id = self.chal_map[res['chal_id']]['pro_id']
+            contest_id = self.chal_map[res['chal_id']]['contest_id']
+            if contest_id != 0:
+                await self.rs.publish('contestnewchalsub', contest_id)
+
             # NOTE: Recalculate problem rate
             await self.rs.hdel('pro_rate', str(pro_id))
             self.chal_map.pop(res['chal_id'])
@@ -128,7 +132,6 @@ class JudgeServerService:
             await self.ws.write_message(data)
 
     async def offline_notice(self):
-        # log
         await LogService.inst.add_log(f"Judge {self.server_name} offline", "judge.offline")
 
 
@@ -204,7 +207,7 @@ class JudgeServerClusterService:
 
         return False
 
-    async def send(self, data, pri, pro_id) -> None:
+    async def send(self, data, pri, pro_id, contest_id) -> None:
         # simple round-robin impl
 
         for i in range(self.idx + 1, len(self.servers)):
@@ -216,7 +219,7 @@ class JudgeServerClusterService:
                 continue
 
             await self.servers[i].send(json.dumps(data))
-            self.servers[i].chal_map[data['chal_id']] = {"pro_id": pro_id}
+            self.servers[i].chal_map[data['chal_id']] = {"pro_id": pro_id, "contest_id": contest_id}
 
             self.idx = i
             return
@@ -230,7 +233,7 @@ class JudgeServerClusterService:
                 continue
 
             await self.servers[i].send(json.dumps(data))
-            self.servers[i].chal_map[data['chal_id']] = {"pro_id": pro_id}
+            self.servers[i].chal_map[data['chal_id']] = {"pro_id": pro_id, "contest_id": contest_id}
 
             self.idx = i
             return

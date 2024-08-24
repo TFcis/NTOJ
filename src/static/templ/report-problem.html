@@ -6,11 +6,12 @@
 
         j_submit.find('button.submit').on('click', function(e) {
             let info = j_submit.find('textarea.info').val();
-            let chal_id = {{ chal_id }};
+            let chal_id = "{{ chal_id }}";
+            let acct_id = "{{ acct.acct_id }}";
 
             $.post('/oj/be/question', {
                 'reqtype': 'ask',
-                'acct_id': {{ acct.acct_id }},
+                'acct_id': acct_id,
                 'qtext':
                 `
                 題目問題回報
@@ -19,13 +20,12 @@
                 `,
             }, function(res) {
                 if (res[0] == 'E') {
-                    if (res == 'E') {
-                    } else {
-                        j_submit.find('div.print').print(res);
-                    }
+                    let msg = res;
+
+                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
                 } else {
-                    j_submit.find('div.print').print('Success!!!');
-                    setTimeout(function(){index.go("/oj/info/");}, 2000);
+                    index.show_notify_dialog('Report Successfully', index.DIALOG_TYPE.success);
+                    setTimeout(() => index.go("/oj/info/"), 2000);
                 }
             });
         });
@@ -49,5 +49,4 @@
     <textarea class="info" placeholder="Info"></textarea>
     <button class="btn btn-warning submit">Send Report</button>
     <button class="btn btn-success cancel">Cancel</button>
-    <div class="print"></div>
 </div>

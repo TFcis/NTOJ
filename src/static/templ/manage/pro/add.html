@@ -1,61 +1,51 @@
 {% extends '../manage.html' %}
 {% block head %}
-<style>
-    div#upload>div.prog{margin-top:8px}
-    div.blk-prog{border:#bdc0ba 1px dashed;padding:4px 4px}div.blk-prog>div.bar{width:0;height:4px;background-color:#5dac81;transition:width 500ms}
-</style>
-
 <script type="text/javascript" id="contjs">
     function init() {
 	    var j_form = $('#form');
-	    var j_upload = $('div#upload');
 
 	    j_form.find('#upload').on('click', function(e) {
 	        let name = j_form.find('#name').val();
 	        let status = j_form.find('#status').val();
-            // var clas = j_form.find('select.class').val();
-            let clas = 1;
 	        let files = j_form.find('#file')[0].files;
 
 	        if (files.length == 0) {
-	    	    j_form.find('div.print').print('No file selected');
+                index.show_notify_dialog('No file selected', index.DIALOG_TYPE.warning);
 	    	    return;
 	        }
 
             pack.get_token().done(function(pack_token) {
-	    	    var j_bar = j_upload.find('div.prog > div.bar');
-
-                j_form.hide();
-                j_upload.show();
+				index.create_progress_bar('Uploading...');
 
                 pack.send(pack_token, files[0]).done(function() {
                     $.post('/oj/be/manage/pro/add', {
                         'reqtype': 'addpro',
                         'name': name,
                         'status': status,
-                        'class': clas,
                         'pack_token': pack_token
                     }, function(res) {
-                        var msg = 'Unknown';
+						index.update_progress_bar_progress(100);
+						index.remove_progress_bar();
+                        let msg = 'Unknown';
 
-                        if(res[0] == 'E') {
-                            if(res == 'Enamemin') {
+                        if (res[0] == 'E') {
+                            if (res == 'Enamemin') {
                                 msg = 'Name length < min';
                             } else if (res == 'Enamemax') {
                                 msg = 'Name length > max';
                             } else if (res == 'Eparam') {
-                                msg = 'Paramater Error';
+                                msg = 'Parameter Error';
                             } else if (res == 'Econf') {
                                 msg = 'Syntax error';
                             }
 
-                            j_upload.find('div.print').print(msg);
+                            index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
                         } else {
                             index.go('/oj/manage/pro/');
                         }
                     });
                 }).progress(function(prog) {
-                    j_bar.css('width', (prog * 100) + '%');
+					index.update_progress_bar_progress(prog * 100);
                 });
             });
 	    });
@@ -78,8 +68,9 @@
             <label for="#status" class="form-label">Status</label>
             <select class="form-select" id="status">
                 <option value=0>Online</option>
-                <option value=1>Hidden</option>
-                <option value=2>Offline</option>
+                <option value=1>Contest</option>
+                <option value=2>Hidden</option>
+                <option value=3>Offline</option>
             </select>
         </div>
 
@@ -90,17 +81,9 @@
         <div class="mb-1">
             <button type="button" class="btn btn-primary" id="upload">Upload</button>
             <button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
-            <div class="print"></div>
         </div>
     </form>
 
-    <div id="upload" style="display: none;">
-	    <strong>Uploading ...</strong>
-	    <div class="print"></div>
-	    <div class="blk-prog prog">
-	        <div class="bar"></div>
-	    </div>
-    </div>
     <br>
     <div>
         給各位TOJ管理員：

@@ -11,6 +11,7 @@ from handlers.chal import (
     ChalNewStateHandler,
 )
 from handlers.code import CodeHandler
+from handlers.contests.url import get_contests_url
 from handlers.index import (
     AbouotHandler,
     DevInfoHandler,
@@ -38,7 +39,7 @@ def get_url(db, rs, pool):
     sub_args = {'pool': pool}
 
     return [
-        (r'/index', IndexHandler, args),
+        (r'/index/(.*)', IndexHandler, args),
         (r'/info', BulletinHandler, args),
         (r'/bulletin/(\d+)', BulletinHandler, args),
         (r'/board', BoardHandler, args),
@@ -64,11 +65,10 @@ def get_url(db, rs, pool):
         (r'/log', LogHandler, args),
         (r'/rank/(\d+)', ProRankHandler, args),
         (r'/users', UserRankHandler, args),
-        # ('/auto',                 AutoHandler,args),
         (r'/code', CodeHandler, args),
         (r'/informsub', BulletinSub, sub_args),
         (r'/online_count', OnlineCounterHandler, args),
         (r'/api', ApiHandler, args),
         (r'/dev-info', DevInfoHandler, args),
         (r'/report', ReportHandler, args),
-    ] + get_manage_url(db, rs, pool)
+    ] + get_manage_url(db, rs, pool) + get_contests_url(db, rs, pool)

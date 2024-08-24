@@ -1,0 +1,97 @@
+{% from services.contests import ContestMode, RegMode %}
+
+
+<div class="row">
+    <h1>{{ contest.name }}</h1>
+    <div class="row">
+        <div class="col-lg-2 col-12">
+            <div class="card mb-1">
+                <div class="card-header">Start / End</div>
+                <div class="card-body">
+                    <h5>{{ contest.contest_start.strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+                    <h5>{{ contest.contest_end.strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+                </div>
+            </div>
+
+            <div class="card mb-1">
+                <div class="card-header">Contest Style</div>
+                <div class="card-body">
+                    <h5>{{ ContestMode(contest.contest_mode).name }}</h5>
+
+                    {% if contest.is_public_scoreboard %}
+                        <h5>Scoreboard</h5>
+                    {% else %}
+                        <h5>No Scoreboard</h5>
+                    {% end %}
+                </div>
+            </div>
+            
+            <div class="card mb-1">
+                <div class="card-header">Registration Before</div>
+                <div class="card-body">
+                    <h5>{{ contest.reg_end.strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+
+                    {% if contest.reg_mode is RegMode.INVITED %}
+                        <h5>Invited</h5>
+                    {% elif contest.reg_mode is RegMode.FREE_REG %}
+                        <h5>Free Registration, no approval needed</h5>
+                    {% elif contest.reg_mode is RegMode.REG_APPROVAL %}
+                        <h5>Free Registration, approval needed </h5>
+                    {% end %}
+                </div>
+            </div>
+
+            <div class="card mb-1">
+                <div class="card-header">Registration Status</div>
+            
+                <div class="card-body">
+                    {% if contest.is_admin(acct_id=acct_id) %}
+                        <h5>Admin, no registration needed</h5>
+                    {% else %}
+                        {% set now = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) %}
+                        {% set can_reg = True %}
+                        {% if now >= contest.reg_end %}
+                            {% set can_reg = False %}
+                            <h5>Registration Ended</h5>
+                        {% end %}
+
+                        {% if contest.reg_mode is RegMode.INVITED %}
+                            {% if acct_id in contest.acct_list %}
+                                <h5>Invited</h5>
+                            {% else %}
+                                <h5>Not Invited</h5>
+                            {% end %}
+                        {% elif contest.reg_mode is RegMode.FREE_REG %}
+                            {% if acct_id in contest.acct_list %}
+                                <h5>Registered</h5>
+                            {% else %}
+                                <h5>Not Registered</h5>
+                                {% if can_reg %}
+                                    <a href="/oj/contests/{{ contest.contest_id }}/reg/" class="btn btn-primary">Go to Register</a>
+                                {% end %}
+                            {% end %}
+                        {% else %}
+                            {% if acct_id in contest.reg_list %}
+                                <h5>Wait Approval</h5>
+                            {% elif acct_id in contest.acct_list %}
+                                <h5>Register</h5>
+                            {% else %}
+                                <h5>Not Register</h5>
+                                {% if can_reg %}
+                                    <a href="/oj/contests/{{ contest.contest_id }}/reg/" class="btn btn-primary">Go to Register</a>
+                                {% end %}
+                            {% end %}
+                        {% end %}
+                    {% end %}
+                </div>
+
+            </div>
+        </div>
+
+        <div class="col-lg-10 col-12">
+            <!-- TODO: desc 支援 markdown -->
+            <p style="white-space: pre-line;">{{ contest.desc }}</p>
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,315 @@
+{% from services.contests import ContestMode %}
+
+<style>
+.rank-gold > td {
+    background-color: #cab03b;
+}
+.rank-silver > td {
+    background-color: #7e7d73;
+}
+.rank-copper > td {
+    background-color: #b67335;
+}
+
+td.state-0 a {
+color: #DC0000;
+}
+td.state-1 a {
+color: #DC2000;
+}
+td.state-2 a {
+color: #DC5800;
+}
+td.state-3 a {
+color: #DC8400;
+}
+td.state-4 a {
+color: #DEB000;
+}
+td.state-5 a {
+color: #DCDC00;
+}
+td.state-6 a {
+color: #CADC00;
+}
+td.state-7 a {
+color: #C0DC00;
+}
+td.state-8 a {
+color: #B0DC00;
+}
+td.state-9 a {
+color: #8DDC00;
+}
+td.state-10 a {
+color: #00dc00;
+font-weight: bolder;
+}
+
+</style>
+
+<script>
+    var contest_id = '{{ contest.contest_id }}';
+    var post_url = `/oj/be/contests/${contest_id}/scoreboard`;
+    var contest_start = new Date("{{ contest.contest_start }}");
+    var contest_end = new Date("{{ contest.contest_end }}");
+    var contest_length = parseInt((contest_end - contest_start) / 1000);
+    var score_color_class_map 
+        = ["state-0", "state-1", "state-2", "state-3", "state-4", "state-5", "state-6", "state-7", "state-8", "state-9", "state-10"];
+    var slider = $("#timestampSlider");
+    var display_time_label = $("#displayTime");
+    var ws;
+    var timer_id = 0;
+    var is_in_specific_timestamp = false;
+
+    /**
+     * @argument secs { number }
+     * @returns { string }
+     */
+    function secsToText(secs) {
+        const ss = Math.floor(secs % 60);
+        const mm = Math.floor(secs / 60) % 60;
+        const hh = Math.floor(secs / 3600);
+        return hh + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+    }
+
+    function timer() {
+        let cur_time = new Date();
+        let diff_sec = parseInt((cur_time - contest_start) / 1000);
+        if (cur_time < contest_end) {
+            slider.val(diff_sec);
+            display_time_label.text(secsToText(diff_sec));
+        } else {
+            slider.val(contest_length);
+            display_time_label.text("Ended");
+            clearInterval(timer_id);
+        }
+    }
+
+    /**
+     * @argument p { String }
+     * @argument q { String }
+     * @returns { number }
+     */
+    function compare_timestamp(p, q) {
+        let [p_min, p_sec] = p.split(":");
+        let [q_min, q_sec] = q.split(":");
+        p_min = parseInt(p_min);
+        p_sec = parseInt(p_sec);
+        q_min = parseInt(q_min);
+        q_sec = parseInt(q_sec);
+        q_min = isNaN(q_min) ? 0 : q_min;
+        q_sec = isNaN(q_min) ? 0 : q_sec;
+        
+        if (p_min == q_min) return p_sec > q_sec;
+        return p_min > q_min;
+    }  
+
+        
+    function init() {
+        ws = index.get_ws(`contests/${contest_id}/scoreboardsub`);
+        ws.onopen = (e) => {
+            ws.send(contest_id); 
+
+            let indicator = $("#connectIndicator");
+            indicator.removeClass('bg-danger');
+            indicator.addClass('bg-success');
+            indicator.text("Online");
+        };
+       
+        ws.onmessage = (e) => {
+            if (e.data == contest_id)
+                $("#refresh").click();
+        };
+
+        ws.onclose = (e) => {
+            let indicator = $("#connectIndicator");
+            indicator.addClass('bg-danger');
+            indicator.removeClass('bg-success');
+            indicator.text("Offline");
+        };
+
+        let cur_date = new Date();
+        slider.attr('max', contest_length);
+
+        slider.on('input', function(e) {
+
+            let sec = slider.val();
+            let cur_length = parseInt((new Date() - contest_start) / 1000);
+
+            if (sec > contest_length) {
+                slider.val(contest_length);
+                display_time_label.text("Ended");
+                update_scoreboard(-1);
+
+            } else if (sec >= cur_length) {
+                slider.val(cur_length);
+                display_time_label.text(secsToText(cur_length));
+                update_scoreboard(-1);
+                
+                clearInterval(timer_id); // make sure only one timer running
+                timer_id = setInterval(timer, 1);
+
+            } else {
+                clearInterval(timer_id); // stop timer
+
+                let start = new Date(contest_start);
+                start.setSeconds(start.getSeconds() + sec);
+                display_time_label.text(secsToText(sec));
+                update_scoreboard(start.toISOString());
+            }
+        });
+
+        $("#refresh").on('click', e => {
+            index.reload();
+        });
+        
+        update_scoreboard(-1);
+        timer_id = setInterval(timer, 1);
+    }
+  
+
+    /**
+     * @argument timestamp { number|string }
+     */
+    function update_scoreboard(timestamp) {
+        let param = {};
+        if (timestamp != -1) {
+            param.display_time = timestamp; 
+        }
+
+        $.post(post_url, param, res => {
+            if (res == 'Eacces') {
+                $("#scoreboard").html("No Scoreboard");
+                return;
+            }
+
+            /**
+             * @type { Array<Object> }
+             */
+            let scores = JSON.parse(res);
+            scores.sort((p, q) => {
+                if (q.total_score == p.total_score) {
+                    let p_max_timestamp = '';
+                    let q_max_timestamp = '';
+
+                    for (const [_, score] of Object.entries(p.scores)) {
+                        if (compare_timestamp(score.timestamp, p_max_timestamp)) p_max_timestamp = score.timestamp;
+                    }
+
+                    for (const [_, score] of Object.entries(q.scores)) {
+                        if (compare_timestamp(score.timestamp, q_max_timestamp)) q_max_timestamp = score.timestamp;
+                    }
+                    
+                    return compare_timestamp(p_max_timestamp, q_max_timestamp) ? 1 : -1;
+                }
+
+                return q.total_score - p.total_score;
+            });
+                
+            {% if contest.contest_mode is ContestMode.IOI %}
+            render_ioi_style_scoreboard(scores);
+            {% end %}
+        });
+    }
+
+    {% if contest.contest_mode is ContestMode.IOI %}
+
+    /**
+     * @argument scores_data { Array }
+     */
+    function render_ioi_style_scoreboard(scores_data) {
+        let pro_list = {{ contest.pro_list }};
+        let each_ranks_html = '';
+        let cur_rank = 0;
+        let cur_total_score = 0;
+        for (const [_, scores] of scores_data.entries()) {
+            if (scores.total_score != cur_total_score) {
+                cur_total_score = scores.total_score;
+                cur_rank += 1;
+            }
+            
+            let each_problems_score_html = '';
+            let max_timestamp = '00:00';
+            for (const pro_id of pro_list) {
+                if (!(pro_id in scores.scores)) {
+                    each_problems_score_html += `
+                    <td>
+                        <p class="text-muted">-</p>
+                    </td>
+                    `;
+                } else {
+                    let score = scores.scores[pro_id];
+                    let score_color_class_html = score_color_class_map[parseInt(score.score / 10)];
+
+                    each_problems_score_html += `
+                    <td class="${score_color_class_html}">
+                        <p class=""><a href="/oj/contests/${contest_id}/chal/${score.chal_id}/">${score.score}</a></p>
+                        <p class="text-muted">${score.timestamp}</p>
+                    </td>
+                    `;
+                    
+                    if (compare_timestamp(score.timestamp, max_timestamp)) {
+                        max_timestamp = score.timestamp;
+                    }
+                }
+            }
+
+            each_ranks_html += `
+                <tr>
+                    <td>${cur_rank}</td>
+                    <td><a href="/oj/acct/${scores.acct_id}/">${scores.name}</a></td>
+                    ${each_problems_score_html}
+                    <td>
+                        <p class="">${scores.total_score}</p>
+                        <p class="text-muted">${max_timestamp}</p>
+                    </td>
+                </tr>
+            `;
+        }
+
+        let scoreboard_html = `
+            <table class="table table-sm table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th scope="col">Rank</th>
+                        <th scope="col">Username</th>
+                        {% for idx, pro_id in enumerate(contest.pro_list) %}
+                        <th scope="col">
+                            <a class="" href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro_id }}/">p{{chr(65+idx)}}</a>
+                        </th>
+                        {% end %}
+                        <th scope="col">Total</th>
+                    </tr> 
+                </thead>
+                <tbody>
+                    ${each_ranks_html}
+                </tbody>
+            </table>
+        `;
+
+        $("#scoreboard").html(scoreboard_html);
+    }
+    {% end %}
+</script>
+
+<div class="row">
+    <div>
+        <h2>
+            <span class="text-muted">Scoreboard </span>
+            <small>{{ contest.name }}</small>
+        </h2>
+        <button class="btn btn-primary" id="refresh">Refresh <span class="badge bg-danger" id="connectIndicator">Offline</span></button>
+    </div>
+    <div class="mb-1 text-center">
+        <label for="timestampSlider" class="form-label">
+            Display Time: <span id="displayTime">Ended</span>
+            {% if (fr := contest.freeze_scoreboard_period) != 0 %}
+            <span>(Scoreboard will freeze at {{ fr }} minutes)</span>
+            {% end %}
+        </label>
+        <input type="range" class="form-range" min="0" max="5" step="1" id="timestampSlider"> 
+    </div>
+    <div id="scoreboard">
+    </div>
+</div>

@@ -1,15 +1,32 @@
 import msgpack
 
 from handlers.base import RequestHandler, reqenv
+from services.contests import ContestService
 from services.ques import QuestionService
 
 
 class IndexHandler(RequestHandler):
     @reqenv
-    async def get(self):
+    async def get(self, page: str):
+        is_in_contest = False
+        contest_manage = False
+        contest_id = 0
+
         manage = False
         reply = False
         ask_cnt = 0
+
+        if page.startswith('contests'):
+            is_in_contest = True
+            try:
+                contest_id = int(page.split('/')[1])
+            except:
+                is_in_contest = False
+
+            if contest_id != 0:
+                _, contest = await ContestService.inst.get_contest(contest_id)
+                if contest.is_admin(self.acct):
+                    contest_manage = True
 
         if self.acct.is_guest():
             name = ''
@@ -24,7 +41,8 @@ class IndexHandler(RequestHandler):
             else:
                 reply = await QuestionService.inst.have_reply(self.acct.acct_id)
 
-        await self.render('index', name=name, manage=manage, ask_cnt=ask_cnt, reply=reply)
+        await self.render('index', name=name, manage=manage, ask_cnt=ask_cnt, reply=reply,
+                          is_in_contest=is_in_contest, contest_manage=contest_manage, contest_id=contest_id)
 
 
 class AbouotHandler(RequestHandler):

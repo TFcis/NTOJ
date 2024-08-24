@@ -30,12 +30,12 @@ class UserConst:
 class Account:
     acct_id: int
     acct_type: int
-    acct_class: int
     mail: str
     name: str
     photo: str
     cover: str
     lastip: str
+    # TODO: Finish allow view other page
 
     def is_kernel(self):
         return self.acct_type == UserConst.ACCTTYPE_KERNEL
@@ -45,7 +45,7 @@ class Account:
 
 
 GUEST_ACCOUNT = Account(
-    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, acct_class=0, name='', mail='', photo='', cover='', lastip=''
+    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip=''
 )
 
 
@@ -114,14 +114,13 @@ class UserService:
                 result = await con.fetch(
                     '''
                         INSERT INTO "account"
-                        ("mail", "password", "name", "acct_type", "class", "group")
-                        VALUES ($1, $2, $3, $4, $5, $6) RETURNING "acct_id";
+                        ("mail", "password", "name", "acct_type", "group")
+                        VALUES ($1, $2, $3, $4, $5) RETURNING "acct_id";
                     ''',
                     mail,
                     base64.b64encode(hpw).decode('utf-8'),
                     name,
                     UserConst.ACCTTYPE_USER,
-                    [1],
                     GroupConst.DEFAULT_GROUP,
                 )
 
@@ -198,8 +197,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "name", "acct_type", "mail",
-                        "class", "photo", "cover", "lastip"
+                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip"
                         FROM "account" WHERE "acct_id" = $1;
                     ''',
                     acct_id,
@@ -212,7 +210,6 @@ class UserService:
             acct = Account(
                 acct_id=acct_id,
                 acct_type=result['acct_type'],
-                acct_class=result['class'][0],
                 mail=result['mail'],
                 name=result['name'],
                 photo=result['photo'],
@@ -226,11 +223,9 @@ class UserService:
 
         return None, acct
 
-    async def update_acct(self, acct_id, acct_type, clas, name, photo, cover):
+    async def update_acct(self, acct_id, acct_type, name, photo, cover):
         if acct_type not in [UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER]:
             return 'Eparam1', None
-        if clas not in [0, 1, 2]:
-            return 'Eparam2', None
         name_len = len(name)
         if name_len < UserConst.NAME_MIN:
             return 'Enamemin', None
@@ -243,13 +238,12 @@ class UserService:
                 '''
                     UPDATE "account"
                     SET "acct_type" = $1, "name" = $2,
-                    "photo" = $3, "cover" = $4, "class" = $5 WHERE "acct_id" = $6 RETURNING "acct_id";
+                    "photo" = $3, "cover" = $4, WHERE "acct_id" = $5 RETURNING "acct_id";
                 ''',
                 acct_type,
                 name,
                 photo,
                 cover,
-                [clas],
                 acct_id,
             )
             if len(result) != 1:
@@ -301,7 +295,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "acct_id", "acct_type", "class", "name", "mail", "lastip"
+                        SELECT "acct_id", "acct_type", "name", "mail", "lastip"
                         FROM "account" WHERE "acct_type" >= $1
                         ORDER BY "acct_id" ASC;
                     ''',
@@ -309,11 +303,10 @@ class UserService:
                 )
 
             acctlist = []
-            for acct_id, acct_type, clas, name, mail, lastip in result:
+            for acct_id, acct_type, name, mail, lastip in result:
                 acct = Account(
                     acct_id=acct_id,
                     acct_type=acct_type,
-                    acct_class=clas[0],
                     mail='',
                     name=name,
                     photo='',
@@ -329,3 +322,4 @@ class UserService:
             await self.rs.hset('acctlist', field, pickle.dumps(acctlist))
 
         return None, acctlist
+

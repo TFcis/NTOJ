@@ -1,8 +1,11 @@
+{% from services.chal import ChalConst %}
 <link rel="stylesheet" type="text/css" href="/oj/submit.css">submit
 
 <script type="text/javascript">
     function init() {
 	    var j_submit = $('#submit');
+        let pro_id = "{{ pro['pro_id'] }}";
+        let contest_id = "{{ contest_id }}";
 
 	    j_submit.find('input.file').on('change', function(e) {
 	        var reader = new FileReader();
@@ -13,28 +16,48 @@
 
 	        reader.readAsText(this.files[0]);
 	    });
-        j_submit.find('button.submit').on('click', function(e) {
-            var code = j_submit.find('textarea.code').val();
-            var comp_type = j_submit.find('#compilerList').val();
 
-            $.post('/oj/be/submit', {
+        j_submit.find('button.submit').on('click', function(e) {
+            let code = j_submit.find('textarea.code').val();
+            let comp_type = j_submit.find('#compilerList').val();
+
+            let url = '';
+            if (contest_id !== "0") {
+                url = `/oj/be/contests/${contest_id}/submit`;
+            } else {
+                url = '/oj/be/submit';
+            }
+
+            $.post(url, {
                 'reqtype': 'submit',
-                'pro_id' : {{ pro['pro_id'] }},
+                'pro_id' : pro_id,
                 'code': code,
                 'comp_type': comp_type,
             }, function(res) {
                 if (res[0] == 'E') {
-                    if (res == 'Einternal') {
-                        j_submit.find('div.print').print('interval < 30 sec');
+                    let msg = '';
+                    if (res.startsWith('Einternal')) {
+                        let cd_time = parseInt(res.slice(9));
+                        msg = `interval < ${cd_time} sec`;
                     } else if (res == 'Eempty') {
-                        j_submit.find('div.print').print('Do not submit empty code');
+                        msg = 'Do not submit empty code';
                     } else if (res == 'Ejudge') {
-                        j_submit.find('div.print').print('All Judge Server offline, cannot submit')
+                        msg = 'All Judge Server offline, cannot submit';
+                    } else if (res == 'Ecomp') {
+                        msg = 'This contest did not allow this language or compiler';
                     } else {
-                        j_submit.find('div.print').print(res);
+                        msg = res;
                     }
+
+                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
                 } else {
-                    index.go('/oj/chal/' + JSON.parse(res) + '/');
+                    if (contest_id !== "0") {
+                        url = `/oj/contests/${contest_id}/chal/${JSON.parse(res)}/`;
+                    } else {
+                        url = `/oj/chal/${JSON.parse(res)}/`;
+                    }
+
+                    index.go(url);
                 }
             });
         });
@@ -49,13 +72,10 @@
             <div class="mb-1">
                 <label for="" class="form-label">Compiler</label>
                 <select id="compilerList" class="form-select">
-                    <option value="g++" selected>G++ 12.2.0 GNU++17</option>
-                    <option value="gcc">GCC 12.2.0 GNU11</option>
-                    <option value="clang">Clang 15.0.6 C11</option>
-                    <option value="clang++">Clang++ 15.0.6 C++17</option>
-                    <option value="python3">CPython 3.11.2</option>
-                    <option value="rustc">Rust 1.63</option>
-                    <option value="java">OpenJDK 17.0.8</option>
+                    <!-- TODO:  -->
+                    {% for compiler in allow_compilers %}
+                        <option value="{{ compiler }}">{{ ChalConst.COMPILER_NAME[compiler] }}</option>
+                    {% end %}
                 </select>
             </div>
 
@@ -70,7 +90,6 @@
             <button type="button" class="btn btn-primary submit">Submit</button>
         </form>
 
-        <div class="print"></div>
     </div>
     <div class="col-lg-2"></div>
 </div>

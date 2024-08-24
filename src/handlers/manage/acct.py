@@ -28,7 +28,6 @@ class ManageAcctHandler(RequestHandler):
         if page == 'update' and reqtype == 'update':
             acct_id = int(self.get_argument('acct_id'))
             acct_type = int(self.get_argument('acct_type'))
-            clas = int(self.get_argument('class'))
             group = str(self.get_argument('group'))
             err, acct = await UserService.inst.info_acct(acct_id)
 
@@ -45,7 +44,7 @@ class ManageAcctHandler(RequestHandler):
                 'manage.acct.update',
             )
 
-            err, _ = await UserService.inst.update_acct(acct_id, acct_type, clas, acct.name, acct.photo, acct.cover)
+            err, _ = await UserService.inst.update_acct(acct_id, acct_type, acct.name, acct.photo, acct.cover)
             if err:
                 self.error(err)
                 return

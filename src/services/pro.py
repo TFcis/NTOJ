@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import json
 import os
@@ -17,8 +16,9 @@ class ProConst:
     NAME_MAX = 64
     CODE_MAX = 16384
     STATUS_ONLINE = 0
-    STATUS_HIDDEN = 1
-    STATUS_OFFLINE = 2
+    STATUS_CONTEST = 1
+    STATUS_HIDDEN = 2
+    STATUS_OFFLINE = 3
 
 
 class ProService:
@@ -26,8 +26,9 @@ class ProService:
     NAME_MAX = 64
     CODE_MAX = 16384
     STATUS_ONLINE = 0
-    STATUS_HIDDEN = 1
-    STATUS_OFFLINE = 2
+    STATUS_CONTEST = 1
+    STATUS_HIDDEN = 2
+    STATUS_OFFLINE = 3
 
     PACKTYPE_FULL = 1
     PACKTYPE_CONTHTML = 2
@@ -38,14 +39,22 @@ class ProService:
         self.rs = rs
         ProService.inst = self
 
-    async def get_pro(self, pro_id, acct: Account = None, special=None):
+    async def get_pro(self, pro_id, acct: Account = None, is_contest: bool = False):
+        """
+        Parameter `is_contest` should be set to true if you want to get contest problems and your account type is not kernel.
+
+        :param pro_id:
+        :param acct:
+        :param is_contest:
+        :return:
+        """
         pro_id = int(pro_id)
-        max_status = self.get_acct_limit(acct, special)
+        max_status = self.get_acct_limit(acct, is_contest)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 """
-                    SELECT "name", "status", "class", "expire", "tags"
+                    SELECT "name", "status", "expire", "tags"
                     FROM "problem" WHERE "pro_id" = $1 AND "status" <= $2;
                 """,
                 pro_id,
@@ -55,10 +64,9 @@ class ProService:
                 return "Enoext", None
             result = result[0]
 
-            name, status, clas, expire, tags = (
+            name, status, expire, tags = (
                 result["name"],
                 result["status"],
-                result["class"][0],
                 result["expire"],
                 result["tags"],
             )
@@ -106,7 +114,6 @@ class ProService:
                 "name": name,
                 "status": status,
                 "expire": expire,
-                "class": clas,
                 "testm_conf": testm_conf,
                 "tags": tags,
             },
@@ -115,7 +122,7 @@ class ProService:
     # TODO: Too many branch
     # TODO: Too many local var
     # TODO: Too many statement
-    async def list_pro(self, acct: Account = None, state=False, clas=None):
+    async def list_pro(self, acct: Account = None, is_contest=False, state=False):
         def _mp_encoder(obj):
             if isinstance(obj, datetime.datetime):
                 return obj.astimezone(datetime.timezone.utc).timestamp()
@@ -128,18 +135,11 @@ class ProService:
             isadmin = False
 
         else:
-            max_status = self.get_acct_limit(acct)
+            max_status = self.get_acct_limit(acct, contest=is_contest)
             isguest = acct.is_guest()
             isadmin = acct.is_kernel()
 
-        if clas is None:
-            clas = [1, 2]
-
-        else:
-            clas = [clas]
-
         statemap = {}
-        # TODO: decrease sql search times
         if state is True and isguest is False:
             async with self.db.acquire() as con:
                 result = await con.fetch(
@@ -151,18 +151,17 @@ class ProService:
                         ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
                         INNER JOIN "problem"
                         ON "challenge"."pro_id" = "problem"."pro_id"
-                        WHERE "problem"."status" <= $2 AND "problem"."class" && $3
+                        WHERE "problem"."status" <= $2
                         GROUP BY "problem"."pro_id"
                         ORDER BY "pro_id" ASC;
                     """,
                     int(acct.acct_id),
                     max_status,
-                    clas,
                 )
 
             statemap = {pro_id: state for pro_id, state in result}
 
-        field = f"{max_status}|{clas}"
+        field = f"{max_status}|{[1, 2]}"  # TODO: Remove class column on db
         if (prolist := (await self.rs.hget("prolist", field))) is not None:
             prolist = unpackb(prolist)
 
@@ -177,18 +176,16 @@ class ProService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     """
-                        SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."expire",
-                        "problem"."class", "problem"."tags"
+                        SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."expire", "problem"."tags"
                         FROM "problem"
-                        WHERE "problem"."status" <= $1 AND "problem"."class" && $2
+                        WHERE "problem"."status" <= $1
                         ORDER BY "pro_id" ASC;
                     """,
                     max_status,
-                    clas,
                 )
 
             prolist = []
-            for pro_id, name, status, expire, clas, tags in result:
+            for pro_id, name, status, expire, tags in result:
                 if expire == datetime.datetime.max:
                     expire = None
 
@@ -201,7 +198,6 @@ class ProService:
                         "name": name,
                         "status": status,
                         "expire": expire,
-                        "class": clas[0],
                         "tags": tags,
                     }
                 )
@@ -236,7 +232,7 @@ class ProService:
         return None, prolist
 
     # TODO: Too many args
-    async def add_pro(self, name, status, clas, expire, pack_token):
+    async def add_pro(self, name, status, expire, pack_token):
         name_len = len(name)
         if name_len < ProService.NAME_MIN:
             return "Enamemin", None
@@ -245,9 +241,6 @@ class ProService:
         del name_len
         if status < ProService.STATUS_ONLINE or status > ProService.STATUS_OFFLINE:
             return "Eparam", None
-        if clas not in [1, 2]:
-            return "Eparam", None
-
         if expire is None:
             expire = datetime.datetime(2099, 12, 31, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
@@ -255,12 +248,11 @@ class ProService:
             result = await con.fetch(
                 """
                     INSERT INTO "problem"
-                    ("name", "status", "class", "expire")
-                    VALUES ($1, $2, $3, $4) RETURNING "pro_id";
+                    ("name", "status", "expire")
+                    VALUES ($1, $2, $3) RETURNING "pro_id";
                 """,
                 name,
                 status,
-                [clas],
                 expire,
             )
             if len(result) != 1:
@@ -277,7 +269,7 @@ class ProService:
         return None, pro_id
 
     # TODO: Too many args
-    async def update_pro(self, pro_id, name, status, clas, expire, pack_type, pack_token=None, tags=""):
+    async def update_pro(self, pro_id, name, status, expire, pack_type, pack_token=None, tags=""):
         name_len = len(name)
         if name_len < ProService.NAME_MIN:
             return "Enamemin", None
@@ -285,8 +277,6 @@ class ProService:
             return "Enamemax", None
         del name_len
         if status < ProService.STATUS_ONLINE or status > ProService.STATUS_OFFLINE:
-            return "Eparam", None
-        if clas not in [1, 2]:
             return "Eparam", None
         if tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", tags):
             return "Etags", None
@@ -298,12 +288,11 @@ class ProService:
             result = await con.fetch(
                 """
                     UPDATE "problem"
-                    SET "name" = $1, "status" = $2, "class" = $3, "expire" = $4, "tags" = $5
-                    WHERE "pro_id" = $6 RETURNING "pro_id";
+                    SET "name" = $1, "status" = $2, "expire" = $3, "tags" = $4
+                    WHERE "pro_id" = $5 RETURNING "pro_id";
                 """,
                 name,
                 status,
-                [clas],
                 expire,
                 tags,
                 int(pro_id),
@@ -373,9 +362,12 @@ class ProService:
         return None, None
 
     # TODO: 把這破函數命名改一下
-    def get_acct_limit(self, acct: Account, special=None):
-        if special:
-            return ProService.STATUS_OFFLINE
+    def get_acct_limit(self, acct: Account = None, contest=False):
+        if contest:
+            return ProService.STATUS_CONTEST
+
+        if acct is None:
+            return ProService.STATUS_ONLINE
 
         if acct.is_kernel():
             return ProService.STATUS_OFFLINE
@@ -526,3 +518,4 @@ class ProClassService:
 
     async def get_priclass_list(self, acct_id):
         pass
+

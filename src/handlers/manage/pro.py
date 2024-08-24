@@ -90,11 +90,10 @@ class ManageProHandler(RequestHandler):
         if page == "add" and reqtype == 'addpro':
             name = self.get_argument('name')
             status = int(self.get_argument('status'))
-            clas = int(self.get_argument('class'))
             expire = None
             pack_token = self.get_argument('pack_token')
 
-            err, pro_id = await ProService.inst.add_pro(name, status, clas, expire, pack_token)
+            err, pro_id = await ProService.inst.add_pro(name, status, expire, pack_token)
             await LogService.inst.add_log(
                 f"{self.acct.name} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro'
             )
@@ -208,7 +207,6 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 name = self.get_argument('name')
                 status = int(self.get_argument('status'))
-                clas = int(self.get_argument('class'))
                 expire = None
                 pack_type = int(self.get_argument('pack_type'))
                 pack_token = self.get_argument('pack_token')
@@ -218,7 +216,7 @@ class ManageProHandler(RequestHandler):
                     pack_token = None
 
                 err, _ = await ProService.inst.update_pro(
-                    pro_id, name, status, clas, expire, pack_type, pack_token, tags
+                    pro_id, name, status, expire, pack_type, pack_token, tags
                 )
                 await LogService.inst.add_log(
                     f"{self.acct.name} had been send a request to update the problem #{pro_id}", 'manage.pro.update.pro'
@@ -331,6 +329,7 @@ class ManageProHandler(RequestHandler):
                 'manage.chal.rechal',
             )
 
+            # TODO: send notify to user
             async def _rechal(rechals):
                 for chal_id, comp_type in rechals:
                     file_ext = ChalConst.FILE_EXTENSION[comp_type]
