@@ -35,7 +35,6 @@
         $("button.submit").on('click', function(e) {
             let start_time = null, end_time = null, reg_end_time = null;
             let contest_name = $("#contestName").val();
-            let contest_desc = $("#contestDesc").val();
             let contest_mode = $("#contestMode").val();
             let reg_mode = $("#regMode").val();
             let submit_cd_time = parseInt($("#submitCdTime").val());
@@ -75,7 +74,7 @@
             }
 
             reg_end_time = reg_end_date_picker.viewDate;
- 
+
             if (isNaN(submit_cd_time) || submit_cd_time < 0) {
                 index.show_notify_dialog("Submission CD Time必須是正整數(包含0)", index.DIALOG_TYPE.warning);
                 return;
@@ -86,7 +85,6 @@
             $.post("/oj/be/contests/{{ contest_id }}/manage/general", {
                 reqtype: "update",
                 name: contest_name,
-                desc: contest_desc,
 
                 contest_mode: contest_mode,
                 contest_start: start_time.toISOString(),
@@ -252,7 +250,7 @@
         </div>
 
         <div class="form-check form-check-inline">
-            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox5" value="python3"{% if 'python' in contest.allow_compilers %} checked {% end %}>
+            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox5" value="python3"{% if 'python3' in contest.allow_compilers %} checked {% end %}>
             <label class="form-check-label" for="inlineCheckbox5">CPython 3.11</label>
         </div>
 
@@ -265,13 +263,6 @@
             <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox7" value="java"{% if 'java' in contest.allow_compilers %} checked {% end %}>
             <label class="form-check-label" for="inlineCheckbox7">OpenJDK Java17</label>
         </div>
-    </div>
-
-    <!-- TODO: desc 支援 markdown -->
-    <!-- TODO: desc markdown 預覽 -->
-    <div class="mb-1">
-        <label for="contestDesc" class="form-label">Contest Desc</label>
-        <textarea id="contestDesc" class="form-control">{{ contest.desc }}</textarea>
     </div>
 
     <button class="btn btn-primary submit">Update</button>
