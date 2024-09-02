@@ -105,6 +105,20 @@ class ChalHandler(RequestHandler):
             self.error(err)
             return
 
+        if chal['contest_id'] and not self.contest:
+            self.error('Enoext')
+            return
+        elif self.contest:
+            if not self.contest.is_start():
+                if self.contest.is_admin(acct_id=chal['acct_id']) and not self.contest.is_admin(self.acct):
+                    self.error('Eacces')
+                    return
+
+            elif self.contest.is_running():
+                if self.contest.hide_admin and self.contest.is_admin(acct_id=chal['acct_id']) and not self.contest.is_admin(self.acct):
+                    self.error('Eacces')
+                    return
+
         err, pro = await ProService.inst.get_pro(chal['pro_id'], self.acct, is_contest=self.contest is not None)
         if err:
             self.error(err)
