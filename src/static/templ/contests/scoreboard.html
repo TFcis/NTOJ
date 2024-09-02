@@ -246,7 +246,10 @@ font-weight: bolder;
                     `;
                 } else {
                     let score = scores.scores[pro_id];
-                    let score_color_class_html = score_color_class_map[parseInt(score.score / 10)];
+                    let score_idx = parseInt(score.score / 10);
+                    if (score_idx > 10) score_idx = 10;
+                    if (score_idx < 0) score_idx = 0;
+                    let score_color_class_html = score_color_class_map[score_idx];
 
                     each_problems_score_html += `
                     <td class="${score_color_class_html}">
