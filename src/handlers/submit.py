@@ -81,7 +81,7 @@ class SubmitHandler(RequestHandler):
                     self.error('Enoext')
                     return
 
-            err = await self.is_allow_submit(code, comp_type)
+            err = await self.is_allow_submit(code, comp_type, pro_id)
             if err:
                 self.error(err)
                 return
@@ -138,13 +138,12 @@ class SubmitHandler(RequestHandler):
             self.error(err)
             return
 
-        if reqtype == 'submit' and pro['status'] == ProService.STATUS_ONLINE:
+        if reqtype == 'submit' and pro['status'] == [ProService.STATUS_ONLINE, ProService.STATUS_CONTEST]:
             await self.rs.publish('challist_sub', 1)
 
         self.finish(json.dumps(chal_id))
         return
-
-    async def is_allow_submit(self, code: str, comp_type: str):
+    async def is_allow_submit(self, code: str, comp_type: str, pro_id: int):
         # limits variable config
         allow_compilers = ChalConst.ALLOW_COMPILERS
         submit_cd_time = 30
@@ -161,20 +160,21 @@ class SubmitHandler(RequestHandler):
         if comp_type not in allow_compilers:
             return 'Ecomp'
 
-        name = ''
-        crc32 = ''
-        if self.contest:
-            name = f'contest_{self.contest.contest_id}_acct_{self.acct.acct_id}'
-            crc32 = str(zlib.crc32(code.encode('utf-8')))
-
-            if await self.rs.sismember(name, crc32):
-                return 'Esame'
-
         should_check_submit_cd = (
                 self.contest is None and not self.acct.is_kernel()  # not in contest
                 or
                 self.contest and self.acct.acct_id in self.contest.acct_list  # in contest
         )
+
+        if self.contest:
+            name = f'contest_{self.contest.contest_id}_acct_{self.acct.acct_id}_pro_{pro_id}_compiler_{comp_type}'
+            crc32 = str(zlib.crc32(code.encode('utf-8')))
+
+            if await self.rs.sismember(name, crc32):
+                return 'Esame'
+
+            await self.rs.sadd(name, crc32)
+            await self.rs.expire(name, time=(self.contest.contest_end - self.contest.contest_start))
 
         if should_check_submit_cd:
             last_submit_name = f"last_submit_time_{self.acct.acct_id}"
@@ -189,8 +189,5 @@ class SubmitHandler(RequestHandler):
                 else:
                     await self.rs.set(last_submit_name, int(time.time()))
 
-        if self.contest:
-            await self.rs.sadd(name, crc32)
-            await self.rs.expire(name, time=(self.contest.contest_end - self.contest.contest_start))
 
         return None
