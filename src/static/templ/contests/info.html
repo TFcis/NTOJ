@@ -9,6 +9,11 @@
             let desc_tex = `{% raw contest.desc_after_contest.replace('\\', '\\\\').replace('`', '\\`') %}`;
         {% end %}
 
+        let descEle = document.getElementById('desc');
+        descEle.innerHTML = DOMPurify.sanitize(marked.parse(desc_tex));
+        MathJax.Hub.Queue(["Typeset",MathJax.Hub, descEle]);
+    }
+</script>
 
 <div class="row">
     <h1>{{ contest.name }}</h1>
@@ -97,9 +102,6 @@
             </div>
         </div>
 
-        <div class="col-lg-10 col-12">
-            <!-- TODO: desc 支援 markdown -->
-            <p style="white-space: pre-line;">{{ contest.desc }}</p>
-        </div>
+        <div class="col-lg-10 col-12" id="desc"></div>
     </div>
 </div>

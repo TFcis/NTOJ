@@ -54,6 +54,7 @@ class ContestManageAcctHandler(RequestHandler):
                 self.contest.reg_list.remove(acct_id)
 
             changed_list.append(acct_id)
+            changed_list.sort()
             await ContestService.inst.update_contest(self.acct, self.contest)
             await self.finish('S')
 
@@ -79,6 +80,7 @@ class ContestManageAcctHandler(RequestHandler):
                 return
 
             changed_list.remove(acct_id)
+            changed_list.sort()
             await ContestService.inst.update_contest(self.acct, self.contest)
             await self.finish('S')
 

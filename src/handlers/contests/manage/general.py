@@ -29,7 +29,6 @@ class ContestManageGeneralHandler(RequestHandler):
 
         if reqtype == "update":
             name = self.get_argument("name")
-            desc = self.get_argument("desc")
 
             contest_mode = ContestMode(int(self.get_argument("contest_mode")))
             contest_start = self.get_argument("contest_start")
@@ -74,7 +73,6 @@ class ContestManageGeneralHandler(RequestHandler):
                 return
 
             self.contest.name = name
-            self.contest.desc = desc
 
             self.contest.contest_mode = contest_mode
             self.contest.contest_start = contest_start
