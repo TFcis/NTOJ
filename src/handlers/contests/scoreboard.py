@@ -44,7 +44,10 @@ class ContestScoreboardHandler(RequestHandler):
 
     @reqenv
     async def post(self):
-        if not self.contest.is_end() and not self.contest.is_public_scoreboard and not self.contest.is_admin(self.acct):
+        if not self.contest.is_start() and not self.contest.is_admin(self.acct):
+            self.error('Eacces')
+            return
+        elif not self.contest.is_end() and not self.contest.is_public_scoreboard and not self.contest.is_admin(self.acct):
             self.error('Eacces')
             return
 
