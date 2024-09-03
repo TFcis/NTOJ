@@ -38,8 +38,13 @@ if [ -z $ADMIN_PASSWORD ]; then
 	ADMIN_PASSWORD=admin1234
 fi
 
-if [ -z $SITE_TITLE ]; then
+if [ -z "${SITE_TITLE}" ]; then
     SITE_TITLE="New TNFSH Online Judge"
+fi
+
+if [ ! -d $INSTALL_DIR ]; then
+    echo "$INSTALL_DIR does not exist."
+    exit
 fi
 
 # Update and upgrade
@@ -50,11 +55,16 @@ sudo apt upgrade
 sudo mkdir -p ${INSTALL_DIR}/ntoj
 sudo mkdir -p ${INSTALL_DIR}/ntoj_web/oj/
 
-# # Create log file and directory
+sudo chown $USER ${INSTALL_DIR}/ntoj
+sudo chown $USER ${INSTALL_DIR}/ntoj_web/oj/
+
+# Create log file and directory
 sudo mkdir -p /var/log/ntoj/
 sudo touch /var/log/ntoj/access.log
+sudo chown $USER /var/log/ntoj/
+sudo chown $USER /var/log/ntoj/access.log
 
-# # Install PostgreSQL
+# Install PostgreSQL
 sudo apt install wget gpg
 sudo wget -O- https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | sudo tee /usr/share/keyrings/postgresql.gpg
 echo deb [arch=amd64 signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main | sudo tee /etc/apt/sources.list.d/postgresql.list
@@ -83,11 +93,11 @@ sudo rm /var/lib/postgresql/oj.sql
 
 # Install Python3
 sudo apt install python3 python3-pip dos2unix
-sudo pip3 install -r ./requirements.txt
+pip3 install -r ./requirements.txt
 
 # NTOJ
-sudo cp -r ../src/* ${INSTALL_DIR}/ntoj/
-sudo cp -r ../src/static/* ${INSTALL_DIR}/ntoj_web/oj/
+cp -r ../src/* ${INSTALL_DIR}/ntoj/
+cp -r ../src/static/* ${INSTALL_DIR}/ntoj_web/oj/
 
 # Install Nginx
 sudo apt install nginx
@@ -110,7 +120,7 @@ sudo systemctl enable --now redis-server.service
 sudo apt install xxd
 COOKIE_SEC=$(head -c 32 /dev/urandom | xxd -ps -c 128)
 UNLOCK_PWD=$(python3 get_unlock_pwd.py <<<${UNLOCK_PASSWORD})
-cat <<EOF | sudo tee ${INSTALL_DIR}/ntoj/config.py >/dev/null
+cat <<EOF | tee ${INSTALL_DIR}/ntoj/config.py >/dev/null
 DBNAME_OJ  = '${DB_NAME}'
 DBUSER_OJ  = '${DB_USERNAME}'
 DBPW_OJ    = '${DB_PASSWORD}'
@@ -126,3 +136,4 @@ EOF
 
 # Create default administrator account
 $(python3 add_admin.py ${ADMIN_NAME} ${ADMIN_PASSWORD} ${ADMIN_MAIL} ${INSTALL_DIR}/ntoj/config.py)
+
