@@ -59,14 +59,13 @@ async def sign_up(mail, pw, name, db, rs):
             result = await con.fetch(
                 '''
                     INSERT INTO "account"
-                    ("mail", "password", "name", "acct_type", "class", "group")
-                    VALUES ($1, $2, $3, $4, $5, $6) RETURNING "acct_id";
+                    ("mail", "password", "name", "acct_type", "group")
+                    VALUES ($1, $2, $3, $4, $5) RETURNING "acct_id";
                 ''',
                 mail,
                 base64.b64encode(hpw).decode('utf-8'),
                 name,
                 UserConst.ACCTTYPE_KERNEL,
-                [1],
                 GroupConst.KERNEL_GROUP,
             )
 
