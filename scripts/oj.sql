@@ -519,13 +519,6 @@ ALTER TABLE ONLY public.bulletin
     ADD CONSTRAINT bulletin_pkey PRIMARY KEY (bulletin_id);
 
 --
--- Name: account_idx_class; Type: INDEX; Schema: public; Owner: db_username; Tablespace:
---
-
-CREATE INDEX account_idx_class ON public.account USING gin (class);
-
-
---
 -- Name: challenge_idx_acct_id; Type: INDEX; Schema: public; Owner: db_username; Tablespace:
 --
 
@@ -537,13 +530,6 @@ CREATE INDEX challenge_idx_acct_id ON public.challenge USING btree (acct_id);
 --
 
 CREATE INDEX challenge_idx_pro_id ON public.challenge USING btree (pro_id);
-
-
---
--- Name: problem_idx_class; Type: INDEX; Schema: public; Owner: db_username; Tablespace:
---
-
-CREATE INDEX problem_idx_class ON public.problem USING gin (class);
 
 
 --
