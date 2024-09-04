@@ -48,8 +48,8 @@ if [ ! -d $INSTALL_DIR ]; then
 fi
 
 # Update and upgrade
-sudo apt update
-sudo apt upgrade
+sudo apt update -y
+sudo apt upgrade -y
 
 # Create Directory
 sudo mkdir -p ${INSTALL_DIR}/ntoj
@@ -65,11 +65,11 @@ sudo chown $USER /var/log/ntoj/
 sudo chown $USER /var/log/ntoj/access.log
 
 # Install PostgreSQL
-sudo apt install wget gpg
+sudo apt install -y wget gpg
 sudo wget -O- https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | sudo tee /usr/share/keyrings/postgresql.gpg
 echo deb [arch=amd64 signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main | sudo tee /etc/apt/sources.list.d/postgresql.list
-sudo apt update
-sudo apt install -f postgresql-15 postgresql-client-15
+sudo apt update -y
+sudo apt install -f -y postgresql-15 postgresql-client-15
 sudo systemctl enable --now postgresql.service
 
 sudo sed -i 's/peer/trust/' /etc/postgresql/15/main/pg_hba.conf
@@ -92,7 +92,7 @@ PGPASSWORD=${DB_PASSWORD} sudo -u postgres psql -U ${DB_USERNAME} -d ${DB_NAME} 
 sudo rm /var/lib/postgresql/oj.sql
 
 # Install Python3 & Poetry
-sudo apt install python3 python3-pip dos2unix curl
+sudo apt install -y python3 python3-pip dos2unix curl
 curl -sSL https://install.python-poetry.org | python3 -
 
 # NTOJ
@@ -105,7 +105,7 @@ $HOME/.local/bin/poetry install
 cd $CURRENT_PWD
 
 # Install Nginx
-sudo apt install nginx
+sudo apt -y install nginx
 sudo systemctl enable --now nginx.service
 
 ## Replace nginx root directory path
@@ -118,14 +118,14 @@ sudo rm /etc/nginx/sites-enabled/default
 sudo nginx -s reload
 
 # Install Redis
-sudo apt install redis
+sudo apt -y install redis
 sudo systemctl enable --now redis-server.service
 
 # Create config.py
-sudo apt install xxd
+sudo apt -y install xxd
 cd ${INSTALL_DIR}/ntoj/
 COOKIE_SEC=$(head -c 32 /dev/urandom | xxd -ps -c 128)
-UNLOCK_PWD=$($HOME/.local/bin/poetry run python3 get_unlock_pwd.py <<<${UNLOCK_PASSWORD})
+UNLOCK_PWD=$($HOME/.local/bin/poetry run python3 ${CURRENT_PWD}/get_unlock_pwd.py <<<${UNLOCK_PASSWORD})
 cat <<EOF | tee ${INSTALL_DIR}/ntoj/config.py >/dev/null
 DBNAME_OJ  = '${DB_NAME}'
 DBUSER_OJ  = '${DB_USERNAME}'
@@ -142,6 +142,6 @@ EOF
 
 # Create default administrator account
 cp ${INSTALL_DIR}/ntoj/config.py ${CURRENT_PWD}/config.py
-$HOME/.local/bin/poetry run python3 add_admin.py ${ADMIN_NAME} ${ADMIN_PASSWORD} ${ADMIN_MAIL} ${INSTALL_DIR}/ntoj/config.py
+$HOME/.local/bin/poetry run python3 ${CURRENT_PWD}/add_admin.py ${ADMIN_NAME} ${ADMIN_PASSWORD} ${ADMIN_MAIL}
 cd ${CURRENT_PWD}
 rm config.py

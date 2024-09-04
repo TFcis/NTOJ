@@ -100,12 +100,10 @@ args_parser = argparse.ArgumentParser(description='add_admin')
 args_parser.add_argument('username', type=str, help='admin username')
 args_parser.add_argument('password', type=str, help='admin password')
 args_parser.add_argument('mail', type=str, help='admin mail')
-args_parser.add_argument('config_path', type=str, help='ntoj config path')
 args_parser.add_argument('-d', '--debug', action='store_const', dest='loglevel', const=logging.DEBUG)
 args_parser.set_defaults(loglevel=logging.INFO)
 
 args = args_parser.parse_args()
-copyfile((args.config_path,), ('./config.py',))
 
 logging.basicConfig(level=args.loglevel, format='%(asctime)s %(levelname)s %(message)s')
 
@@ -116,8 +114,6 @@ db = asyncio.get_event_loop().run_until_complete(
 )
 rs = aioredis.Redis(host='localhost', port=6379, db=1)
 err, acct_id = asyncio.get_event_loop().run_until_complete(sign_up(args.mail, args.password, args.username, db, rs))
-
-os.remove('./config.py')
 
 if err == 'Eexist':
     logging.error("Mail: {args.mail} already existed!!!")
