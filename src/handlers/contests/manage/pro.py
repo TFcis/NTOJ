@@ -85,7 +85,7 @@ class ContestManageProHandler(RequestHandler):
 
         elif reqtype == "rechal":
             pro_id = int(pro_id)
-            can_submit = await JudgeServerClusterService.inst.is_server_online()
+            can_submit = JudgeServerClusterService.inst.is_server_online()
             if not can_submit:
                 self.error('Ejudge')
                 return
@@ -121,6 +121,7 @@ class ContestManageProHandler(RequestHandler):
                         pro_id,
                         pro['testm_conf'],
                         comp_type,
+                        ChalConst.CONTEST_REJUDGE_PRI,
                     )
 
             await asyncio.create_task(_rechal(rechals=result))

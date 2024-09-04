@@ -270,7 +270,7 @@ class ProHandler(RequestHandler):
             if result['state'] is None or result['state'] != ChalConst.STATE_AC:
                 pro['tags'] = ''
 
-        can_submit = await JudgeServerClusterService.inst.is_server_online()
+        can_submit = JudgeServerClusterService.inst.is_server_online()
 
         await self.render(
             'pro',

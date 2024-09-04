@@ -75,6 +75,11 @@ class ChalConst:
         'java': 'OpenJDK 17.0.8',
     }
 
+    NORMAL_PRI = 0
+    CONTEST_PRI = 1
+    CONTEST_REJUDGE_PRI = 2
+    NORMAL_REJUDGE_PRI = 3
+
 
 @dataclass
 class ChalSearchingParam:
@@ -287,7 +292,7 @@ class ChalService:
             },
         )
 
-    async def emit_chal(self, chal_id, pro_id, testm_conf, comp_type):
+    async def emit_chal(self, chal_id, pro_id, testm_conf, comp_type, pri: int):
         chal_id = int(chal_id)
         pro_id = int(pro_id)
 
@@ -335,11 +340,7 @@ class ChalService:
 
         file_ext = ChalConst.FILE_EXTENSION[comp_type]
 
-        try:
-            code_f = open(f"code/{chal_id}/main.{file_ext}", 'rb')
-            code_f.close()
-
-        except FileNotFoundError:
+        if not os.path.isfile(f"code/{chal_id}/main.{file_ext}"):
             for test in testl:
                 await self.update_test(chal_id, test['test_idx'], ChalConst.STATE_ERR, 0, 0, '', refresh_db=False)
             await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
@@ -352,7 +353,7 @@ class ChalService:
 
         await JudgeServerClusterService.inst.send(
             {
-                'pri': 1,
+                'pri': pri,
                 'chal_id': chal_id,
                 'test': testl,
                 'code_path': f'{chal_id}/main.{file_ext}',
@@ -361,7 +362,6 @@ class ChalService:
                 'comp_type': comp_type,
                 'check_type': test_conf['check_type'],
             },
-            1,
             pro_id,
             contest_id,
         )

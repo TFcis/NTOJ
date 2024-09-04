@@ -11,7 +11,7 @@ class BulletinHandler(RequestHandler):
     @reqenv
     async def get(self, bulletin_id=None):
         if bulletin_id is None:
-            can_submit = await JudgeServerClusterService.inst.is_server_online()
+            can_submit = JudgeServerClusterService.inst.is_server_online()
             _, bulletin_list = await BulletinService.inst.list_bulletin()
             bulletin_list.sort(key=lambda b: (b['pinned'], b['timestamp']), reverse=True)
 
