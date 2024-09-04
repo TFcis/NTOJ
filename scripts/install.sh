@@ -91,21 +91,26 @@ sudo chmod 644 /var/lib/postgresql/oj.sql
 PGPASSWORD=${DB_PASSWORD} sudo -u postgres psql -U ${DB_USERNAME} -d ${DB_NAME} -f /var/lib/postgresql/oj.sql
 sudo rm /var/lib/postgresql/oj.sql
 
-# Install Python3
-sudo apt install python3 python3-pip dos2unix
-pip3 install -r ./requirements.txt
+# Install Python3 & Poetry
+sudo apt install python3 python3-pip dos2unix curl
+curl -sSL https://install.python-poetry.org | python3 -
 
 # NTOJ
 cp -r ../src/* ${INSTALL_DIR}/ntoj/
 cp -r ../src/static/* ${INSTALL_DIR}/ntoj_web/oj/
+cp ../pyproject.toml ${INSTALL_DIR}/ntoj/
+CURRENT_PWD=$(pwd)
+cd ${INSTALL_DIR}/ntoj/
+$HOME/.local/bin/poetry install
+cd $CURRENT_PWD
 
 # Install Nginx
 sudo apt install nginx
 sudo systemctl enable --now nginx.service
 
 ## Replace nginx root directory path
-INSTALL_DIR_ESCAPE=$(echo ${INSTALL_DIR} | sed 's/[\/\$]/\\\&/g')
-sudo sed -i "s/INSTALL_DIR/${INSTALL_DIR_ESCAPE}/" ./ntoj.conf
+INSTALL_DIR_ESCAPE=$(echo ${INSTALL_DIR} | sed 's/[\/\$]/\\\//g')
+sed -i "s/INSTALL_DIR/${INSTALL_DIR_ESCAPE}/" ./ntoj.conf
 sudo cp ./ntoj.conf /etc/nginx/conf.d/
 sudo sed -i "s/www-data/root/" /etc/nginx/nginx.conf
 sudo rm /etc/nginx/sites-enabled/default
@@ -118,8 +123,9 @@ sudo systemctl enable --now redis-server.service
 
 # Create config.py
 sudo apt install xxd
+cd ${INSTALL_DIR}/ntoj/
 COOKIE_SEC=$(head -c 32 /dev/urandom | xxd -ps -c 128)
-UNLOCK_PWD=$(python3 get_unlock_pwd.py <<<${UNLOCK_PASSWORD})
+UNLOCK_PWD=$($HOME/.local/bin/poetry run python3 get_unlock_pwd.py <<<${UNLOCK_PASSWORD})
 cat <<EOF | tee ${INSTALL_DIR}/ntoj/config.py >/dev/null
 DBNAME_OJ  = '${DB_NAME}'
 DBUSER_OJ  = '${DB_USERNAME}'
@@ -135,5 +141,7 @@ JUDGE_SERVER_LIST = [
 EOF
 
 # Create default administrator account
-$(python3 add_admin.py ${ADMIN_NAME} ${ADMIN_PASSWORD} ${ADMIN_MAIL} ${INSTALL_DIR}/ntoj/config.py)
-
+cp ${INSTALL_DIR}/ntoj/config.py ${CURRENT_PWD}/config.py
+$HOME/.local/bin/poetry run python3 add_admin.py ${ADMIN_NAME} ${ADMIN_PASSWORD} ${ADMIN_MAIL} ${INSTALL_DIR}/ntoj/config.py
+cd ${CURRENT_PWD}
+rm config.py
