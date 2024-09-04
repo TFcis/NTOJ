@@ -13,11 +13,13 @@ from services.log import LogService
 
 
 class JudgeServerService:
-    def __init__(self, rs, server_name, server_url, judge_id) -> None:
+    def __init__(self, rs, server_name: str, server_url: str, codes_path: str, problems_path: str, judge_id) -> None:
         self.rs = rs
         self.server_name = server_name
         self.server_url = server_url
         self.judge_id = judge_id
+        self.codes_path = codes_path
+        self.problems_path = problems_path
         self.status = True
         self.ws = None
 
@@ -61,7 +63,7 @@ class JudgeServerService:
                     res['chal_id'],
                     test_idx,
                     result['status'],
-                    int(result['time'] / 10**6),  # ns to ms
+                    int(result['time'] / 10 ** 6),  # ns to ms
                     result['memory'],
                     result['verdict'],
                     refresh_db=False,
@@ -130,7 +132,10 @@ class JudgeServerService:
                 ),
             )
 
-            await self.ws.write_message(data)
+            data['code_path'] = f"{self.codes_path}/{data['code_path']}"
+            data['res_path'] = f"{self.problems_path}/{data['res_path']}"
+
+            await self.ws.write_message(json.dumps(data))
 
     async def offline_notice(self):
         await LogService.inst.add_log(f"Judge {self.server_name} offline", "judge.offline")
@@ -147,10 +152,23 @@ class JudgeServerClusterService:
         for judge_id, server in enumerate(server_urls):
             url = server.get('url')
             name = server.get('name')
-            if name is None:
-                name = ''
+            codes_path = server.get('codes_path')
+            problems_path = server.get('problems_path')
 
-            self.servers.append(JudgeServerService(self.rs, name, url, judge_id))
+            # TODO: add log
+            if url is None:
+                continue
+
+            if codes_path is None:
+                continue
+
+            if problems_path is None:
+                continue
+
+            if name is None:
+                name = f'JudgeServer-{judge_id}'
+
+            self.servers.append(JudgeServerService(self.rs, name, url, codes_path, problems_path, judge_id))
 
     async def start(self) -> None:
         for idx, judge_server in enumerate(self.servers):
@@ -233,7 +251,7 @@ class JudgeServerClusterService:
             if not status['status']:
                 continue
 
-            await self.servers[i].send(json.dumps(data))
+            await self.servers[i].send(data)
             self.servers[i].chal_map[data['chal_id']] = {"pro_id": pro_id, "contest_id": contest_id}
 
             self.idx = i
