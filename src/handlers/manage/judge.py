@@ -19,7 +19,7 @@ class ManageJudgeHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        judge_status_list = await JudgeServerClusterService.inst.get_servers_status()
+        judge_status_list = JudgeServerClusterService.inst.get_servers_status()
         await self.render('manage/judge', page='judge', judge_status_list=judge_status_list)
 
     @reqenv
@@ -30,7 +30,7 @@ class ManageJudgeHandler(RequestHandler):
         if reqtype == 'connect':
             index = int(self.get_argument('index'))
 
-            err, server_inform = await JudgeServerClusterService.inst.get_server_status(index)
+            err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
             if (server_name := server_inform['name']) == '':
                 server_name = f"server-{index}"
 
@@ -52,7 +52,7 @@ class ManageJudgeHandler(RequestHandler):
             index = int(self.get_argument('index'))
             pwd = str(self.get_argument('pwd'))
 
-            err, server_inform = await JudgeServerClusterService.inst.get_server_status(index)
+            err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
             if (server_name := server_inform['name']) == '':
                 server_name = f"server-{index}"
 

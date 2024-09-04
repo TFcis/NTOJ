@@ -300,7 +300,7 @@ class ManageProHandler(RequestHandler):
                 return
 
             pro_id = int(self.get_argument('pro_id'))
-            can_submit = await JudgeServerClusterService.inst.is_server_online()
+            can_submit = JudgeServerClusterService.inst.is_server_online()
             if not can_submit:
                 self.error('Ejudge')
                 return
@@ -339,6 +339,7 @@ class ManageProHandler(RequestHandler):
                         pro_id,
                         pro['testm_conf'],
                         comp_type,
+                        ChalConst.NORMAL_REJUDGE_PRI,
                     )
 
             await asyncio.create_task(_rechal(rechals=result))

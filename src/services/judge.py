@@ -100,6 +100,7 @@ class JudgeServerService:
 
         try:
             self.status = False
+            self.running_chal_cnt = 0
             self.ws.close()
             self.main_task.cancel()
             self.main_task = None
@@ -108,7 +109,7 @@ class JudgeServerService:
 
         return None
 
-    async def get_server_status(self):
+    def get_server_status(self):
         return (
             None,
             {
@@ -203,56 +204,51 @@ class JudgeServerClusterService:
             self.queue.get()
             await server.disconnect_server()
 
-    async def get_server_status(self, idx):
+    def get_server_status(self, idx):
         if idx < 0 or idx >= len(self.servers):
             return 'Eparam'
 
-        _, status = await self.servers[idx].get_server_status()
+        _, status = self.servers[idx].get_server_status()
         return None, status
 
-    async def get_servers_status(self) -> List[Dict]:
+    def get_servers_status(self) -> List[Dict]:
         status_list: List[Dict] = []
         for server in self.servers:
-            _, status = await server.get_server_status()
+            _, status = server.get_server_status()
             status_list.append(status)
 
         return status_list
 
-    async def is_server_online(self) -> bool:
+    def is_server_online(self) -> bool:
         for server in self.servers:
-            _, status = await server.get_server_status()
+            _, status = server.get_server_status()
             if status['status']:
                 return True
 
         return False
 
-    async def send(self, data, pri, pro_id, contest_id) -> None:
-        # simple round-robin impl
+    async def send(self, data, pro_id, contest_id) -> None:
+        # priority impl
 
-        for i in range(self.idx + 1, len(self.servers)):
-            if self.servers[i].ws is None:
-                continue
+        if not self.is_server_online():
+            return
 
-            _, status = await self.servers[i].get_server_status()
+        while not self.queue.empty():
+            running_cnt, idx = self.queue.get()
+            _, status = self.get_server_status(idx)
             if not status['status']:
                 continue
 
-            await self.servers[i].send(json.dumps(data))
-            self.servers[i].chal_map[data['chal_id']] = {"pro_id": pro_id, "contest_id": contest_id}
+            judge_id = status['judge_id']
 
-            self.idx = i
-            return
+            if data['chal_id'] in self.servers[judge_id].chal_map:
+                self.queue.put([running_cnt, idx])
+                break
 
-        for i in range(0, len(self.servers)):
-            if self.servers[i].ws is None:
-                continue
+            await self.servers[judge_id].send(data)
+            _, status = self.get_server_status(idx)
 
-            _, status = await self.servers[i].get_server_status()
-            if not status['status']:
-                continue
+            self.queue.put([status['running_chal_cnt'], judge_id])
+            self.servers[idx].chal_map[data['chal_id']] = {"pro_id": pro_id, "contest_id": contest_id}
 
-            await self.servers[i].send(data)
-            self.servers[i].chal_map[data['chal_id']] = {"pro_id": pro_id, "contest_id": contest_id}
-
-            self.idx = i
-            return
+            break

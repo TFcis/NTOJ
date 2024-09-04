@@ -21,6 +21,7 @@ class SubmitHandler(RequestHandler):
 
         pro_id = int(pro_id)
 
+        # TODO: if problem is makefile type, we should restrict compiler type
         allow_compilers = ChalConst.ALLOW_COMPILERS
         if self.contest:
             if not self.contest.is_running() and not self.contest.is_admin(self.acct):
@@ -33,7 +34,7 @@ class SubmitHandler(RequestHandler):
 
             allow_compilers = self.contest.allow_compilers
 
-        can_submit = await JudgeServerClusterService.inst.is_server_online()
+        can_submit = JudgeServerClusterService.inst.is_server_online()
 
         if not can_submit:
             self.finish('<h1 style="color: red;">All Judge Server Offline</h1>')
@@ -56,7 +57,7 @@ class SubmitHandler(RequestHandler):
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     @contest_require_permission('all')
     async def post(self):
-        can_submit = await JudgeServerClusterService.inst.is_server_online()
+        can_submit = JudgeServerClusterService.inst.is_server_online()
 
         if not can_submit:
             self.error('Ejudge')
@@ -73,6 +74,7 @@ class SubmitHandler(RequestHandler):
             comp_type = str(self.get_argument('comp_type'))
 
             if self.contest:
+                pri = ChalConst.CONTEST_PRI
                 if not self.contest.is_running() and not self.contest.is_admin(self.acct):
                     self.error('Eacces')
                     return
@@ -80,6 +82,8 @@ class SubmitHandler(RequestHandler):
                 if pro_id not in self.contest.pro_list:
                     self.error('Enoext')
                     return
+            else:
+                pri = ChalConst.NORMAL_PRI
 
             err = await self.is_allow_submit(code, comp_type, pro_id)
             if err:
@@ -107,6 +111,10 @@ class SubmitHandler(RequestHandler):
         elif reqtype == 'rechal':
             if ((self.contest is None and self.acct.is_kernel())  # not in contest
                     or (self.contest and self.contest.is_admin(self.acct))):  # in contest
+                if self.contest:
+                    pri = ChalConst.CONTEST_REJUDGE_PRI
+                else:
+                    pri = ChalConst.NORMAL_REJUDGE_PRI
 
                 chal_id = int(self.get_argument('chal_id'))
 
@@ -129,6 +137,7 @@ class SubmitHandler(RequestHandler):
             pro_id,
             pro['testm_conf'],
             comp_type,
+            pri=pri
         )
         if err:
             self.error(err)
@@ -139,6 +148,7 @@ class SubmitHandler(RequestHandler):
 
         self.finish(json.dumps(chal_id))
         return
+
     async def is_allow_submit(self, code: str, comp_type: str, pro_id: int):
         # limits variable config
         allow_compilers = ChalConst.ALLOW_COMPILERS
@@ -153,6 +163,7 @@ class SubmitHandler(RequestHandler):
         if len(code) > ProService.CODE_MAX:
             return 'Ecodemax'
 
+        # TODO: if problem is makefile type, we should restrict compiler type
         if comp_type not in allow_compilers:
             return 'Ecomp'
 
@@ -184,6 +195,5 @@ class SubmitHandler(RequestHandler):
 
                 else:
                     await self.rs.set(last_submit_name, int(time.time()))
-
 
         return None
