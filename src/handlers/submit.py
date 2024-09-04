@@ -124,15 +124,11 @@ class SubmitHandler(RequestHandler):
             self.error('Eparam')
             return
 
-        file_ext = ChalConst.FILE_EXTENSION[comp_type]
-
         err, _ = await ChalService.inst.emit_chal(
             chal_id,
             pro_id,
             pro['testm_conf'],
             comp_type,
-            f'/srv/ntoj/code/{chal_id}/main.{file_ext}',
-            f'/srv/ntoj/problem/{pro_id}/res',
         )
         if err:
             self.error(err)

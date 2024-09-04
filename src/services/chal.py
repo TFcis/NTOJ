@@ -287,7 +287,7 @@ class ChalService:
             },
         )
 
-    async def emit_chal(self, chal_id, pro_id, testm_conf, comp_type, code_path, res_path):
+    async def emit_chal(self, chal_id, pro_id, testm_conf, comp_type):
         chal_id = int(chal_id)
         pro_id = int(pro_id)
 
@@ -355,8 +355,8 @@ class ChalService:
                 'pri': 1,
                 'chal_id': chal_id,
                 'test': testl,
-                'code_path': code_path,
-                'res_path': res_path,
+                'code_path': f'{chal_id}/main.{file_ext}',
+                'res_path': f'{pro_id}/res',
                 'metadata': chalmeta,
                 'comp_type': comp_type,
                 'check_type': test_conf['check_type'],

@@ -339,8 +339,6 @@ class ManageProHandler(RequestHandler):
                         pro_id,
                         pro['testm_conf'],
                         comp_type,
-                        f"/srv/ntoj/code/{chal_id}/main.{file_ext}",
-                        f"/srv/ntoj/problem/{pro_id}/res",
                     )
 
             await asyncio.create_task(_rechal(rechals=result))
