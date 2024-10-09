@@ -113,16 +113,31 @@ def reqenv(func):
 
     return wrap
 
+GOTO_SIGN="""
+<script type="text/javascript" id="contjs">
+function init() {
+    index.go('/oj/sign/');
+}
+</script>
+"""
 
 def require_permission(acct_type):
     def decorator(func):
         async def wrap(self, *args, **kwargs):
             if isinstance(acct_type, list):
                 if self.acct.acct_type not in acct_type:
+                    if self.acct.is_guest():
+                        self.finish(GOTO_SIGN)
+                        return
+
                     await self.finish('Eacces')
                     return
 
             elif self.acct.acct_type != acct_type:
+                if self.acct.is_guest():
+                    self.finish(GOTO_SIGN)
+                    return
+
                 await self.finish('Eacces')
                 return
 
