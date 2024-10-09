@@ -5,7 +5,7 @@ import tornado.web
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
-from services.pro import ProService, ProClassService, ProConst
+from services.pro import ProService, ProClassService, ProClassConst
 from services.rate import RateService
 from services.user import UserConst, UserService
 from services.chal import ChalConst
