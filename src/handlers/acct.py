@@ -102,7 +102,11 @@ class AcctConfigHandler(RequestHandler):
         elif reqtype == 'reset':
             old = self.get_argument('old')
             pw = self.get_argument('pw')
-            target_acct_id = self.get_argument('acct_id')
+            target_acct_id = int(self.get_argument('acct_id'))
+
+            if not (self.acct.acct_id == target_acct_id or self.acct.is_kernel()):
+                self.error('Eacces')
+                return
 
             err, _ = await UserService.inst.update_pw(target_acct_id, old, pw, self.acct.is_kernel())
             if err:
