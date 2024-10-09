@@ -59,7 +59,7 @@ class Contest:
         return self.contest_start <= datetime.datetime.now().replace(
             tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) < self.contest_end
 
-    def is_member(self, acct: Account = None, acct_id: int = None):
+    def is_member(self, acct: Account | None = None, acct_id: int | None = None):
         if acct is not None:
             return acct.acct_id in self.acct_list or acct.acct_id in self.admin_list
 
@@ -68,7 +68,7 @@ class Contest:
 
         assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
 
-    def is_admin(self, acct: Account = None, acct_id: int = None):
+    def is_admin(self, acct: Account | None = None, acct_id: int | None = None):
         if acct is not None:
             return acct.acct_id in self.admin_list
 

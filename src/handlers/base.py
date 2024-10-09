@@ -43,12 +43,12 @@ class RequestHandler(tornado.web.RequestHandler):
     async def render(self, templ, **kwargs):
 
         class _encoder(json.JSONEncoder):
-            def default(self, obj):
-                if isinstance(obj, datetime.datetime):
-                    return obj.isoformat()
+            def default(self, o):
+                if isinstance(o, datetime.datetime):
+                    return o.isoformat()
 
                 else:
-                    return json.JSONEncoder.default(self, obj)
+                    return json.JSONEncoder.default(self, o)
 
         kwargs['user'] = self.acct
 
@@ -78,7 +78,7 @@ class WebSocketSubHandler(tornado.websocket.WebSocketHandler):
         super().__init__(*args, **kwargs)
         self.settings['websocket_ping_interval'] = 10
 
-    def check_origin(self, origin: str) -> bool:
+    def check_origin(self, _: str) -> bool:
         return True
 
     def on_close(self) -> None:

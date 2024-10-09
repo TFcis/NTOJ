@@ -2,7 +2,7 @@ import tornado
 
 from handlers.base import reqenv, RequestHandler
 from handlers.contests.base import contest_require_permission
-from services.pro import ProService, ProConst
+from services.pro import ProService
 from services.rate import RateService
 
 

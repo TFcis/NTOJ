@@ -34,6 +34,9 @@ class ContestManageAcctHandler(RequestHandler):
             changed_list = self.contest.acct_list
         elif list_type == "admin":
             changed_list = self.contest.admin_list
+        else:
+            self.error('Eparam')
+            return
 
         if reqtype == "add":
             acct_id = int(acct_id)
@@ -111,7 +114,7 @@ class ContestManageAcctHandler(RequestHandler):
             acct_list = parse_list_str(acct_id)
 
             acct_list = filter(lambda acct_id: self.contest.is_member(acct_id=acct_id), acct_list)
-            changed_list = filter(lambda acct_id: acct_id not in acct_list, changed_list)
+            changed_list = list(filter(lambda acct_id: acct_id not in acct_list, changed_list))
 
             # NOTE: Prevent admin remove self
             if self.acct.acct_id in changed_list and self.contest.is_admin(self.acct):

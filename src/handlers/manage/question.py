@@ -1,4 +1,4 @@
-from msgpack import packb, unpackb
+from msgpack import unpackb
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService

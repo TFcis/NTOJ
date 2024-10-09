@@ -57,7 +57,7 @@ class ProService:
         self.rs = rs
         ProService.inst = self
 
-    async def get_pro(self, pro_id, acct: Account = None, is_contest: bool = False):
+    async def get_pro(self, pro_id, acct: Account | None = None, is_contest: bool = False):
         """
         Parameter `is_contest` should be set to true if you want to get contest problems and your account type is not kernel.
 
@@ -289,7 +289,7 @@ class ProService:
         return None, None
 
     # TODO: 把這破函數命名改一下
-    def get_acct_limit(self, acct: Account = None, contest=False):
+    def get_acct_limit(self, acct: Account | None = None, contest=False):
         if contest:
             return ProService.STATUS_CONTEST
 

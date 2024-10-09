@@ -128,7 +128,7 @@ class SubmitHandler(RequestHandler):
 
                 chal_id = int(self.get_argument('chal_id'))
 
-                err, ret = await ChalService.inst.reset_chal(chal_id)
+                err, _ = await ChalService.inst.reset_chal(chal_id)
                 err, chal = await ChalService.inst.get_chal(chal_id)
 
                 pro_id = chal['pro_id']
@@ -154,7 +154,7 @@ class SubmitHandler(RequestHandler):
             return
 
         if reqtype == 'submit' and pro['status'] in [ProService.STATUS_ONLINE, ProService.STATUS_CONTEST]:
-            await self.rs.publish('challist_sub', 1)
+            await self.rs.publish('challist_sub', str(1))
 
         self.finish(json.dumps(chal_id))
         return

@@ -37,7 +37,7 @@ class CodeService:
             can_see = True
 
         elif contest_id != 0:
-            err, contest = await ContestService.inst.get_contest(contest_id)
+            _, contest = await ContestService.inst.get_contest(contest_id)
             if contest.is_admin(query_acct):
                 can_see = True
 

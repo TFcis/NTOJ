@@ -11,7 +11,7 @@ class PackHandler(WebSocketHandler):
     STATE_DTAT = 1
     CHUNK_MAX = 65536
 
-    def check_origin(self, origin: str) -> bool:
+    def check_origin(self, _: str) -> bool:
         # TODO: secure
         return True
 

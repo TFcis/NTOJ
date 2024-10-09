@@ -154,7 +154,7 @@ class UserService:
 
         acct_id = int(acct_id)
 
-        if (acct := (await self.rs.exists(f'account@{acct_id}'))) is None:
+        if (await self.rs.exists(f'account@{acct_id}')) is None:
             async with self.db.acquire() as con:
                 result = await con.fetch('SELECT "acct_id","lastip" FROM "account" WHERE "acct_id" = $1;', acct_id)
 

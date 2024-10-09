@@ -207,7 +207,6 @@ class ManageProHandler(RequestHandler):
                 test_group[group]['weight'] = weight
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f"{self.acct.name} had been send a request to add the problem #{pro_id}", 'manage.pro.update.tests'
                     f'{self.acct.name} had been send a request to update weight of subtask#{group} of the problem #{pro_id}',
                     'manage.pro.update.tests.updateweight',
                     {
@@ -738,7 +737,6 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f"{self.acct.name} had been send a request to update the problem #{pro_id}", 'manage.pro.update.pro',
                     f"{self.acct.name} had been send a request to update the problem #{pro_id}", 'manage.pro.update.pro',
                     {
                         'name': name,

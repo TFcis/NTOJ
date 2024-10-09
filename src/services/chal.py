@@ -1,13 +1,11 @@
 from dataclasses import dataclass
 import datetime
-import json
 import os
 
 import config
 from services.judge import JudgeServerClusterService
-from services.log import LogService
 from services.pro import ProService
-from services.user import Account, UserConst
+from services.user import Account
 
 
 class ChalConst:
@@ -115,7 +113,7 @@ class ChalSearchingParam:
         if self.contest != 0:
             query += f' AND "challenge"."contest_id"={self.contest} '
         else:
-            query += f' AND "challenge"."contest_id"=0 '
+            query += ' AND "challenge"."contest_id"=0 '
 
         return query
 
@@ -471,7 +469,6 @@ class ChalService:
 
     async def get_stat(self, acct: Account, flt: ChalSearchingParam):
         fltquery = flt.get_sql_query_str()
-        min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:
             result = await con.fetch(

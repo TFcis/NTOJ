@@ -15,7 +15,7 @@ class ContestManageProHandler(RequestHandler):
     async def get(self):
         pro_list = []
         for pro_id in self.contest.pro_list:
-            err, pro = await ProService.inst.get_pro(pro_id, is_contest=True)
+            _, pro = await ProService.inst.get_pro(pro_id, is_contest=True)
             pro_list.append(pro)
 
         await self.render('contests/manage/pro', page='pro',
@@ -114,7 +114,6 @@ class ContestManageProHandler(RequestHandler):
             # TODO: send notify to user
             async def _rechal(rechals):
                 for chal_id, comp_type in rechals:
-                    file_ext = ChalConst.FILE_EXTENSION[comp_type]
                     _, _ = await ChalService.inst.reset_chal(chal_id)
                     _, _ = await ChalService.inst.emit_chal(
                         chal_id,

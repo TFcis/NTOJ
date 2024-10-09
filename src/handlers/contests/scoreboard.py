@@ -14,21 +14,21 @@ UTC8 = datetime.timezone(datetime.timedelta(hours=8))
 
 
 class _JsonDatetimeEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, datetime.datetime):
-            return obj.isoformat()
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            return o.isoformat()
 
-        elif isinstance(obj, datetime.timedelta):
-            total_seconds = int(obj.total_seconds())
+        elif isinstance(o, datetime.timedelta):
+            total_seconds = int(o.total_seconds())
             minutes = total_seconds // 60
             seconds = total_seconds % 60
             return f"{minutes}:{seconds:02}"
 
-        elif isinstance(obj, Decimal):
-            return int(obj)
+        elif isinstance(o, Decimal):
+            return int(o)
 
         else:
-            return json.JSONEncoder.default(self, obj)
+            return json.JSONEncoder.default(self, o)
 
 
 class ContestScoreboardHandler(RequestHandler):

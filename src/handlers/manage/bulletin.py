@@ -1,5 +1,3 @@
-import tornado.web
-
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.bulletin import BulletinService
 from services.log import LogService
