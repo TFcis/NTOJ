@@ -137,22 +137,31 @@ class RateService:
             self, acct: Account, contest_id: int = 0, starttime='1970-01-01 00:00:00.000',
             endtime='2100-01-01 00:00:00.000'
     ):
+        from services.pro import ProConst
         if isinstance(starttime, str):
             starttime = datetime.datetime.fromisoformat(starttime)
 
         if isinstance(endtime, str):
             endtime = datetime.datetime.fromisoformat(endtime)
 
+        problem_status_sql = ''
+        if contest_id != 0:
+            problem_status_sql = f'AND "problem"."status" = {ProConst.STATUS_CONTEST}'
+        elif acct.is_kernel():
+            problem_status_sql = f'AND "problem"."status" <= {ProConst.STATUS_HIDDEN} AND "problem"."status" != {ProConst.STATUS_CONTEST}'
+        else:
+            problem_status_sql = f'AND "problem"."status" <= {ProConst.STATUS_ONLINE} AND "problem"."status" != {ProConst.STATUS_CONTEST}'
+
         async with self.db.acquire() as con:
             result = await con.fetch(
-                '''
+                f'''
                     SELECT "challenge"."pro_id", MAX("challenge_state"."rate") AS "score",
-                    COUNT("challenge_state") AS "count"
+                    COUNT("challenge_state") AS "count", MIN("challenge_state"."state") as "state"
                     FROM "challenge"
                     INNER JOIN "challenge_state"
                     ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
                     INNER JOIN "problem"
-                    ON "challenge"."pro_id" = "problem"."pro_id"
+                    ON "challenge"."pro_id" = "problem"."pro_id" {problem_status_sql}
                     WHERE "challenge"."contest_id" = $2 AND "challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4
                     GROUP BY "challenge"."pro_id";
                 ''',
@@ -163,10 +172,11 @@ class RateService:
             )
 
         statemap = {}
-        for pro_id, rate, count in result:
+        for pro_id, rate, count, state in result:
             statemap[pro_id] = {
                 'rate': rate,
                 'count': count,
+                'state': state,
             }
 
         return None, statemap

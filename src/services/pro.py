@@ -120,40 +120,14 @@ class ProService:
     # TODO: Too many branch
     # TODO: Too many local var
     # TODO: Too many statement
-    async def list_pro(self, acct: Account = None, is_contest=False, state=False):
+    async def list_pro(self, acct: Account = None, is_contest=False):
         from services.chal import ChalConst
 
         if acct is None:
             max_status = ProService.STATUS_ONLINE
-            isguest = True
-            isadmin = False
 
         else:
             max_status = self.get_acct_limit(acct, contest=is_contest)
-            isguest = acct.is_guest()
-            isadmin = acct.is_kernel()
-
-        statemap = {}
-        if state is True and isguest is False:
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    """
-                        SELECT "problem"."pro_id",
-                        MIN("challenge_state"."state") AS "state"
-                        FROM "challenge"
-                        INNER JOIN "challenge_state"
-                        ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
-                        INNER JOIN "problem"
-                        ON "challenge"."pro_id" = "problem"."pro_id"
-                        WHERE "problem"."status" <= $2
-                        GROUP BY "problem"."pro_id"
-                        ORDER BY "pro_id" ASC;
-                    """,
-                    int(acct.acct_id),
-                    max_status,
-                )
-
-            statemap = {pro_id: state for pro_id, state in result}
 
         field = f"{max_status}|{[1, 2]}"  # TODO: Remove class column on db
         if (prolist := (await self.rs.hget("prolist", field))) is not None:
@@ -186,17 +160,6 @@ class ProService:
                 )
 
             await self.rs.hset("prolist", field, packb(prolist))
-
-        for pro in prolist:
-            pro_id = pro["pro_id"]
-            pro["state"] = statemap.get(pro_id)
-
-            if isguest:
-                pro["tags"] = ""
-
-            elif not isadmin:
-                if pro["state"] != ChalConst.STATE_AC:
-                    pro["tags"] = ""
 
         return None, prolist
 

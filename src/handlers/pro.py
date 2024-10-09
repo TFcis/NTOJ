@@ -73,7 +73,7 @@ class ProsetHandler(RequestHandler):
         except tornado.web.HTTPError:
             pubclass_id = None
 
-        err, prolist = await ProService.inst.list_pro(self.acct, state=True)
+        err, prolist = await ProService.inst.list_pro(self.acct)
 
         _, pubclass_list = await ProClassService.inst.get_pubclass_list()
 
@@ -89,6 +89,17 @@ class ProsetHandler(RequestHandler):
 
         if show_only_online_pro:
             prolist = list(filter(lambda pro: pro['status'] == ProConst.STATUS_ONLINE, prolist))
+
+        _, acct_states = await RateService.inst.map_rate_acct(self.acct)
+        def _set_pro_state_and_tags(pro):
+            pro['state'] = acct_states.get(pro['pro_id'], {}).get('state')
+
+            if (self.acct.is_guest()) or (not self.acct.is_kernel() and pro['state'] != ChalConst.STATE_AC):
+                pro['tags'] = ''
+
+            return pro
+
+        prolist = list(map(lambda pro: _set_pro_state_and_tags(pro), prolist))
 
         if problem_show == "onlyac":
             prolist = list(filter(lambda pro: pro['state'] == ChalConst.STATE_AC, prolist))

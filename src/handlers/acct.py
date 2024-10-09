@@ -6,6 +6,7 @@ from services.log import LogService
 from services.pro import ProService
 from services.rate import RateService
 from services.user import UserConst, UserService
+from services.chal import ChalConst
 
 
 class AcctHandler(RequestHandler):
@@ -37,17 +38,19 @@ class AcctHandler(RequestHandler):
 
         prolist2 = []
 
+        ac_pro_cnt = 0
         for pro in prolist:
             pro_id = pro['pro_id']
             tmp = {'pro_id': pro_id, 'score': -1}
             if pro_id in ratemap:
                 tmp['score'] = ratemap[pro_id]['rate']
+                ac_pro_cnt += ratemap[pro_id]['state'] == ChalConst.STATE_AC
 
             prolist2.append(tmp)
 
         isadmin = self.acct.is_kernel()
         rate_data['rate'] = math.floor(rate_data['rate'])
-        rate_data['ac_pro_cnt'] = sum(t.get('rate') == 100 for t in ratemap.values())
+        rate_data['ac_pro_cnt'] = ac_pro_cnt
 
         # force https, add by xiplus, 2018/8/24
         acct.photo = re.sub(r'^http://', 'https://', acct.photo)
