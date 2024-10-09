@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import uuid
@@ -18,6 +19,8 @@ class PackHandler(WebSocketHandler):
         self.state = PackHandler.STATE_HDR
         self.output = None
         self.remain = 0
+        self.sha1 = hashlib.sha1()
+        self.received_sha1 = ''
 
     async def on_message(self, msg):
         if self.state == PackHandler.STATE_DTAT:
@@ -30,10 +33,16 @@ class PackHandler(WebSocketHandler):
 
             self.output.write(msg)
             self.remain -= size
+            self.sha1.update(msg)
 
             if self.remain == 0:
                 self.output.close()
                 self.output = None
+
+                if self.sha1.hexdigest().lower() != self.received_sha1.lower():
+                    self.write_message('Ehash')
+                    os.remove(f'tmp/{self.pack_token}')
+                    return
 
             self.write_message('S')
 
@@ -42,6 +51,7 @@ class PackHandler(WebSocketHandler):
 
             self.pack_token = str(uuid.UUID(hdr['pack_token']))
             self.remain = hdr['pack_size']
+            self.received_sha1 = hdr['sha-1']
             self.output = open(f'tmp/{self.pack_token}', 'wb')
             self.state = PackHandler.STATE_DTAT
 

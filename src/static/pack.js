@@ -32,10 +32,18 @@ var pack = new function() {
         var lt = 0;
 
         ws.onopen = function(e) {
-            ws.send(JSON.stringify({
-                'pack_token' : pack_token,
-                'pack_size' : file.size
-            }));
+            file.arrayBuffer()
+                .then(file_buffer => crypto.subtle.digest("SHA-1", file_buffer))
+                .then(hash_buffer => {
+                    const hash_array = Array.from(new Uint8Array(hash_buffer));
+                    const hash_hex = hash_array.map((b) => b.toString(16).padStart(2, "0")).join("");
+
+                    ws.send(JSON.stringify({
+                        'pack_token' : pack_token,
+                        'pack_size' : file.size,
+                        'sha-1': hash_hex,
+                    }));
+                });
         };
         ws.onmessage = function(e) {
             var size;
@@ -52,7 +60,7 @@ var pack = new function() {
                 remain -= size;
 
                 ct = new Date().getTime();
-                if(ct - lt > 500) {
+                if (ct - lt > 500) {
                     defer.notify(off / file.size);
                     lt = ct;
                 }

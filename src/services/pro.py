@@ -84,7 +84,7 @@ class ProService:
 
         testm_conf = OrderedDict()
         for (
-                test_idx,
+                test_group_idx,
                 comp_type,
                 score_type,
                 check_type,
@@ -94,7 +94,7 @@ class ProService:
                 metadata,
                 chalmeta,
         ) in result:
-            testm_conf[test_idx] = {
+            testm_conf[test_group_idx] = {
                 "comp_type": comp_type,
                 "score_type": score_type,
                 "check_type": check_type,
@@ -241,7 +241,7 @@ class ProService:
         with open(f'problem/{pro_id}/conf.json', 'r') as f:
             conf_json = json.load(f)
 
-        for test_idx, test_conf in testm_conf.items():
+        for test_group_idx, test_conf in testm_conf.items():
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     """
@@ -251,12 +251,12 @@ class ProService:
                     """,
                     json.dumps(test_conf['metadata']),
                     int(pro_id),
-                    test_idx
+                    test_group_idx
                 )
                 if len(result) == 0:
                     return "Enoext", None
 
-                conf_json['test'][test_idx]['data'] = test_conf['metadata']['data']
+                conf_json['test'][test_group_idx]['data'] = test_conf['metadata']['data']
 
         with open(f'problem/{pro_id}/conf.json', 'w') as f:
             f.write(json.dumps(conf_json))

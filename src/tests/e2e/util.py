@@ -1,3 +1,4 @@
+import hashlib
 import asyncio
 import datetime
 import json
@@ -46,12 +47,22 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         return all_states
 
     async def upload_file(self, file, file_size: int, pack_token: str):
+        sha1 = hashlib.sha1()
         remain = file_size
+        while True:
+            data = file.read(65536)
+            if not data:
+                break
+
+            sha1.update(data)
+
         ws = await websocket_connect('ws://localhost:5501/pack')
         await ws.write_message(json.dumps({
             'pack_token': pack_token,
-            'pack_size': file_size
+            'pack_size': file_size,
+            'sha-1': sha1.hexdigest(),
         }))
+        file.seek(0, 0)
         msg = await ws.read_message()
         self.assertEqual(msg, 'S')
 
@@ -62,6 +73,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
 
             msg = await ws.read_message()
             self.assertNotEqual(msg, 'Echunk')
+            self.assertNotEqual(msg, 'Ehash')
             if msg is None:
                 break
         ws.close()
