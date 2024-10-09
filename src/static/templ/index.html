@@ -21,6 +21,18 @@
   <script src="/oj/index.js"></script>
   <script src="/oj/pack.js"></script>
   <script src="/oj/third/pdf.min.js" defer=""></script>
+  <script src="/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML" async></script>
+  <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        jax: ['output/SVG'],
+        tex2jax:{
+            inlineMath:[['$','$'],['\\(','\\)'], ['$$$', '$$$']],
+            displayMath: [['$$$$$$', '$$$$$$']]
+        }
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" async></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.7/purify.min.js" integrity="sha512-BdRNuI8/lsyxkKQVxK1lVtfZshggfXPAwEP+JAOJEKx6Y8SLfcBSRdaWyXQmMxo+wG180uFqXYGjGRL0mh4/Jw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <script id="indexjs" type="text/javascript" acct_id="{{ acct_id }}" contest_id="{{ contest_id }}">
     $(document).ready(function () {
@@ -56,7 +68,7 @@
   <!-- style="background-color: #314783;" -->
   <nav class="navbar navbar-expand-lg">
     <div id="index-navlist" class="container-fluid">
-      {% if is_in_contest %}  
+      {% if is_in_contest %}
         <a class="navbar-brand" href="/oj/contests/{{ contest_id }}/info/">NTOJ</a>
       {% else %}
         <a class="navbar-brand" href="/oj/info/">NTOJ</a>
