@@ -62,13 +62,8 @@ jobs:
           cd $HOME/NTOJ-Judge/src
           cat output.log
 
-      - name: Collect Coverage Report
-        run: |
-          sudo apt install zip
-          cd src
-          zip -r report.zip htmlcov
-
-      - uses: actions/upload-artifact@v3
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
         with:
           name: coverage-report
-          path: src/report.zip
+          path: src/htmlcov

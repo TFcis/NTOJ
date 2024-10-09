@@ -119,6 +119,6 @@ class ManageProClassHandler(RequestHandler):
             await LogService.inst.add_log(
                 f"{self.acct.name} remove proclass name={proclass['name']}.", 'manage.proclass.remove'
             )
-            await ProClassService.inst.remove_pubclass(proclass_id)
+            await ProClassService.inst.remove_proclass(proclass_id)
 
             self.finish('S')
