@@ -36,7 +36,10 @@ class ManageProClassHandler(RequestHandler):
                 return
 
             await LogService.inst.add_log(
-                f"{self.acct.name} add proclass name={name} list={p_list}", 'manage.proclass.add'
+                f"{self.acct.name} add proclass name={name}", 'manage.proclass.add',
+                {
+                    "list": p_list
+                }
             )
             err, pubclass_id = await ProClassService.inst.add_pubclass(name, p_list)
             if err:
@@ -56,7 +59,10 @@ class ManageProClassHandler(RequestHandler):
                 return
 
             await LogService.inst.add_log(
-                f"{self.acct.name} update proclass name={name} list={p_list}", 'manage.proclass.update'
+                f"{self.acct.name} update proclass name={name}", 'manage.proclass.update',
+                {
+                    "list": p_list
+                }
             )
             err = await ProClassService.inst.update_pubclass(pubclass_id, name, p_list)
             if err:

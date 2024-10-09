@@ -33,25 +33,31 @@ class ManageQuestionHandler(RequestHandler):
         if page == "reply":
             reqtype = self.get_argument('reqtype')
             if reqtype == 'rpl':
+                rtext = self.get_argument('rtext')
                 await LogService.inst.add_log(
-                    f"{self.acct.name} replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".",
+                    f"{self.acct.name} replyed a question from user #{self.get_argument('qacct_id')}.",
                     'manage.question.reply',
+                    {
+                        'reply_message': rtext
+                    }
                 )
 
                 index = self.get_argument('index')
-                rtext = self.get_argument('rtext')
                 qacct_id = int(self.get_argument('qacct_id'))
                 await QuestionService.inst.reply(qacct_id, index, rtext)
                 self.finish('S')
 
             elif reqtype == 'rrpl':
+                rtext = self.get_argument('rtext')
                 await LogService.inst.add_log(
-                    f"{self.acct.name} re-replyed a question from user #{self.get_argument('qacct_id')}:\"{self.get_argument('rtext')}\".",
+                    f"{self.acct.name} re-replyed a question from user #{self.get_argument('qacct_id')}.",
                     'manage.question.re-reply',
+                    {
+                        'reply_message': rtext
+                    }
                 )
 
                 index = self.get_argument('index')
-                rtext = self.get_argument('rtext')
                 qacct_id = int(self.get_argument('qacct_id'))
                 await QuestionService.inst.reply(qacct_id, index, rtext)
                 self.finish('S')

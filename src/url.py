@@ -63,6 +63,7 @@ def get_url(db, rs, pool):
         (r'/question', QuestionHandler, args),
         (r'/set-tags', ProTagsHandler, args),
         (r'/log', LogHandler, args),
+        (r'/log/(\d+)', LogHandler, args),
         (r'/rank/(\d+)', ProRankHandler, args),
         (r'/users', UserRankHandler, args),
         (r'/code', CodeHandler, args),

@@ -1,6 +1,14 @@
 import datetime
 import json
 
+tz = datetime.timezone(datetime.timedelta(hours=+8))
+
+class _Encoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            return o.astimezone(tz).isoformat(timespec="seconds")
+
+        return super().default(o)
 
 class LogService:
     def __init__(self, db, rs) -> None:
@@ -10,7 +18,7 @@ class LogService:
 
     async def add_log(self, message, log_type=None, params=None):
         if isinstance(params, dict):
-            params = json.dumps(params, ensure_ascii=False)
+            params = json.dumps(params, ensure_ascii=False, cls=_Encoder)
 
         message = str(message)
 
@@ -27,8 +35,26 @@ class LogService:
             )
         return None, result[0]['log_id']
 
+    async def view_log(self, log_id: int):
+        async with self.db.acquire() as con:
+            res = await con.fetch('SELECT log_id, message, "timestamp", params FROM log WHERE log_id = $1', int(log_id))
+            if len(res) == 0:
+                return 'Enoext', None
+            res = res[0]
+
+            params = '{}'
+            if res['params']:
+                params = json.dumps(json.loads(res['params']), indent=4)
+
+            return None, {
+                'log_id': res['log_id'],
+                'message': res['message'],
+                'timestamp': res['timestamp'].astimezone(tz).isoformat(timespec="seconds"),
+                'params': params
+            }
+
+
     async def list_log(self, off, num, log_type=None):
-        tz = datetime.timezone(datetime.timedelta(hours=+8))
         async with self.db.acquire() as con:
             if log_type is None:
                 result = await con.fetch(
