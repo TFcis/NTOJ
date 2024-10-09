@@ -64,7 +64,7 @@ async def materialized_view_task():
 
     async def _update():
         ret = await rs.incr('materialized_view_counter') - 1
-        await db.execute('REFRESH MATERIALIZED VIEW challenge_state;')
+        await db.execute('SELECT refresh_challenge_state_incremental();')
         return ret
 
     counter = await _update()

@@ -156,3 +156,9 @@ cp ${INSTALL_DIR}/ntoj/config.py ${CURRENT_PWD}/config.py
 $HOME/.local/bin/poetry run python3 ${CURRENT_PWD}/add_admin.py ${ADMIN_NAME} ${ADMIN_PASSWORD} ${ADMIN_MAIL}
 cd ${CURRENT_PWD}
 rm config.py
+
+# Run migration
+cd ../migration
+cp ${INSTALL_DIR}/ntoj/config.py ./config.py
+$HOME/.local/bin/poetry -C ${INSTALL_DIR}/ntoj run python3 migration.py
+rm config.py
