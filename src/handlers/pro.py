@@ -178,7 +178,7 @@ class ProStaticHandler(RequestHandler):
             self.set_header('Pragma', 'public')
             self.set_header('Expires', '0')
             self.set_header('Cache-Control', 'must-revalidate, post-check=0, pre-check=0')
-            self.add_header('Content-Type', 'application/pdf')
+            self.set_header('Content-Type', 'application/pdf')
 
             try:
                 download = self.get_argument('download')
