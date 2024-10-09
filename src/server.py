@@ -58,7 +58,7 @@ async def materialized_view_task():
     db = await asyncpg.connect(
         database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost'
     )
-    rs = await aioredis.Redis(host='localhost', port=6379, db=1)
+    rs = await aioredis.Redis(host='localhost', port=6379, db=config.REDIS_DB)
     p = rs.pubsub()
     await p.subscribe('materialized_view_req')
 
@@ -80,7 +80,7 @@ async def materialized_view_task():
 
 
 if __name__ == "__main__":
-    httpsock = tornado.netutil.bind_sockets(5500)
+    httpsock = tornado.netutil.bind_sockets(config.PORT)
 
     def run_materialized_view_task():
         signal.signal(signal.SIGINT, lambda _, __: loop.stop())
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     db: asyncpg.Pool = asyncio.get_event_loop().run_until_complete(
         asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost')
     )
-    pool = aioredis.ConnectionPool.from_url("redis://localhost", db=1)
+    pool = aioredis.ConnectionPool.from_url("redis://localhost", db=config.REDIS_DB)
     rs = aioredis.Redis.from_pool(pool)
 
     services_init(db, rs)

@@ -10,6 +10,14 @@ if [ -z $INSTALL_DIR ]; then
 	INSTALL_DIR=/srv
 fi
 
+if [ -z $REDIS_DB ]; then
+	REDIS_DB=1
+fi
+
+if [ -z $PORT ]; then
+	PORT=5500
+fi
+
 if [ -z $DB_NAME ]; then
 	DB_NAME=ntoj
 fi
@@ -111,6 +119,7 @@ sudo systemctl enable --now nginx.service
 ## Replace nginx root directory path
 INSTALL_DIR_ESCAPE=$(echo ${INSTALL_DIR} | sed 's/[\/\$]/\\\//g')
 sed -i "s/INSTALL_DIR/${INSTALL_DIR_ESCAPE}/" ./ntoj.conf
+sed -i "s/PORT/${PORT}/" ./ntoj.conf
 sudo cp ./ntoj.conf /etc/nginx/conf.d/
 sudo sed -i "s/www-data/root/" /etc/nginx/nginx.conf
 sudo rm /etc/nginx/sites-enabled/default
@@ -127,6 +136,8 @@ cd ${INSTALL_DIR}/ntoj/
 COOKIE_SEC=$(head -c 32 /dev/urandom | xxd -ps -c 128)
 UNLOCK_PWD=$($HOME/.local/bin/poetry run python3 ${CURRENT_PWD}/get_unlock_pwd.py <<<${UNLOCK_PASSWORD})
 cat <<EOF | tee ${INSTALL_DIR}/ntoj/config.py >/dev/null
+PORT       = '${PORT}'
+REDIS_DB   = '${REDIS_DB}'
 DBNAME_OJ  = '${DB_NAME}'
 DBUSER_OJ  = '${DB_USERNAME}'
 DBPW_OJ    = '${DB_PASSWORD}'
