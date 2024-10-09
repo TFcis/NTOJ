@@ -178,25 +178,25 @@ class SubmitHandler(RequestHandler):
             return 'Ecomp'
 
         should_check_submit_cd = (
-                self.contest is None and not self.acct.is_kernel()  # not in contest
-                or
-                self.contest and self.acct.acct_id in self.contest.acct_list  # in contest
+            self.contest is None and not self.acct.is_kernel()  # not in contest
+            or
+            self.contest and self.acct.acct_id in self.contest.acct_list  # in contest
         )
 
+        name = ''
+        crc32 = ''
         if self.contest:
             name = f'contest_{self.contest.contest_id}_acct_{self.acct.acct_id}_pro_{pro_id}_compiler_{comp_type}'
             crc32 = str(zlib.crc32(code.encode('utf-8')))
 
-            if await self.rs.sismember(name, crc32):
+            if (await self.rs.sismember(name, crc32)):
                 return 'Esame'
-
-            await self.rs.sadd(name, crc32)
-            await self.rs.expire(name, time=(self.contest.contest_end - self.contest.contest_start))
 
         if should_check_submit_cd:
             last_submit_name = f"last_submit_time_{self.acct.acct_id}"
             if (last_submit_time := (await self.rs.get(last_submit_name))) is None:
-                await self.rs.set(last_submit_name, int(time.time()), ex=submit_cd_time)  # ex means expire
+                if submit_cd_time:
+                    await self.rs.set(last_submit_name, int(time.time()), ex=submit_cd_time)  # ex means expire
 
             else:
                 last_submit_time = int(str(last_submit_time)[2:-1])
@@ -205,5 +205,9 @@ class SubmitHandler(RequestHandler):
 
                 else:
                     await self.rs.set(last_submit_name, int(time.time()))
+
+        if self.contest:
+            await self.rs.sadd(name, crc32)
+            await self.rs.expire(name, time=(self.contest.contest_end - self.contest.contest_start))
 
         return None
