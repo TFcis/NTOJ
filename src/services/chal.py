@@ -366,8 +366,7 @@ class ChalService:
             contest_id,
         )
 
-        await self.rs.hdel('rate@kernel_True', str(acct_id))
-        await self.rs.hdel('rate@kernel_False', str(acct_id))
+        await self.rs.hdel('rate', str(acct_id))
 
         return None, None
 
@@ -376,7 +375,6 @@ class ChalService:
         fltquery = flt.get_sql_query_str()
 
         max_status = ProService.inst.get_acct_limit(acct, contest=flt.contest != 0)
-        min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -391,7 +389,7 @@ class ChalService:
                     ON "challenge"."pro_id" = "problem"."pro_id" AND "problem"."status" <= {max_status}
                     LEFT JOIN "challenge_state"
                     ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                    WHERE "account"."acct_type" >= {min_accttype}
+                    WHERE 1=1
                 '''
                 + fltquery
                 + f'''
@@ -440,7 +438,6 @@ class ChalService:
     ):
         chal_id = int(chal_id)
         max_status = ProService.inst.get_acct_limit(acct)
-        min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -450,9 +447,8 @@ class ChalService:
                     INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
                     INNER JOIN "problem" ON "challenge"."pro_id" = "problem"."pro_id"
                     INNER JOIN "challenge_state" ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                    WHERE "account"."acct_type" >= $1 AND "problem"."status" <= $2 AND "challenge_state"."chal_id" = $3;
+                    WHERE "problem"."status" <= $1 AND "challenge_state"."chal_id" = $2;
                 ''',
-                min_accttype,
                 max_status,
                 chal_id,
             )
@@ -480,7 +476,7 @@ class ChalService:
                         'ON "challenge"."acct_id" = "account"."acct_id" '
                         'LEFT JOIN "challenge_state" '
                         'ON "challenge"."chal_id"="challenge_state"."chal_id" '
-                        f'WHERE "account"."acct_type" >= {min_accttype}' + fltquery + ';'
+                        'WHERE 1=1' + fltquery + ';'
                 )
             )
 

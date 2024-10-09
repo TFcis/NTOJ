@@ -41,15 +41,14 @@ class ProRankHandler(RequestHandler):
                 'ON "challenge"."acct_id"="account"."acct_id" '
                 'LEFT JOIN "challenge_state" '
                 'ON "challenge"."chal_id"="challenge_state"."chal_id" '
-                'WHERE "account"."acct_type">= $1 AND "challenge"."pro_id"= $2 '
+                'WHERE "challenge"."pro_id"= $1 '
                 'AND "challenge_state"."state"=1 '
                 'ORDER BY "challenge"."acct_id" ASC, '
                 '"challenge_state"."runtime" ASC, "challenge_state"."memory" ASC,'
                 '"challenge"."timestamp" ASC, "challenge"."acct_id" ASC'
                 ') temp '
                 'ORDER BY "runtime" ASC, "memory" ASC,'
-                '"timestamp" ASC, "acct_id" ASC OFFSET $3 LIMIT $4;',
-                self.acct.acct_type,
+                '"timestamp" ASC, "acct_id" ASC OFFSET $2 LIMIT $3;',
                 pro_id,
                 pageoff,
                 pagenum,
@@ -63,11 +62,10 @@ class ProRankHandler(RequestHandler):
                 FROM challenge
                 INNER JOIN account ON challenge.acct_id=account.acct_id
                 LEFT JOIN challenge_state ON challenge.chal_id=challenge_state.chal_id
-                WHERE account.acct_type>=$1 AND challenge.pro_id=$2
+                WHERE challenge.pro_id=$1
                 AND challenge_state.state=1
                 ) temp;
                 ''',
-                self.acct.acct_type,
                 pro_id,
             )
             total_cnt = total_cnt[0]['count']

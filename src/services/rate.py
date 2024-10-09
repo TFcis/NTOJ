@@ -14,8 +14,7 @@ class RateService:
         RateService.inst = self
 
     async def get_acct_rate_and_chal_cnt(self, acct: Account):
-        kernel = acct.is_kernel()
-        key = f'rate@kernel_{kernel}'
+        key = 'rate'
         acct_id = acct.acct_id
 
         if (rate_data := await self.rs.hget(key, acct_id)) is None:
