@@ -54,7 +54,7 @@ class ProService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 """
-                    SELECT "name", "status", "expire", "tags"
+                    SELECT "name", "status", "expire", "tags", "allow_submit"
                     FROM "problem" WHERE "pro_id" = $1 AND "status" <= $2;
                 """,
                 pro_id,
@@ -64,11 +64,12 @@ class ProService:
                 return "Enoext", None
             result = result[0]
 
-            name, status, expire, tags = (
+            name, status, expire, tags, allow_submit = (
                 result["name"],
                 result["status"],
                 result["expire"],
                 result["tags"],
+                result["allow_submit"],
             )
             if expire == datetime.datetime.max:
                 expire = None
@@ -116,6 +117,7 @@ class ProService:
                 "expire": expire,
                 "testm_conf": testm_conf,
                 "tags": tags,
+                "allow_submit": allow_submit,
             },
         )
 
@@ -269,7 +271,7 @@ class ProService:
         return None, pro_id
 
     # TODO: Too many args
-    async def update_pro(self, pro_id, name, status, expire, pack_type, pack_token=None, tags=""):
+    async def update_pro(self, pro_id, name, status, expire, pack_type, pack_token=None, tags="", allow_submit=True):
         name_len = len(name)
         if name_len < ProService.NAME_MIN:
             return "Enamemin", None
@@ -288,13 +290,14 @@ class ProService:
             result = await con.fetch(
                 """
                     UPDATE "problem"
-                    SET "name" = $1, "status" = $2, "expire" = $3, "tags" = $4
-                    WHERE "pro_id" = $5 RETURNING "pro_id";
+                    SET "name" = $1, "status" = $2, "expire" = $3, "tags" = $4, "allow_submit" = $5
+                    WHERE "pro_id" = $6 RETURNING "pro_id";
                 """,
                 name,
                 status,
                 expire,
                 tags,
+                allow_submit,
                 int(pro_id),
             )
             if len(result) != 1:

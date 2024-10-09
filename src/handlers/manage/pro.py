@@ -211,12 +211,13 @@ class ManageProHandler(RequestHandler):
                 pack_type = int(self.get_argument('pack_type'))
                 pack_token = self.get_argument('pack_token')
                 tags = self.get_argument('tags')
+                allow_submit = self.get_argument('allow_submit') == "true"
 
                 if pack_token == '':
                     pack_token = None
 
                 err, _ = await ProService.inst.update_pro(
-                    pro_id, name, status, expire, pack_type, pack_token, tags
+                    pro_id, name, status, expire, pack_type, pack_token, tags, allow_submit
                 )
                 await LogService.inst.add_log(
                     f"{self.acct.name} had been send a request to update the problem #{pro_id}", 'manage.pro.update.pro'

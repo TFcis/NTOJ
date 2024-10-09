@@ -55,6 +55,7 @@
 		    let status = j_form.find('select.status').val();
  	       	let pack_type = j_form.find('select.packtype').val();
 		    let files = j_form.find('input.file')[0].files;
+            let allow_submit = j_form.find('input.allow-submit').is(":checked");
 		    let pack_token = '';
 
 		    function _update() {
@@ -66,6 +67,7 @@
 				    'status': status,
  	 	          	'pack_type': pack_type,
 				    'pack_token': pack_token,
+                    'allow_submit': allow_submit,
 				}, function(res) {
  	 	          	let msg = 'Unknown';
 
@@ -161,6 +163,10 @@
 			<option value="2" {% if pro['status'] == 2 %} selected {% end %}>Hidden</option>
 			<option value="3" {% if pro['status'] == 3 %} selected {% end %}>Offline</option>
 		</select>
+
+        <label for="" class="form-check-label">Allow Submit</label>
+        <input type="checkbox" class="form-check-input allow-submit" {% if pro['allow_submit'] %} checked {% end %}>
+        <br />
 
 		<label for="" class="form-label">文件</label>
 			<select class="form-select packtype">

@@ -50,6 +50,10 @@ class SubmitHandler(RequestHandler):
             self.error('Eacces')
             return
 
+        if not pro['allow_submit']:
+            self.error('Eacces')
+            return
+
         await self.render('submit', pro=pro,
                           allow_compilers=allow_compilers, contest_id=self.contest.contest_id if self.contest else 0)
 
@@ -100,6 +104,10 @@ class SubmitHandler(RequestHandler):
                 return
 
             elif pro['status'] == ProService.STATUS_CONTEST and not self.contest:
+                self.error('Eacces')
+                return
+
+            if not pro['allow_submit']:
                 self.error('Eacces')
                 return
 

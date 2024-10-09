@@ -279,6 +279,7 @@ class ProHandler(RequestHandler):
                 'name': pro['name'],
                 'status': pro['status'],
                 'tags': pro['tags'],
+                'allow_submit': pr['allow_submit'],
             },
             testl=testl,
             isadmin=isadmin,
