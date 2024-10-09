@@ -7,9 +7,10 @@ class UserRankTest(AsyncTest):
             html = self.get_html('http://localhost:5501/users', admin_session)
             first = html.select_one('tbody > tr')
             self.assertEqual(first.attrs['class'][0], 'rank-gold')
-            self.assertEqual(first.select('td')[2].text, 'admin')
-            self.assertEqual(first.select('td')[3].text, '2')
-            self.assertEqual(first.select('td')[4].text.strip().replace('\n', ''), '33.33%(3/9)')
+            self.assertEqual(first.select('td')[2].text, 'admin') # username
+            self.assertEqual(first.select('td')[3].text, '') # motto
+            self.assertEqual(first.select('td')[4].text, '2') # ac count
+            self.assertEqual(first.select('td')[5].text.strip().replace('\n', ''), '33.33%(3/9)') # ac ratio
 
 
 class ProRankTest(AsyncTest):

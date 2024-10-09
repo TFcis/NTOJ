@@ -29,7 +29,7 @@ class E2ETest(AsyncTest):
     async def init(self):
         self.session = requests.Session()
         _, acct_id = await UserService.inst.sign_up('admin@test', 'testtest', 'admin')
-        await UserService.inst.update_acct(acct_id, UserConst.ACCTTYPE_KERNEL, 'admin', '', '')
+        await UserService.inst.update_acct(acct_id, UserConst.ACCTTYPE_KERNEL, 'admin', '', '', '')
 
         try:
             shutil.move('problem', 'problem-tmp')

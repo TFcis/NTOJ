@@ -46,6 +46,7 @@ class AcctPageTest(AsyncTest):
                 'name': 'test1',
                 'photo': 'https://static.zerochan.net/Takakura.Anzu.full.1658390.jpg',
                 'cover': 'https://wallpaper.forfun.com/fetch/eb/eb9a621bbe1ceeb38a4387153a4376eb.jpeg',
+                'motto': 'motto test',
             })
             self.assertEqual(res.text, 'S')
 
@@ -56,6 +57,7 @@ class AcctPageTest(AsyncTest):
                              'https://static.zerochan.net/Takakura.Anzu.full.1658390.jpg')
             self.assertEqual(html.select_one('script#contjs').attrs.get('cover'),
                              'https://wallpaper.forfun.com/fetch/eb/eb9a621bbe1ceeb38a4387153a4376eb.jpeg')
+            self.assertEqual(html.select_one('p').text, 'motto test')
 
             self.assertEqual(trs[0].select('td')[1].text, '0')
             self.assertEqual(trs[1].select('td')[1].text, '0')
@@ -68,6 +70,7 @@ class AcctPageTest(AsyncTest):
                 'name': 'test1',
                 'photo': 'https://static.zerochan.net/Takakura.Anzu.full.1658390.jpg',
                 'cover': 'https://wallpaper.forfun.com/fetch/eb/eb9a621bbe1ceeb38a4387153a4376eb.jpeg',
+                'motto': 'motto test',
             })
             self.assertEqual(res.text, 'Eacces')
             html = self.get_html('http://localhost:5501/acct/1', user_session)
@@ -76,6 +79,7 @@ class AcctPageTest(AsyncTest):
                                 'https://static.zerochan.net/Takakura.Anzu.full.1658390.jpg')
             self.assertNotEqual(html.select_one('script#contjs').attrs.get('cover'),
                                 'https://wallpaper.forfun.com/fetch/eb/eb9a621bbe1ceeb38a4387153a4376eb.jpeg')
+            self.assertNotEqual(html.select_one('p').text, 'motto test')
 
             # test change password
             res = user_session.post('http://localhost:5501/acctedit', data={
