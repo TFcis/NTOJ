@@ -50,12 +50,7 @@ class RequestHandler(tornado.web.RequestHandler):
                 else:
                     return json.JSONEncoder.default(self, obj)
 
-        from services.user import UserConst
-        if not self.acct.is_guest():
-            kwargs['acct_id'] = self.acct.acct_id
-
-        else:
-            kwargs['acct_id'] = ''
+        kwargs['user'] = self.acct
 
         if self.res_json is True:
             self.finish(json.dumps(kwargs, cls=_encoder))

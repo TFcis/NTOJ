@@ -59,21 +59,21 @@
 
 <!-- TODO: Show reject -->
 {% if contest.reg_mode is RegMode.INVITED %}
-    {% if acct_id in contest.acct_list %}
+    {% if user.acct_id in contest.acct_list %}
         {% set status = "Invited" %}
     {% else %}
         {% set status = "Not Invited" %}
     {% end %}
 {% elif contest.reg_mode is RegMode.FREE_REG %}
-    {% if acct_id in contest.acct_list %}
+    {% if user.acct_id in contest.acct_list %}
         {% set status = "Registered" %}
     {% else %}
         {% set status = "Not Registered" %}
     {% end %}
 {% else %}
-    {% if acct_id in contest.reg_list %}
+    {% if user.acct_id in contest.reg_list %}
         {% set status = "Waiting Approval" %}
-    {% elif acct_id in contest.acct_list %}
+    {% elif user.acct_id in contest.acct_list %}
         {% set status = "Registered" %}
     {% else %}
         {% set status = "Not Registered" %}
@@ -84,13 +84,13 @@
 <div class="row row-cols-1 row-cols-lg-4 justify-content-center align-content-center">
     <div class="col mt-4">
         <div class="mb-1 text-center">
-            <label class="form-label">Status: {{ status }}</label> 
+            <label class="form-label">Status: {{ status }}</label>
             <label class="form-label">Registration End: {{ contest.reg_end.strftime("%Y-%m-%d %H:%M:%S") }}</label>
-            
+
             {% set now = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) %}
-            {% set is_reged = not (acct_id not in contest.acct_list and acct_id not in contest.reg_list) %}
-            
-            {% if now >= contest.reg_end %} 
+            {% set is_reged = not (user.acct_id not in contest.acct_list and user.acct_id not in contest.reg_list) %}
+
+            {% if now >= contest.reg_end %}
                 <h4 class="form-label">Registration Ended</h4>
             {% end %}
 

@@ -51,7 +51,6 @@ class AcctHandler(RequestHandler):
 
             prolist2.append(tmp)
 
-        isadmin = self.acct.is_kernel()
         rate_data['rate'] = math.floor(rate_data['rate'])
         rate_data['ac_pro_cnt'] = ac_pro_cnt
 
@@ -59,7 +58,7 @@ class AcctHandler(RequestHandler):
         acct.photo = re.sub(r'^http://', 'https://', acct.photo)
         acct.cover = re.sub(r'^http://', 'https://', acct.cover)
 
-        await self.render('acct/profile', acct=acct, rate=rate_data, prolist=prolist2, isadmin=isadmin)
+        await self.render('acct/profile', acct=acct, rate=rate_data, prolist=prolist2)
 
 
 class AcctConfigHandler(RequestHandler):
@@ -74,7 +73,7 @@ class AcctConfigHandler(RequestHandler):
             self.error(err)
             return
 
-        await self.render('acct/acct-config', acct=acct, isadmin=self.acct.is_kernel())
+        await self.render('acct/acct-config', acct=acct)
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
@@ -138,7 +137,7 @@ class AcctProClassHandler(RequestHandler):
         if page is None:
             _, proclass_list = await ProClassService.inst.get_proclass_list()
             proclass_list = filter(lambda proclass: proclass['acct_id'] == self.acct.acct_id, proclass_list)
-            await self.render('acct/proclass-list', proclass_list=proclass_list, user=self.acct)
+            await self.render('acct/proclass-list', proclass_list=proclass_list)
 
         elif page == "add":
             await self.render('acct/proclass-add', user=self.acct)
@@ -150,7 +149,7 @@ class AcctProClassHandler(RequestHandler):
                 self.error('Eacces')
                 return
 
-            await self.render('acct/proclass-update', proclass_id=proclass_id, proclass=proclass, user=self.acct)
+            await self.render('acct/proclass-update', proclass_id=proclass_id, proclass=proclass)
 
     @reqenv
     async def post(self, acct_id):

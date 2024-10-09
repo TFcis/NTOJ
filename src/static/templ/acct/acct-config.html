@@ -1,6 +1,6 @@
 {{ set_page_title("Edit Account") }}
 
-{% if acct.acct_id != acct_id and not isadmin %}
+{% if acct.acct_id != user.acct_id and not user.is_kernel() %}
     You don't have permission.
 {% else %}
 <script id="contjs" type="text/javascript">
@@ -104,7 +104,7 @@
             <h1>Edit User <a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.name }}</a></h1>
         </span>
 
-        {% if acct.acct_id == acct_id %}
+        {% if acct.acct_id == user.acct_id %}
         <form id="profile">
             <div class="mb-1">
                 <label class="form-label">Name</label>
@@ -144,7 +144,7 @@
         </form>
         {% end %}
 
-        {% if acct.acct_id == acct_id or isadmin %}
+        {% if acct.acct_id == user.acct_id or user.is_kernel() %}
         <form id="reset">
             <h3>更改密碼</h3>
 

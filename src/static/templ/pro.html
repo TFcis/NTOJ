@@ -184,7 +184,7 @@
 
         <div class="my-lg-1">
             {% if contest %}
-                <a class="btn btn-success" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}&acctid={{ acct_id }}">My Status</a>
+                <a class="btn btn-success" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}&acctid={{ user.acct_id }}">My Status</a>
                 <a class="btn btn-secondary" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}">Status</a>
             {% else %}
                 <a class="btn btn-success" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
@@ -197,7 +197,7 @@
             <a class="btn btn-warning my-lg-1" style="display: none; width: 156px; text-align: center;" id="pdfbtn">Download PDF</a>
             <a class="btn btn-warning my-lg-1" id="switchviewer" style="display: none; width: 156px; text-align: center;">Switch Viewer</a>
         </div>
-        {% if (isadmin) and not contest %}
+        {% if user.is_kernel() and not contest %}
             <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width: 190px" placeholder="add tags here">
         {% else %}
             <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width: 190px" placeholder="no tags" disabled>
@@ -243,7 +243,7 @@
                 {% end %}
             </tbody>
         </table>
-        {% if isadmin %}
+        {% if user.is_kernel() %}
             <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro['pro_id']}}">Manage</a>
         {% end %}
     </div>

@@ -11,7 +11,7 @@
 			<th scope="col">Length</th>
             <th scope="col">Contest Type</th>
             <th scope="col">Scoreboard</th>
-			{% if acct.is_kernel() %}
+			{% if user.is_kernel() %}
 			<th scope="col">
 				<a class="btn btn-primary" href="/oj/contests/manage/add/">&#x271a</a>
 			</th>

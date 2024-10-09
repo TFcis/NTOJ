@@ -1,7 +1,4 @@
 {% import math %}
-<!-- <link rel="stylesheet" type="text/css" href="/oj/board.css"> -->
-<!-- exist -->
-
 <style>
   table th._rank {
     text-align: center;
@@ -137,7 +134,7 @@
     <h3>
       <div id="count"></div>
     </h3>
-  </div> 
+  </div>
   <div class="col-lg-12" style="overflow-x: scroll;" id="board1">
     <table class="table table-hover table-sm table-bordered table-responsive-sm col mx-lg-3" style="width:{{9+64+150+112+len(prolist)*99}}px;">
       <thead>
@@ -159,7 +156,6 @@
           <td class="_score"><a href="/oj/chal/?acctid={{ acct_id }}">{{ acct.rate }} / {{ acct_submit[acct_id] }}</a></td>
           {% for pro in prolist %}
             {% set pro_id = pro['pro_id'] %}
-            <!-- TODO: Is this if-statement necessary??? -->
             {% if acct_id in ratemap and pro_id in ratemap[acct_id] %}
               {% set rate = ratemap[acct_id][pro_id] %}
               {% set sc = math.floor(rate['rate'] / 10) %}
@@ -169,7 +165,7 @@
             {% end %}
           {% end %}
         </tr>
-        {% end %}    
+        {% end %}
         <tr>
             <td colspan="3" style="text-align:center; padding:0 0">score / submit</td>
             {% for pro in prolist %}

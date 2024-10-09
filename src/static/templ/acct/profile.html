@@ -1,6 +1,3 @@
-<!-- <link rel="stylesheet" type="text/css" href="/oj/acct.css"> -->
-<!-- exist -->
-
 <style>
     #cover {
         height: 512px;
@@ -117,9 +114,9 @@
                     </tr>
                 </tbody>
             </table>
-            {% if acct.acct_id == acct_id %}
+            {% if acct.acct_id == user.acct_id %}
                 <a class="btn btn-primary" href="/oj/acctedit/{{ acct.acct_id }}/">Edit My Account</a>
-            {% elif isadmin %}
+            {% elif user.is_kernel() %}
                 <a class="btn btn-primary" href="/oj/acctedit/{{ acct.acct_id }}/">Edit Account Password</a>
             {% end %}
         </form>

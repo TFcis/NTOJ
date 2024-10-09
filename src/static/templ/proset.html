@@ -294,7 +294,7 @@
                     <option value="notac"{% if flt['problem_show'] == 'notac' %} selected {% end %}>Not AC</option>
                 </select>
 
-                {% if isadmin %}
+                {% if user.is_kernel() %}
                     <label for="online" class="form-check-label">Show Only Online Problem</label>
                     <input type="checkbox" class="form-check-input" id="online" {% if flt['online'] %} checked {% end %} />
                 {% end %}
@@ -376,7 +376,7 @@
         {% if flt['order'] != None %}
         {% set postfix = postfix + f"&order={flt['order']}" %}
         {% end %}
-        {% if isadmin and flt['online'] != False %}
+        {% if user.is_kernel() and flt['online'] %}
         {% set postfix = postfix + f"&online={flt['online']}" %}
         {% end %}
         {% if flt['reverse'] != False %}

@@ -179,7 +179,7 @@ var index = new function() {
 
         acct_id = $('#indexjs').attr('acct_id');
         contest_id = $('#indexjs').attr('contest_id');
-        if (acct_id != '') {
+        if (acct_id != '0') {
             that.acct_id = parseInt(acct_id);
             j_navlist.find('li.leave').show();
         } else {

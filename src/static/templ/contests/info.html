@@ -59,7 +59,7 @@
                 <div class="card-header">Registration Status</div>
 
                 <div class="card-body">
-                    {% if contest.is_admin(acct_id=acct_id) %}
+                    {% if contest.is_admin(user) %}
                         <h5>Admin, no registration needed</h5>
                     {% else %}
                         {% set now = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) %}
@@ -70,13 +70,13 @@
                         {% end %}
 
                         {% if contest.reg_mode is RegMode.INVITED %}
-                            {% if acct_id in contest.acct_list %}
+                            {% if user.acct_id in contest.acct_list %}
                                 <h5>Invited</h5>
                             {% else %}
                                 <h5>Not Invited</h5>
                             {% end %}
                         {% elif contest.reg_mode is RegMode.FREE_REG %}
-                            {% if acct_id in contest.acct_list %}
+                            {% if user.acct_id in contest.acct_list %}
                                 <h5>Registered</h5>
                             {% else %}
                                 <h5>Not Registered</h5>
@@ -85,9 +85,9 @@
                                 <a href="/oj/contests/{{ contest.contest_id }}/reg/" class="btn btn-primary">Go to Register</a>
                             {% end %}
                         {% else %}
-                            {% if acct_id in contest.reg_list %}
+                            {% if user.acct_id in contest.reg_list %}
                                 <h5>Waiting Approval</h5>
-                            {% elif acct_id in contest.acct_list %}
+                            {% elif user.acct_id in contest.acct_list %}
                                 <h5>Registered</h5>
                             {% else %}
                                 <h5>Not Registered</h5>

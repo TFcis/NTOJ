@@ -156,7 +156,6 @@ class ProsetHandler(RequestHandler):
             cur_proclass=proclass,
             pageoff=pageoff,
             flt=flt,
-            isadmin=self.acct.is_kernel(),
         )
 
     @reqenv
@@ -294,17 +293,14 @@ class ProHandler(RequestHandler):
             self.error('Eacces')
             return
 
-        isguest = self.acct.is_guest()
-        isadmin = self.acct.is_kernel()
-
         # NOTE: Guest cannot see tags
         # NOTE: Admin can see tags
         # NOTE: User get ac can see tags
 
-        if isguest or pro['tags'] is None or pro['tags'] == '':
+        if self.acct.is_guest() or pro['tags'] is None or pro['tags'] == '':
             pro['tags'] = ''
 
-        elif not isadmin:
+        elif not self.acct.is_kernel():
             async with self.db.acquire() as con:
                 result = await con.fetchrow(
                     '''
@@ -330,7 +326,6 @@ class ProHandler(RequestHandler):
         await self.render(
             'pro',
             pro=pro,
-            isadmin=isadmin,
             can_submit=can_submit,
             contest=self.contest
         )

@@ -126,7 +126,7 @@
 
             newstate_ws.onopen = (e) => {
                 newstate_ws.send(JSON.stringify({
-                    acct_id: '{{ acct.acct_id }}',
+                    acct_id: '{{ user.acct_id }}',
                     last_chal_id: "{{ challist[0]['chal_id'] if len(challist) > 0 else -1 }}",
                     first_chal_id: "{{ challist[-1]['chal_id'] if len(challist) > 0 else -1 }}"
                 }));
@@ -173,7 +173,7 @@
             <label class="form-label">過濾器</label>
 
             <div class="mb-1">
-                <label class="form-label">Your ID: {{ acct.acct_id }}</label>
+                <label class="form-label">Your ID: {{ user.acct_id }}</label>
                 <input id="proid" class="form-control mb-1" type="text" value="{% if flt.pro != None %}{{ ppro_id }}{% end %}" placeholder="Problem ID">
                 <input id="acctid" class="form-control mb-1" type="text" value="{% if flt.acct != None %}{{ pacct_id }}{% end %}" placeholder="Account ID">
             </div>
