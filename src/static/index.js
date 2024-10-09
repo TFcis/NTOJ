@@ -127,6 +127,9 @@ var index = new function() {
             let cur_href = location.href;
             let href = $(this).attr('href');
             if (href == undefined || href.length == 0) return;
+            if ($(this).attr('target') !== "") {
+                return;
+            }
             window.history.pushState(null, document.title, $(this).attr('href'));
 
             if (href.startsWith('?')) {
