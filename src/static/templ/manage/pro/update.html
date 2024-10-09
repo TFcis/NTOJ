@@ -1,10 +1,14 @@
 {% extends '../manage.html' %}
 {% block head %}
+{% from services.chal import ChalConst %}
+{% from services.pro import ProConst %}
+{% import json %}
 <script type="text/javascript" id="contjs" async>
     function init() {
 		let pro_id = "{{ pro['pro_id'] }}"
 		let j_form = $('#form');
 		let j_form2 = $('#form2');
+        let j_form3 = $('#form3');
 
 		j_form.find('button.unlock').on('click', function(e) {
 		    let pwd = prompt('unlock password');
@@ -36,16 +40,13 @@
 		    });
 		});
 
-        j_form.find('input.file').on('change', function(e) {
-            let pack_type_select = j_form.find('select.packtype');
-            let filename = $(this)[0].files[0].name;
-
-            if (filename.endsWith(".tar.xz")) {
-                pack_type_select.val('1');
-            } else if (filename.endsWith(".html")) {
-                pack_type_select.val('2');
-            } else if (filename.endsWith(".pdf")) {
-                pack_type_select.val('3');
+        j_form.find('select.check-type').on('change', function(e) {
+            if ($(this).val() == "{{ ProConst.CHECKER_IOREDIR }}") {
+                j_form.find("label.chalmeta").show();
+                j_form.find("textarea.chalmeta").show();
+            } else {
+                j_form.find("label.chalmeta").hide();
+                j_form.find("textarea.chalmeta").hide();
             }
         });
 
@@ -53,76 +54,107 @@
 		    let name = j_form.find('input.name').val();
 		    let tags = j_form.find('input.tags').val();
 		    let status = j_form.find('select.status').val();
- 	       	let pack_type = j_form.find('select.packtype').val();
-		    let files = j_form.find('input.file')[0].files;
+            let check_type = j_form.find('select.check-type').val();
+            let is_makefile = j_form.find('input.is-makefile').is(':checked');
             let allow_submit = j_form.find('input.allow-submit').is(":checked");
-		    let pack_token = '';
 
-		    function _update() {
-				$.post('/oj/be/manage/pro/update', {
-				    'reqtype': 'updatepro',
-				    'pro_id': pro_id,
-				    'name': name,
-				    'tags': tags,
-				    'status': status,
- 	 	          	'pack_type': pack_type,
-				    'pack_token': pack_token,
-                    'allow_submit': allow_submit,
-				}, function(res) {
- 	 	          	let msg = 'Unknown';
-
- 	 	          	if (res[0] == 'E') {
- 	 	          	    if (res == 'Enamemin') {
-							msg = '	Name length < min';
- 	 	          	    } else if (res == 'Enamemax') {
- 	 	          	        msg = 'Name length > max';
- 	 	          	    } else if (res == 'Eparam') {
- 	 	          	        msg = 'Parameter Error';
- 	 	          	    } else if (res == 'Econf') {
- 	 	          	        msg = 'Syntax error';
- 	 	          	    } else {
- 	 	          	        msg = res;
- 	 	          	    }
-
-						index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
- 	 	          	} else {
-						index.show_notify_dialog('Upload Successfully', index.DIALOG_TYPE.success);
-                        index.reload();
- 	 	          	}
-				});
-		    }
-
-		    if (files.length == 0) {
-				// NOTE: Update problem param
-				_update();
-		    } else {
-				pack.get_token().done(function(token) {
-					index.create_progress_bar('Uploading...');
-					pack_token = token;
-					pack.send(pack_token,files[0]).done(function() {
-						index.update_progress_bar_progress(100);
-                        index.update_progress_bar_title('Decompressing...');
-						index.remove_progress_bar();
-						_update();
-
-					}).progress(function(prog) {
-						index.update_progress_bar_progress(prog * 100);
-					});
-				});
-		    }
+            let chalmeta = '';
+            if (check_type == "{{ ProConst.CHECKER_IOREDIR }}") {
+                chalmeta = j_form.find('textarea.chalmeta').val();
+            }
+            $.post('/oj/be/manage/pro/update', {
+                'reqtype': 'updatepro',
+                'pro_id': pro_id,
+                'name': name,
+                'tags': tags,
+                'status': status,
+                'allow_submit': allow_submit,
+                'check_type': check_type,
+                'is_makefile': is_makefile,
+                'chalmeta': chalmeta,
+            }, function(res) {
+                let msg = 'Unknown';
+                if (res[0] == 'E') {
+                    if (res == 'Enamemin') {
+                        msg = '	Name length < min';
+                    } else if (res == 'Enamemax') {
+                        msg = 'Name length > max';
+                    } else if (res == 'Eparam') {
+                        msg = 'Parameter Error';
+                    } else {
+                        msg = res;
+                    }
+                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
+                } else {
+                    index.show_notify_dialog('Upload Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
+                }
+            });
 		});
+
+        j_form3.find('button.upload').on('click', function(e) {
+            function _update(token) {
+                $.post('/oj/be/manage/pro/update', {
+                    'reqtype': 'uploadpackage',
+                    'pro_id': pro_id,
+                    'pack_token': token,
+                }, function(res) {
+                    let dialog_type = null;
+                    let msg = '';
+                    if (res[0] == 'E') {
+                        dialog_type = index.DIALOG_TYPE.error;
+                        if (res == 'Econf') {
+                            msg = 'conf.json syntax error';
+                        } else {
+                            msg = res;
+                        }
+                    } else {
+                        msg = 'Update problem by uploading package successfully';
+                    }
+
+                    index.show_notify_dialog(msg, dialog_type);
+                    index.reload();
+                });
+            }
+
+            let files = j_form3.find('input.file')[0].files;
+            if (files.length == 0) {
+                index.show_notify_dialog('Package file should not empty');
+                return;
+            }
+
+            pack.get_token().done(function(token) {
+                index.create_progress_bar('Uploading...');
+                pack.send(token, files[0]).done(function() {
+                    index.update_progress_bar_progress(100);
+                    index.update_progress_bar_title('Decompressing...');
+                    index.remove_progress_bar();
+                    _update(token);
+                }).progress(function(prog) {
+                    index.update_progress_bar_progress(prog * 100);
+                });
+            });
+        });
 
 		j_form.find('button.cancel').on('click', () => index.go('/oj/manage/pro/'));
 
 		j_form2.find('button.submit').on('click', function(e) {
-		    let timelimit = j_form2.find('input.timelimit').val();
-		    let memlimit = j_form2.find('input.memlimit').val();
+            let limits = {};
+            j_form2.find("tbody > tr").each(function() {
+                let j_tr = $(this);
+                let lang = j_tr.attr('language');
+                let timelimit = j_tr.find("input.time").val();
+                let memlimit = j_tr.find("input.mem").val();
+                limits[lang] = {
+                    timelimit: timelimit,
+                    memlimit: memlimit
+                };
+            });
 
 			$.post('/oj/be/manage/pro/update', {
 			    'reqtype': 'updatelimit',
 			    'pro_id': pro_id,
-			    'timelimit': timelimit,
-			    'memlimit': memlimit,
+                'limits': JSON.stringify(limits);
 			}, function(res) {
 				let msg = 'Unknown';
 				if (res[0] == 'E') {
@@ -168,13 +200,24 @@
         <input type="checkbox" class="form-check-input allow-submit" {% if pro['allow_submit'] %} checked {% end %}>
         <br />
 
-		<label for="" class="form-label">文件</label>
-			<select class="form-select packtype">
-			<option value="1">full</option>
-			<option value="2">cont.html</option>
-			<option value="3">cont.pdf</option>
-		</select>
-		<input type="file" class="form-control file">
+        <label for="" class="form-check-label">Is Makefile Problem</label>
+        <input type="checkbox" class="form-check-input is-makefile" {% if pro['testm_conf']['is_makefile'] %} checked {% end %}>
+        <br />
+
+        {% set check_type = pro['testm_conf']['check_type'] %}
+		<label for="" class="form-label">Checker Type</label>
+        <select class="form-select check-type">
+            <option value="0" {% if check_type == ProConst.CHECKER_DIFF %} selected {% end %}>Diff</option>
+            <option value="1" {% if check_type == ProConst.CHECKER_DIFF_STRICT %} selected {% end %}>Strict Diff</option>
+            <option value="2" {% if check_type == ProConst.CHECKER_DIFF_FLOAT %} selected {% end %}>Float Diff(WIP)</option>
+            <option value="3" {% if check_type == ProConst.CHECKER_IOREDIR %} selected {% end %}>IORedir</option>
+            <option value="4" {% if check_type == ProConst.CHECKER_CMS %} selected {% end %}>CMS</option>
+        </select>
+
+        <label for="" class="form-label chalmeta" {% if check_type != ProConst.CHECKER_IOREDIR %} style="display: none;" {% end %}>IORedir Settings</label>
+        <textarea rows="10" cols="80" class="form-control chalmeta" {% if check_type != ProConst.CHECKER_IOREDIR %} style="display: none;" {% end %}>
+            {{ json.dumps(pro['testm_conf']['chalmeta'], indent=4) }}
+        </textarea>
 
 		<div class="mt-3">
 			<button type="button" class="btn btn-primary submit">Update</button>
@@ -183,16 +226,56 @@
 			<button type="button" class="btn btn-secondary cancel">Cancel</button>
 		</div>
     </form>
-	<form id="form2" class="blk-cont" style="margin-top: 60px; border: 1px solid red; padding: 3px;">
-		<label class="form-label" style="color: red;">Danger Zone</label>
-		<br>
-		<label class="form-label">Time limit (ms)</label>
-		<input type="number" class="form-control timelimit" value="{{ testl[0]['timelimit'] }}">
-		<label class="form-label">Mem limit (Kb)</label>
-		<input type="number" class="form-control memlimit" value="{{ round(testl[0]['memlimit'] / 1024) }}">
-		<button type="button" class="btn btn-danger submit">Update</button>
+
+    <form id="form3">
+        <label class="form-label" style="color: red;">Danger Zone</label>
+        <input type="file" class="form-control file">
+        <button type="button" class="btn btn-danger upload">Upload</button>
+    </form>
+
+	<form id="form2" class="blk-cont">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Language</th>
+                    <th>Time (ms)</th>
+                    <th>Memory (Kb)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set limits = pro['testm_conf']['limit'] %}
+                <tr language="default">
+                    <td>default</td>
+                    <td><input type="number" class="form-control time" value="{{ limits['default']['timelimit'] }}"></td>
+                    <td><input type="number" class="form-control mem" value="{{ limits['default']['memlimit'] // 1024 }}"></td>
+                </tr>
+                {% set ALLOW_COMPILERS = ChalConst.ALLOW_COMPILERS %}
+                {% if pro['testm_conf']['is_makefile'] %}
+                    {% set ALLOW_COMPILERS = ['gcc', 'g++', 'clang', 'clang++'] %}
+                {% end %}
+
+                {% for language in ALLOW_COMPILERS %}
+                    {% if language in limits %}
+                    <tr language="{{ language }}">
+                        <td>{{ language }}</td>
+                        <td><input type="number" class="form-control time" value="{{ limits[language]['timelimit'] }}"></td>
+                        <td><input type="number" class="form-control mem" value="{{ limits[language]['memlimit'] // 1024 }}"></td>
+                    </tr>
+                    {% else %}
+                    <tr language="{{ language }}">
+                        <td>{{ language }}</td>
+                        <td><input type="number" class="form-control time"></td>
+                        <td><input type="number" class="form-control mem"></td>
+                    </tr>
+                    {% end %}
+                {% end %}
+            </tbody>
+        </table>
+
+		<button type="button" class="btn btn-primary submit">Update</button>
     </form>
 
 	<a class="btn btn-primary" href="/oj/manage/pro/updatetests/?proid={{ pro['pro_id'] }}">Edit Testcases</a>
+    <a class="btn btn-primary" href="/oj/manage/pro/filemanager/?proid={{ pro['pro_id'] }}">File Manager</a>
 </div>
 {% end %}

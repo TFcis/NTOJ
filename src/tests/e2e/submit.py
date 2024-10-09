@@ -45,8 +45,7 @@ class SubmitTest(AsyncTest):
             })
             self.assertEqual(res.text, 'Einternal30')
 
-            # TODO: wait feature
-            # test submit comptype when makefile
-            # html = self.get_html('http://localhost:5501/submit/2', user_session)
-            # for option in html.select('option'):
-            #     self.assertIn(option.attrs['value'], ['g++', 'clang++'])
+            # NOTE: makefile problem only allow C/C++ language
+            html = self.get_html('http://localhost:5501/submit/2', user_session)
+            for option in html.select('option'):
+                self.assertIn(option.attrs['value'], ['g++', 'clang++', 'gcc', 'clang'])

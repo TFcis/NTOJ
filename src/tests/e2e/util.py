@@ -90,6 +90,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
             'name': name,
             'status': status,
             'pack_token': pack_token,
+            'mode': 'upload',
         })
 
         self.assertEqual(res.text, str(expected_pro_id))

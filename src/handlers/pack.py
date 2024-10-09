@@ -29,6 +29,7 @@ class PackHandler(WebSocketHandler):
                 self.write_message('Echunk')
                 self.output.close()
                 self.output = None
+                os.remove(f'tmp/{self.pack_token}')
                 return
 
             self.output.write(msg)

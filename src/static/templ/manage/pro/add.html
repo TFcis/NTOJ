@@ -4,56 +4,77 @@
     function init() {
 	    var j_form = $('#form');
 
-	    j_form.find('#upload').on('click', function(e) {
+	    j_form.find('#submit').on('click', function(e) {
 	        let name = j_form.find('#name').val();
 	        let status = j_form.find('#status').val();
-	        let files = j_form.find('#file')[0].files;
+            let mode = j_form.find("#mode").val();
+            let files = null;
 
-	        if (files.length == 0) {
-                index.show_notify_dialog('No file selected', index.DIALOG_TYPE.warning);
-	    	    return;
-	        }
+            if (mode == "upload") {
+                files = j_form.find('#file')[0].files;
+            }
 
-            pack.get_token().done(function(pack_token) {
-				index.create_progress_bar('Uploading...');
+            function _update(pack_token) {
+                $.post('/oj/be/manage/pro/add', {
+                    'reqtype': 'addpro',
+                    'name': name,
+                    'status': status,
+                    'mode': mode,
+                    'pack_token': pack_token,
+                }, function(res) {
+                    let msg = 'Unknown';
+                    if (res[0] == 'E') {
+                        if (res == 'Enamemin') {
+                            msg = 'Name length < min';
+                        } else if (res == 'Enamemax') {
+                            msg = 'Name length > max';
+                        } else if (res == 'Eparam') {
+                            msg = 'Parameter Error';
+                        } else if (res == 'Econf') {
+                            msg = 'Syntax error';
+                        }
 
-                pack.send(pack_token, files[0]).done(function() {
-                    $.post('/oj/be/manage/pro/add', {
-                        'reqtype': 'addpro',
-                        'name': name,
-                        'status': status,
-                        'pack_token': pack_token
-                    }, function(res) {
+                        index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
+                    } else {
+                        index.go(`/oj/manage/pro/update/?proid=${JSON.parse(res)}`);
+                    }
+                });
+            }
+
+            if (mode == "upload") {
+                if (files.length == 0) {
+                    index.show_notify_dialog('No file selected', index.DIALOG_TYPE.warning);
+                    return;
+                }
+                pack.get_token().done(function(pack_token) {
+                    index.create_progress_bar('Uploading...');
+
+                    pack.send(pack_token, files[0]).done(function() {
                         index.update_progress_bar_progress(100);
                         index.update_progress_bar_title('Decompressing...');
+                        _update(pack_token);
                         index.remove_progress_bar();
-                        let msg = 'Unknown';
-
-                        if (res[0] == 'E') {
-                            if (res == 'Enamemin') {
-                                msg = 'Name length < min';
-                            } else if (res == 'Enamemax') {
-                                msg = 'Name length > max';
-                            } else if (res == 'Eparam') {
-                                msg = 'Parameter Error';
-                            } else if (res == 'Econf') {
-                                msg = 'Syntax error';
-                            }
-
-                            index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-                        } else {
-                            index.go(`/oj/manage/pro/update/?proid=${JSON.parse(res)}`);
-                        }
+                    }).progress(function(prog) {
+                        index.update_progress_bar_progress(prog * 100);
                     });
-                }).progress(function(prog) {
-					index.update_progress_bar_progress(prog * 100);
                 });
-            });
+            } else if (mode == "manual") {
+                _update(null);
+            }
+
 	    });
 
 	    j_form.find('#cancel').on('click', function(e) {
 	        index.go('/oj/manage/pro/');
 	    });
+
+        j_form.find("#mode").on('change', function(e) {
+            if ($(this).val() == "upload") {
+                j_form.find("#file-block").show();
+            } else {
+                j_form.find("#file-block").hide();
+            }
+        });
     }
 </script>
 {% end %}
@@ -73,14 +94,19 @@
                 <option value=2>Hidden</option>
                 <option value=3>Offline</option>
             </select>
+            <label for="#mode" class="form-label">Add Problem Mode</label>
+            <select class="form-select" id="mode">
+                <option value="upload" selected>Upload problem package</option>
+                <option value="manual">Use web ui to setup problem</option>
+            </select>
         </div>
 
-        <div class="mb-1">
+        <div class="mb-1" id="file-block">
             <input class="form-control" type="file" id="file">
         </div>
 
         <div class="mb-1">
-            <button type="button" class="btn btn-primary" id="upload">Upload</button>
+            <button type="button" class="btn btn-primary" id="submit">Submit</button>
             <button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
         </div>
     </form>

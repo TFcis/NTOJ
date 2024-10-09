@@ -1,0 +1,29 @@
+{
+    "timelimit": 1000,
+    "memlimit": 262144,
+    "compile": "makefile",
+    "score": "rate",
+    "check": "diff",
+    "test": [
+        {
+            "data": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14
+            ],
+            "weight": 100
+        }
+    ],
+    "metadata": {}
+}

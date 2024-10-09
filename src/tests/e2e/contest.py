@@ -20,12 +20,12 @@ class ContestTest(AsyncTest):
         self.signup('contest6', 'contest6@test', 'test')  # acct_id = 9
         with AccountContext('admin@test', 'testtest') as admin_session:
             # upload more problem
-            await self.upload_problem('toj674.tar.xz', 'Move 1', ProConst.STATUS_CONTEST, expected_pro_id=4, session=admin_session)
-            await self.upload_problem('toj674.tar.xz', 'Move 2', ProConst.STATUS_CONTEST, expected_pro_id=5, session=admin_session)
-            await self.upload_problem('toj674.tar.xz', 'Move 3', ProConst.STATUS_CONTEST, expected_pro_id=6, session=admin_session)
-            await self.upload_problem('toj674.tar.xz', 'Move 4', ProConst.STATUS_CONTEST, expected_pro_id=7, session=admin_session)
-            await self.upload_problem('toj674.tar.xz', 'Move 5', ProConst.STATUS_CONTEST, expected_pro_id=8, session=admin_session)
-            await self.upload_problem('toj674.tar.xz', 'Move 6', ProConst.STATUS_CONTEST, expected_pro_id=9, session=admin_session)
+            await self.upload_problem('toj674.tar.xz', 'Move 1', ProConst.STATUS_CONTEST, expected_pro_id=5, session=admin_session)
+            await self.upload_problem('toj674.tar.xz', 'Move 2', ProConst.STATUS_CONTEST, expected_pro_id=6, session=admin_session)
+            await self.upload_problem('toj674.tar.xz', 'Move 3', ProConst.STATUS_CONTEST, expected_pro_id=7, session=admin_session)
+            await self.upload_problem('toj674.tar.xz', 'Move 4', ProConst.STATUS_CONTEST, expected_pro_id=8, session=admin_session)
+            await self.upload_problem('toj674.tar.xz', 'Move 5', ProConst.STATUS_CONTEST, expected_pro_id=9, session=admin_session)
+            await self.upload_problem('toj674.tar.xz', 'Move 6', ProConst.STATUS_CONTEST, expected_pro_id=10, session=admin_session)
 
             res = admin_session.post('http://localhost:5501/contests/manage/add', data={
                 'reqtype': 'add',
@@ -115,7 +115,7 @@ class ContestTest(AsyncTest):
             # add problem
             res = admin_session.post('http://localhost:5501/contests/1/manage/pro', data={
                 'reqtype': 'add',
-                'pro_id': 4
+                'pro_id': 5
             })
             self.assertEqual(res.text, 'S')
 
@@ -124,7 +124,7 @@ class ContestTest(AsyncTest):
 
             res = admin_session.post('http://localhost:5501/contests/1/manage/pro', data={
                 'reqtype': 'remove',
-                'pro_id': 4
+                'pro_id': 5
             })
             self.assertEqual(res.text, 'S')
             html = self.get_html('http://localhost:5501/contests/1/manage/pro', admin_session)
@@ -132,7 +132,7 @@ class ContestTest(AsyncTest):
 
             res = admin_session.post('http://localhost:5501/contests/1/manage/pro', data={
                 'reqtype': 'multi_add',
-                'pro_id': '4..10'
+                'pro_id': '5..11'
             })
             self.assertEqual(res.text, 'S')
             html = self.get_html('http://localhost:5501/contests/1/manage/pro', admin_session)
@@ -140,7 +140,7 @@ class ContestTest(AsyncTest):
 
             res = admin_session.post('http://localhost:5501/contests/1/manage/pro', data={
                 'reqtype': 'multi_remove',
-                'pro_id': '4..10'
+                'pro_id': '5..11'
             })
             self.assertEqual(res.text, 'S')
             html = self.get_html('http://localhost:5501/contests/1/manage/pro', admin_session)
@@ -148,7 +148,7 @@ class ContestTest(AsyncTest):
 
             res = admin_session.post('http://localhost:5501/contests/1/manage/pro', data={
                 'reqtype': 'multi_add',
-                'pro_id': '4..10'
+                'pro_id': '5..11'
             })
             self.assertEqual(res.text, 'S')
             html = self.get_html('http://localhost:5501/contests/1/manage/pro', admin_session)
@@ -346,10 +346,10 @@ class ContestTest(AsyncTest):
             html = self.get_html('http://localhost:5501/contests/1/proset', user_session)
             self.assertEqual(len(html.select('tr')[1:]), 0)
 
-            res = user_session.get('http://localhost:5501/contests/1/pro/4')
+            res = user_session.get('http://localhost:5501/contests/1/pro/5')
             self.assertEqual(res.text, 'Eacces')
 
-            res = user_session.get('http://localhost:5501/contests/1/pro/4/cont.pdf')
+            res = user_session.get('http://localhost:5501/contests/1/pro/5/cont.pdf')
             self.assertEqual(res.text, 'Eacces')
 
         with AccountContext('admin@test', 'testtest') as admin_session:
@@ -371,16 +371,16 @@ class ContestTest(AsyncTest):
             self.assertEqual(len(html.select('tr')[1:]), 6)
             self.assertEqual(html.select('tr')[1:][0].select('td')[3].text.strip(), '0')
 
-            html = self.get_html('http://localhost:5501/contests/1/pro/4', user_session)
+            html = self.get_html('http://localhost:5501/contests/1/pro/5', user_session)
             side = html.select_one('div#side')
-            self.assertEqual(side.select('a')[0].attrs['href'], '/oj/contests/1/submit/4/')
-            self.assertEqual(side.select('a')[1].attrs['href'], '/oj/contests/1/chal/?proid=4&acctid=4')
-            self.assertEqual(side.select('a')[2].attrs['href'], '/oj/contests/1/chal/?proid=4')
+            self.assertEqual(side.select('a')[0].attrs['href'], '/oj/contests/1/submit/5/')
+            self.assertEqual(side.select('a')[1].attrs['href'], '/oj/contests/1/chal/?proid=5&acctid=4')
+            self.assertEqual(side.select('a')[2].attrs['href'], '/oj/contests/1/chal/?proid=5')
 
-            res = user_session.get('http://localhost:5501/contests/1/pro/4/cont.pdf')
+            res = user_session.get('http://localhost:5501/contests/1/pro/5/cont.pdf')
             self.assertIn('X-Accel-Redirect', res.headers)
 
-            html = self.get_html('http://localhost:5501/contests/1/submit/4', user_session)
+            html = self.get_html('http://localhost:5501/contests/1/submit/5', user_session)
             self.assertEqual(len(html.select('option')), 2)
 
             res = user_session.post('http://localhost:5501/contests/1/submit', data={
@@ -393,7 +393,7 @@ class ContestTest(AsyncTest):
 
             res = user_session.post('http://localhost:5501/contests/1/submit', data={
                 'reqtype': 'submit',
-                'pro_id': 4,
+                'pro_id': 5,
                 'code': 'cc2',
                 'comp_type': 'python3',
             })
@@ -401,11 +401,11 @@ class ContestTest(AsyncTest):
 
             res = user_session.post('http://localhost:5501/contests/1/submit', data={
                 'reqtype': 'submit',
-                'pro_id': 4,
+                'pro_id': 5,
                 'code': open('tests/static_file/code/toj674.ac.cpp').read(),
                 'comp_type': 'g++',
             })
-            self.assertEqual(res.text, '11')
+            self.assertEqual(res.text, '13')
 
             ws = await websocket_connect('ws://localhost:5501/manage/judgecntws')
 
@@ -420,7 +420,7 @@ class ContestTest(AsyncTest):
 
             res = user_session.post('http://localhost:5501/contests/1/submit', data={
                 'reqtype': 'submit',
-                'pro_id': 4,
+                'pro_id': 5,
                 'code': open('tests/static_file/code/toj674.ac.cpp').read(),
                 'comp_type': 'g++',
             })
@@ -428,7 +428,7 @@ class ContestTest(AsyncTest):
 
             res = user_session.post('http://localhost:5501/contests/1/submit', data={
                 'reqtype': 'submit',
-                'pro_id': 4,
+                'pro_id': 5,
                 'code': 'cc3',
                 'comp_type': 'g++',
             })
@@ -454,8 +454,8 @@ class ContestTest(AsyncTest):
                     self.assertEqual(scores['name'], 'contest1')
                     self.assertEqual(scores['total_score'], 100)
 
-                    score = scores['scores']['4']
-                    self.assertEqual(score['chal_id'], 11)
+                    score = scores['scores']['5']
+                    self.assertEqual(score['chal_id'], 13)
                     self.assertEqual(score['score'], 100)
             ws2.close()
 
@@ -463,9 +463,9 @@ class ContestTest(AsyncTest):
             html = self.get_html('http://localhost:5501/contests/1/chal', user_session)
             self.assertEqual(len(html.select('tbody > tr')[1:]), 1)
             chal_tr = html.select('tbody > tr')[1:][0]
-            self.assertEqual(chal_tr.attrs.get('id'), 'chal11')
-            self.assertEqual(chal_tr.select('td > a')[0].attrs.get('href'), '/oj/contests/1/chal/11/')
-            self.assertEqual(chal_tr.select('td > a')[1].attrs.get('href'), '/oj/contests/1/pro/4/')
+            self.assertEqual(chal_tr.attrs.get('id'), 'chal13')
+            self.assertEqual(chal_tr.select('td > a')[0].attrs.get('href'), '/oj/contests/1/chal/13/')
+            self.assertEqual(chal_tr.select('td > a')[1].attrs.get('href'), '/oj/contests/1/pro/5/')
             self.assertEqual(chal_tr.select('td')[3].attrs.get('class')[0], 'state-1')
 
         # is_public_scoreboard: bool = False

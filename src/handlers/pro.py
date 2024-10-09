@@ -224,32 +224,6 @@ class ProHandler(RequestHandler):
             self.error('Eacces')
             return
 
-        testl = []
-        for test_idx, test_conf in pro['testm_conf'].items():
-            testl.append(
-                {
-                    'test_idx': test_idx,
-                    'timelimit': test_conf['timelimit'],
-                    'memlimit': test_conf['memlimit'],
-                    'weight': test_conf['weight'],
-                    'rate': 2000,
-                }
-            )
-
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    SELECT "test_idx", "rate" FROM "test_valid_rate"
-                    WHERE "pro_id" = $1 ORDER BY "test_idx" ASC;
-                ''',
-                pro_id,
-            )
-
-        countmap = {test_idx: count for test_idx, count in result}
-        for test in testl:
-            if test['test_idx'] in countmap:
-                test['rate'] = math.floor(countmap[test['test_idx']])
-
         isguest = self.acct.is_guest()
         isadmin = self.acct.is_kernel()
 
@@ -285,14 +259,7 @@ class ProHandler(RequestHandler):
 
         await self.render(
             'pro',
-            pro={
-                'pro_id': pro['pro_id'],
-                'name': pro['name'],
-                'status': pro['status'],
-                'tags': pro['tags'],
-                'allow_submit': pr['allow_submit'],
-            },
-            testl=testl,
+            pro=pro,
             isadmin=isadmin,
             can_submit=can_submit,
             contest=self.contest

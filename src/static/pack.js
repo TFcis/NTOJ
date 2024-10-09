@@ -33,10 +33,9 @@ var pack = new function() {
 
         ws.onopen = function(e) {
             file.arrayBuffer()
-                .then(file_buffer => crypto.subtle.digest("SHA-1", file_buffer))
-                .then(hash_buffer => {
-                    const hash_array = Array.from(new Uint8Array(hash_buffer));
-                    const hash_hex = hash_array.map((b) => b.toString(16).padStart(2, "0")).join("");
+                .then(file_buffer => {
+                    const word_array = CryptoJS.lib.WordArray.create(new Uint8Array(file_buffer));
+                    const hash_hex = CryptoJS.SHA1(word_array).toString(CryptoJS.enc.Hex);
 
                     ws.send(JSON.stringify({
                         'pack_token' : pack_token,

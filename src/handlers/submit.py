@@ -21,7 +21,6 @@ class SubmitHandler(RequestHandler):
 
         pro_id = int(pro_id)
 
-        # TODO: if problem is makefile type, we should restrict compiler type
         allow_compilers = ChalConst.ALLOW_COMPILERS
         if self.contest:
             if not self.contest.is_running() and not self.contest.is_admin(self.acct):
@@ -53,6 +52,9 @@ class SubmitHandler(RequestHandler):
         if not pro['allow_submit']:
             self.error('Eacces')
             return
+
+        if pro['testm_conf']['is_makefile']:
+            allow_compilers = list(filter(lambda compiler: compiler in ['gcc', 'g++', 'clang', 'clang++'], allow_compilers))
 
         await self.render('submit', pro=pro,
                           allow_compilers=allow_compilers, contest_id=self.contest.contest_id if self.contest else 0)

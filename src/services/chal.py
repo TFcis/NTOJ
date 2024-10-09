@@ -293,6 +293,7 @@ class ChalService:
         )
 
     async def emit_chal(self, chal_id, pro_id, testm_conf, comp_type, pri: int):
+        from services.pro import ProConst
         chal_id = int(chal_id)
         pro_id = int(pro_id)
 
@@ -309,16 +310,24 @@ class ChalService:
         result = result[0]
 
         acct_id, contest_id, timestamp = int(result['acct_id']), int(result['contest_id']), result['timestamp']
+        limit = testm_conf['limit']
+
+        if comp_type in limit:
+            timelimit = limit[comp_type]['timelimit']
+            memlimit = limit[comp_type]['memlimit']
+        else:
+            timelimit = limit['default']['timelimit']
+            memlimit = limit['default']['memlimit']
 
         async with self.db.acquire() as con:
             testl = []
-            for test_idx, test_conf in testm_conf.items():
+            for test_group_idx, test in testm_conf['test_group'].items():
                 testl.append(
                     {
-                        'test_idx': test_idx,
-                        'timelimit': test_conf['timelimit'],
-                        'memlimit': test_conf['memlimit'],
-                        'metadata': test_conf['metadata'],
+                        'test_idx': test_group_idx,
+                        'timelimit': timelimit,
+                        'memlimit': memlimit,
+                        'metadata': test['metadata'],
                     }
                 )
 
@@ -331,7 +340,7 @@ class ChalService:
                     chal_id,
                     acct_id,
                     pro_id,
-                    test_idx,
+                    test_group_idx,
                     ChalConst.STATE_JUDGE,
                     timestamp,
                 )
@@ -346,9 +355,9 @@ class ChalService:
             await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
             return None, None
 
-        chalmeta = test_conf['chalmeta']
+        chalmeta = testm_conf['chalmeta']
 
-        if test_conf['comp_type'] == 'makefile':
+        if testm_conf['is_makefile']:
             comp_type = 'makefile'
 
         await JudgeServerClusterService.inst.send(
@@ -360,7 +369,7 @@ class ChalService:
                 'res_path': f'{pro_id}/res',
                 'metadata': chalmeta,
                 'comp_type': comp_type,
-                'check_type': test_conf['check_type'],
+                'check_type': ProConst.CHECKER_TYPE[testm_conf['check_type']],
             },
             pro_id,
             contest_id,

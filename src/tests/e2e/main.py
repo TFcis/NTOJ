@@ -8,11 +8,13 @@ import tornado
 from services.chal import ChalConst
 from services.pro import ProConst
 from services.user import UserService, UserConst
-from .manage.acct import ManageAcctTest
-from .manage.pro import ManageProTest
-from .pro import ProTest
-
 from .util import AccountContext, AsyncTest
+from .manage.acct import ManageAcctTest
+from .manage.pro.filemanager import ManageProFileManagerTest
+from .manage.pro.update import ManageProUpdateTest
+from .manage.pro.updatetests import ManageProUpdateTestsTest
+from .manage.pack import ManagePackTest
+from .pro import ProTest
 from .acct import SignTest, AcctPageTest
 from .board import BoardTest
 from .bulletin import BulletinTest
@@ -233,13 +235,19 @@ class E2ETest(AsyncTest):
                 SignTest().main,
                 AcctPageTest().main,
                 ManageAcctTest().main,
-                ManageProTest().main,
+                ManageProUpdateTest().main,
+                ManageProUpdateTestsTest().main,
+                ManageProFileManagerTest().main,
+                ManagePackTest().main,
                 ContestTest().main
             ]
             for f in s:
                 r = await f()
                 if r is None:
                     continue
+
+            # NOTE: all upload file should be cleaned
+            self.assertEqual(os.listdir('tmp'), ['.gitkeep'])
 
         finally:
             self.cleanup()

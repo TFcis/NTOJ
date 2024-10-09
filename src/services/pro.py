@@ -1,8 +1,6 @@
-import datetime
 import json
 import os
 import re
-from collections import OrderedDict
 
 from msgpack import packb, unpackb
 
@@ -20,6 +18,20 @@ class ProConst:
     STATUS_HIDDEN = 2
     STATUS_OFFLINE = 3
 
+    CHECKER_DIFF = 0
+    CHECKER_DIFF_STRICT = 1
+    CHECKER_DIFF_FLOAT = 2
+    CHECKER_IOREDIR = 3
+    CHECKER_CMS = 4
+
+    CHECKER_TYPE = {
+        CHECKER_DIFF: "diff",
+        CHECKER_DIFF_STRICT: "diff-strict",
+        CHECKER_DIFF_FLOAT: "diff-float",
+        CHECKER_IOREDIR: "ioredir",
+        CHECKER_CMS: "cms",
+    }
+
 
 class ProService:
     NAME_MIN = 1
@@ -33,6 +45,12 @@ class ProService:
     PACKTYPE_FULL = 1
     PACKTYPE_CONTHTML = 2
     PACKTYPE_CONTPDF = 3
+
+    CHECKER_DIFF = 0
+    CHECKER_DIFF_STRICT = 1
+    CHECKER_DIFF_FLOAT = 2
+    CHECKER_IOREDIR = 3
+    CHECKER_CMS = 4
 
     def __init__(self, db, rs):
         self.db = db
@@ -54,7 +72,8 @@ class ProService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 """
-                    SELECT "name", "status", "tags", "allow_submit"
+                    SELECT "name", "status", "tags", "allow_submit",
+                    "check_type", "is_makefile", "chalmeta", "limit"
                     FROM "problem" WHERE "pro_id" = $1 AND "status" <= $2;
                 """,
                 pro_id,
@@ -64,46 +83,39 @@ class ProService:
                 return "Enoext", None
             result = result[0]
 
-            name, status, tags, allow_submit = (
+            name, status, tags, allow_submit, check_type, is_makefile, limit, chalmeta = (
                 result["name"],
                 result["status"],
                 result["tags"],
                 result["allow_submit"],
+                result["check_type"],
+                result["is_makefile"],
+                json.loads(result["limit"]),
+                json.loads(result["chalmeta"]),
             )
 
             result = await con.fetch(
                 """
-                    SELECT "test_idx", "compile_type", "score_type",
-                    "check_type", "timelimit", "memlimit", "weight", "metadata", "chalmeta"
+                    SELECT "test_idx", "weight", "metadata"
                     FROM "test_config" WHERE "pro_id" = $1 ORDER BY "test_idx" ASC;
                 """,
                 pro_id,
             )
-            if len(result) == 0:
-                return "Econf", None
 
-        testm_conf = OrderedDict()
-        for (
-                test_group_idx,
-                comp_type,
-                score_type,
-                check_type,
-                timelimit,
-                memlimit,
-                weight,
-                metadata,
-                chalmeta,
-        ) in result:
-            testm_conf[test_group_idx] = {
-                "comp_type": comp_type,
-                "score_type": score_type,
-                "check_type": check_type,
-                "timelimit": timelimit,
-                "memlimit": memlimit,
+        test_groups = {}
+        for test_group_idx, weight, metadata in result:
+            test_groups[test_group_idx] = {
                 "weight": weight,
-                "chalmeta": json.loads(chalmeta),
                 "metadata": json.loads(metadata),
             }
+
+        testm_conf = {
+            "chalmeta": chalmeta,
+            "limit": limit,
+            "check_type": check_type,
+            "is_makefile": is_makefile,
+            "test_group": test_groups,
+        }
 
         return (
             None,
@@ -117,12 +129,7 @@ class ProService:
             },
         )
 
-    # TODO: Too many branch
-    # TODO: Too many local var
-    # TODO: Too many statement
     async def list_pro(self, acct: Account = None, is_contest=False):
-        from services.chal import ChalConst
-
         if acct is None:
             max_status = ProService.STATUS_ONLINE
 
@@ -163,14 +170,12 @@ class ProService:
 
         return None, prolist
 
-    # TODO: Too many args
     async def add_pro(self, name, status, pack_token):
         name_len = len(name)
         if name_len < ProService.NAME_MIN:
             return "Enamemin", None
         if name_len > ProService.NAME_MAX:
             return "Enamemax", None
-        del name_len
         if status < ProService.STATUS_ONLINE or status > ProService.STATUS_OFFLINE:
             return "Eparam", None
 
@@ -189,9 +194,20 @@ class ProService:
 
             pro_id = int(result[0]["pro_id"])
 
-            _, _ = await self.unpack_pro(pro_id, ProService.PACKTYPE_FULL, pack_token)
+            if pack_token:
+                _, _ = await self.unpack_pro(pro_id, ProService.PACKTYPE_FULL, pack_token)
+                await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
 
-            await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
+            else:
+                os.mkdir(f"problem/{pro_id}")
+                os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
+                os.mkdir(f"problem/{pro_id}/res")
+                os.mkdir(f"problem/{pro_id}/http")
+                os.mkdir(f"problem/{pro_id}/res/testdata")
+                os.symlink(
+                    os.path.abspath(f"problem/{pro_id}/http"),
+                    f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
+                )
 
         await self.rs.delete("prolist")
 
@@ -237,53 +253,38 @@ class ProService:
 
         return None, None
 
-    async def update_testcases(self, pro_id, testm_conf):
-        with open(f'problem/{pro_id}/conf.json', 'r') as f:
-            conf_json = json.load(f)
+    async def update_test_config(self, pro_id, testm_conf: dict):
+        insert_sql = []
+        is_makefile = testm_conf['is_makefile']
+        check_type = testm_conf['check_type']
+        chalmeta = testm_conf['chalmeta']
+        limit = testm_conf['limit']
+        for test_group_idx, test_group_conf in testm_conf['test_group'].items():
+            weight = test_group_conf['weight']
 
-        for test_group_idx, test_conf in testm_conf.items():
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    """
-                        UPDATE "test_config"
-                        SET "metadata" = $1
-                        WHERE "pro_id" = $2 AND "test_idx" = $3 RETURNING "pro_id";
-                    """,
-                    json.dumps(test_conf['metadata']),
-                    int(pro_id),
-                    test_group_idx
-                )
-                if len(result) == 0:
-                    return "Enoext", None
-
-                conf_json['test'][test_group_idx]['data'] = test_conf['metadata']['data']
-
-        with open(f'problem/{pro_id}/conf.json', 'w') as f:
-            f.write(json.dumps(conf_json))
-
-        return None, None
-
-    async def update_limit(self, pro_id, timelimit, memlimit):
-        if timelimit <= 0:
-            return "Etimelimitmin", None
-        if memlimit <= 0:
-            return "Ememlimitmin", None
-
-        memlimit = memlimit * 1024
+            sql = '({}, {}, {}, \'{}\')'.format(pro_id, test_group_idx, weight, json.dumps(test_group_conf['metadata']))
+            insert_sql.append(sql)
 
         async with self.db.acquire() as con:
-            result = await con.fetch(
-                """
-                    UPDATE "test_config"
-                    SET "timelimit" = $1, "memlimit" = $2
-                    WHERE "pro_id" = $3 RETURNING "pro_id";
-                """,
-                int(timelimit),
-                int(memlimit),
-                int(pro_id),
+            await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
+            await con.execute(
+                'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4 WHERE pro_id = $5',
+                is_makefile, check_type, json.dumps(chalmeta), json.dumps(limit), pro_id
             )
-        if len(result) == 0:
-            return "Enoext", None
+
+            if insert_sql:
+                await con.execute(
+                    f"""
+                        INSERT INTO "test_config"
+                        ("pro_id", "test_idx", "weight", "metadata")
+                        VALUES {','.join(insert_sql)};
+                    """
+                )
+
+        await self.db.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
+        await self.rs.delete('rate')
+        await self.rs.hdel('pro_rate', pro_id)
+        await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
 
         return None, None
 
@@ -302,6 +303,7 @@ class ProService:
             return ProService.STATUS_ONLINE
 
     async def unpack_pro(self, pro_id, pack_type, pack_token):
+        from services.chal import ChalConst
         def _clean_cont(prefix):
             try:
                 os.remove(f"{prefix}cont.html")
@@ -339,7 +341,6 @@ class ProService:
 
             try:
                 os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-                # INFO: 正式上線請到config.py修改成正確路徑
                 os.symlink(
                     os.path.abspath(f"problem/{pro_id}/http"),
                     f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
@@ -354,39 +355,62 @@ class ProService:
             except json.decoder.JSONDecodeError:
                 return "Econf", None
 
-            comp_type = conf["compile"]
-            score_type = conf["score"]
-            check_type = conf["check"]
-            timelimit = conf["timelimit"]
-            memlimit = conf["memlimit"] * 1024
+            is_makefile = conf["compile"] == 'makefile'
+            check_type = self._get_check_type(conf["check"])
             chalmeta = conf["metadata"]  # INFO: ioredir data
+
+            ALLOW_COMPILERS = list(ChalConst.ALLOW_COMPILERS) + ['default']
+            if is_makefile:
+                ALLOW_COMPILERS = ['default', 'gcc', 'g++', 'clang', 'clang++']
+
+            if "limit" in conf:
+                limit = {lang: lim for lang, lim in conf["limit"].items() if lang in ALLOW_COMPILERS}
+            else:
+                limit = {
+                    'default': {
+                        'timelimit': conf["timelimit"],
+                        'memlimit': conf["memlimit"] * 1024
+                    }
+                }
 
             async with self.db.acquire() as con:
                 await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
+                await con.execute(
+                    'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4 WHERE pro_id = $5',
+                    is_makefile, check_type, json.dumps(chalmeta), json.dumps(limit), pro_id
+                )
+
+                insert_sql = []
 
                 for test_idx, test_conf in enumerate(conf["test"]):
-                    metadata = {"data": test_conf["data"]}
+                    for i in range(len(test_conf["data"])):
+                        test_conf["data"][i] = str(test_conf["data"][i])
 
-                    await con.execute(
-                        """
-                            INSERT INTO "test_config"
-                            ("pro_id", "test_idx", "compile_type", "score_type", "check_type",
-                            "timelimit", "memlimit", "weight", "metadata", "chalmeta")
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
-                        """,
-                        int(pro_id),
-                        int(test_idx),
-                        comp_type,
-                        score_type,
-                        check_type,
-                        int(timelimit),
-                        int(memlimit),
-                        int(test_conf["weight"]),
-                        json.dumps(metadata),
-                        json.dumps(chalmeta),
-                    )
+                    metadata = {"data": test_conf["data"]}
+                    insert_sql.append(f"({pro_id}, {test_idx}, {test_conf['weight']}, \'{json.dumps(metadata)}\')")
+
+                await con.execute(
+                    f"""
+                        INSERT INTO "test_config"
+                        ("pro_id", "test_idx", "weight", "metadata")
+                        VALUES {",".join(insert_sql)}
+                    """
+                )
+
 
         return None, None
+
+    def _get_check_type(self, s: str):
+        if s == "diff":
+            return ProConst.CHECKER_DIFF
+        elif s == "diff-strict":
+            return ProConst.CHECKER_DIFF_STRICT
+        elif s == "diff-float":
+            return ProConst.CHECKER_DIFF_FLOAT
+        elif s == "ioredir":
+            return ProConst.CHECKER_IOREDIR
+        elif s == "cms":
+            return ProConst.CHECKER_CMS
 
 
 class ProClassService:
