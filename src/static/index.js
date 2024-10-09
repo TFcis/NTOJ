@@ -259,7 +259,7 @@ var index = new function() {
             return;
         }
 
-        progressbar.querySelector('.modal-header').textContent = title;
+        progressbar.querySelector('.text-center').textContent = title;
     }
 
     that.remove_progress_bar = function () {
