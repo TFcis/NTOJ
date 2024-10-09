@@ -1,0 +1,69 @@
+name: tests
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  e2etest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+
+      - name: Install PostgreSQL, Redis, Dos2Unix
+        run: |
+          sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | sudo tee /usr/share/keyrings/postgresql.gpg
+          echo deb [arch=amd64 signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main | sudo tee /etc/apt/sources.list.d/postgresql.list
+          sudo apt update -y
+          sudo apt install -f -y postgresql-16 postgresql-client-16 redis dos2unix
+          sudo sed -i 's/peer/trust/' /etc/postgresql/16/main/pg_hba.conf
+          sudo service postgresql start
+          sudo service redis-server start
+
+      - name: Install Coverage
+        run: |
+          $HOME/.local/bin/poetry add --dev coverage
+
+      - name: Install Project dependencies
+        run: |
+          sed -i '/^mkdocs-material/d' pyproject.toml # test don't need mkdocs-material
+          rm poetry.lock # we need to remove it because we change the pyproject file
+          $HOME/.local/bin/poetry install
+          $HOME/.local/bin/poetry add beautifulsoup4
+          $HOME/.local/bin/poetry add requests
+
+      - name: Deploy NTOJ-Judge
+        run: |
+          cd $HOME
+          git clone https://github.com/tobiichi3227/NTOJ-Judge
+          cd NTOJ-Judge/src
+          sudo pip3 install tornado cffi --break-system-packages
+          chmod +x ./runserver.sh
+          sudo ./runserver.sh > output.log 2>&1 &
+
+      - name: Run e2e test
+        run: |
+          cd src
+          chmod +x runtests.sh
+          ./runtests.sh
+
+      - name: Output judge log
+        run: |
+          cd $HOME/NTOJ-Judge/src
+          cat output.log
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: src/htmlcov

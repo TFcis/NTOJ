@@ -172,7 +172,7 @@
 <div class="row">
     <div id="side" class="col-lg-2 col-12 mt-lg-2">
         <h3>{{ pro['pro_id']}} / {{ pro['name'] }}</h3>
-        {% if can_submit == True %}
+        {% if can_submit and pro['allow_submit'] %}
             {% if contest %}
                 <a class="btn btn-primary btn-lg my-lg-1" href="/oj/contests/{{ contest.contest_id }}/submit/{{ pro['pro_id'] }}/">Submit</a><br />
             {% else %}
@@ -184,7 +184,7 @@
 
         <div class="my-lg-1">
             {% if contest %}
-                <a class="btn btn-success" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}&acctid={{ acct_id }}">My Status</a>
+                <a class="btn btn-success" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}&acctid={{ user.acct_id }}">My Status</a>
                 <a class="btn btn-secondary" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}">Status</a>
             {% else %}
                 <a class="btn btn-success" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
@@ -197,7 +197,7 @@
             <a class="btn btn-warning my-lg-1" style="display: none; width: 156px; text-align: center;" id="pdfbtn">Download PDF</a>
             <a class="btn btn-warning my-lg-1" id="switchviewer" style="display: none; width: 156px; text-align: center;">Switch Viewer</a>
         </div>
-        {% if (isadmin) and not contest %}
+        {% if user.is_kernel() and not contest %}
             <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width: 190px" placeholder="add tags here">
         {% else %}
             <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width: 190px" placeholder="no tags" disabled>
@@ -211,19 +211,19 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Key</th>
-                    <th>Value</th>
+                    <th>Lang</th>
+                    <th>Time</th>
+                    <th>Memory</th>
                 </tr>
             </thead>
             <tbody>
+                {% for language, limit in pro['testm_conf']['limit'].items() %}
                 <tr>
-                    <td>time</td>
-                    <td>{{ testl[0]['timelimit'] }} ms</td>
+                    <td>{{ language }}</td>
+                    <td>{{ limit['timelimit'] }} </td>
+                    <td>{{ limit['memlimit'] // 1024 }} </td>
                 </tr>
-                <tr>
-                    <td>mem</td>
-                    <td>{{ round(testl[0]['memlimit'] / 1024) }} KB</td>
-                </tr>
+                {% end %}
             </tbody>
         </table>
 
@@ -235,15 +235,15 @@
                 </tr>
             </thead>
             <tbody>
-                {% for test in testl %}
+                {% for test_group_idx, test in pro['testm_conf']['test_group'].items() %}
                     <tr>
-                        <td>{{ '%04d' % (test['test_idx'] + 1) }}</td>
+                        <td>{{ '%04d' % (test_group_idx + 1) }}</td>
                         <td>{{ test['weight'] }}</td>
                     </tr>
                 {% end %}
             </tbody>
         </table>
-        {% if isadmin %}
+        {% if user.is_kernel() %}
             <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro['pro_id']}}">Manage</a>
         {% end %}
     </div>

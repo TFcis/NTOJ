@@ -1,6 +1,6 @@
 {{ set_page_title("Edit Account") }}
 
-{% if acct.acct_id != acct_id and not isadmin %}
+{% if acct.acct_id != user.acct_id and not user.is_kernel() %}
     You don't have permission.
 {% else %}
 <script id="contjs" type="text/javascript">
@@ -13,6 +13,7 @@
             let name = j_profile.find('input.name').val();
             let photo = j_profile.find('input.photo').val();
             let cover = j_profile.find('input.cover').val();
+            let motto = j_profile.find('input.motto').val();
 
             try {
                 new URL(photo);
@@ -37,7 +38,8 @@
                 'acct_id': acct_id,
                 'name': name,
                 'photo': photo,
-                'cover': cover
+                'cover': cover,
+                'motto': motto,
             }, function(res) {
                 let msg = 'Unknown';
 
@@ -47,6 +49,8 @@
                         msg = 'Name length < min';
                     } else if (res == 'Enamemax') {
                         msg = 'Name length > max';
+                    } else if (res == 'Emottomax') {
+                        msg = 'Your motto is too long';
                     }
 
                     index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
@@ -100,7 +104,7 @@
             <h1>Edit User <a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.name }}</a></h1>
         </span>
 
-        {% if acct.acct_id == acct_id %}
+        {% if acct.acct_id == user.acct_id %}
         <form id="profile">
             <div class="mb-1">
                 <label class="form-label">Name</label>
@@ -109,12 +113,12 @@
 
             <div class="mb-1">
                 <label class="form-label">Email(WIP)</label>
-                <input class="name form-control" type="text" value="WIP (Email)" placeholder="email" disabled>
+                <input class="email form-control" type="text" value="WIP (Email)" placeholder="email" disabled>
             </div>
 
             <div class="mb-1">
-                <label class="form-label">Motto(WIP)</label>
-                <input class="name form-control" type="text" value="WIP (Motto)" placeholder="motto" disabled>
+                <label class="form-label">Motto</label>
+                <input class="motto form-control" type="text" value="{{ acct.motto }}" placeholder="motto">
             </div>
 
             <div class="mb-1">
@@ -140,7 +144,7 @@
         </form>
         {% end %}
 
-        {% if acct.acct_id == acct_id or isadmin %}
+        {% if acct.acct_id == user.acct_id or user.is_kernel() %}
         <form id="reset">
             <h3>更改密碼</h3>
 

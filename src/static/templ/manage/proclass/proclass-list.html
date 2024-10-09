@@ -12,6 +12,7 @@
 			<tr>
 				<td scope="col">#</td>
 				<td scope="">Name</td>
+                <td>Type</td>
 				<td>
                     <a class="btn btn-primary" href="/oj/manage/proclass/add/">&#x271a</a>
 				</td>
@@ -19,12 +20,19 @@
 		</thead>
 
 		<tbody>
-		{% for pubclass in pubclass_list %}
+        {% for proclass in proclass_list %}
             <tr>
-                <th scope="row">{{ pubclass['pubclass_id'] }}</th>
-				<td>{{ pubclass['name'] }}</td>
+                <th scope="row">{{ proclass['proclass_id'] }}</th>
+				<td>{{ proclass['name'] }}</td>
+                {% set t = "" %}
+                {% if proclass['type'] == 0 %}
+                    {% set t = "Public" %}
+                {% elif proclass['type'] == 1 %}
+                    {% set t = "Hidden" %}
+                {% end %}
+                <td>{{ t }}</td>
                 <td>
-                    <a class="btn btn-secondary" href="/oj/manage/proclass/update/?pubclassid={{ pubclass['pubclass_id'] }}">&#x2699</a>
+                    <a class="btn btn-secondary" href="/oj/manage/proclass/update/?proclassid={{ proclass['proclass_id'] }}">&#x2699</a>
                 </td>
             </tr>
 		{% end %}

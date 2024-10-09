@@ -1,0 +1,340 @@
+{% extends '../manage.html' %}
+{% block head %}
+<link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
+<link rel="stylesheet" href="/oj/third/prism.css">
+
+<script type="text/javascript" id="contjs">
+	function init() {
+		$.getScript('/oj/third/prism.js');
+
+		let pro_id = "{{ pro_id }}";
+		let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
+        let add_single_file_modal = new bootstrap.Modal(document.getElementById('addSingleFileModal'));
+
+		document.querySelectorAll('a.preview-file').forEach(el => {
+			el.addEventListener('click', function (e) {
+				let tr = $(this).parents('tr');
+                let path = $(this).parents('.accordion-collapse').attr('path');
+				let filename = tr.attr('filename');
+
+				let file_content = '';
+				$.post('/oj/be/manage/pro/filemanager', {
+					'reqtype': 'preview',
+					'pro_id': pro_id,
+                    'filename': filename,
+                    'path': path,
+				}, function (res) {
+					if (res[0] == 'E') {
+						if (res == 'Efile') {
+							file_content = 'File is too large or not utf-8';
+						} else if (res == 'Enoext') {
+							file_content = 'File not found';
+						}
+					} else {
+						file_content = JSON.parse(res);
+					}
+
+					$("#code").find("code").html(file_content);
+                    $("#preview-title").text(filename);
+					preview_modal.show();
+				});
+			});
+		});
+
+		document.querySelectorAll('button.rename-single-file').forEach(el => {
+			el.addEventListener('click', function (e) {
+                let path = $(this).parents('.accordion-collapse').attr('path');
+				let old_filename = $(this).parents('tr').attr('filename');
+                let new_filename = prompt('New filename', old_filename);
+
+				$.post('/oj/be/manage/pro/filemanager', {
+					'reqtype': 'renamesinglefile',
+					'pro_id': pro_id,
+                    'old_filename': old_filename,
+                    'new_filename': new_filename,
+                    'path': path,
+				}, function (res) {
+					let msg = '';
+					let dialog_type = null;
+					if (res[0] == 'E') {
+						dialog_type = index.DIALOG_TYPE.error;
+						if (res == 'Eexist') {
+                            msg = `${new_filename} already exist.`;
+						} else {
+							msg = res;
+						}
+					} else {
+						dialog_type = index.DIALOG_TYPE.success;
+                        msg = `Rename ${old_filename} to ${new_filename} successfully.`;
+					}
+
+					index.show_notify_dialog(msg, dialog_type);
+                    index.reload();
+				});
+			});
+        });
+
+		document.querySelectorAll('button.delete-single-file').forEach(el => {
+			el.addEventListener('click', function (e) {
+                let path = $(this).parents('.accordion-collapse').attr('path');
+				let filename = $(this).parents('tr').attr('filename');
+
+				$.post('/oj/be/manage/pro/filemanager', {
+					'reqtype': 'deletesinglefile',
+					'pro_id': pro_id,
+                    'filename': filename,
+                    'path': path,
+				}, function (res) {
+					let msg = '';
+					let dialog_type = null;
+					if (res[0] == 'E') {
+						dialog_type = index.DIALOG_TYPE.error;
+						if (res == 'Enoext') {
+							msg = 'File not found';
+						} else {
+							msg = res;
+						}
+					} else {
+						dialog_type = index.DIALOG_TYPE.success;
+                        msg = `Delete ${filename} successfully.`;
+					}
+
+					index.show_notify_dialog(msg, dialog_type);
+                    index.reload();
+				});
+			});
+		});
+
+        let j_add_single_file = $("#addSingleFileModal");
+        $("button.add-single-file").on('click', function(e) {
+            j_add_single_file.attr('path', $(this).attr('path'));
+            j_add_single_file.find("input.filename").val("");
+            j_add_single_file.find("input.file").val("");
+            add_single_file_modal.show();
+        });
+
+        j_add_single_file.find("button.cancel").on('click', function(e) {
+            add_single_file_modal.hide();
+        });
+
+        j_add_single_file.find("button.upload").on('click', function(e) {
+            let path = j_add_single_file.attr('path');
+			function _update(token, filename) {
+				$.post('/oj/be/manage/pro/filemanager', {
+					'reqtype': 'addsinglefile',
+					'pack_token': token,
+					'pro_id': pro_id,
+                    'filename': filename,
+                    'path': path,
+				}, function (res) {
+					let msg = '';
+					let dialog_type = null;
+					if (res[0] == 'E') {
+                        msg = res;
+						dialog_type = index.DIALOG_TYPE.error;
+					} else {
+						dialog_type = index.DIALOG_TYPE.success;
+                        msg = `Upload single file ${filename} successfully`;
+					}
+
+					index.show_notify_dialog(msg, dialog_type);
+                    index.reload();
+				});
+			}
+            add_single_file_modal.hide();
+
+            let filename = j_add_single_file.find("input.filename").val();
+            if (filename.length == 0) {
+                index.show_notify_dialog('Filename should not empty', index.DIALOG_TYPE.error);
+                return;
+            }
+
+            let files = j_add_single_file.find("input.file")[0].files;
+
+            if (files.length == 0) {
+                index.show_notify_dialog('File should not empty', index.DIALOG_TYPE.error);
+                return;
+            }
+            let file = files[0];
+
+            pack.get_token().done(function(token) {
+                index.create_progress_bar('File Uploading...');
+
+                pack.send(token, file).done(function () {
+                    index.update_progress_bar_progress(100);
+                    index.remove_progress_bar();
+                    _update(token, filename);
+
+                    j_add_single_file.find("input.file").val("");
+                }).progress(function(prog) {
+                    index.update_progress_bar_progress(prog * 100);
+                });
+            });
+        });
+
+		document.querySelectorAll('button.update-single-file').forEach(el => {
+			let j_input = $(el).siblings('input');
+            let path = $(el).parents('.accordion-collapse').attr('path');
+
+			function _update(pack_token, filename) {
+				$.post('/oj/be/manage/pro/filemanager', {
+					'reqtype': 'updatesinglefile',
+					'pack_token': pack_token,
+					'pro_id': pro_id,
+                    'filename': filename,
+                    'path': path,
+				}, function (res) {
+					let msg = '';
+					let dialog_type = null;
+					if (res[0] == 'E') {
+						dialog_type = index.DIALOG_TYPE.error;
+						if (res == 'Enoext') {
+							msg = 'File not found';
+						} else {
+							msg = res;
+						}
+					} else {
+						dialog_type = index.DIALOG_TYPE.success;
+                        msg = `Update ${filename} successfully.`;
+					}
+
+					index.show_notify_dialog(msg, dialog_type);
+                    index.reload();
+				});
+			}
+
+			el.addEventListener('click', function (e) {
+				j_input.click();
+				e.preventDefault();
+				e.stopPropagation();
+			});
+
+			j_input.on('change', function (e) {
+				if (e.target.files.length == 0) {
+					return;
+				}
+
+				let filename = $(this).parents('tr').attr('filename');
+				let file = e.target.files[0];
+				pack.get_token().done(function(token) {
+					index.create_progress_bar('Uploading...');
+
+					pack.send(token, file).done(function () {
+						index.update_progress_bar_progress(100);
+						index.remove_progress_bar();
+						_update(token, filename);
+						j_input.val(''); // for the same file upload
+
+					}).progress(function(prog) {
+						index.update_progress_bar_progress(prog * 100);
+					});
+				});
+			});
+		});
+	}
+</script>
+{% end %}
+
+{% block content %}
+<div class="modal fade" id="previewModal" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="preview-title">Preview File</h5>
+			</div>
+
+			<div class="modal-body">
+				<pre id="code"
+					data-language=""
+					data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"
+				>
+					<code class=""></code>
+				</pre>
+			</div>
+
+			<div class="modal-footer">
+                <a href="" id="downloadLink">Download(WIP)</a>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="addSingleFileModal" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="preview-title">Add Single File</h5>
+			</div>
+
+			<div class="modal-body">
+                <form>
+                    <label for="" class="form-label">Filename</label>
+                    <input class="form-control filename" type="text">
+                    <label for="" class="form-label">File</label>
+                    <input type="file" class="form-control file">
+                </form>
+			</div>
+
+			<div class="modal-footer">
+				<button class="btn btn-primary upload">Upload</button>
+				<button class="btn btn-secondary cancel">Cancel</button>
+			</div>
+		</div>
+
+	</div>
+</div>
+
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+	<div class="accordion" id="dirs">
+	{% for dir_idx, dir in enumerate(dirs) %}
+		<div class="accordion-item">
+			<h2 class="accordion-header">
+					<button
+						class="accordion-button"
+						type="button"
+						data-bs-toggle="collapse"
+						data-bs-target="#collapse{{ dir_idx }}"
+						aria-expanded="true"
+						aria-controls="collapseOne"
+					>
+                        {{ f"problem/{pro_id}/{dir['path']}" }}
+					</button>
+			</h2>
+            <div id="collapse{{ dir_idx }}" class="accordion-collapse collapse" data-bs-parent="#tests" path="{{ dir['path'] }}">
+				<div class="accordion-body">
+                    <button class="btn btn-primary add-single-file" path="{{ dir['path'] }}">Add Single File</button>
+
+					<table class="table table-hover table-sm table-responsive-sm my-3">
+						<thead>
+							<tr>
+								<th scope="col">#</th>
+                                <th scope="col">Filename</th>
+								<th scope="col">Operation</th>
+							</tr>
+						</thead>
+
+						<tbody>
+							{% for file_idx, filename in enumerate(dir['files']) %}
+                                <tr idx="{{ file_idx }}" filename="{{ filename }}">
+									<th scope="row">{{ file_idx + 1 }}</th>
+                                    <td><a class="preview-file">{{ filename }}</a></td>
+                                    <td>
+                                        <div class="btn-toolbar">
+                                            <input type="file" style="display: none;">
+                                            <button class="btn btn-primary me-2 update-single-file">Update</button>
+                                            <button class="btn btn-danger me-2 delete-single-file">Delete</button>
+                                            <button class="btn btn-secondary me-2 rename-single-file">Rename</button>
+                                            <button class="btn btn-secondary me-2 download-single-file">Download(WIP)</button>
+                                        </div>
+                                    </td>
+								</tr>
+							{% end %}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	{% end %}
+	</div>
+</div>
+{% end %}

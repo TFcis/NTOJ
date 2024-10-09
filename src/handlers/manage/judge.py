@@ -1,7 +1,7 @@
 import asyncio
 import base64
 
-from msgpack import packb, unpackb
+from msgpack import packb
 
 import config
 from handlers.base import (

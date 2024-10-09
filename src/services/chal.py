@@ -1,13 +1,11 @@
 from dataclasses import dataclass
 import datetime
-import json
 import os
 
 import config
 from services.judge import JudgeServerClusterService
-from services.log import LogService
 from services.pro import ProService
-from services.user import Account, UserConst
+from services.user import Account
 
 
 class ChalConst:
@@ -115,7 +113,7 @@ class ChalSearchingParam:
         if self.contest != 0:
             query += f' AND "challenge"."contest_id"={self.contest} '
         else:
-            query += f' AND "challenge"."contest_id"=0 '
+            query += ' AND "challenge"."contest_id"=0 '
 
         return query
 
@@ -293,6 +291,7 @@ class ChalService:
         )
 
     async def emit_chal(self, chal_id, pro_id, testm_conf, comp_type, pri: int):
+        from services.pro import ProConst
         chal_id = int(chal_id)
         pro_id = int(pro_id)
 
@@ -309,32 +308,36 @@ class ChalService:
         result = result[0]
 
         acct_id, contest_id, timestamp = int(result['acct_id']), int(result['contest_id']), result['timestamp']
+        limit = testm_conf['limit']
+
+        if comp_type in limit:
+            timelimit = limit[comp_type]['timelimit']
+            memlimit = limit[comp_type]['memlimit']
+        else:
+            timelimit = limit['default']['timelimit']
+            memlimit = limit['default']['memlimit']
 
         async with self.db.acquire() as con:
             testl = []
-            for test_idx, test_conf in testm_conf.items():
+            insert_sql = []
+            for test_group_idx, test in testm_conf['test_group'].items():
                 testl.append(
                     {
-                        'test_idx': test_idx,
-                        'timelimit': test_conf['timelimit'],
-                        'memlimit': test_conf['memlimit'],
-                        'metadata': test_conf['metadata'],
+                        'test_idx': test_group_idx,
+                        'timelimit': timelimit,
+                        'memlimit': memlimit,
+                        'metadata': test['metadata'],
                     }
                 )
+                insert_sql.append(f'({chal_id}, {acct_id}, {pro_id}, {test_group_idx}, {ChalConst.STATE_JUDGE}, \'{timestamp}\')')
 
-                await con.execute(
-                    '''
-                        INSERT INTO "test"
-                        ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp")
-                        VALUES ($1, $2, $3, $4, $5, $6);
-                    ''',
-                    chal_id,
-                    acct_id,
-                    pro_id,
-                    test_idx,
-                    ChalConst.STATE_JUDGE,
-                    timestamp,
-                )
+            await con.execute(
+            f'''
+                INSERT INTO "test"
+                ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp") VALUES
+                {','.join(insert_sql)};
+            '''
+            )
 
         await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
 
@@ -346,9 +349,9 @@ class ChalService:
             await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
             return None, None
 
-        chalmeta = test_conf['chalmeta']
+        chalmeta = testm_conf['chalmeta']
 
-        if test_conf['comp_type'] == 'makefile':
+        if testm_conf['is_makefile']:
             comp_type = 'makefile'
 
         await JudgeServerClusterService.inst.send(
@@ -360,14 +363,13 @@ class ChalService:
                 'res_path': f'{pro_id}/res',
                 'metadata': chalmeta,
                 'comp_type': comp_type,
-                'check_type': test_conf['check_type'],
+                'check_type': ProConst.CHECKER_TYPE[testm_conf['check_type']],
             },
             pro_id,
             contest_id,
         )
 
-        await self.rs.hdel('rate@kernel_True', str(acct_id))
-        await self.rs.hdel('rate@kernel_False', str(acct_id))
+        await self.rs.hdel('rate', str(acct_id))
 
         return None, None
 
@@ -376,7 +378,6 @@ class ChalService:
         fltquery = flt.get_sql_query_str()
 
         max_status = ProService.inst.get_acct_limit(acct, contest=flt.contest != 0)
-        min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -391,11 +392,11 @@ class ChalService:
                     ON "challenge"."pro_id" = "problem"."pro_id" AND "problem"."status" <= {max_status}
                     LEFT JOIN "challenge_state"
                     ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                    WHERE "account"."acct_type" >= {min_accttype}
+                    WHERE 1=1
                 '''
                 + fltquery
                 + f'''
-                    ORDER BY "challenge"."timestamp" DESC OFFSET {off} LIMIT {num};
+                    ORDER BY "challenge"."chal_id" DESC OFFSET {off} LIMIT {num};
                 '''
             )
 
@@ -440,7 +441,6 @@ class ChalService:
     ):
         chal_id = int(chal_id)
         max_status = ProService.inst.get_acct_limit(acct)
-        min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -450,9 +450,8 @@ class ChalService:
                     INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
                     INNER JOIN "problem" ON "challenge"."pro_id" = "problem"."pro_id"
                     INNER JOIN "challenge_state" ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                    WHERE "account"."acct_type" >= $1 AND "problem"."status" <= $2 AND "challenge_state"."chal_id" = $3;
+                    WHERE "problem"."status" <= $1 AND "challenge_state"."chal_id" = $2;
                 ''',
-                min_accttype,
                 max_status,
                 chal_id,
             )
@@ -470,7 +469,6 @@ class ChalService:
 
     async def get_stat(self, acct: Account, flt: ChalSearchingParam):
         fltquery = flt.get_sql_query_str()
-        min_accttype = min(acct.acct_type, UserConst.ACCTTYPE_USER)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -480,7 +478,7 @@ class ChalService:
                         'ON "challenge"."acct_id" = "account"."acct_id" '
                         'LEFT JOIN "challenge_state" '
                         'ON "challenge"."chal_id"="challenge_state"."chal_id" '
-                        f'WHERE "account"."acct_type" >= {min_accttype}' + fltquery + ';'
+                        'WHERE 1=1' + fltquery + ';'
                 )
             )
 

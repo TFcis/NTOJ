@@ -15,7 +15,7 @@ class QuestionHandler(RequestHandler):
             return
 
         await self.rs.set(f"{self.acct.acct_id}_have_reply", packb(False))
-        await self.render('question', acct=self.acct, ques_list=ques_list)
+        await self.render('question', ques_list=ques_list)
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER])

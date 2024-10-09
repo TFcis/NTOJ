@@ -18,6 +18,8 @@ class UserConst:
     PW_MIN = 1
     NAME_MAX = 27  # 3227
     NAME_MIN = 1
+    MOTTO_MIN = 0
+    MOTTO_MAX = 100
 
     ACCTTYPE_KERNEL = 0
     ACCTTYPE_USER = 3
@@ -34,8 +36,9 @@ class Account:
     name: str
     photo: str
     cover: str
+    motto: str
     lastip: str
-    # TODO: Finish allow view other page
+    proclass_collection: list[int]
 
     def is_kernel(self):
         return self.acct_type == UserConst.ACCTTYPE_KERNEL
@@ -45,7 +48,7 @@ class Account:
 
 
 GUEST_ACCOUNT = Account(
-    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip=''
+    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', motto='', proclass_collection=[]
 )
 
 
@@ -126,9 +129,8 @@ class UserService:
 
         except (asyncpg.IntegrityConstraintViolationError, asyncpg.UniqueViolationError):
             async with self.db.acquire() as con:
-                # FIXME: if exist, decrease account_acct_id_seq
-                result = await con.fetch("SELECT currval('account_acct_id_seq');")
-                cur_acct_id = int(result[0]['currval'])
+                result = await con.fetch("SELECT last_value FROM account_acct_id_seq;")
+                cur_acct_id = int(result[0]['last_value'])
                 await con.execute(f"SELECT setval('account_acct_id_seq', {cur_acct_id - 1}, true);")
 
             return 'Eexist', None
@@ -152,7 +154,7 @@ class UserService:
 
         acct_id = int(acct_id)
 
-        if (acct := (await self.rs.exists(f'account@{acct_id}'))) is None:
+        if (await self.rs.exists(f'account@{acct_id}')) is None:
             async with self.db.acquire() as con:
                 result = await con.fetch('SELECT "acct_id","lastip" FROM "account" WHERE "acct_id" = $1;', acct_id)
 
@@ -203,7 +205,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip"
+                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "motto", "proclass_collection"
                         FROM "account" WHERE "acct_id" = $1;
                     ''',
                     acct_id,
@@ -220,7 +222,9 @@ class UserService:
                 name=result['name'],
                 photo=result['photo'],
                 cover=result['cover'],
+                motto=result['motto'],
                 lastip=result['lastip'],
+                proclass_collection=result['proclass_collection'],
             )
             b_acct = pickle.dumps(acct)
 
@@ -229,7 +233,7 @@ class UserService:
 
         return None, acct
 
-    async def update_acct(self, acct_id, acct_type, name, photo, cover):
+    async def update_acct(self, acct_id, acct_type, name, photo, cover, motto, proclass_collection):
         if acct_type not in [UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER]:
             return 'Eparam1', None
         name_len = len(name)
@@ -237,18 +241,26 @@ class UserService:
             return 'Enamemin', None
         if name_len > UserConst.NAME_MAX:
             return 'Enamemax', None
+        motto_len = len(motto)
+        if motto_len < UserConst.MOTTO_MIN:
+            return 'Emottomin', None
+        if motto_len > UserConst.MOTTO_MAX:
+            return 'Emottomax', None
+
         acct_id = int(acct_id)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
                     UPDATE "account"
-                    SET "acct_type" = $1, "name" = $2, "photo" = $3, "cover" = $4 WHERE "acct_id" = $5 RETURNING "acct_id";
+                    SET "acct_type" = $1, "name" = $2, "photo" = $3, "cover" = $4, "motto" = $5, "proclass_collection" = $6 WHERE "acct_id" = $7 RETURNING "acct_id";
                 ''',
                 acct_type,
                 name,
                 photo,
                 cover,
+                motto,
+                proclass_collection,
                 acct_id,
             )
             if len(result) != 1:
@@ -317,7 +329,9 @@ class UserService:
                     name=name,
                     photo='',
                     cover='',
+                    motto='',
                     lastip=lastip,
+                    proclass_collection=[],
                 )
 
                 if private:

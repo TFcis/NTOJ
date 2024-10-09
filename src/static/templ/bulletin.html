@@ -1,6 +1,6 @@
 <script>
     function init() {
-        let desc_tex = `{% raw bulletin['content'] %}`
+        let desc_tex = `{% raw bulletin['content'].replace('\\', '\\\\').replace('`', '\\`') %}`
 
         let descEle = document.getElementById('content');
         descEle.innerHTML = DOMPurify.sanitize(marked.parse(desc_tex));

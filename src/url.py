@@ -1,5 +1,5 @@
 # from auto import AutoHandler
-from handlers.acct import AcctConfigHandler, AcctHandler, SignHandler
+from handlers.acct import AcctConfigHandler, AcctHandler, AcctProClassHandler, SignHandler
 from handlers.api import ApiHandler
 from handlers.board import BoardHandler
 from handlers.bulletin import BulletinHandler, BulletinSub
@@ -46,6 +46,7 @@ def get_url(db, rs, pool):
         (r'/board/(\d+)', BoardHandler, args),
         (r'/sign', SignHandler, args),
         (r'/acct/(\d+)', AcctHandler, args),
+        (r'/acct/proclass/(\d+)', AcctProClassHandler, args),
         (r'/acctedit', AcctConfigHandler, args),
         (r'/acctedit/(\d+)', AcctConfigHandler, args),
         (r'/proset', ProsetHandler, args),
@@ -63,6 +64,7 @@ def get_url(db, rs, pool):
         (r'/question', QuestionHandler, args),
         (r'/set-tags', ProTagsHandler, args),
         (r'/log', LogHandler, args),
+        (r'/log/(\d+)', LogHandler, args),
         (r'/rank/(\d+)', ProRankHandler, args),
         (r'/users', UserRankHandler, args),
         (r'/code', CodeHandler, args),

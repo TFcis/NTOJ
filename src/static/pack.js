@@ -32,10 +32,17 @@ var pack = new function() {
         var lt = 0;
 
         ws.onopen = function(e) {
-            ws.send(JSON.stringify({
-                'pack_token' : pack_token,
-                'pack_size' : file.size
-            }));
+            file.arrayBuffer()
+                .then(file_buffer => {
+                    const word_array = CryptoJS.lib.WordArray.create(new Uint8Array(file_buffer));
+                    const hash_hex = CryptoJS.SHA1(word_array).toString(CryptoJS.enc.Hex);
+
+                    ws.send(JSON.stringify({
+                        'pack_token' : pack_token,
+                        'pack_size' : file.size,
+                        'sha-1': hash_hex,
+                    }));
+                });
         };
         ws.onmessage = function(e) {
             var size;
@@ -52,7 +59,7 @@ var pack = new function() {
                 remain -= size;
 
                 ct = new Date().getTime();
-                if(ct - lt > 500) {
+                if (ct - lt > 500) {
                     defer.notify(off / file.size);
                     lt = ct;
                 }

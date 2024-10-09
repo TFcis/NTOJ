@@ -1,0 +1,33 @@
+{
+    "limit": {
+        "default": {
+            "timelimit": 1000,
+            "memlimit": 524288
+        }
+    },
+    "compile": "g++",
+    "score": "rate",
+    "check": "ioredir",
+    "test": [
+        {
+            "data": [
+                1, 2, 3, 4, 5
+            ],
+            "weight": 100
+        }
+    ],
+    "metadata": {
+        "redir_test": {
+            "pipeout": 1,
+            "testin": 0,
+            "testout": -1,
+            "pipein": -1
+        },
+        "redir_check": {
+            "ansin": 2,
+            "testin": -1,
+            "pipeout": 0,
+            "pipein": -1
+        }
+    }
+}

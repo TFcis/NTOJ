@@ -1,4 +1,4 @@
-import tornado
+import tornado.web
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.group import GroupConst, GroupService

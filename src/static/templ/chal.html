@@ -88,7 +88,7 @@
             $.getScript('/oj/third/prism.js');
 	    });
 
-        {% if acct_id == chal['acct_id'] %}
+        {% if user.acct_id == chal['acct_id'] %}
         $('#report_pro_button').on('click', function(e) {
             index.go(`/oj/report/?chal_id=${chal_id}`);
         });
@@ -153,7 +153,7 @@
     {% if rechal == True %}
         <button id="rechal" class="btn btn-warning">Rechallenge</button>
     {% end %}
-    {% if chal['acct_id'] == acct_id %}
+    {% if chal['acct_id'] == user.acct_id %}
         <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
     {% end %}
     </div>

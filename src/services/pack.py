@@ -38,6 +38,10 @@ class PackService:
 
         os.remove(f'tmp/{pack_token}')
 
+    def clear(self, pack_token):
+        if os.path.exists(f'tmp/{pack_token}'):
+            os.remove(f'tmp/{pack_token}')
+
     async def _run_and_wait_process(self, program, *args):
         process = await asyncio.create_subprocess_exec(program, *args)
         returncode = await process.wait()

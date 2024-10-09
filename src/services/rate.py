@@ -14,8 +14,7 @@ class RateService:
         RateService.inst = self
 
     async def get_acct_rate_and_chal_cnt(self, acct: Account):
-        kernel = acct.is_kernel()
-        key = f'rate@kernel_{kernel}'
+        key = 'rate'
         acct_id = acct.acct_id
 
         if (rate_data := await self.rs.hget(key, acct_id)) is None:
@@ -37,31 +36,24 @@ class RateService:
                 ac_chal_cnt = ac_chal_cnt['count']
 
                 result = await con.fetch(
-                    (
-                        'SELECT '
-                        'SUM("test_valid_rate"."rate" * '
-                        '    CASE WHEN "valid_test"."timestamp" < "valid_test"."expire" '
-                        '    THEN 1 ELSE '
-                        '    (1 - (GREATEST(date_part(\'days\',justify_interval('
-                        '    age("valid_test"."timestamp","valid_test"."expire") '
-                        '    + \'1 days\')),-1)) * 0.15) '
-                        '    END) '
-                        'AS "rate" FROM "test_valid_rate" '
-                        'INNER JOIN ('
-                        '    SELECT "test"."pro_id","test"."test_idx",'
-                        '    MIN("test"."timestamp") AS "timestamp","problem"."expire" '
-                        '    FROM "test" '
-                        '    INNER JOIN "account" '
-                        '    ON "test"."acct_id" = "account"."acct_id" '
-                        '    INNER JOIN "problem" '
-                        '    ON "test"."pro_id" = "problem"."pro_id" '
-                        '    WHERE "account"."acct_id" = $1 '
-                        '    AND "test"."state" = $2 '
-                        '    GROUP BY "test"."pro_id","test"."test_idx","problem"."expire"'
-                        ') AS "valid_test" '
-                        'ON "test_valid_rate"."pro_id" = "valid_test"."pro_id" '
-                        'AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";'
-                    ),
+                    '''
+                        SELECT
+                        SUM("test_valid_rate"."rate") AS "rate" FROM "test_valid_rate"
+                        INNER JOIN (
+                            SELECT "test"."pro_id","test"."test_idx",
+                            MIN("test"."timestamp") AS "timestamp"
+                            FROM "test"
+                            INNER JOIN "account"
+                            ON "test"."acct_id" = "account"."acct_id"
+                            INNER JOIN "problem"
+                            ON "test"."pro_id" = "problem"."pro_id"
+                            WHERE "account"."acct_id" = $1
+                            AND "test"."state" = $2
+                            GROUP BY "test"."pro_id","test"."test_idx"
+                        ) AS "valid_test"
+                        ON "test_valid_rate"."pro_id" = "valid_test"."pro_id"
+                        AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";
+                    ''',
                     acct_id,
                     int(ChalConst.STATE_AC),
                 )
@@ -145,22 +137,31 @@ class RateService:
             self, acct: Account, contest_id: int = 0, starttime='1970-01-01 00:00:00.000',
             endtime='2100-01-01 00:00:00.000'
     ):
+        from services.pro import ProConst
         if isinstance(starttime, str):
             starttime = datetime.datetime.fromisoformat(starttime)
 
         if isinstance(endtime, str):
             endtime = datetime.datetime.fromisoformat(endtime)
 
+        problem_status_sql = ''
+        if contest_id != 0:
+            problem_status_sql = f'AND "problem"."status" = {ProConst.STATUS_CONTEST}'
+        elif acct.is_kernel():
+            problem_status_sql = f'AND "problem"."status" <= {ProConst.STATUS_HIDDEN} AND "problem"."status" != {ProConst.STATUS_CONTEST}'
+        else:
+            problem_status_sql = f'AND "problem"."status" <= {ProConst.STATUS_ONLINE} AND "problem"."status" != {ProConst.STATUS_CONTEST}'
+
         async with self.db.acquire() as con:
             result = await con.fetch(
-                '''
+                f'''
                     SELECT "challenge"."pro_id", MAX("challenge_state"."rate") AS "score",
-                    COUNT("challenge_state") AS "count"
+                    COUNT("challenge_state") AS "count", MIN("challenge_state"."state") as "state"
                     FROM "challenge"
                     INNER JOIN "challenge_state"
                     ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
                     INNER JOIN "problem"
-                    ON "challenge"."pro_id" = "problem"."pro_id"
+                    ON "challenge"."pro_id" = "problem"."pro_id" {problem_status_sql}
                     WHERE "challenge"."contest_id" = $2 AND "challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4
                     GROUP BY "challenge"."pro_id";
                 ''',
@@ -171,10 +172,11 @@ class RateService:
             )
 
         statemap = {}
-        for pro_id, rate, count in result:
+        for pro_id, rate, count, state in result:
             statemap[pro_id] = {
                 'rate': rate,
                 'count': count,
+                'state': state,
             }
 
         return None, statemap

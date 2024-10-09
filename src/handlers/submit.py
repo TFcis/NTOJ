@@ -21,7 +21,6 @@ class SubmitHandler(RequestHandler):
 
         pro_id = int(pro_id)
 
-        # TODO: if problem is makefile type, we should restrict compiler type
         allow_compilers = ChalConst.ALLOW_COMPILERS
         if self.contest:
             if not self.contest.is_running() and not self.contest.is_admin(self.acct):
@@ -49,6 +48,13 @@ class SubmitHandler(RequestHandler):
         if pro['status'] == ProService.STATUS_OFFLINE:
             self.error('Eacces')
             return
+
+        if not pro['allow_submit']:
+            self.error('Eacces')
+            return
+
+        if pro['testm_conf']['is_makefile']:
+            allow_compilers = list(filter(lambda compiler: compiler in ['gcc', 'g++', 'clang', 'clang++'], allow_compilers))
 
         await self.render('submit', pro=pro,
                           allow_compilers=allow_compilers, contest_id=self.contest.contest_id if self.contest else 0)
@@ -103,6 +109,10 @@ class SubmitHandler(RequestHandler):
                 self.error('Eacces')
                 return
 
+            if not pro['allow_submit']:
+                self.error('Eacces')
+                return
+
             err, chal_id = await ChalService.inst.add_chal(pro_id, self.acct.acct_id, contest_id, comp_type, code)
             if err:
                 self.error(err)
@@ -118,7 +128,7 @@ class SubmitHandler(RequestHandler):
 
                 chal_id = int(self.get_argument('chal_id'))
 
-                err, ret = await ChalService.inst.reset_chal(chal_id)
+                err, _ = await ChalService.inst.reset_chal(chal_id)
                 err, chal = await ChalService.inst.get_chal(chal_id)
 
                 pro_id = chal['pro_id']
@@ -144,7 +154,7 @@ class SubmitHandler(RequestHandler):
             return
 
         if reqtype == 'submit' and pro['status'] in [ProService.STATUS_ONLINE, ProService.STATUS_CONTEST]:
-            await self.rs.publish('challist_sub', 1)
+            await self.rs.publish('challist_sub', str(1))
 
         self.finish(json.dumps(chal_id))
         return
@@ -168,25 +178,25 @@ class SubmitHandler(RequestHandler):
             return 'Ecomp'
 
         should_check_submit_cd = (
-                self.contest is None and not self.acct.is_kernel()  # not in contest
-                or
-                self.contest and self.acct.acct_id in self.contest.acct_list  # in contest
+            self.contest is None and not self.acct.is_kernel()  # not in contest
+            or
+            self.contest and self.acct.acct_id in self.contest.acct_list  # in contest
         )
 
+        name = ''
+        crc32 = ''
         if self.contest:
             name = f'contest_{self.contest.contest_id}_acct_{self.acct.acct_id}_pro_{pro_id}_compiler_{comp_type}'
             crc32 = str(zlib.crc32(code.encode('utf-8')))
 
-            if await self.rs.sismember(name, crc32):
+            if (await self.rs.sismember(name, crc32)):
                 return 'Esame'
-
-            await self.rs.sadd(name, crc32)
-            await self.rs.expire(name, time=(self.contest.contest_end - self.contest.contest_start))
 
         if should_check_submit_cd:
             last_submit_name = f"last_submit_time_{self.acct.acct_id}"
             if (last_submit_time := (await self.rs.get(last_submit_name))) is None:
-                await self.rs.set(last_submit_name, int(time.time()), ex=submit_cd_time)  # ex means expire
+                if submit_cd_time:
+                    await self.rs.set(last_submit_name, int(time.time()), ex=submit_cd_time)  # ex means expire
 
             else:
                 last_submit_time = int(str(last_submit_time)[2:-1])
@@ -195,5 +205,9 @@ class SubmitHandler(RequestHandler):
 
                 else:
                     await self.rs.set(last_submit_name, int(time.time()))
+
+        if self.contest:
+            await self.rs.sadd(name, crc32)
+            await self.rs.expire(name, time=(self.contest.contest_end - self.contest.contest_start))
 
         return None

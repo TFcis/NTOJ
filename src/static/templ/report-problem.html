@@ -7,7 +7,7 @@
         j_submit.find('button.submit').on('click', function(e) {
             let info = j_submit.find('textarea.info').val();
             let chal_id = "{{ chal_id }}";
-            let acct_id = "{{ acct.acct_id }}";
+            let acct_id = "{{ user.acct_id }}";
 
             $.post('/oj/be/question', {
                 'reqtype': 'ask',

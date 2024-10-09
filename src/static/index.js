@@ -126,6 +126,10 @@ var index = new function() {
         $(document).on('click', 'a', function(e) {
             let cur_href = location.href;
             let href = $(this).attr('href');
+            if (href == undefined || href.length == 0) return;
+            if ($(this).attr('target') !== "") {
+                return;
+            }
             window.history.pushState(null, document.title, $(this).attr('href'));
 
             if (href.startsWith('?')) {
@@ -175,7 +179,7 @@ var index = new function() {
 
         acct_id = $('#indexjs').attr('acct_id');
         contest_id = $('#indexjs').attr('contest_id');
-        if (acct_id != '') {
+        if (acct_id != '0') {
             that.acct_id = parseInt(acct_id);
             j_navlist.find('li.leave').show();
         } else {
@@ -259,7 +263,7 @@ var index = new function() {
             return;
         }
 
-        progressbar.querySelector('.modal-header').textContent = title;
+        progressbar.querySelector('.text-center').textContent = title;
     }
 
     that.remove_progress_bar = function () {

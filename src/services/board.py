@@ -1,10 +1,5 @@
 import datetime
 
-from msgpack import packb, unpackb
-
-from services.group import GroupService
-
-
 class BoardConst:
     STATUS_ONLINE = 0
     STATUS_HIDDEN = 1

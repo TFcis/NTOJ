@@ -12,7 +12,6 @@ class IndexHandler(RequestHandler):
         contest_manage = False
         contest_id = 0
 
-        manage = False
         reply = False
         ask_cnt = 0
 
@@ -28,21 +27,15 @@ class IndexHandler(RequestHandler):
                 if contest.is_admin(self.acct):
                     contest_manage = True
 
-        if self.acct.is_guest():
-            name = ''
+        if self.acct.is_kernel():
+            _, _, ask_cnt = await QuestionService.inst.get_asklist()
 
-        else:
-            name = self.acct.name
+        elif not self.acct.is_guest():
+            reply = await QuestionService.inst.have_reply(self.acct.acct_id)
 
-            if self.acct.is_kernel():
-                manage = True
-                _, _, ask_cnt = await QuestionService.inst.get_asklist()
-
-            else:
-                reply = await QuestionService.inst.have_reply(self.acct.acct_id)
-
-        await self.render('index', name=name, manage=manage, ask_cnt=ask_cnt, reply=reply,
+        await self.render('index', ask_cnt=ask_cnt, reply=reply,
                           is_in_contest=is_in_contest, contest_manage=contest_manage, contest_id=contest_id)
+
 
 
 class AbouotHandler(RequestHandler):

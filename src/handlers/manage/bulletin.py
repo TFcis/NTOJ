@@ -1,5 +1,3 @@
-import tornado.web
-
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.bulletin import BulletinService
 from services.log import LogService
@@ -43,7 +41,12 @@ class ManageBulletinHandler(RequestHandler):
             await BulletinService.inst.add_bulletin(title, content, self.acct.acct_id, color, pinned)
 
             await LogService.inst.add_log(
-                f"{self.acct.name} added a line on bulletin: \"{title}\".", 'manage.inform.add'
+                f"{self.acct.name} added a line on bulletin: \"{title}\".", 'manage.inform.add',
+                {
+                    "content": content,
+                    "is_pinned": pinned,
+                    "color": color,
+                }
             )
             await self.finish('S')
 
@@ -63,6 +66,11 @@ class ManageBulletinHandler(RequestHandler):
             await LogService.inst.add_log(
                 f"{self.acct.name} updated a line on bulletin: \"{title}\" which id is #{bulletin_id}.",
                 'manage.inform.update',
+                {
+                    "content": content,
+                    "is_pinned": pinned,
+                    "color": color,
+                }
             )
             await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct.acct_id, color, pinned)
             await self.finish('S')

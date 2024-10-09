@@ -43,19 +43,14 @@ class RequestHandler(tornado.web.RequestHandler):
     async def render(self, templ, **kwargs):
 
         class _encoder(json.JSONEncoder):
-            def default(self, obj):
-                if isinstance(obj, datetime.datetime):
-                    return obj.isoformat()
+            def default(self, o):
+                if isinstance(o, datetime.datetime):
+                    return o.isoformat()
 
                 else:
-                    return json.JSONEncoder.default(self, obj)
+                    return json.JSONEncoder.default(self, o)
 
-        from services.user import UserConst
-        if not self.acct.is_guest():
-            kwargs['acct_id'] = self.acct.acct_id
-
-        else:
-            kwargs['acct_id'] = ''
+        kwargs['user'] = self.acct
 
         if self.res_json is True:
             self.finish(json.dumps(kwargs, cls=_encoder))
@@ -83,7 +78,7 @@ class WebSocketSubHandler(tornado.websocket.WebSocketHandler):
         super().__init__(*args, **kwargs)
         self.settings['websocket_ping_interval'] = 10
 
-    def check_origin(self, origin: str) -> bool:
+    def check_origin(self, _: str) -> bool:
         return True
 
     def on_close(self) -> None:
@@ -113,16 +108,31 @@ def reqenv(func):
 
     return wrap
 
+GOTO_SIGN="""
+<script type="text/javascript" id="contjs">
+function init() {
+    index.go('/oj/sign/');
+}
+</script>
+"""
 
 def require_permission(acct_type):
     def decorator(func):
         async def wrap(self, *args, **kwargs):
             if isinstance(acct_type, list):
                 if self.acct.acct_type not in acct_type:
+                    if self.acct.is_guest():
+                        self.finish(GOTO_SIGN)
+                        return
+
                     await self.finish('Eacces')
                     return
 
             elif self.acct.acct_type != acct_type:
+                if self.acct.is_guest():
+                    self.finish(GOTO_SIGN)
+                    return
+
                 await self.finish('Eacces')
                 return
 

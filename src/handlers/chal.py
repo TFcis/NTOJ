@@ -88,7 +88,6 @@ class ChalListHandler(RequestHandler):
             pageoff=pageoff,
             ppro_id=ppro_id,
             pacct_id=pacct_id,
-            acct=self.acct,
             chalids=json.dumps(chalids),
             isadmin=isadmin,
         )

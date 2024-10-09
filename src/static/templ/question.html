@@ -1,7 +1,7 @@
 <script type="text/javascript">
     function init() {
         let j_form = $('#form');
-        let acct_id = "{{ acct.acct_id }}";
+        let acct_id = "{{ user.acct_id }}";
         j_form.find('button.submit').on('click', function(e) {
             let qtext = j_form.find('textarea.ques').val();
             $.post('/oj/be/question', {
@@ -27,7 +27,7 @@
 
     function rm_ques(idx) {
         let j_form = $('#form');
-        let acct_id = "{{ acct.acct_id }}"
+        let acct_id = "{{ user.acct_id }}"
 
         $.post('/oj/be/question', {
             'reqtype': 'rm_ques',
@@ -47,7 +47,7 @@
 </script>
 <div class="g-lg-12">
   <div>
-  Account : {{ acct.name }} {{ acct.acct_id }}
+  Account : {{ user.name }} {{ user.acct_id }}
   </div>
   <div id="form">
     {% for count, ques in enumerate(ques_list) %}

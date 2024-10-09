@@ -6,9 +6,29 @@
         let j_form = $("#form");
         let re = /[^0-9,\ ]/;
 
+        j_form.find("#desc").val(`{% raw proclass['desc'].replace('`', '\\`').replace('\\', '\\\\') %}`);
+
+        let desc_textarea = document.getElementById('desc');
+        let desc_preview = document.getElementById('descPreviewDialog');
+        let desc_preview_modal = new bootstrap.Modal(desc_preview);
+        desc_textarea.style.height = 'auto';
+        desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
+        desc_textarea.addEventListener('input', (event) => {
+            desc_textarea.style.height = 'auto';
+            desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
+        });
+
+        j_form.find('#preview').on('click', function(e) {
+            let body = desc_preview.querySelector('.modal-body');
+            body.innerHTML = DOMPurify.sanitize(marked.parse(desc_textarea.value));
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub, body]);
+            desc_preview_modal.show();
+        });
+
         j_form.find("#update").on('click', (event) => {
             let name = j_form.find("#name").val();
             let list = j_form.find("#list").val();
+            let proclass_type = j_form.find("#type").val();
 
             if (re.test(list)) {
                 index.show_notify_dialog("Problem List錯誤，請輸入數字、逗號與空白設定，範例：1, 2, 3", index.DIALOG_TYPE.warning);
@@ -17,14 +37,17 @@
 
             $.post('/oj/be/manage/proclass/update', {
                 reqtype: 'update',
-                pubclass_id: "{{ pubclass_id }}",
+                proclass_id: "{{ proclass_id }}",
                 name: name,
                 list: list,
+                desc: desc_textarea.value,
+                type: proclass_type,
             }, function(res) {
                 if (res[0] == 'E') {
 
                 } else {
-                    index.go(`/oj/manage/proclass/update?pubclassid=${res}`)
+                    index.show_notify_dialog('Update Proclass#{{ proclass_id }} success', index.DIALOG_TYPE.success);
+                    index.reload();
                 }
             });
         });
@@ -32,12 +55,13 @@
 		j_form.find("#remove").on('click', (event) => {
 			$.post('/oj/be/manage/proclass/update', {
 				reqtype: 'remove',
-				pubclass_id: "{{ pubclass_id }}"
+                proclass_id: "{{ proclass_id }}"
 			}, function(res) {
                 if (res[0] == 'E') {
 
                 } else {
-                    index.go("/oj/manage/proclass/")
+                    index.show_notify_dialog('Delete Proclass#{{ proclass_id }} success', index.DIALOG_TYPE.success);
+                    index.go("/oj/manage/proclass/");
                 }
 			});
 		});
@@ -49,21 +73,51 @@
 </script>
 {% end %}
 {% block content %}
+
+<div class="modal fade" id="descPreviewDialog" tabindex="-1" aria-hidden="true">
+<div class="modal-dialog modal-dialog-scrollable modal-xl">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Preview Markdown Render</h2>
+        </div>
+        <div class="modal-body">
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+    </div>
+</div>
+</div>
+
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
 	<form id="form">
 		<div class="mb-1">
             <label for="name" class="form-label">Name</label>
-			<input class="form-control" id="name" type="text" value="{{ pubclass['name'] }}">
+            <input class="form-control" id="name" type="text" value="{{ proclass['name'] }}">
+		</div>
+
+		<div class="mb-1">
+            <label for="name" class="form-label">ProClass Type</label>
+            <select class="form-select" id="type">
+                <option value="0" {% if proclass['type'] == 0 %} selected {% end %}>Public</option>
+                <option value="1" {% if proclass['type'] == 1 %} selected {% end %}>Hidden</option>
+            </select>
 		</div>
 
         <div class="mb-1">
             <label>Problem List</label>
-            {% set list = str(pubclass['list']) %}
+            {% set list = str(proclass['list']) %}
             <input class="form-control" id="list" type="text" value="{{ list[1:-1] }}">
+        </div>
+
+        <div class="mb-1">
+            <label>Description</label>
+            <textarea class="form-control" id="desc"></textarea>
         </div>
 
 		<div class="mt-2">
 			<button type="button" class="btn btn-primary" id="update">Update</button>
+            <button type="button" class="btn btn-secondary" id="preview">Preview Description</button>
 			<button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
 			<button type="button" class="btn btn-danger" id="remove">Remove</button>
 		</div>

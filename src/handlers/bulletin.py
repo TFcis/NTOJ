@@ -1,7 +1,5 @@
 import asyncio
 
-from redis import asyncio as aioredis
-
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
 from services.bulletin import BulletinService
 from services.judge import JudgeServerClusterService
