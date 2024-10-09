@@ -107,7 +107,6 @@ class ManageProHandler(RequestHandler):
                             if buffer:
                                 self.write(buffer)
                             else:
-                                f.close()
                                 self.finish()
                                 return
                     except:
