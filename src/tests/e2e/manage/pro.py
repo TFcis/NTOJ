@@ -121,11 +121,21 @@ class ManageProTest(AsyncTest):
                 'pack_type': '1',
                 'pack_token': '',
                 'tags': '',
+                'allow_submit': 'false',
             })
             self.assertEqual(res.text, 'S')
+            html = self.get_html('http://localhost:5501/manage/pro/update?proid=1', admin_session)
+            self.assertIsNone(html.select_one('input.allow-submit').get('checked'))
+            self.assertEqual(html.select_one('select.status > option[selected]').text, 'Hidden')
+            self.assertEqual(int(html.select_one('select.status > option[selected]').get('value')), ProConst.STATUS_HIDDEN)
 
             res = admin_session.get('http://localhost:5501/pro/1')
             self.assertNotEqual(res.text, 'Eacces')
+
+            html = self.get_html('http://localhost:5501/pro/1', admin_session)
+            submit_button = html.select_one('a.btn')
+            self.assertIn('btn-warning', submit_button.get('class'))
+            self.assertEqual(submit_button.text, 'Cannot Submit')
 
             with AccountContext('test1@test', 'test') as user_session:
                 res = user_session.get('http://localhost:5501/pro/1')
@@ -150,6 +160,7 @@ class ManageProTest(AsyncTest):
                 'pack_type': '1',
                 'pack_token': '',
                 'tags': '',
+                'allow_submit': 'true',
             })
             self.assertEqual(res.text, 'S')
             res = admin_session.get('http://localhost:5501/submit/1')
@@ -174,6 +185,7 @@ class ManageProTest(AsyncTest):
                 'pack_type': '1',
                 'pack_token': '',
                 'tags': '',
+                'allow_submit': 'true',
             })
 
             # test rechal
