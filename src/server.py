@@ -36,10 +36,10 @@ def sig_handler(server, db, rs, pool, sig, frame):
             for task in asyncio.all_tasks():
                 task.cancel()
 
-            io_loop.run_in_executor(func=db.close, executor=None)
-            io_loop.run_in_executor(func=rs.aclose, executor=None)
-            io_loop.run_in_executor(func=pool.aclose, executor=None)
-            io_loop.run_in_executor(func=JudgeServerClusterService.inst.disconnect_all_server, executor=None)
+            io_loop.add_callback(db.close)
+            io_loop.add_callback(rs.aclose)
+            io_loop.add_callback(pool.aclose)
+            io_loop.add_callback(JudgeServerClusterService.inst.disconnect_all_server)
             io_loop.stop()
 
             print('Shutdown finally')
