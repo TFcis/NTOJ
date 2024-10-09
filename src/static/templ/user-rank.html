@@ -31,6 +31,7 @@
         <th>Rank</th>
         <th></th> <!-- for avatar -->
         <th>Account</th>
+        <th>Motto</th>
         <th>Accepted</th>
         <th>AC Ratio</th>
         </tr>
@@ -56,6 +57,7 @@
                     {% end %}
                     <td><img class="img-fluid" width="30" height="30" src="{{ acct.photo }}" /></td>
                     <td><a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.name }}</a></td>
+                    <td>{{ acct.motto }}</td>
                     <td>{{ acct.rate_data['ac_pro_cnt'] }}</td>
                     <td>
                     {% if acct.rate_data['all_cnt'] != 0 %}

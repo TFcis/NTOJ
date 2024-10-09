@@ -18,6 +18,8 @@ class UserConst:
     PW_MIN = 1
     NAME_MAX = 27  # 3227
     NAME_MIN = 1
+    MOTTO_MIN = 0
+    MOTTO_MAX = 100
 
     ACCTTYPE_KERNEL = 0
     ACCTTYPE_USER = 3
@@ -34,8 +36,8 @@ class Account:
     name: str
     photo: str
     cover: str
+    motto: str
     lastip: str
-    # TODO: Finish allow view other page
 
     def is_kernel(self):
         return self.acct_type == UserConst.ACCTTYPE_KERNEL
@@ -45,7 +47,7 @@ class Account:
 
 
 GUEST_ACCOUNT = Account(
-    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip=''
+    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', motto=''
 )
 
 
@@ -203,7 +205,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip"
+                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "motto"
                         FROM "account" WHERE "acct_id" = $1;
                     ''',
                     acct_id,
@@ -220,6 +222,7 @@ class UserService:
                 name=result['name'],
                 photo=result['photo'],
                 cover=result['cover'],
+                motto=result['motto'],
                 lastip=result['lastip'],
             )
             b_acct = pickle.dumps(acct)
@@ -229,7 +232,7 @@ class UserService:
 
         return None, acct
 
-    async def update_acct(self, acct_id, acct_type, name, photo, cover):
+    async def update_acct(self, acct_id, acct_type, name, photo, cover, motto):
         if acct_type not in [UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER]:
             return 'Eparam1', None
         name_len = len(name)
@@ -237,18 +240,25 @@ class UserService:
             return 'Enamemin', None
         if name_len > UserConst.NAME_MAX:
             return 'Enamemax', None
+        motto_len = len(motto)
+        if motto_len < UserConst.MOTTO_MIN:
+            return 'Emottomin', None
+        if motto_len > UserConst.MOTTO_MAX:
+            return 'Emottomax', None
+
         acct_id = int(acct_id)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
                     UPDATE "account"
-                    SET "acct_type" = $1, "name" = $2, "photo" = $3, "cover" = $4 WHERE "acct_id" = $5 RETURNING "acct_id";
+                    SET "acct_type" = $1, "name" = $2, "photo" = $3, "cover" = $4, "motto" = $5 WHERE "acct_id" = $6 RETURNING "acct_id";
                 ''',
                 acct_type,
                 name,
                 photo,
                 cover,
+                motto,
                 acct_id,
             )
             if len(result) != 1:
@@ -317,6 +327,7 @@ class UserService:
                     name=name,
                     photo='',
                     cover='',
+                    motto='',
                     lastip=lastip,
                 )
 

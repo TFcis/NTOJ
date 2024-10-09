@@ -79,6 +79,7 @@ class AcctConfigHandler(RequestHandler):
             name = self.get_argument('name')
             photo = self.get_argument('photo')
             cover = self.get_argument('cover')
+            motto = self.get_argument('motto')
             target_acct_id = self.get_argument('acct_id')
 
             if target_acct_id != str(self.acct.acct_id):
@@ -86,7 +87,7 @@ class AcctConfigHandler(RequestHandler):
                 return
 
             err, _ = await UserService.inst.update_acct(
-                self.acct.acct_id, self.acct.acct_type, name, photo, cover
+                self.acct.acct_id, self.acct.acct_type, name, photo, cover, motto
             )
             if err:
                 self.error(err)

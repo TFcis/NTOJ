@@ -128,6 +128,7 @@ class UserRankHandler(RequestHandler):
             rate_data['ac_pro_cnt'] = sum(1 for r in ratemap[acct.acct_id].values() if r['rate'] == 100)
             acct.rate_data = rate_data
             acct.photo = t_acct.photo
+            acct.motto = t_acct.motto
 
         total_cnt = len(acctlist)
         acctlist.sort(
