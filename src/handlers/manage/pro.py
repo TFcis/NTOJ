@@ -90,10 +90,9 @@ class ManageProHandler(RequestHandler):
         if page == "add" and reqtype == 'addpro':
             name = self.get_argument('name')
             status = int(self.get_argument('status'))
-            expire = None
             pack_token = self.get_argument('pack_token')
 
-            err, pro_id = await ProService.inst.add_pro(name, status, expire, pack_token)
+            err, pro_id = await ProService.inst.add_pro(name, status, pack_token)
             await LogService.inst.add_log(
                 f"{self.acct.name} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro'
             )
@@ -207,7 +206,6 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 name = self.get_argument('name')
                 status = int(self.get_argument('status'))
-                expire = None
                 pack_type = int(self.get_argument('pack_type'))
                 pack_token = self.get_argument('pack_token')
                 tags = self.get_argument('tags')
@@ -217,7 +215,7 @@ class ManageProHandler(RequestHandler):
                     pack_token = None
 
                 err, _ = await ProService.inst.update_pro(
-                    pro_id, name, status, expire, pack_type, pack_token, tags, allow_submit
+                    pro_id, name, status, pack_type, pack_token, tags, allow_submit
                 )
                 await LogService.inst.add_log(
                     f"{self.acct.name} had been send a request to update the problem #{pro_id}", 'manage.pro.update.pro'

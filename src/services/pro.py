@@ -54,7 +54,7 @@ class ProService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 """
-                    SELECT "name", "status", "expire", "tags", "allow_submit"
+                    SELECT "name", "status", "tags", "allow_submit"
                     FROM "problem" WHERE "pro_id" = $1 AND "status" <= $2;
                 """,
                 pro_id,
@@ -64,15 +64,12 @@ class ProService:
                 return "Enoext", None
             result = result[0]
 
-            name, status, expire, tags, allow_submit = (
+            name, status, tags, allow_submit = (
                 result["name"],
                 result["status"],
-                result["expire"],
                 result["tags"],
                 result["allow_submit"],
             )
-            if expire == datetime.datetime.max:
-                expire = None
 
             result = await con.fetch(
                 """
@@ -114,7 +111,6 @@ class ProService:
                 "pro_id": pro_id,
                 "name": name,
                 "status": status,
-                "expire": expire,
                 "testm_conf": testm_conf,
                 "tags": tags,
                 "allow_submit": allow_submit,
@@ -126,11 +122,6 @@ class ProService:
     # TODO: Too many statement
     async def list_pro(self, acct: Account = None, is_contest=False, state=False):
         from services.chal import ChalConst
-        def _mp_encoder(obj):
-            if isinstance(obj, datetime.datetime):
-                return obj.astimezone(datetime.timezone.utc).timestamp()
-
-            return obj
 
         if acct is None:
             max_status = ProService.STATUS_ONLINE
@@ -168,18 +159,11 @@ class ProService:
         if (prolist := (await self.rs.hget("prolist", field))) is not None:
             prolist = unpackb(prolist)
 
-            for pro in prolist:
-                if (expire := pro["expire"]) is not None:
-                    expire = datetime.datetime.fromtimestamp(expire)
-                    expire = expire.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))
-
-                pro["expire"] = expire
-
         else:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     """
-                        SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."expire", "problem"."tags"
+                        SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."tags"
                         FROM "problem"
                         WHERE "problem"."status" <= $1
                         ORDER BY "pro_id" ASC;
@@ -188,10 +172,7 @@ class ProService:
                 )
 
             prolist = []
-            for pro_id, name, status, expire, tags in result:
-                if expire == datetime.datetime.max:
-                    expire = None
-
+            for pro_id, name, status, tags in result:
                 if tags is None:
                     tags = ""
 
@@ -200,15 +181,11 @@ class ProService:
                         "pro_id": pro_id,
                         "name": name,
                         "status": status,
-                        "expire": expire,
                         "tags": tags,
                     }
                 )
 
-            await self.rs.hset("prolist", field, packb(prolist, default=_mp_encoder))
-
-        now = datetime.datetime.utcnow()
-        now = now.replace(tzinfo=datetime.timezone.utc)
+            await self.rs.hset("prolist", field, packb(prolist))
 
         for pro in prolist:
             pro_id = pro["pro_id"]
@@ -221,20 +198,10 @@ class ProService:
                 if pro["state"] != ChalConst.STATE_AC:
                     pro["tags"] = ""
 
-            if pro["expire"] is None:
-                pro["outdate"] = False
-
-            else:
-                delta = (pro["expire"] - now).total_seconds()
-                if delta < 0:
-                    pro["outdate"] = True
-                else:
-                    pro["outdate"] = False
-
         return None, prolist
 
     # TODO: Too many args
-    async def add_pro(self, name, status, expire, pack_token):
+    async def add_pro(self, name, status, pack_token):
         name_len = len(name)
         if name_len < ProService.NAME_MIN:
             return "Enamemin", None
@@ -243,19 +210,16 @@ class ProService:
         del name_len
         if status < ProService.STATUS_ONLINE or status > ProService.STATUS_OFFLINE:
             return "Eparam", None
-        if expire is None:
-            expire = datetime.datetime(2099, 12, 31, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 """
                     INSERT INTO "problem"
-                    ("name", "status", "expire")
-                    VALUES ($1, $2, $3) RETURNING "pro_id";
+                    ("name", "status")
+                    VALUES ($1, $2) RETURNING "pro_id";
                 """,
                 name,
                 status,
-                expire,
             )
             if len(result) != 1:
                 return "Eunk", None
@@ -271,7 +235,7 @@ class ProService:
         return None, pro_id
 
     # TODO: Too many args
-    async def update_pro(self, pro_id, name, status, expire, pack_type, pack_token=None, tags="", allow_submit=True):
+    async def update_pro(self, pro_id, name, status, pack_type, pack_token=None, tags="", allow_submit=True):
         name_len = len(name)
         if name_len < ProService.NAME_MIN:
             return "Enamemin", None
@@ -283,19 +247,15 @@ class ProService:
         if tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", tags):
             return "Etags", None
 
-        if expire is None:
-            expire = datetime.datetime(2099, 12, 31, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
-
         async with self.db.acquire() as con:
             result = await con.fetch(
                 """
                     UPDATE "problem"
-                    SET "name" = $1, "status" = $2, "expire" = $3, "tags" = $4, "allow_submit" = $5
-                    WHERE "pro_id" = $6 RETURNING "pro_id";
+                    SET "name" = $1, "status" = $2, "tags" = $3, "allow_submit" = $4
+                    WHERE "pro_id" = $5 RETURNING "pro_id";
                 """,
                 name,
                 status,
-                expire,
                 tags,
                 allow_submit,
                 int(pro_id),
