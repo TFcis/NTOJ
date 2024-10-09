@@ -3,8 +3,7 @@ import datetime
 import tornado.web
 
 from handlers.base import RequestHandler, reqenv
-from services.rate import RateService
-from services.user import UserConst, UserService
+from services.user import UserConst, UserService, Account
 
 
 class ProRankHandler(RequestHandler):
@@ -27,28 +26,31 @@ class ProRankHandler(RequestHandler):
 
         async with self.db.acquire() as con:
             result = await con.fetch(
-                'SELECT *'
-                'FROM ('
-                'SELECT DISTINCT ON ("challenge"."acct_id")'
-                '"challenge"."chal_id",'
-                '"challenge"."acct_id",'
-                '"challenge"."timestamp",'
-                '"account"."name" AS "acct_name",'
-                '"challenge_state"."runtime",'
-                '"challenge_state"."memory" '
-                'FROM "challenge" '
-                'INNER JOIN "account" '
-                'ON "challenge"."acct_id"="account"."acct_id" '
-                'LEFT JOIN "challenge_state" '
-                'ON "challenge"."chal_id"="challenge_state"."chal_id" '
-                'WHERE "challenge"."pro_id"= $1 '
-                'AND "challenge_state"."state"=1 '
-                'ORDER BY "challenge"."acct_id" ASC, '
-                '"challenge_state"."runtime" ASC, "challenge_state"."memory" ASC,'
-                '"challenge"."timestamp" ASC, "challenge"."acct_id" ASC'
-                ') temp '
-                'ORDER BY "runtime" ASC, "memory" ASC,'
-                '"timestamp" ASC, "acct_id" ASC OFFSET $2 LIMIT $3;',
+                '''
+                SELECT *
+                FROM (
+                SELECT DISTINCT ON ("challenge"."acct_id")
+                "challenge"."chal_id",
+                "challenge"."acct_id",
+                "challenge"."timestamp",
+                "account"."name" AS "acct_name",
+                "challenge_state"."runtime",
+                "challenge_state"."memory"
+                FROM "challenge"
+                INNER JOIN "account"
+                ON "challenge"."acct_id"="account"."acct_id"
+                INNER JOIN "challenge_state"
+                ON "challenge"."chal_id"="challenge_state"."chal_id"
+                WHERE "challenge"."pro_id"= $1
+                AND "challenge_state"."state"=1
+                ORDER BY "challenge"."acct_id" ASC,
+                "challenge_state"."runtime" ASC, "challenge_state"."memory" ASC,
+                "challenge"."timestamp" ASC, "challenge"."acct_id" ASC
+                ) temp
+                ORDER BY "runtime" ASC, "memory" ASC,
+                "timestamp" ASC, "acct_id" ASC OFFSET $2 LIMIT $3;
+                '''
+                ,
                 pro_id,
                 pageoff,
                 pagenum,
@@ -61,7 +63,7 @@ class ProRankHandler(RequestHandler):
                 SELECT DISTINCT challenge.acct_id
                 FROM challenge
                 INNER JOIN account ON challenge.acct_id=account.acct_id
-                LEFT JOIN challenge_state ON challenge.chal_id=challenge_state.chal_id
+                INNER JOIN challenge_state ON challenge.chal_id=challenge_state.chal_id
                 WHERE challenge.pro_id=$1
                 AND challenge_state.state=1
                 ) temp;
@@ -104,44 +106,64 @@ class UserRankHandler(RequestHandler):
         except tornado.web.HTTPError:
             pagenum = 20
 
-        err, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL)
-        if err:
-            self.error(err)
-            return
+        res = await self.db.fetch(
+            f'''
+                WITH user_stats AS (
+                    SELECT
+                        a.acct_id,
+                        a.name,
+                        a.photo,
+                        a.motto,
+                        COUNT(DISTINCT CASE WHEN cs.state = 1 THEN c.pro_id END) AS ac_problem_count,
+                        SUM(CASE WHEN cs.state = 1 THEN cs.rate ELSE 0 END) AS total_problem_rate,
+                        COUNT(CASE WHEN cs.state = 1 THEN 1 END) AS ac_challenge_count,
+                        COUNT(c.chal_id) AS all_challenge_count,
+                        COUNT(CASE WHEN cs.state = 1 THEN 1 END)::float / NULLIF(COUNT(c.chal_id), 0) AS ac_ratio
 
-        err, ratemap = await RateService.inst.map_rate()
-        if err:
-            self.error(err)
-            return
+                    FROM
+                        public.challenge c
+                    INNER JOIN
+                        public.challenge_state cs ON c.chal_id = cs.chal_id AND c.contest_id = 0
+                    INNER JOIN
+                        public.account a ON a.acct_id = c.acct_id
+                    INNER JOIN
+                        public.problem ON c.pro_id = problem.pro_id AND problem.status = 0
+                    GROUP BY
+                        a.acct_id
+                )
+                SELECT
+                    acct_id,
+                    name,
+                    photo,
+                    motto,
+                    ac_problem_count,
+                    total_problem_rate,
+                    ac_challenge_count,
+                    all_challenge_count,
+                    RANK() OVER (ORDER BY
+                        ac_problem_count DESC,
+                        total_problem_rate DESC,
+                        ac_ratio DESC
+                    ) AS rank
+                FROM
+                    user_stats
+                ORDER BY
+                    rank
+                OFFSET {pageoff} LIMIT {pagenum};
+                ''')
 
-        for acct in acctlist:
-            err, t_acct = await UserService.inst.info_acct(acct.acct_id)
-            if err:
-                self.error(err)
-                return
+        acctlist = []
+        for acct_id, name, photo, motto, ac_pro_cnt, total_rate, ac_cnt, all_cnt, rank in res:
+            acct = Account(acct_id, -1, '', name, photo, '', motto, '', [])
+            acct.rank = rank
+            acct.rate_data = {
+                'all_cnt': all_cnt,
+                'ac_cnt': ac_cnt,
+                'ac_pro_cnt': ac_pro_cnt,
+            }
+            acctlist.append(acct)
 
-            err, rate_data = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
-            if err:
-                self.error(err)
-                return
-
-            rate_data['ac_pro_cnt'] = sum(1 for r in ratemap[acct.acct_id].values() if r['rate'] == 100)
-            acct.rate_data = rate_data
-            acct.photo = t_acct.photo
-            acct.motto = t_acct.motto
-
-        total_cnt = len(acctlist)
-        acctlist.sort(
-            key=lambda acct: (
-                acct.rate_data['ac_pro_cnt'],
-                acct.rate_data['ac_cnt'],
-                acct.rate_data['all_cnt'],
-                acct.rate_data['rate'],
-            ),
-            reverse=True,
-        )
-        acctlist = acctlist[pageoff : pageoff + pagenum]
-        for rank, acct in enumerate(acctlist):
-            acct.rank = rank + 1 + pageoff
+        _, t_acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL)
+        total_cnt = len(t_acctlist)
 
         await self.render('user-rank', acctlist=acctlist, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt)
