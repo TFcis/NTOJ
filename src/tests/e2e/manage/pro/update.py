@@ -37,7 +37,7 @@ class ManageProUpdateTest(AsyncTest):
                 self.assertEqual(res.text, 'Enoext')
 
                 html = self.get_html('http://localhost:5501/proset', user_session)
-                trs = html.select('tr')[1:]
+                trs = html.select('#prolist > tbody > tr')
                 self.assertEqual(trs[0].select('td')[0].text, '2')
                 self.assertEqual(trs[0].select('td')[2].text.strip().replace('\n', ''), '猜數字')
 

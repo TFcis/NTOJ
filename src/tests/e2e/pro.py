@@ -27,7 +27,7 @@ class ProTest(AsyncTest):
             self.assertEqual(html.select_one('input#tags').attrs.get('value'), '')
 
             html = self.get_html('http://localhost:5501/proset', user_session)
-            trs = html.select('tr')[1:]
+            trs = html.select('#prolist > tbody > tr')
             self.assertEqual(trs[0].select('td')[0].text, '1')
             self.assertEqual(trs[0].select('td')[1].text, ChalConst.STATE_LONG_STR[ChalConst.STATE_CE])  # chal_id: 10
             self.assertEqual(trs[0].select('td')[3].text.strip().replace('\n', ''), '50.00%(1/ 2)')

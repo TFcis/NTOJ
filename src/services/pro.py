@@ -412,6 +412,11 @@ class ProService:
         elif s == "cms":
             return ProConst.CHECKER_CMS
 
+class ProClassConst:
+    OFFICIAL_PUBLIC = 0
+    OFFICIAL_HIDDEN = 1
+    USER_PUBLIC = 2
+    USER_HIDDEN = 3
 
 class ProClassService:
     def __init__(self, db, rs):
@@ -419,11 +424,11 @@ class ProClassService:
         self.rs = rs
         ProClassService.inst = self
 
-    async def get_pubclass(self, pubclass_id):
+    async def get_proclass(self, proclass_id):
         async with self.db.acquire() as con:
             res = await con.fetch(
-                'SELECT "pubclass_id", "name", "list" FROM "pubclass" WHERE "pubclass_id" = $1;',
-                int(pubclass_id),
+                'SELECT "proclass_id", "name", "desc", "list", "acct_id", "type" FROM "proclass" WHERE "proclass_id" = $1 ORDER BY "proclass_id" ASC;',
+                int(proclass_id),
             )
 
             if len(res) != 1:
@@ -431,42 +436,40 @@ class ProClassService:
 
         return None, res[0]
 
-    async def get_pubclass_list(self):
+    async def get_proclass_list(self):
         async with self.db.acquire() as con:
-            res = await con.fetch('SELECT "pubclass_id", "name" FROM "pubclass";')
+            res = await con.fetch('SELECT "proclass_id", "name", "acct_id", "type" FROM "proclass";')
 
         return None, res
 
-    async def add_pubclass(self, pubclass_name, p_list):
+    async def add_proclass(self, name, p_list, desc, acct_id, proclass_type):
         async with self.db.acquire() as con:
             res = await con.fetchrow(
                 """
-                    INSERT INTO "pubclass" ("name", "list")
-                    VALUES ($1, $2) RETURNING "pubclass_id";
+                    INSERT INTO "proclass" ("name", "list", "desc", "acct_id", "type")
+                    VALUES ($1, $2, $3, $4, $5) RETURNING "proclass_id";
                 """,
-                pubclass_name,
+                name,
                 p_list,
+                desc,
+                acct_id,
+                proclass_type,
             )
 
         return None, res[0]
 
-    async def remove_pubclass(self, pubclass_id):
+    async def remove_proclass(self, proclass_id):
         async with self.db.acquire() as con:
-            await con.execute('DELETE FROM "pubclass" WHERE "pubclass_id" = $1', int(pubclass_id))
+            await con.execute('DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id))
 
-    async def update_pubclass(self, pubclass_id, pubclass_name, p_list):
-        pubclass_id = int(pubclass_id)
+    async def update_proclass(self, proclass_id, name, p_list, desc, proclass_type):
+        proclass_id = int(proclass_id)
         async with self.db.acquire() as con:
             await con.execute(
-                'UPDATE "pubclass" SET "name" = $1, "list" = $2 WHERE "pubclass_id" = $3',
-                pubclass_name,
+                'UPDATE "proclass" SET "name" = $1, "list" = $2, "desc" = $3, "type" = $4 WHERE "proclass_id" = $5',
+                name,
                 p_list,
-                pubclass_id,
+                desc,
+                proclass_type,
+                proclass_id,
             )
-
-    async def get_priclass(self, acct_id):
-        pass
-
-    async def get_priclass_list(self, acct_id):
-        pass
-

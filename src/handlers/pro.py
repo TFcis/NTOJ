@@ -1,4 +1,4 @@
-import math
+import json
 
 import tornado.web
 
@@ -6,9 +6,9 @@ from handlers.base import RequestHandler, reqenv, require_permission
 from services.chal import ChalConst
 from services.judge import JudgeServerClusterService
 from services.log import LogService
-from services.pro import ProClassService, ProConst, ProService
+from services.pro import ProClassService, ProClassConst, ProConst, ProService
 from services.rate import RateService
-from services.user import UserConst
+from services.user import UserService, UserConst
 
 
 def user_ac_cmp(pro):
@@ -69,30 +69,42 @@ class ProsetHandler(RequestHandler):
         }
 
         try:
-            pubclass_id = int(self.get_argument('pubclass_id'))
+            proclass_id = int(self.get_argument('proclass_id'))
         except tornado.web.HTTPError:
-            pubclass_id = None
+            proclass_id = None
 
         err, prolist = await ProService.inst.list_pro(self.acct)
 
-        _, pubclass_list = await ProClassService.inst.get_pubclass_list()
-
-        pubclass = None
-        if pubclass_id is not None:
-            err, pubclass = await ProClassService.inst.get_pubclass(pubclass_id)
+        proclass = None
+        if proclass_id is not None:
+            err, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if err:
                 self.error(err)
                 return
+            proclass = dict(proclass)
 
-            p_list = pubclass['list']
+            if proclass['type'] == ProClassConst.OFFICIAL_HIDDEN and not self.acct.is_kernel():
+                self.error('Eacces')
+                return
+            elif proclass['type'] == ProClassConst.USER_HIDDEN and proclass['acct_id'] != self.acct.acct_id:
+                self.error('Eacces')
+                return
+
+            p_list = proclass['list']
             prolist = list(filter(lambda pro: pro['pro_id'] in p_list, prolist))
+            if proclass['acct_id']:
+                _, creator = await UserService.inst.info_acct(proclass['acct_id'])
+                proclass['creator_name'] = creator.name
 
         if show_only_online_pro:
             prolist = list(filter(lambda pro: pro['status'] == ProConst.STATUS_ONLINE, prolist))
 
         _, acct_states = await RateService.inst.map_rate_acct(self.acct)
+        ac_pro_cnt = 0
         def _set_pro_state_and_tags(pro):
+            nonlocal ac_pro_cnt
             pro['state'] = acct_states.get(pro['pro_id'], {}).get('state')
+            ac_pro_cnt += pro['state'] == ChalConst.STATE_AC
 
             if (self.acct.is_guest()) or (not self.acct.is_kernel() and pro['state'] != ChalConst.STATE_AC):
                 pro['tags'] = ''
@@ -137,14 +149,72 @@ class ProsetHandler(RequestHandler):
 
         await self.render(
             'proset',
+            user=self.acct,
             pro_total_cnt=pro_total_cnt,
+            ac_pro_cnt=ac_pro_cnt,
             prolist=prolist,
-            pubclass_list=pubclass_list,
-            cur_pubclass=pubclass,
+            cur_proclass=proclass,
             pageoff=pageoff,
             flt=flt,
             isadmin=self.acct.is_kernel(),
         )
+
+    @reqenv
+    async def post(self):
+        reqtype = self.get_argument('reqtype')
+        if reqtype == "listproclass":
+            _, accts = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL)
+            accts = {acct.acct_id: acct.name for acct in accts}
+            _, proclass_list = await ProClassService.inst.get_proclass_list()
+            proclass_list = list(map(dict, proclass_list))
+            for proclass in proclass_list:
+                if proclass['acct_id']:
+                    proclass['creator_name'] = accts[proclass['acct_id']]
+
+            proclass_cata = {
+                "official": list(filter(lambda proclass: proclass['type'] == ProClassConst.OFFICIAL_PUBLIC, proclass_list)),
+                "shared": list(filter(lambda proclass: proclass['type'] == ProClassConst.USER_PUBLIC, proclass_list)),
+                "collection": list(filter(lambda proclass: proclass['proclass_id'] in self.acct.proclass_collection, proclass_list)),
+                "own": list(filter(lambda proclass: proclass['acct_id'] == self.acct.acct_id, proclass_list)),
+            }
+            if self.acct.is_kernel():
+                proclass_cata['official'].extend(filter(lambda proclass: proclass['type'] == ProClassConst.OFFICIAL_HIDDEN, proclass_list))
+
+            self.finish(json.dumps(proclass_cata))
+
+        elif reqtype == "collect":
+            if self.acct.is_guest():
+                self.error('Eacces')
+                return
+
+            proclass_id = int(self.get_argument('proclass_id'))
+
+            if proclass_id in self.acct.proclass_collection:
+                self.error('Eexist')
+                return
+
+            self.acct.proclass_collection.append(proclass_id)
+            self.acct.proclass_collection.sort()
+            await UserService.inst.update_acct(self.acct.acct_id, self.acct.acct_type, self.acct.name,
+                                         self.acct.photo, self.acct.cover, self.acct.motto, self.acct.proclass_collection)
+            self.finish('S')
+
+        elif reqtype == "decollect":
+            if self.acct.is_guest():
+                self.error('Eacces')
+                return
+
+            proclass_id = int(self.get_argument('proclass_id'))
+
+            if proclass_id not in self.acct.proclass_collection:
+                self.error('Enoext')
+                return
+
+            self.acct.proclass_collection.remove(proclass_id)
+            self.acct.proclass_collection.sort()
+            await UserService.inst.update_acct(self.acct.acct_id, self.acct.acct_type, self.acct.name,
+                                         self.acct.photo, self.acct.cover, self.acct.motto, self.acct.proclass_collection)
+            self.finish('S')
 
 
 class ProStaticHandler(RequestHandler):

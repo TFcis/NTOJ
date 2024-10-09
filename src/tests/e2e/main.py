@@ -20,7 +20,7 @@ from .board import BoardTest
 from .bulletin import BulletinTest
 from .chal import ChalTest, ChalListTest
 from .contest import ContestTest
-from .proclass import PublicProClassTest
+from .proclass import ProClassTest
 from .proset import ProsetTest
 from .ques import QuesTest
 from .rank import ProRankTest, UserRankTest
@@ -31,7 +31,7 @@ class E2ETest(AsyncTest):
     async def init(self):
         self.session = requests.Session()
         _, acct_id = await UserService.inst.sign_up('admin@test', 'testtest', 'admin')
-        await UserService.inst.update_acct(acct_id, UserConst.ACCTTYPE_KERNEL, 'admin', '', '', '')
+        await UserService.inst.update_acct(acct_id, UserConst.ACCTTYPE_KERNEL, 'admin', '', '', '', [])
 
         try:
             shutil.move('problem', 'problem-tmp')
@@ -125,7 +125,7 @@ class E2ETest(AsyncTest):
 
                 # view proset
                 html = self.get_html('http://localhost:5501/proset', admin_session)
-                trs = html.select('tr')[1:]
+                trs = html.select('#prolist > tbody > tr')
                 self.assertEqual(trs[0].select('td')[0].text, '1')  # pro_id
                 self.assertEqual(trs[0].select('td')[1].text, 'Todo')  # pro status
                 self.assertEqual(trs[0].select('td')[2].text.strip().replace('\n', ''), 'GCD')  # pro name
@@ -188,7 +188,7 @@ class E2ETest(AsyncTest):
 
                 # view proset
                 html = self.get_html('http://localhost:5501/proset', admin_session)
-                trs = html.select('tr')[1:]
+                trs = html.select('#prolist > tbody > tr')
                 self.assertEqual(trs[0].select('td')[0].text, '1')  # pro_id
                 self.assertEqual(trs[0].select('td')[1].text,
                                  ChalConst.STATE_LONG_STR[ChalConst.STATE_AC])  # pro status
@@ -227,7 +227,7 @@ class E2ETest(AsyncTest):
                 ProTest().main,
                 ProsetTest().main,
                 BoardTest().main,
-                PublicProClassTest().main,
+                ProClassTest().main,
                 ProRankTest().main,
                 UserRankTest().main,
                 QuesTest().main,

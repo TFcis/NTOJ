@@ -1,12 +1,7 @@
-{% extends '../manage.html' %}
-{% block head %}
-
 <script type="text/javascript">
     function init() {
         let j_form = $("#form");
         let re = /[^0-9,\ ]/;
-
-        j_form.find("#desc").val(`{% raw proclass['desc'].replace('`', '\\`').replace('\\', '\\\\') %}`);
 
         let desc_textarea = document.getElementById('desc');
         let desc_preview = document.getElementById('descPreviewDialog');
@@ -25,7 +20,7 @@
             desc_preview_modal.show();
         });
 
-        j_form.find("#update").on('click', (event) => {
+        j_form.find("#add").on('click', (event) => {
             let name = j_form.find("#name").val();
             let list = j_form.find("#list").val();
             let proclass_type = j_form.find("#type").val();
@@ -35,9 +30,8 @@
                 return;
             }
 
-            $.post('/oj/be/manage/proclass/update', {
-                reqtype: 'update',
-                proclass_id: "{{ proclass_id }}",
+            $.post('/oj/be/acct/proclass/{{ user.acct_id }}', {
+                reqtype: 'add',
                 name: name,
                 list: list,
                 desc: desc_textarea.value,
@@ -46,33 +40,17 @@
                 if (res[0] == 'E') {
 
                 } else {
-                    index.show_notify_dialog('Update Proclass#{{ proclass_id }} success', index.DIALOG_TYPE.success);
-                    index.reload();
+                    index.show_notify_dialog(`Add Proclass#${res} success`, index.DIALOG_TYPE.success);
+                    index.go(`/oj/acct/proclass/{{ user.acct_id }}?page=update&proclassid=${res}`);
                 }
             });
         });
 
-		j_form.find("#remove").on('click', (event) => {
-			$.post('/oj/be/manage/proclass/update', {
-				reqtype: 'remove',
-                proclass_id: "{{ proclass_id }}"
-			}, function(res) {
-                if (res[0] == 'E') {
-
-                } else {
-                    index.show_notify_dialog('Delete Proclass#{{ proclass_id }} success', index.DIALOG_TYPE.success);
-                    index.go("/oj/manage/proclass/");
-                }
-			});
-		});
-
         j_form.find("#cancel").on('click', (event) => {
-            index.go("/oj/manage/proclass/")
+            index.go("/oj/acct/proclass/{{ user.acct_id }}/");
         });
     }
 </script>
-{% end %}
-{% block content %}
 
 <div class="modal fade" id="descPreviewDialog" tabindex="-1" aria-hidden="true">
 <div class="modal-dialog modal-dialog-scrollable modal-xl">
@@ -93,21 +71,20 @@
 	<form id="form">
 		<div class="mb-1">
             <label for="name" class="form-label">Name</label>
-            <input class="form-control" id="name" type="text" value="{{ proclass['name'] }}">
+			<input class="form-control" id="name" type="text">
 		</div>
 
 		<div class="mb-1">
             <label for="name" class="form-label">ProClass Type</label>
             <select class="form-select" id="type">
-                <option value="0" {% if proclass['type'] == 0 %} selected {% end %}>Public</option>
-                <option value="1" {% if proclass['type'] == 1 %} selected {% end %}>Hidden</option>
+                <option value="2">Public</option>
+                <option value="3">Hidden</option>
             </select>
 		</div>
 
         <div class="mb-1">
             <label>Problem List</label>
-            {% set list = str(proclass['list']) %}
-            <input class="form-control" id="list" type="text" value="{{ list[1:-1] }}">
+            <input class="form-control" id="list" type="text">
         </div>
 
         <div class="mb-1">
@@ -116,11 +93,9 @@
         </div>
 
 		<div class="mt-2">
-			<button type="button" class="btn btn-primary" id="update">Update</button>
-            <button type="button" class="btn btn-secondary" id="preview">Preview Description</button>
+			<button type="button" class="btn btn-primary" id="add">Add</button>
+			<button type="button" class="btn btn-secondary" id="preview">Preview Description</button>
 			<button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
-			<button type="button" class="btn btn-danger" id="remove">Remove</button>
 		</div>
 	</form>
 </div>
-{% end %}

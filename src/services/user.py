@@ -38,6 +38,7 @@ class Account:
     cover: str
     motto: str
     lastip: str
+    proclass_collection: list[int]
 
     def is_kernel(self):
         return self.acct_type == UserConst.ACCTTYPE_KERNEL
@@ -47,7 +48,7 @@ class Account:
 
 
 GUEST_ACCOUNT = Account(
-    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', motto=''
+    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', motto='', proclass_collection=[]
 )
 
 
@@ -205,7 +206,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "motto"
+                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "motto", "proclass_collection"
                         FROM "account" WHERE "acct_id" = $1;
                     ''',
                     acct_id,
@@ -224,6 +225,7 @@ class UserService:
                 cover=result['cover'],
                 motto=result['motto'],
                 lastip=result['lastip'],
+                proclass_collection=result['proclass_collection'],
             )
             b_acct = pickle.dumps(acct)
 
@@ -232,7 +234,7 @@ class UserService:
 
         return None, acct
 
-    async def update_acct(self, acct_id, acct_type, name, photo, cover, motto):
+    async def update_acct(self, acct_id, acct_type, name, photo, cover, motto, proclass_collection):
         if acct_type not in [UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER]:
             return 'Eparam1', None
         name_len = len(name)
@@ -252,13 +254,14 @@ class UserService:
             result = await con.fetch(
                 '''
                     UPDATE "account"
-                    SET "acct_type" = $1, "name" = $2, "photo" = $3, "cover" = $4, "motto" = $5 WHERE "acct_id" = $6 RETURNING "acct_id";
+                    SET "acct_type" = $1, "name" = $2, "photo" = $3, "cover" = $4, "motto" = $5, "proclass_collection" = $6 WHERE "acct_id" = $7 RETURNING "acct_id";
                 ''',
                 acct_type,
                 name,
                 photo,
                 cover,
                 motto,
+                proclass_collection,
                 acct_id,
             )
             if len(result) != 1:
@@ -329,6 +332,7 @@ class UserService:
                     cover='',
                     motto='',
                     lastip=lastip,
+                    proclass_collection=[],
                 )
 
                 if private:

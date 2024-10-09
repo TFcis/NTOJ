@@ -1,12 +1,15 @@
 import math
 import re
 
+import tornado.web
+
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
-from services.pro import ProService
+from services.pro import ProService, ProClassService, ProConst
 from services.rate import RateService
 from services.user import UserConst, UserService
 from services.chal import ChalConst
+from utils.numeric import parse_list_str
 
 
 class AcctHandler(RequestHandler):
@@ -56,7 +59,7 @@ class AcctHandler(RequestHandler):
         acct.photo = re.sub(r'^http://', 'https://', acct.photo)
         acct.cover = re.sub(r'^http://', 'https://', acct.cover)
 
-        await self.render('acct', acct=acct, rate=rate_data, prolist=prolist2, isadmin=isadmin)
+        await self.render('acct/profile', acct=acct, rate=rate_data, prolist=prolist2, isadmin=isadmin)
 
 
 class AcctConfigHandler(RequestHandler):
@@ -71,7 +74,7 @@ class AcctConfigHandler(RequestHandler):
             self.error(err)
             return
 
-        await self.render('acct-config', acct=acct, isadmin=self.acct.is_kernel())
+        await self.render('acct/acct-config', acct=acct, isadmin=self.acct.is_kernel())
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
@@ -90,7 +93,7 @@ class AcctConfigHandler(RequestHandler):
                 return
 
             err, _ = await UserService.inst.update_acct(
-                self.acct.acct_id, self.acct.acct_type, name, photo, cover, motto
+                self.acct.acct_id, self.acct.acct_type, name, photo, cover, motto, self.acct.proclass_collection,
             )
             if err:
                 self.error(err)
@@ -123,6 +126,128 @@ class AcctConfigHandler(RequestHandler):
 
         self.error('Eunk')
 
+class AcctProClassHandler(RequestHandler):
+    @reqenv
+    async def get(self, acct_id):
+        acct_id = int(acct_id)
+        try:
+            page = self.get_argument('page')
+        except tornado.web.HTTPError:
+            page = None
+
+        if page is None:
+            _, proclass_list = await ProClassService.inst.get_proclass_list()
+            proclass_list = filter(lambda proclass: proclass['acct_id'] == self.acct.acct_id, proclass_list)
+            await self.render('acct/proclass-list', proclass_list=proclass_list, user=self.acct)
+
+        elif page == "add":
+            await self.render('acct/proclass-add', user=self.acct)
+
+        elif page == "update":
+            proclass_id = int(self.get_argument('proclassid'))
+            _, proclass = await ProClassService.inst.get_proclass(proclass_id)
+            if proclass['acct_id'] != self.acct.acct_id:
+                self.error('Eacces')
+                return
+
+            await self.render('acct/proclass-update', proclass_id=proclass_id, proclass=proclass, user=self.acct)
+
+    @reqenv
+    async def post(self, acct_id):
+        reqtype = self.get_argument('reqtype')
+        acct_id = int(acct_id)
+
+        if reqtype == 'add':
+            name = self.get_argument('name')
+            desc = self.get_argument('desc')
+            proclass_type = int(self.get_argument('type'))
+            p_list_str = self.get_argument('list')
+            p_list = parse_list_str(p_list_str)
+
+            if proclass_type not in [ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN]:
+                self.error('Eparam')
+                return
+
+            if len(p_list) == 0:
+                self.error('E')
+                return
+
+            await LogService.inst.add_log(
+                f"{self.acct.name} add proclass name={name}", 'user.proclass.add',
+                {
+                    "list": p_list,
+                    "desc": desc,
+                    "proclass_type": proclass_type,
+                }
+            )
+            err, proclass_id = await ProClassService.inst.add_proclass(name, p_list, desc, acct_id, proclass_type)
+            if err:
+                self.error(err)
+                return
+
+            self.finish(str(proclass_id))
+
+        elif reqtype == "update":
+            proclass_id = int(self.get_argument('proclass_id'))
+            name = self.get_argument('name')
+            desc = self.get_argument('desc')
+            proclass_type = int(self.get_argument('type'))
+            p_list_str = self.get_argument('list')
+            p_list = parse_list_str(p_list_str)
+
+            _, proclass = await ProClassService.inst.get_proclass(proclass_id)
+
+            if proclass['acct_id'] != self.acct.acct_id:
+                await LogService.inst.add_log(
+                    f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them", 'user.proclass.update.failed'
+                )
+                self.error('Eacces')
+                return
+
+            if proclass_type not in [ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN]:
+                self.error('Eparam')
+                return
+
+            if len(p_list) == 0:
+                self.error('E')
+                return
+
+            await LogService.inst.add_log(
+                f"{self.acct.name} update proclass name={name}", 'user.proclass.update',
+                {
+                    "list": p_list,
+                    "desc": desc,
+                    "proclass_type": proclass_type,
+                }
+            )
+            err = await ProClassService.inst.update_proclass(proclass_id, name, p_list, desc, proclass_type)
+            if err:
+                self.error(err)
+                return
+
+            self.finish('S')
+
+        elif reqtype == "remove":
+            proclass_id = int(self.get_argument('proclass_id'))
+            err, proclass = await ProClassService.inst.get_proclass(proclass_id)
+
+            if err:
+                self.error(err)
+                return
+
+            if proclass['acct_id'] != self.acct.acct_id:
+                await LogService.inst.add_log(
+                    f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them", 'user.proclass.remove.failed'
+                )
+                self.error('Eacces')
+                return
+
+            await LogService.inst.add_log(
+                f"{self.acct.name} remove proclass name={proclass['name']}.", 'user.proclass.remove'
+            )
+            await ProClassService.inst.remove_proclass(proclass_id)
+
+            self.finish('S')
 
 class SignHandler(RequestHandler):
     @reqenv

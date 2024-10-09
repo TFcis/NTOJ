@@ -1,5 +1,6 @@
 {% import math %}
 {% from services.chal import ChalConst %}
+{% from services.pro import ProClassConst %}
 
 <link rel="stylesheet" type="text/css" href="/oj/proset.css">
 
@@ -9,11 +10,11 @@
         let j_proclass = $('#proclass');
         let j_filter = $('#filter');
 
-        j_proclass.find('#publicProClass').on('change', function(e) {
-            let off = location.href.match(/off=(\d+)/);
-            let pubclass_id = $(this).val();
+        function get_goto_url(proclass_id) {
             let order = j_filter.find("#order").val();
             let show = j_filter.find("#show").val();
+            if (proclass_id == -1)
+                proclass_id = $("#curProclassId").attr("proclass");
             let is_online = j_filter.find("#online").is(":checked");
             let is_reversed = j_filter.find("#reverse").is(":checked");
             let url = '/oj/proset/?';
@@ -34,42 +35,15 @@
                 url += `&reverse=${is_reversed}`;
             }
 
-            if (pubclass_id != 'None') {
-                url += `&pubclass_id=${pubclass_id}`;
+            if (proclass_id != 'None') {
+                url += `&proclass_id=${proclass_id}`;
             }
 
-            index.go(url);
-        });
+            return url;
+        }
 
         j_filter.find("#filter_submit").on('click', function(e) {
-            let order = j_filter.find("#order").val();
-            let show = j_filter.find("#show").val();
-            let pubclass_id = j_proclass.find("#publicProClass").val();
-            let is_online = j_filter.find("#online").is(":checked");
-            let is_reversed = j_filter.find("#reverse").is(":checked");
-            let url = '/oj/proset/?';
-
-            if (order != '') {
-                url += `&order=${order}`;
-            }
-
-            if (show != '') {
-                url += `&show=${show}`;
-            }
-
-            if (is_online != false) {
-                url += `&online=${is_online}`;
-            }
-
-            if (is_reversed != false) {
-                url += `&reverse=${is_reversed}`;
-            }
-
-            if (pubclass_id != 'None') {
-                url += `&pubclass_id=${pubclass_id}`;
-            }
-
-            index.go(url);
+            index.go(get_goto_url(-1));
         });
 
         let select_prob = j_filter.find('input.select_prob');
@@ -84,6 +58,123 @@
                 index.go(`/oj/pro/${select_prob.val()}/`);
             }
         });
+
+        {% if cur_proclass %}
+            let cur_proclass_desc = `{% raw cur_proclass['desc'].replace('`', '\\`').replace('\\', '\\\\') %}`;
+            let info_dialog = document.getElementById('proclassInfoDialog');
+            let info_dialog_modal = new bootstrap.Modal(info_dialog);
+            $("#infoProClass").on('click', function(e) {
+                let body = info_dialog.querySelector('.modal-body');
+                body.innerHTML = DOMPurify.sanitize(marked.parse(cur_proclass_desc));
+                MathJax.Hub.Queue(["Typeset", MathJax.Hub, body]);
+                info_dialog_modal.show();
+            });
+        {% end %}
+
+        let proclass_cata = null;
+        let list_dialog = document.getElementById('proclassListDialog');
+        let list_dialog_modal = new bootstrap.Modal(list_dialog);
+        let j_list_dialog = $(list_dialog);
+
+        function render_proclass_list(proclass_type) {
+            let proclass_table = j_list_dialog.find("tbody");
+            let collected = new Set(proclass_cata.collection.map(proclass => proclass.proclass_id));
+
+            proclass_table.html("");
+            for (let proclass of proclass_cata[proclass_type]) {
+                let tr = $("<tr></tr>")
+                tr.append($("<td></td>").text(proclass.proclass_id));
+                tr.append($("<td></td>").text(proclass.name));
+                if (proclass.acct_id != null) {
+                    tr.append($("<td></td>").append($(`<a href="/oj/acct/${proclass.acct_id}/"></a>`).text(proclass.creator_name)));
+                } else {
+                    tr.append($("<td></td>").text("Official"));
+                }
+
+                let collect_td = null;
+                if (collected.has(proclass.proclass_id)) {
+                    collect_td = $(`<td><button class="btn btn-success" actionType="decollect">Decollect</button></td>`);
+                } else {
+                    collect_td = $(`<td><button class="btn btn-success" actionType="collect">Collect</button></td>`);
+                }
+                collect_td.find("button").on('click', function (e) {
+                    let action = $(this).attr("actionType");
+                    let j_this = $(this);
+                    $.post("/oj/be/proset", data={
+                        'reqtype': action,
+                        'proclass_id': proclass.proclass_id,
+                    }, function(res) {
+                        if (res[0] == 'E') {
+                            // TODO: notify dialog will cover by current dialog, we should make notify dialog on the top
+                            let msg = '';
+                            if (res == 'Eacces') {
+                                msg = 'You should login first';
+                            } else if (res == 'Enoext') {
+                                msg = 'Proclass not in your collection';
+                            } else if (res == 'Eexist') {
+                                msg = 'Proclass already in your collection';
+                            }
+                            index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
+                        } else {
+                            if (action == "decollect") {
+                                j_this.attr("actionType", "collect");
+                                j_this.text("Collect");
+                            } else {
+                                j_this.attr("actionType", 'decollect');
+                                j_this.text("Decollect");
+                            }
+                            proclass_cata = null;
+                        }
+                    });
+                });
+                tr.append(collect_td);
+
+                let goto = $(`<td><button class="btn btn-primary">Goto!</button></td>`)
+                goto.find("button").on('click', function(e) {
+                    list_dialog_modal.hide();
+                    index.go(get_goto_url(proclass.proclass_id));
+                });
+                tr.append(goto);
+
+                proclass_table.append(tr);
+            }
+        }
+
+        $("#switchProClass").on('click', function(e) {
+            document.querySelectorAll('.proclass-tab').forEach(el => el.classList.remove('active'));
+            document.querySelector('.proclass-tab[proclassType="official"]').classList.add('active');
+            if (proclass_cata == null) {
+                $.post("/oj/be/proset", {
+                    "reqtype": "listproclass"
+                }, function (e) {
+                    proclass_cata = JSON.parse(e);
+                    render_proclass_list("official");
+                });
+            } else {
+                render_proclass_list("official");
+            }
+
+            list_dialog_modal.show();
+        });
+
+        document.querySelectorAll('.proclass-tab').forEach(el => {
+            el.addEventListener('click', function(e) {
+                document.querySelectorAll('.proclass-tab').forEach(el => el.classList.remove('active'));
+                el.classList.add('active');
+                let proclass_type = el.getAttribute('proclassType');
+
+                if (proclass_cata == null) {
+                    $.post("/oj/be/proset", {
+                        "reqtype": "listproclass"
+                    }, function (e) {
+                        proclass_cata = JSON.parse(e);
+                        render_proclass_list(proclass_type);
+                    });
+                } else {
+                    render_proclass_list(proclass_type);
+                }
+            });
+        });
     }
 </script>
 
@@ -97,28 +188,82 @@
 
 </style>
 
+{% if cur_proclass %}
+<div class="modal fade" id="proclassInfoDialog" tabindex="-1" aria-hidden="true">
+<div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>{{ cur_proclass['name'] }}</h2>
+            {% if cur_proclass['acct_id'] %}
+                <h2><a href="/oj/acct/{{ cur_proclass['acct_id'] }}/">Created By: {{ cur_proclass['creator_name'] }}</a></h2>
+            {% else %}
+                <h2>Created By: Official</h2>
+            {% end %}
+        </div>
+        <div class="modal-body">
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+    </div>
+</div>
+</div>
+{% end %}
+
+<div class="modal fade" id="proclassListDialog" tabindex="-1" aria-hidden="true">
+<div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+        <div class="modal-body">
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <a class="nav-link proclass-tab" proclassType="official">Official</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link proclass-tab" proclassType="shared">User Shared</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link proclass-tab" proclassType="collection">My Collection</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link proclass-tab" proclassType="own">My Problem Class</a>
+                </li>
+            </ul>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th>Name</th>
+                        <th>Creator</th>
+                        <th>Collect</th>
+                        <th>Goto!</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+    </div>
+</div>
+</div>
+
 <div class="row">
     <div class="col-lg-2 col-12">
         <form id="proclass">
-            <label class="form-label">題單</label>
-
-            <div class="mb-1">
-                <label for="" class="form-label">Public Problem Class</label>
-                <select id="publicProClass" class="form-select">
-                    <option value="None" {% if cur_pubclass is None %}selected{% end %}>None</option>
-                    {% for pc in pubclass_list %}
-                        <option value="{{ pc['pubclass_id'] }}" {% if cur_pubclass is not None and pc['pubclass_id'] == cur_pubclass['pubclass_id'] %}selected{% end %}>
-                            {{ pc['name'] }}
-                        </option>
-                    {% end %}
-                </select>
-            </div>
-
-            <div class="mb-1">
-                <label for="" class="form-label">Private Problem Class</label>
-                <select id="privateProClass" class="form-select">
-                    <option value="WIP">None</option> <!-- TODO: Private Problem Set -->
-                </select>
+            <label class="form-label">Current Problem Class</label>
+            {% if cur_proclass %}
+                <label class="form-label">{{ cur_proclass['name'] }}</label>
+                <div style="display: none;" id="curProclassId" proclass="{{ cur_proclass['proclass_id'] }}"></div>
+            {% else %}
+                <label class="form-label">NULL</label>
+                <div style="display: none;" id="curProclassId" proclass="None"></div>
+            {% end %}
+            <div>
+                <button type="button" class="btn btn-primary" id="switchProClass">Switch</button>
+                <button type="button" class="btn btn-success" id="infoProClass">Info</button>
+                <a class="btn btn-warning" href="/oj/acct/proclass/{{ user.acct_id }}/">Manage</a>
             </div>
         </form>
 
@@ -222,8 +367,8 @@
 
         <!-- TODO: Sort By & Problem Selector -->
         {% set postfix = '' %}
-        {% if cur_pubclass != None %}
-        {% set postfix = postfix + '&pubclass_id=%s' % cur_pubclass['pubclass_id'] %}
+        {% if cur_proclass != None %}
+        {% set postfix = postfix + '&proclass_id=%s' % cur_proclass['proclass_id'] %}
         {% end %}
         {% if flt['problem_show'] != 'all' %}
         {% set postfix = postfix + f"&show={flt['problem_show']}" %}
