@@ -129,7 +129,7 @@ var index = new function() {
             let href = $(this).attr('href');
             let target = $(this).attr('target');
             if (href == undefined || href.length == 0) return;
-            if (target != undefined && target != "") return
+            if (target) return
 
             window.history.pushState(null, document.title, $(this).attr('href'));
 
