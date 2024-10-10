@@ -458,6 +458,11 @@ class ManageProHandler(RequestHandler):
                 input_pack_token = self.get_argument('input_pack_token')
                 output_pack_token = self.get_argument('output_pack_token')
 
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 basepath = f'problem/{pro_id}/res/testdata'
                 inputfile_path = f'{basepath}/{filename}.in'
                 outputfile_path = f'{basepath}/{filename}.out'
@@ -991,7 +996,7 @@ class ManageProHandler(RequestHandler):
                 if is_all_chal:
                     sql = ""
                 else:
-                    sql = '''AND "challenge_state"."state" IS NULL'''
+                    sql = '''AND "challenge_state"."chal_id" IS NULL'''
                 result = await con.fetch(
                     f'''
                         SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"
