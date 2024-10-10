@@ -262,7 +262,9 @@
             {% end %}
             <div>
                 <button type="button" class="btn btn-primary" id="switchProClass">Switch</button>
-                <button type="button" class="btn btn-success" id="infoProClass">Info</button>
+                {% if cur_proclass %}
+                    <button type="button" class="btn btn-success" id="infoProClass">Info</button>
+                {% end %}
                 <a class="btn btn-warning" href="/oj/acct/proclass/{{ user.acct_id }}/">Manage</a>
             </div>
         </form>
