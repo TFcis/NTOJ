@@ -164,11 +164,15 @@ class ProsetHandler(RequestHandler):
         if reqtype == "listproclass":
             _, accts = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL)
             accts = {acct.acct_id: acct.name for acct in accts}
+
             _, proclass_list = await ProClassService.inst.get_proclass_list()
-            proclass_list = list(map(dict, proclass_list))
-            for proclass in proclass_list:
+            def _set_creator_name(proclass):
+                proclass = dict(proclass)
                 if proclass['acct_id']:
                     proclass['creator_name'] = accts[proclass['acct_id']]
+
+                return proclass
+            proclass_list = list(map(_set_creator_name, proclass_list))
 
             proclass_cata = {
                 "official": list(filter(lambda proclass: proclass['type'] == ProClassConst.OFFICIAL_PUBLIC, proclass_list)),
