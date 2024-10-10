@@ -50,6 +50,9 @@ class ManageProHandler(RequestHandler):
         elif page == "filemanager":
             pro_id = int(self.get_argument('proid'))
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            if err:
+                self.error(err)
+                return
 
             testm_conf = pro['testm_conf']
             dirs = []
@@ -116,6 +119,10 @@ class ManageProHandler(RequestHandler):
 
 
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            if err:
+                self.error(err)
+                return
+
             files = sorted(set(map(lambda file: file.replace('.in', '').replace('.out', ''),
                         filter(lambda file: file.endswith('.in') or file.endswith('.out'), os.listdir(f'problem/{pro_id}/res/testdata')))))
 
@@ -197,6 +204,10 @@ class ManageProHandler(RequestHandler):
                 weight = int(self.get_argument('weight'))
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 test_group = pro['testm_conf']['test_group']
 
                 if group not in test_group:
@@ -219,6 +230,10 @@ class ManageProHandler(RequestHandler):
                 weight = int(self.get_argument('weight'))
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 test_group = pro['testm_conf']['test_group']
 
                 test_group[len(test_group)] = {
@@ -242,6 +257,10 @@ class ManageProHandler(RequestHandler):
                 group = int(self.get_argument('group'))
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
                     self.error('Enoext')
@@ -266,12 +285,16 @@ class ManageProHandler(RequestHandler):
                 group = int(self.get_argument('group'))
                 testcase = self.get_argument('testcase')
 
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not os.path.exists(f'{basepath}/{testcase}.in') or not os.path.exists(f'{basepath}/{testcase}.out'):
                     self.error('Enoext')
                     return
 
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
                     self.error('Enoext')
@@ -300,6 +323,10 @@ class ManageProHandler(RequestHandler):
                 testcase = self.get_argument('testcase')
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
                     self.error('Enoext')
@@ -322,6 +349,11 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 old_filename = self.get_argument('old_filename')
                 new_filename = self.get_argument('new_filename')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 # check filename
                 basepath = f'problem/{pro_id}/res/testdata'
@@ -356,7 +388,6 @@ class ManageProHandler(RequestHandler):
                 os.rename(old_inputfile_path, new_inputfile_path)
                 os.rename(old_outputfile_path, new_outputfile_path)
 
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 is_modified = False
                 for test_group in pro['testm_conf']['test_group'].values():
                     test = test_group['metadata']['data']
@@ -379,6 +410,11 @@ class ManageProHandler(RequestHandler):
                 filename = self.get_argument('filename')
                 test_type = self.get_argument('type')
                 pack_token = self.get_argument('pack_token')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 if test_type not in ['output', 'input']:
                     PackService.inst.clear(pack_token)
@@ -407,6 +443,8 @@ class ManageProHandler(RequestHandler):
                     return
 
                 _ = await PackService.inst.direct_copy(pack_token, filepath)
+
+                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
                     f'{self.acct.name} had been send a request to update a single file:{filename} of the problem #{pro_id}',
                     'manage.pro.update.tests.updatesinglefile',
@@ -460,6 +498,11 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
 
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not self._is_file_access_safe(basepath, f'{filename}.in'):
                     await LogService.inst.add_log(
@@ -480,7 +523,6 @@ class ManageProHandler(RequestHandler):
                 os.remove(f'{basepath}/{filename}.in')
                 os.remove(f'{basepath}/{filename}.out')
 
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 for test_group in pro['testm_conf']['test_group'].values():
                     test = test_group['metadata']['data']
 
@@ -491,7 +533,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                                        f'{self.acct.name} had been send a request to delete a single file:{filename} of the problem #{pro_id}',
+                    f'{self.acct.name} had been send a request to delete a single file:{filename} of the problem #{pro_id}',
                     'manage.pro.update.tests.deletesinglefile',
                 )
 
@@ -502,6 +544,11 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
                 basepath = self.get_argument('path')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 if basepath not in ['http', 'res/check', 'res/make']:
                     self.error('Eparam')
@@ -542,6 +589,11 @@ class ManageProHandler(RequestHandler):
                 old_filename = self.get_argument('old_filename')
                 new_filename = self.get_argument('new_filename')
                 basepath = self.get_argument('path')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 if basepath not in ['http', 'res/check', 'res/make']:
                     self.error('Eparam')
@@ -587,6 +639,11 @@ class ManageProHandler(RequestHandler):
                 pack_token = self.get_argument('pack_token')
                 basepath = self.get_argument('path')
 
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 if basepath not in ['http', 'res/check', 'res/make']:
                     self.error('Eparam')
                     return
@@ -626,6 +683,11 @@ class ManageProHandler(RequestHandler):
                 pack_token = self.get_argument('pack_token')
                 basepath = self.get_argument('path')
 
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 if basepath not in ['http', 'res/check', 'res/make']:
                     self.error('Eparam')
                     return
@@ -663,6 +725,11 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
                 basepath = self.get_argument('path')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 if basepath not in ['http', 'res/check', 'res/make']:
                     self.error('Eparam')
@@ -702,6 +769,7 @@ class ManageProHandler(RequestHandler):
                 status = int(self.get_argument('status'))
                 tags = self.get_argument('tags')
                 allow_submit = self.get_argument('allow_submit') == "true"
+                # NOTE: test config
                 is_makefile = self.get_argument('is_makefile') == "true"
                 check_type = int(self.get_argument('check_type'))
 
@@ -718,6 +786,10 @@ class ManageProHandler(RequestHandler):
                     pro_id, name, status, None, None, tags, allow_submit
                 )
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 old_is_makefile = pro['testm_conf']['is_makefile']
                 old_check_type = pro['testm_conf']['check_type']
                 custom_check_type = [ProConst.CHECKER_IOREDIR, ProConst.CHECKER_CMS]
@@ -759,6 +831,10 @@ class ManageProHandler(RequestHandler):
                 pack_token = self.get_argument('pack_token')
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 err, _ = await ProService.inst.update_pro(
                     pro_id, pro['name'], pro['status'], ProService.PACKTYPE_FULL, pack_token, pro['tags'], pro['allow_submit']
                 )
@@ -798,6 +874,9 @@ class ManageProHandler(RequestHandler):
                 limits = json.loads(self.get_argument('limits'))
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 ALLOW_COMPILERS = ChalConst.ALLOW_COMPILERS
                 if pro['testm_conf']['is_makefile']:
