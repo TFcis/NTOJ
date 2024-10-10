@@ -125,11 +125,12 @@ var index = new function() {
 
         $(document).on('click', 'a', function(e) {
             let cur_href = location.href;
+
             let href = $(this).attr('href');
+            let target = $(this).attr('target');
             if (href == undefined || href.length == 0) return;
-            if ($(this).attr('target') !== "") {
-                return;
-            }
+            if (target != undefined && target != "") return
+
             window.history.pushState(null, document.title, $(this).attr('href'));
 
             if (href.startsWith('?')) {
