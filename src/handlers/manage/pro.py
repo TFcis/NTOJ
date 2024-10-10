@@ -50,6 +50,9 @@ class ManageProHandler(RequestHandler):
         elif page == "filemanager":
             pro_id = int(self.get_argument('proid'))
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            if err:
+                self.error(err)
+                return
 
             testm_conf = pro['testm_conf']
             dirs = []
@@ -116,6 +119,10 @@ class ManageProHandler(RequestHandler):
 
 
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            if err:
+                self.error(err)
+                return
+
             files = sorted(set(map(lambda file: file.replace('.in', '').replace('.out', ''),
                         filter(lambda file: file.endswith('.in') or file.endswith('.out'), os.listdir(f'problem/{pro_id}/res/testdata')))))
 
@@ -143,7 +150,7 @@ class ManageProHandler(RequestHandler):
 
             err, pro_id = await ProService.inst.add_pro(name, status, pack_token)
             await LogService.inst.add_log(
-                f"{self.acct.name} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro'
+                f"{self.acct.name} has sent a request to add the problem #{pro_id}", 'manage.pro.add.pro'
             )
             if err:
                 self.error(err)
@@ -165,7 +172,7 @@ class ManageProHandler(RequestHandler):
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not self._is_file_access_safe(basepath, filename):
                     await LogService.inst.add_log(
-                        f'{self.acct.name} tried to preview file:{filename} of the problem #{pro_id}, but it was suspicious',
+                        f'{self.acct.name} tried to preview file:{filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.preview.failed'
                     )
                     self.error('Eacces')
@@ -175,13 +182,13 @@ class ManageProHandler(RequestHandler):
 
                 if not os.path.exists(filepath):
                     await LogService.inst.add_log(
-                        f'{self.acct.name} tried to preview file:{filename} of the problem #{pro_id} but not found',
+                        f'{self.acct.name} tried to preview file:{filename} for problem #{pro_id} but not found',
                         'manage.pro.update.tests.preview.failed'
                     )
                     self.error('Enoext')
                     return
 
-                await LogService.inst.add_log(f'{self.acct.name} preview file:{filename} of the problem #{pro_id}',
+                await LogService.inst.add_log(f'{self.acct.name} preview file:{filename} for problem #{pro_id}',
                                             'manage.pro.update.tests.preview')
                 with open(filepath, 'r') as testcase_f:
                     content = testcase_f.readlines()
@@ -197,6 +204,10 @@ class ManageProHandler(RequestHandler):
                 weight = int(self.get_argument('weight'))
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 test_group = pro['testm_conf']['test_group']
 
                 if group not in test_group:
@@ -206,7 +217,7 @@ class ManageProHandler(RequestHandler):
                 test_group[group]['weight'] = weight
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to update weight of subtask#{group} of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to update weight of subtask#{group} for problem #{pro_id}',
                     'manage.pro.update.tests.updateweight',
                     {
                         'weight': weight,
@@ -219,6 +230,10 @@ class ManageProHandler(RequestHandler):
                 weight = int(self.get_argument('weight'))
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 test_group = pro['testm_conf']['test_group']
 
                 test_group[len(test_group)] = {
@@ -228,7 +243,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to add a new subtask of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to add a new subtask for problem #{pro_id}',
                     'manage.pro.update.tests.addtaskgroup',
                     {
                         'weight': weight,
@@ -242,6 +257,10 @@ class ManageProHandler(RequestHandler):
                 group = int(self.get_argument('group'))
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
                     self.error('Enoext')
@@ -256,7 +275,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to delete a subtask of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to delete a subtask for problem #{pro_id}',
                     'manage.pro.update.tests.deletetaskgroup',
                 )
                 self.finish('S')
@@ -266,12 +285,16 @@ class ManageProHandler(RequestHandler):
                 group = int(self.get_argument('group'))
                 testcase = self.get_argument('testcase')
 
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not os.path.exists(f'{basepath}/{testcase}.in') or not os.path.exists(f'{basepath}/{testcase}.out'):
                     self.error('Enoext')
                     return
 
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
                     self.error('Enoext')
@@ -289,7 +312,7 @@ class ManageProHandler(RequestHandler):
                 test_group[group]['metadata']['data'].append(testcase)
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to add a testcase:{testcase} to group#{group} of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to add a testcase:{testcase} to group#{group} for problem #{pro_id}',
                     'manage.pro.update.tests.addsingletestcase',
                 )
                 self.finish('S')
@@ -300,6 +323,10 @@ class ManageProHandler(RequestHandler):
                 testcase = self.get_argument('testcase')
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
                     self.error('Enoext')
@@ -313,7 +340,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to delete a testcase:{testcase} to group#{group} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to delete a testcase:{testcase} to group#{group} for problem #{pro_id}',
                     'manage.pro.update.tests.deletesingletestcase',
                 )
                 self.finish('S')
@@ -322,6 +349,11 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 old_filename = self.get_argument('old_filename')
                 new_filename = self.get_argument('new_filename')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 # check filename
                 basepath = f'problem/{pro_id}/res/testdata'
@@ -356,7 +388,6 @@ class ManageProHandler(RequestHandler):
                 os.rename(old_inputfile_path, new_inputfile_path)
                 os.rename(old_outputfile_path, new_outputfile_path)
 
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 is_modified = False
                 for test_group in pro['testm_conf']['test_group'].values():
                     test = test_group['metadata']['data']
@@ -369,7 +400,7 @@ class ManageProHandler(RequestHandler):
                 if is_modified:
                     await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
                     'manage.pro.update.tests.renamesinglefile',
                 )
                 self.finish('S')
@@ -379,6 +410,11 @@ class ManageProHandler(RequestHandler):
                 filename = self.get_argument('filename')
                 test_type = self.get_argument('type')
                 pack_token = self.get_argument('pack_token')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 if test_type not in ['output', 'input']:
                     PackService.inst.clear(pack_token)
@@ -391,7 +427,7 @@ class ManageProHandler(RequestHandler):
                 if not self._is_file_access_safe(basepath, f"{filename}.{test_type[0:-3]}"):
                     PackService.inst.clear(pack_token)
                     await LogService.inst.add_log(
-                        f'{self.acct.name} tried to update {filename} of the problem #{pro_id}, but it was suspicious',
+                        f'{self.acct.name} tried to update {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.updatesinglefile.failed'
                     )
                     self.error('Eacces')
@@ -407,8 +443,10 @@ class ManageProHandler(RequestHandler):
                     return
 
                 _ = await PackService.inst.direct_copy(pack_token, filepath)
+
+                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to update a single file:{filename} of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to update a single file:{filename} for problem #{pro_id}',
                     'manage.pro.update.tests.updatesinglefile',
                 )
 
@@ -419,6 +457,11 @@ class ManageProHandler(RequestHandler):
                 filename = self.get_argument('filename')
                 input_pack_token = self.get_argument('input_pack_token')
                 output_pack_token = self.get_argument('output_pack_token')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 inputfile_path = f'{basepath}/{filename}.in'
@@ -450,7 +493,7 @@ class ManageProHandler(RequestHandler):
                 _ = await PackService.inst.direct_copy(output_pack_token, outputfile_path)
 
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to add a single file:{filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to add a single file:{filename} for problem #{pro_id}',
                     'manage.pro.update.tests.addsinglefile',
                 )
 
@@ -459,6 +502,11 @@ class ManageProHandler(RequestHandler):
             elif reqtype == 'deletesinglefile':
                 pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not self._is_file_access_safe(basepath, f'{filename}.in'):
@@ -480,7 +528,6 @@ class ManageProHandler(RequestHandler):
                 os.remove(f'{basepath}/{filename}.in')
                 os.remove(f'{basepath}/{filename}.out')
 
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 for test_group in pro['testm_conf']['test_group'].values():
                     test = test_group['metadata']['data']
 
@@ -491,7 +538,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                                        f'{self.acct.name} had been send a request to delete a single file:{filename} of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to delete a single file:{filename} for problem #{pro_id}',
                     'manage.pro.update.tests.deletesinglefile',
                 )
 
@@ -502,6 +549,11 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
                 basepath = self.get_argument('path')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 if basepath not in ['http', 'res/check', 'res/make']:
                     self.error('Eparam')
@@ -543,6 +595,11 @@ class ManageProHandler(RequestHandler):
                 new_filename = self.get_argument('new_filename')
                 basepath = self.get_argument('path')
 
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 if basepath not in ['http', 'res/check', 'res/make']:
                     self.error('Eparam')
                     return
@@ -576,7 +633,7 @@ class ManageProHandler(RequestHandler):
 
                 os.rename(old_filepath, new_filepath)
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
                     'manage.pro.update.filemanager.renamesinglefile',
                 )
                 self.finish('S')
@@ -586,6 +643,11 @@ class ManageProHandler(RequestHandler):
                 filename = self.get_argument('filename')
                 pack_token = self.get_argument('pack_token')
                 basepath = self.get_argument('path')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 if basepath not in ['http', 'res/check', 'res/make']:
                     self.error('Eparam')
@@ -614,7 +676,7 @@ class ManageProHandler(RequestHandler):
 
                 _ = await PackService.inst.direct_copy(pack_token, filepath)
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to update {filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to update {filename} for problem #{pro_id}',
                     'manage.pro.update.filemanager.updatesinglefile',
                 )
 
@@ -625,6 +687,11 @@ class ManageProHandler(RequestHandler):
                 filename = self.get_argument('filename')
                 pack_token = self.get_argument('pack_token')
                 basepath = self.get_argument('path')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 if basepath not in ['http', 'res/check', 'res/make']:
                     self.error('Eparam')
@@ -653,7 +720,7 @@ class ManageProHandler(RequestHandler):
 
                 _ = await PackService.inst.direct_copy(pack_token, filepath)
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to add {filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to add {filename} for problem #{pro_id}',
                     'manage.pro.update.filemanager.addsinglefile',
                 )
 
@@ -663,6 +730,11 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
                 basepath = self.get_argument('path')
+
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 if basepath not in ['http', 'res/check', 'res/make']:
                     self.error('Eparam')
@@ -689,7 +761,7 @@ class ManageProHandler(RequestHandler):
                 os.remove(f'{basepath}/{filename}')
 
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to delete {filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to delete {filename} for problem #{pro_id}',
                     'manage.pro.update.filemanager.deletesinglefile',
                 )
 
@@ -702,6 +774,7 @@ class ManageProHandler(RequestHandler):
                 status = int(self.get_argument('status'))
                 tags = self.get_argument('tags')
                 allow_submit = self.get_argument('allow_submit') == "true"
+                # NOTE: test config
                 is_makefile = self.get_argument('is_makefile') == "true"
                 check_type = int(self.get_argument('check_type'))
 
@@ -718,6 +791,10 @@ class ManageProHandler(RequestHandler):
                     pro_id, name, status, None, None, tags, allow_submit
                 )
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 old_is_makefile = pro['testm_conf']['is_makefile']
                 old_check_type = pro['testm_conf']['check_type']
                 custom_check_type = [ProConst.CHECKER_IOREDIR, ProConst.CHECKER_CMS]
@@ -736,7 +813,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f"{self.acct.name} had been send a request to update the problem #{pro_id}", 'manage.pro.update.pro',
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.pro',
                     {
                         'name': name,
                         'status': status,
@@ -759,6 +836,10 @@ class ManageProHandler(RequestHandler):
                 pack_token = self.get_argument('pack_token')
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
+
                 err, _ = await ProService.inst.update_pro(
                     pro_id, pro['name'], pro['status'], ProService.PACKTYPE_FULL, pack_token, pro['tags'], pro['allow_submit']
                 )
@@ -787,7 +868,7 @@ class ManageProHandler(RequestHandler):
                     })
 
                 await LogService.inst.add_log(
-                    f"{self.acct.name} had been send a request to update the problem #{pro_id} by uploading problem package",
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id} by uploading problem package",
                     'manage.pro.update.pro.package',
                 )
 
@@ -798,6 +879,9 @@ class ManageProHandler(RequestHandler):
                 limits = json.loads(self.get_argument('limits'))
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                if err:
+                    self.error(err)
+                    return
 
                 ALLOW_COMPILERS = ChalConst.ALLOW_COMPILERS
                 if pro['testm_conf']['is_makefile']:
@@ -843,7 +927,7 @@ class ManageProHandler(RequestHandler):
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
 
                 await LogService.inst.add_log(
-                    f"{self.acct.name} had been send a request to update the problem #{pro_id}",
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id}",
                     'manage.pro.update.limit',
                     {
                         'limits': limits
@@ -912,7 +996,7 @@ class ManageProHandler(RequestHandler):
                 if is_all_chal:
                     sql = ""
                 else:
-                    sql = '''AND "challenge_state"."state" IS NULL'''
+                    sql = '''AND "challenge_state"."chal_id" IS NULL'''
                 result = await con.fetch(
                     f'''
                         SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"

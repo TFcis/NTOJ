@@ -129,7 +129,7 @@ class ProService:
             },
         )
 
-    async def list_pro(self, acct: Account = None, is_contest=False):
+    async def list_pro(self, acct: Account | None = None, is_contest=False):
         if acct is None:
             max_status = ProService.STATUS_ONLINE
 
@@ -424,10 +424,10 @@ class ProClassService:
         self.rs = rs
         ProClassService.inst = self
 
-    async def get_proclass(self, proclass_id):
+    async def get_proclass(self, proclass_id: int):
         async with self.db.acquire() as con:
             res = await con.fetch(
-                'SELECT "proclass_id", "name", "desc", "list", "acct_id", "type" FROM "proclass" WHERE "proclass_id" = $1 ORDER BY "proclass_id" ASC;',
+                'SELECT "proclass_id", "name", "desc", "list", "acct_id", "type" FROM "proclass" WHERE "proclass_id" = $1;',
                 int(proclass_id),
             )
 
@@ -438,11 +438,11 @@ class ProClassService:
 
     async def get_proclass_list(self):
         async with self.db.acquire() as con:
-            res = await con.fetch('SELECT "proclass_id", "name", "acct_id", "type" FROM "proclass";')
+            res = await con.fetch('SELECT "proclass_id", "name", "acct_id", "type" FROM "proclass" ORDER BY "proclass_id" ASC;')
 
         return None, res
 
-    async def add_proclass(self, name, p_list, desc, acct_id, proclass_type):
+    async def add_proclass(self, name: str, p_list: list[int], desc: str, acct_id: int, proclass_type: int):
         async with self.db.acquire() as con:
             res = await con.fetchrow(
                 """
@@ -458,7 +458,7 @@ class ProClassService:
 
         return None, res[0]
 
-    async def remove_proclass(self, proclass_id):
+    async def remove_proclass(self, proclass_id: int):
         async with self.db.acquire() as con:
             await con.execute('DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id))
 

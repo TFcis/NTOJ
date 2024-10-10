@@ -86,6 +86,13 @@ class ProClassTest(AsyncTest):
             res = admin_session.get('http://localhost:5501/proset?proclass_id=1')
             self.assertEqual(re.findall(r'let cur_proclass_desc = `(.*)`;', res.text, re.I)[0], 'desc desc')
 
+            # NOTE: info button
+            html = self.get_html('http://localhost:5501/proset?proclass_id=1', admin_session)
+            self.assertIsNotNone(html.select_one('button#infoProClass'))
+
+            html = self.get_html('http://localhost:5501/proset', admin_session)
+            self.assertIsNone(html.select_one('button#infoProClass'))
+
             with AccountContext('test1@test', 'test') as user_session:
                 res = user_session.get('http://localhost:5501/proset?proclass_id=1')
                 self.assertNotEqual(res.text, 'Eacces')

@@ -1,4 +1,5 @@
 import os
+import copy
 import json
 
 from services.chal import ChalConst
@@ -13,6 +14,17 @@ class ManageProUpdateTestsTest(AsyncTest):
 
         return pack_token
 
+    def assertTable(self, default_data: dict, assert_tables: list[dict], session):
+        for table in assert_tables:
+            equal_value = table.pop("equal_value")
+
+            d = copy.copy(default_data)
+            for key, val in table.items():
+                d[key] = val
+
+            res = session.post('http://localhost:5501/manage/pro/updatetests', data=d)
+            self.assertEqual(res.text, equal_value)
+
     async def main(self):
         with AccountContext("admin@test", "testtest") as admin_session:
             # NOTE: preview
@@ -24,29 +36,21 @@ class ManageProUpdateTestsTest(AsyncTest):
             })
             self.assertEqual(json.loads(res.text), open('tests/static_file/toj3/res/testdata/1.out').read())
 
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'preview',
-                'pro_id': 1,
-                'filename': '2',
-                'type': 'out',
-            })
-            self.assertEqual(res.text, 'Efile')
-
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'preview',
-                'pro_id': 1,
-                'filename': '../conf.json',
-                'type': 'out',
-            })
-            self.assertEqual(res.text, 'Eacces')
-
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'preview',
-                'pro_id': 1,
-                'filename': '5',
-                'type': 'out',
-            })
-            self.assertEqual(res.text, 'Enoext')
+            self.assertTable(
+                {
+                    'reqtype': 'preview',
+                    'pro_id': 1,
+                    'filename': '1',
+                    'type': 'out',
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found
+                    {'filename': '2', 'equal_value': 'Efile'}, # file has more than 25 lines or cannot be decoded as UTF-8.
+                    {'filename': '../conf.json', 'equal_value': 'Eacces'}, # illegal filepath access
+                    {'filename': '5', 'equal_value': 'Enoext'} # file not found
+                ],
+                admin_session
+            )
 
             # NOTE: updateweight
             res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
@@ -96,22 +100,22 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertTrue(os.path.exists('problem/1/res/testdata/3.out'))
             self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/res/testdata/3.in').read())
             self.assertEqual(open('tests/static_file/toj3/3.out').read(), open('problem/1/res/testdata/3.out').read())
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'addsinglefile',
-                'pro_id': 1,
-                'filename': '../etc',
-                'input_pack_token': inputfile_token,
-                'output_pack_token': outputfile_token,
-            })
-            self.assertEqual(res.text, 'Eacces')
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'addsinglefile',
-                'pro_id': 1,
-                'filename': '3',
-                'input_pack_token': inputfile_token,
-                'output_pack_token': outputfile_token,
-            })
-            self.assertEqual(res.text, 'Eexist')
+
+            self.assertTable(
+                {
+                    'reqtype': 'addsinglefile',
+                    'pro_id': 1,
+                    'filename': '3',
+                    'input_pack_token': inputfile_token,
+                    'output_pack_token': outputfile_token,
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found,
+                    {'filename': '../etc', 'equal_value': 'Eacces'}, # illegal filepath access
+                    {'filename': '3', 'equal_value': 'Eexist'} # file already exists
+                ],
+                admin_session
+            )
 
             # NOTE: addsingletestcase
             res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
@@ -126,27 +130,23 @@ class ManageProUpdateTestsTest(AsyncTest):
             testcase_trs = groups[2].select('tbody > tr')
             self.assertEqual(testcase_trs[0].select('td')[0].text.strip(), '3')
             self.assertEqual(testcase_trs[0].attrs.get('testcase'), '3')
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'addsingletestcase',
-                'pro_id': 1,
-                'testcase': '300',
-                'group': 2,
-            })
-            self.assertEqual(res.text, 'Enoext')
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'addsingletestcase',
-                'pro_id': 1,
-                'testcase': '3',
-                'group': 300,
-            })
-            self.assertEqual(res.text, 'Enoext')
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'addsingletestcase',
-                'pro_id': 1,
-                'testcase': '3',
-                'group': 2,
-            })
-            self.assertEqual(res.text, 'Eexist')
+
+            self.assertTable(
+                {
+                    'reqtype': 'addsingletestcase',
+                    'pro_id': 1,
+                    'testcase': '3',
+                    'group': 2,
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found,
+                    {'testcase': '300', 'equal_value': 'Enoext'}, # testcase not found
+                    {'group': '300', 'equal_value': 'Enoext'}, # group not found
+                    {'testcase': '3', 'equal_value': 'Eexist'}, # testcase already exists
+                ],
+                admin_session
+            )
+
             def callback():
                 res = admin_session.post('http://localhost:5501/submit', data={
                     'reqtype': 'rechal',
@@ -175,21 +175,21 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(testcase_trs[0].select('td')[0].text.strip(), '4')
             self.assertEqual(testcase_trs[0].attrs.get('testcase'), '4')
 
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'renamesinglefile',
-                'pro_id': 1,
-                'old_filename': '4',
-                'new_filename': '4',
-            })
-            self.assertEqual(res.text, 'Eexist')
-
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'renamesinglefile',
-                'pro_id': 1,
-                'old_filename': '5',
-                'new_filename': '4',
-            })
-            self.assertEqual(res.text, 'Enoext')
+            self.assertTable(
+                {
+                    'reqtype': 'renamesinglefile',
+                    'pro_id': 1,
+                    'old_filename': '3',
+                    'new_filename': '4',
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found,
+                    {'old_filename': '../conf.json', 'new_filename': '../tw87.json', 'equal_value': 'Eacces'}, # illegal filepath access
+                    {'old_filename': '4', 'new_filename': '4', 'equal_value': 'Eexist'}, # new file already exists
+                    {'old_filename': '5', 'equal_value': 'Enoext'}, # old file not found
+                ],
+                admin_session
+            )
 
             # NOTE: updatesinglefile
             pack_token = await self._upload_file('tests/static_file/toj3/3.out.incorrect', admin_session)
@@ -202,32 +202,23 @@ class ManageProUpdateTestsTest(AsyncTest):
             })
             self.assertEqual(res.text, 'S')
 
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'updatesinglefile',
-                'pro_id': 1,
-                'filename': '4',
-                'type': '../../',
-                'pack_token': pack_token,
-            })
-            self.assertEqual(res.text, 'Eparam')
+            self.assertTable(
+                {
+                    'reqtype': 'updatesinglefile',
+                    'pro_id': 1,
+                    'filename': '4',
+                    'type': 'output',
+                    'pack_token': pack_token,
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found,
+                    {'type': '../../', 'equal_value': 'Eparam'}, # type in ['output', 'input']
+                    {'filename': '../conf.json', 'equal_value': 'Eacces'}, # illegal filepath access
+                    {'filename': '5', 'equal_value': 'Enoext'}, # file not found
+                ],
+                admin_session
+            )
 
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'updatesinglefile',
-                'pro_id': 1,
-                'filename': '../conf.json',
-                'type': 'output',
-                'pack_token': pack_token,
-            })
-            self.assertEqual(res.text, 'Eacces')
-
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'updatesinglefile',
-                'pro_id': 1,
-                'filename': '5',
-                'type': 'output',
-                'pack_token': pack_token,
-            })
-            self.assertEqual(res.text, 'Enoext')
             def callback():
                 res = admin_session.post('http://localhost:5501/submit', data={
                     'reqtype': 'rechal',
@@ -282,18 +273,20 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(res.text, 'S')
             self.assertFalse(os.path.exists('problem/1/res/testdata/4.in'))
             self.assertFalse(os.path.exists('problem/1/res/testdata/4.out'))
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'deletesinglefile',
-                'pro_id': 1,
-                'filename': '5',
-            })
-            self.assertEqual(res.text, 'Enoext')
-            res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={
-                'reqtype': 'deletesinglefile',
-                'pro_id': 1,
-                'filename': '../conf.json',
-            })
-            self.assertEqual(res.text, 'Eacces')
+
+            self.assertTable(
+                {
+                    'reqtype': 'deletesinglefile',
+                    'pro_id': 1,
+                    'filename': '4',
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found,
+                    {'filename': '../conf.json', 'equal_value': 'Eacces'}, # illegal filepath access
+                    {'filename': '5', 'equal_value': 'Enoext'}, # file not found
+                ],
+                admin_session
+            )
 
             # NOTE: deletetaskgroup
             res = admin_session.post('http://localhost:5501/manage/pro/updatetests?proid=1', data={

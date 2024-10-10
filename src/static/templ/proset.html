@@ -66,6 +66,12 @@
             $("#infoProClass").on('click', function(e) {
                 let body = info_dialog.querySelector('.modal-body');
                 body.innerHTML = DOMPurify.sanitize(marked.parse(cur_proclass_desc));
+
+                // NOTE: close info dialog before navigating to another page.
+                info_dialog.querySelectorAll('a').forEach(el => {
+                    el.addEventListener('click', _ => info_dialog_modal.dispose());
+                })
+
                 MathJax.Hub.Queue(["Typeset", MathJax.Hub, body]);
                 info_dialog_modal.show();
             });
@@ -262,7 +268,9 @@
             {% end %}
             <div>
                 <button type="button" class="btn btn-primary" id="switchProClass">Switch</button>
-                <button type="button" class="btn btn-success" id="infoProClass">Info</button>
+                {% if cur_proclass %}
+                    <button type="button" class="btn btn-success" id="infoProClass">Info</button>
+                {% end %}
                 <a class="btn btn-warning" href="/oj/acct/proclass/{{ user.acct_id }}/">Manage</a>
             </div>
         </form>

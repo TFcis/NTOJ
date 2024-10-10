@@ -7,6 +7,7 @@ from services.judge import JudgeServerClusterService
 from services.pro import ProService
 from services.user import Account
 
+TZ = datetime.timezone(datetime.timedelta(hours=+8))
 
 class ChalConst:
     STATE_AC = 1
@@ -108,12 +109,12 @@ class ChalSearchingParam:
                 query += f' AND "challenge_state"."state" = {self.state} '
 
         if self.compiler != 'all':
-            query += f' AND \"challenge\".\"compiler_type\"=\'{self.compiler}\' '
+            query += f' AND "challenge"."compiler_type"=\'{self.compiler}\' '
 
         if self.contest != 0:
             query += f' AND "challenge"."contest_id"={self.contest} '
         else:
-            query += ' AND "challenge"."contest_id"=0 '
+            query += f' AND "challenge"."contest_id"=0 '
 
         return query
 
@@ -270,10 +271,6 @@ class ChalService:
                 }
             )
 
-        owner = await self.rs.get(f'{pro_id}_owner')
-        unlock = [1]
-
-        tz = datetime.timezone(datetime.timedelta(hours=+8))
 
         return (
             None,
@@ -283,7 +280,7 @@ class ChalService:
                 'acct_id': acct_id,
                 'contest_id': contest_id,
                 'acct_name': acct_name,
-                'timestamp': timestamp.astimezone(tz),
+                'timestamp': timestamp.astimezone(TZ),
                 'testl': testl,
                 'response': final_response,
                 'comp_type': comp_type,
@@ -309,13 +306,8 @@ class ChalService:
 
         acct_id, contest_id, timestamp = int(result['acct_id']), int(result['contest_id']), result['timestamp']
         limit = testm_conf['limit']
-
-        if comp_type in limit:
-            timelimit = limit[comp_type]['timelimit']
-            memlimit = limit[comp_type]['memlimit']
-        else:
-            timelimit = limit['default']['timelimit']
-            memlimit = limit['default']['memlimit']
+        timelimit = limit.get(comp_type, limit['default'])['timelimit']
+        memlimit = limit.get(comp_type, limit['default'])['memlimit']
 
         async with self.db.acquire() as con:
             testl = []

@@ -1,4 +1,5 @@
 import os
+import copy
 import json
 
 import tornado.escape
@@ -20,6 +21,17 @@ class ManageProFileManagerTest(AsyncTest):
 
         return pack_token
 
+    def assertTable(self, default_data: dict, assert_tables: list[dict], session):
+        for table in assert_tables:
+            equal_value = table.pop("equal_value")
+
+            d = copy.copy(default_data)
+            for key, val in table.items():
+                d[key] = val
+
+            res = session.post('http://localhost:5501/manage/pro/filemanager', data=d)
+            self.assertEqual(res.text, equal_value)
+
     async def main(self):
         with AccountContext("admin@test", "testtest") as admin_session:
             # NOTE: preview
@@ -32,29 +44,21 @@ class ManageProFileManagerTest(AsyncTest):
             self.assertEqual(tornado.escape.xhtml_unescape(json.loads(res.text)),
                              open('tests/static_file/toj3/http/cont.html').read())
 
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=1', data={
-                'reqtype': 'preview',
-                'pro_id': 1,
-                'filename': '../conf.json',
-                'path': 'http'
-            })
-            self.assertEqual(res.text, 'Eacces')
-
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=1', data={
-                'reqtype': 'preview',
-                'pro_id': 1,
-                'filename': 'cont.cont.html',
-                'path': 'http'
-            })
-            self.assertEqual(res.text, 'Enoext')
-
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=1', data={
-                'reqtype': 'preview',
-                'pro_id': 1,
-                'filename': 'cont.html',
-                'path': '/etc'
-            })
-            self.assertEqual(res.text, 'Eparam')
+            self.assertTable(
+                {
+                    'reqtype': 'preview',
+                    'pro_id': 1,
+                    'filename': 'cont.html',
+                    'path': 'http'
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found
+                    {'filename': '../conf.json', 'equal_value': 'Eacces'}, # illegal filepath access
+                    {'filename': 'cont.html.html', 'equal_value': 'Enoext'}, # file not found
+                    {'path': '/etc/', 'filename': 'passwd-', 'equal_value': 'Eparam'}, # path in ['http', 'res/check', 'res/make']
+                ],
+                admin_session
+            )
 
             # NOTE: addsinglefile
             pack_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
@@ -70,30 +74,22 @@ class ManageProFileManagerTest(AsyncTest):
             self.assertTrue(os.path.exists(f'{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/1/test'))
             self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/http/test').read())
 
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=1', data={
-                'reqtype': 'addsinglefile',
-                'pro_id': 1,
-                'filename': 'test2',
-                'path': 'httpx',
-                'pack_token': pack_token,
-            })
-            self.assertEqual(res.text, 'Eparam')
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=1', data={
-                'reqtype': 'addsinglefile',
-                'pro_id': 1,
-                'filename': '../etc',
-                'path': 'http',
-                'pack_token': pack_token,
-            })
-            self.assertEqual(res.text, 'Eacces')
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=1', data={
-                'reqtype': 'addsinglefile',
-                'pro_id': 1,
-                'filename': 'test',
-                'path': 'http',
-                'pack_token': pack_token,
-            })
-            self.assertEqual(res.text, 'Eexist')
+            self.assertTable(
+                {
+                    'reqtype': 'addsinglefile',
+                    'pro_id': 1,
+                    'filename': 'test',
+                    'path': 'http',
+                    'pack_token': pack_token,
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found
+                    {'filename': '../conf.json', 'equal_value': 'Eacces'}, # illegal filepath access
+                    {'filename': 'test', 'equal_value': 'Eexist'}, # file already exists
+                    {'path': '/etc/', 'filename': 'passwd-', 'equal_value': 'Eparam'}, # path in ['http', 'res/check', 'res/make']
+                ],
+                admin_session
+            )
 
             # NOTE: upload checker problem
             await self.upload_problem('float_checker.tar.xz', 'float checker', ProConst.STATUS_ONLINE, 4, admin_session)
@@ -126,30 +122,23 @@ class ManageProFileManagerTest(AsyncTest):
             await self.wait_for_judge_finish(callback)
             chal_states_result = self.get_chal_state(chal_id=12, session=admin_session)
             self.assertEqual(chal_states_result, [ChalConst.STATE_AC])
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
-                'reqtype': 'updatesinglefile',
-                'pro_id': 4,
-                'filename': '../check.cpp',
-                'pack_token': pack_token,
-                'path': 'res/check',
-            })
-            self.assertEqual(res.text, 'Eacces')
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
-                'reqtype': 'updatesinglefile',
-                'pro_id': 4,
-                'filename': 'abc.cpp',
-                'pack_token': pack_token,
-                'path': 'res/check',
-            })
-            self.assertEqual(res.text, 'Enoext')
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
-                'reqtype': 'updatesinglefile',
-                'pro_id': 4,
-                'filename': 'abc.cpp',
-                'pack_token': pack_token,
-                'path': '/etc/',
-            })
-            self.assertEqual(res.text, 'Eparam')
+
+            self.assertTable(
+                {
+                    'reqtype': 'updatesinglefile',
+                    'pro_id': 4,
+                    'filename': 'check.cpp',
+                    'pack_token': pack_token,
+                    'path': 'res/check',
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found
+                    {'filename': '../check.cpp', 'equal_value': 'Eacces'}, # illegal filepath access
+                    {'filename': 'abc.cpp', 'equal_value': 'Enoext'}, # file not found
+                    {'path': '/etc/', 'filename': 'group-', 'equal_value': 'Eparam'}, # path in ['http', 'res/check', 'res/make']
+                ],
+                admin_session
+            )
 
             # NOTE: renamesinglefile
             res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
@@ -190,38 +179,24 @@ class ManageProFileManagerTest(AsyncTest):
             await self.wait_for_judge_finish(callback)
             chal_states_result = self.get_chal_state(chal_id=12, session=admin_session)
             self.assertEqual(chal_states_result, [ChalConst.STATE_ERR])
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
-                'reqtype': 'renamesinglefile',
-                'pro_id': 4,
-                'old_filename': 'check.cpp',
-                'new_filename': 'check.cpp.cpp',
-                'path': 'res/check'
-            })
-            self.assertEqual(res.text, 'Enoext')
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
-                'reqtype': 'renamesinglefile',
-                'pro_id': 4,
-                'old_filename': 'check.cpp.cpp',
-                'new_filename': 'check.cpp.cpp',
-                'path': 'res/check'
-            })
-            self.assertEqual(res.text, 'Eexist')
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
-                'reqtype': 'renamesinglefile',
-                'pro_id': 4,
-                'old_filename': 'check.cpp.cpp',
-                'new_filename': 'check.cpp.cpp',
-                'path': '/etc'
-            })
-            self.assertEqual(res.text, 'Eparam')
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
-                'reqtype': 'renamesinglefile',
-                'pro_id': 4,
-                'old_filename': '../../conf.json',
-                'new_filename': '../../conf.sss',
-                'path': 'res/check'
-            })
-            self.assertEqual(res.text, 'Eacces')
+
+            self.assertTable(
+                {
+                    'reqtype': 'renamesinglefile',
+                    'pro_id': 4,
+                    'old_filename': 'check.cpp',
+                    'new_filename': 'check.cpp.cpp',
+                    'path': 'res/check'
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found
+                    {'old_filename': '../../conf.json', 'new_filename': '../../conf.js', 'equal_value': 'Eacces'}, # illegal filepath access
+                    {'old_filename': 'check.cpp', 'new_filename': 'check.cpp.cpp', 'equal_value': 'Enoext'}, # file not found
+                    {'old_filename': 'check.cpp.cpp', 'new_filename': 'check.cpp.cpp', 'equal_value': 'Eexist'}, # file already exists
+                    {'path': '/etc/', 'old_filename': 'hostname', 'new_filename': 'chi', 'equal_value': 'Eparam'}, # path in ['http', 'res/check', 'res/make']
+                ],
+                admin_session
+            )
 
             # NOTE: deletesinglefile
             res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
@@ -241,27 +216,21 @@ class ManageProFileManagerTest(AsyncTest):
             self.assertEqual(res.text, 'S')
             self.assertFalse(os.path.exists('problem/2/res/make/stub.cpp.cpp'))
 
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
-                'reqtype': 'deletesinglefile',
-                'pro_id': 4,
-                'filename': 'check.cpp',
-                'path': 'res/check'
-            })
-            self.assertEqual(res.text, 'Enoext')
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
-                'reqtype': 'deletesinglefile',
-                'pro_id': 4,
-                'filename': 'hostname',
-                'path': '/etc'
-            })
-            self.assertEqual(res.text, 'Eparam')
-            res = admin_session.post('http://localhost:5501/manage/pro/filemanager?proid=4', data={
-                'reqtype': 'deletesinglefile',
-                'pro_id': 4,
-                'filename': '../../conf.json',
-                'path': 'res/check'
-            })
-            self.assertEqual(res.text, 'Eacces')
+            self.assertTable(
+                {
+                    'reqtype': 'deletesinglefile',
+                    'pro_id': 4,
+                    'filename': 'check.cpp.cpp',
+                    'path': 'res/check'
+                },
+                [
+                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found
+                    {'filename': 'check.cpp', 'equal_value': 'Enoext'}, # file not found, check.cpp was renamed to check.cpp.cpp in the previous code
+                    {'filename': '../../conf.json', 'equal_value': 'Eacces'}, # file not found, check.cpp was renamed to check.cpp.cpp in the previous code
+                    {'path': '/etc/', 'filename': 'hostname', 'equal_value': 'Eparam'}, # path in ['http', 'res/check', 'res/make']
+                ],
+                admin_session
+            )
 
             # TODO: 檢查 pro_id=1只有http, pro_id=2有http與make，pro_id=4有http與check
             html = self.get_html('http://localhost:5501/manage/pro/filemanager?proid=1', admin_session)
