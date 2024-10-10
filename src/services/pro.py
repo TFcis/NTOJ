@@ -427,7 +427,7 @@ class ProClassService:
     async def get_proclass(self, proclass_id):
         async with self.db.acquire() as con:
             res = await con.fetch(
-                'SELECT "proclass_id", "name", "desc", "list", "acct_id", "type" FROM "proclass" WHERE "proclass_id" = $1 ORDER BY "proclass_id" ASC;',
+                'SELECT "proclass_id", "name", "desc", "list", "acct_id", "type" FROM "proclass" WHERE "proclass_id" = $1;',
                 int(proclass_id),
             )
 
@@ -438,7 +438,7 @@ class ProClassService:
 
     async def get_proclass_list(self):
         async with self.db.acquire() as con:
-            res = await con.fetch('SELECT "proclass_id", "name", "acct_id", "type" FROM "proclass";')
+            res = await con.fetch('SELECT "proclass_id", "name", "acct_id", "type" FROM "proclass" ORDER BY "proclass_id" ASC;')
 
         return None, res
 
