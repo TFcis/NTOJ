@@ -150,7 +150,7 @@ class ManageProHandler(RequestHandler):
 
             err, pro_id = await ProService.inst.add_pro(name, status, pack_token)
             await LogService.inst.add_log(
-                f"{self.acct.name} had been send a request to add the problem #{pro_id}", 'manage.pro.add.pro'
+                f"{self.acct.name} has sent a request to add the problem #{pro_id}", 'manage.pro.add.pro'
             )
             if err:
                 self.error(err)
@@ -172,7 +172,7 @@ class ManageProHandler(RequestHandler):
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not self._is_file_access_safe(basepath, filename):
                     await LogService.inst.add_log(
-                        f'{self.acct.name} tried to preview file:{filename} of the problem #{pro_id}, but it was suspicious',
+                        f'{self.acct.name} tried to preview file:{filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.preview.failed'
                     )
                     self.error('Eacces')
@@ -182,13 +182,13 @@ class ManageProHandler(RequestHandler):
 
                 if not os.path.exists(filepath):
                     await LogService.inst.add_log(
-                        f'{self.acct.name} tried to preview file:{filename} of the problem #{pro_id} but not found',
+                        f'{self.acct.name} tried to preview file:{filename} for problem #{pro_id} but not found',
                         'manage.pro.update.tests.preview.failed'
                     )
                     self.error('Enoext')
                     return
 
-                await LogService.inst.add_log(f'{self.acct.name} preview file:{filename} of the problem #{pro_id}',
+                await LogService.inst.add_log(f'{self.acct.name} preview file:{filename} for problem #{pro_id}',
                                             'manage.pro.update.tests.preview')
                 with open(filepath, 'r') as testcase_f:
                     content = testcase_f.readlines()
@@ -217,7 +217,7 @@ class ManageProHandler(RequestHandler):
                 test_group[group]['weight'] = weight
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to update weight of subtask#{group} of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to update weight of subtask#{group} for problem #{pro_id}',
                     'manage.pro.update.tests.updateweight',
                     {
                         'weight': weight,
@@ -243,7 +243,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to add a new subtask of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to add a new subtask for problem #{pro_id}',
                     'manage.pro.update.tests.addtaskgroup',
                     {
                         'weight': weight,
@@ -275,7 +275,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to delete a subtask of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to delete a subtask for problem #{pro_id}',
                     'manage.pro.update.tests.deletetaskgroup',
                 )
                 self.finish('S')
@@ -312,7 +312,7 @@ class ManageProHandler(RequestHandler):
                 test_group[group]['metadata']['data'].append(testcase)
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to add a testcase:{testcase} to group#{group} of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to add a testcase:{testcase} to group#{group} for problem #{pro_id}',
                     'manage.pro.update.tests.addsingletestcase',
                 )
                 self.finish('S')
@@ -340,7 +340,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to delete a testcase:{testcase} to group#{group} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to delete a testcase:{testcase} to group#{group} for problem #{pro_id}',
                     'manage.pro.update.tests.deletesingletestcase',
                 )
                 self.finish('S')
@@ -400,7 +400,7 @@ class ManageProHandler(RequestHandler):
                 if is_modified:
                     await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
                     'manage.pro.update.tests.renamesinglefile',
                 )
                 self.finish('S')
@@ -427,7 +427,7 @@ class ManageProHandler(RequestHandler):
                 if not self._is_file_access_safe(basepath, f"{filename}.{test_type[0:-3]}"):
                     PackService.inst.clear(pack_token)
                     await LogService.inst.add_log(
-                        f'{self.acct.name} tried to update {filename} of the problem #{pro_id}, but it was suspicious',
+                        f'{self.acct.name} tried to update {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.updatesinglefile.failed'
                     )
                     self.error('Eacces')
@@ -446,7 +446,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to update a single file:{filename} of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to update a single file:{filename} for problem #{pro_id}',
                     'manage.pro.update.tests.updatesinglefile',
                 )
 
@@ -493,7 +493,7 @@ class ManageProHandler(RequestHandler):
                 _ = await PackService.inst.direct_copy(output_pack_token, outputfile_path)
 
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to add a single file:{filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to add a single file:{filename} for problem #{pro_id}',
                     'manage.pro.update.tests.addsinglefile',
                 )
 
@@ -538,7 +538,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to delete a single file:{filename} of the problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to delete a single file:{filename} for problem #{pro_id}',
                     'manage.pro.update.tests.deletesinglefile',
                 )
 
@@ -633,7 +633,7 @@ class ManageProHandler(RequestHandler):
 
                 os.rename(old_filepath, new_filepath)
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
                     'manage.pro.update.filemanager.renamesinglefile',
                 )
                 self.finish('S')
@@ -676,7 +676,7 @@ class ManageProHandler(RequestHandler):
 
                 _ = await PackService.inst.direct_copy(pack_token, filepath)
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to update {filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to update {filename} for problem #{pro_id}',
                     'manage.pro.update.filemanager.updatesinglefile',
                 )
 
@@ -720,7 +720,7 @@ class ManageProHandler(RequestHandler):
 
                 _ = await PackService.inst.direct_copy(pack_token, filepath)
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to add {filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to add {filename} for problem #{pro_id}',
                     'manage.pro.update.filemanager.addsinglefile',
                 )
 
@@ -761,7 +761,7 @@ class ManageProHandler(RequestHandler):
                 os.remove(f'{basepath}/{filename}')
 
                 await LogService.inst.add_log(
-                    f'{self.acct.name} had been send a request to delete {filename} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to delete {filename} for problem #{pro_id}',
                     'manage.pro.update.filemanager.deletesinglefile',
                 )
 
@@ -813,7 +813,7 @@ class ManageProHandler(RequestHandler):
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f"{self.acct.name} had been send a request to update the problem #{pro_id}", 'manage.pro.update.pro',
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.pro',
                     {
                         'name': name,
                         'status': status,
@@ -868,7 +868,7 @@ class ManageProHandler(RequestHandler):
                     })
 
                 await LogService.inst.add_log(
-                    f"{self.acct.name} had been send a request to update the problem #{pro_id} by uploading problem package",
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id} by uploading problem package",
                     'manage.pro.update.pro.package',
                 )
 
@@ -927,7 +927,7 @@ class ManageProHandler(RequestHandler):
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
 
                 await LogService.inst.add_log(
-                    f"{self.acct.name} had been send a request to update the problem #{pro_id}",
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id}",
                     'manage.pro.update.limit',
                     {
                         'limits': limits
