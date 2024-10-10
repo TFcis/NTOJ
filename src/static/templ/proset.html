@@ -66,6 +66,12 @@
             $("#infoProClass").on('click', function(e) {
                 let body = info_dialog.querySelector('.modal-body');
                 body.innerHTML = DOMPurify.sanitize(marked.parse(cur_proclass_desc));
+
+                // NOTE: close info dialog before navigating to another page.
+                info_dialog.querySelectorAll('a').forEach(el => {
+                    el.addEventListener('click', _ => info_dialog_modal.dispose());
+                })
+
                 MathJax.Hub.Queue(["Typeset", MathJax.Hub, body]);
                 info_dialog_modal.show();
             });
