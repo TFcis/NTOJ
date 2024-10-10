@@ -1,4 +1,4 @@
-{{ set_page_title("Edit Account") }}
+{% raw set_page_title("Edit Account") %}
 
 {% if acct.acct_id != user.acct_id and not user.is_kernel() %}
     You don't have permission.
