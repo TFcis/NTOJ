@@ -70,7 +70,7 @@ class JudgeServerService:
                 )
 
             self.running_chal_cnt -= 1
-            await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
+            await ChalService.inst.update_challenge_state(res['chal_id'])
 
             await self.rs.publish('chalstatesub', res['chal_id'])
             await self.rs.publish('challiststatesub', res['chal_id'])
