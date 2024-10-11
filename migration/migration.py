@@ -57,11 +57,11 @@ async def main():
             module = importlib.import_module(module_name)
 
             if not hasattr(module, 'dochange'):
-                print(f"{filename} is an illegal migration file because dochange() was not found in {filename}")
+                print(f"{filename} is an invalid migration file because the function 'dochange()' was not found.")
                 continue
 
             if not inspect.iscoroutinefunction(module.dochange):
-                print("dochange() must be an async function")
+                print(f"The function 'dochange()' in {filename} must be asynchronous.")
                 continue
 
             try:
