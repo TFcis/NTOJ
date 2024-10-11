@@ -56,14 +56,22 @@ async def main():
             module_name = filename[:-3]
             module = importlib.import_module(module_name)
 
+            if not hasattr(module, 'dochange'):
+                print(f"{filename} is an illegal migration file because dochange() was not found in {filename}")
+                continue
+
+            if not inspect.iscoroutinefunction(module.dochange):
+                print("dochange() must be an async function")
+                continue
+
             try:
-                if hasattr(module, 'dochange') and inspect.iscoroutinefunction(module.dochange):
+                async with db_conn.transaction():
                     await module.dochange(db_conn, redis_conn)
 
             except Exception as e:
                 print(f"Error running migration file {filename}: {e}")
                 traceback.print_exc()
-                continue
+                break
 
         await db_conn.execute('UPDATE db_version SET "version"=$1', version)
 
