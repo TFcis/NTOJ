@@ -284,7 +284,6 @@ class ProService:
         await self.db.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
         await self.rs.delete('rate')
         await self.rs.hdel('pro_rate', pro_id)
-        await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
 
         return None, None
 

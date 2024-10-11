@@ -187,8 +187,7 @@ class ChalService:
         async with self.db.acquire() as con:
             await con.execute('DELETE FROM "test" WHERE "chal_id" = $1;', chal_id)
 
-        await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
-
+        await self.update_challenge_state(chal_id)
         return None, None
 
     async def get_chal_state(self, chal_id):
@@ -339,14 +338,14 @@ class ChalService:
             '''
             )
 
-        await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
+        await self.update_challenge_state(chal_id)
 
         file_ext = ChalConst.FILE_EXTENSION[comp_type]
 
         if not os.path.isfile(f"code/{chal_id}/main.{file_ext}"):
             for test in testl:
                 await self.update_test(chal_id, test['test_idx'], ChalConst.STATE_ERR, 0, 0, '', refresh_db=False)
-            await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
+                await self.update_challenge_state(chal_id)
             return None, None
 
         chalmeta = testm_conf['chalmeta']
@@ -506,6 +505,9 @@ class ChalService:
             )
 
         if refresh_db:
-            await self.rs.publish('materialized_view_req', (await self.rs.get('materialized_view_counter')))
+            await self.update_challenge_state(chal_id)
 
         return None, None
+
+    async def update_challenge_state(self, chal_id: int):
+        await self.db.execute(f'SELECT update_challenge_state({chal_id});')

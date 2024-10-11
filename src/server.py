@@ -2,7 +2,6 @@ import asyncio
 import functools
 import signal
 import time
-from multiprocessing import Process
 
 import asyncpg
 import tornado.httpserver
@@ -31,8 +30,6 @@ def sig_handler(server, db, rs, pool, sig, frame):
             print('Waiting for next tick')
             io_loop.add_timeout(now + 1, stop_loop, deadline)
         else:
-            view_task_process.kill()
-
             for task in asyncio.all_tasks():
                 task.cancel()
 
@@ -53,49 +50,8 @@ def sig_handler(server, db, rs, pool, sig, frame):
     print('Caught signal: %s' % sig)
     io_loop.add_callback_from_signal(shutdown)
 
-
-async def materialized_view_task():
-    db = await asyncpg.connect(
-        database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost'
-    )
-    rs = await aioredis.Redis(host='localhost', port=6379, db=config.REDIS_DB)
-    p = rs.pubsub()
-    await p.subscribe('materialized_view_req')
-
-    async def _update():
-        ret = await rs.incr('materialized_view_counter') - 1
-        await db.execute('SELECT refresh_challenge_state_incremental();')
-        return ret
-
-    counter = await _update()
-    async for msg in p.listen():
-        if msg['type'] != 'message':
-            continue
-
-        ind = int(msg['data'])
-        if ind <= counter:
-            continue
-
-        counter = await _update()
-
-
 if __name__ == "__main__":
     httpsock = tornado.netutil.bind_sockets(config.PORT)
-
-    def run_materialized_view_task():
-        signal.signal(signal.SIGINT, lambda _, __: loop.stop())
-        signal.signal(signal.SIGTERM, lambda _, __: loop.stop())
-        try:
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(materialized_view_task())
-            loop.run_forever()
-
-        finally:
-            loop.stop()
-            loop.close()
-
-    view_task_process = Process(target=run_materialized_view_task)
-    view_task_process.start()
 
     # tornado.process.fork_processes(4)
     db: asyncpg.Pool = asyncio.get_event_loop().run_until_complete(
