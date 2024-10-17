@@ -59,12 +59,17 @@ class JudgeServerService:
             for test_idx, result in enumerate(res['results']):
                 # INFO: CE會回傳 result['verdict']
 
+                score = None
+                if 'score' in result and result['score'] != -1:
+                    score = result['score']
+
                 _, ret = await ChalService.inst.update_test(
                     res['chal_id'],
                     test_idx,
                     result['status'],
                     int(result['time'] / 10 ** 6),  # ns to ms
                     result['memory'],
+                    score,
                     result['verdict'],
                     refresh_db=False,
                 )

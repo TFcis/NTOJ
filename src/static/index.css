@@ -6,41 +6,49 @@ a:hover a:visited a:link a:active {
   text-decoration: none !important;
 }
 
-.state-1 {
+.state-1 { /* AC */
   color: #0f0 !important;
 }
 
-.state-2 {
+.state-2 { /* PC */
+  color: #0f0 !important;
+}
+
+.state-3 { /* WA */
   color: #ed784a !important;
 }
 
-.state-3 {
+.state-4 { /* RE */
   color: #27fff6 !important;
 }
 
-.state-4 {
-  color: #70649a !important;
-}
-
-.state-5 {
-  color: #e83015 !important;
-}
-
-.state-6 {
-  color: #ffeb00 !important;
-}
-
-.state-8 {
-  color: #ffeb00 !important;
-}
-
-.state-9 {
+.state-5 { /* RESIG */
   color: #237ac7 !important;
 }
 
-.state-10 {
+.state-6 { /* TLE */
+  color: #70649a !important;
+}
+
+.state-7 { /* MLE */
+  color: #e83015 !important;
+}
+
+.state-8 { /* OLE */
   color: #ffeb00 !important;
 }
+
+.state-9 { /* CE */
+  color: #ffeb00 !important;
+}
+
+.state-10 { /* CLE */
+  color: #ffeb00 !important;
+}
+
+/* .state-11 IE */
+/* .state-100 JUDGE */
+/* .state-101 NOTSTARTED */
 
 .panel {
   margin-bottom: 20px;

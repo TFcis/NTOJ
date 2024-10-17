@@ -1,3 +1,4 @@
+import decimal
 import datetime
 from collections import defaultdict
 
@@ -19,58 +20,56 @@ class RateService:
 
         if (rate_data := await self.rs.hget(key, acct_id)) is None:
             async with self.db.acquire() as con:
-                all_chal_cnt = await con.fetchrow('SELECT COUNT(*) FROM "challenge" WHERE "acct_id" = $1', acct_id)
-                all_chal_cnt = all_chal_cnt['count']
-
-                ac_chal_cnt = await con.fetchrow(
-                    '''
-                        SELECT COUNT(*) FROM "challenge"
-                        INNER JOIN "challenge_state"
-                        ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                        AND "challenge_state"."state" = $1
-                        WHERE "acct_id" = $2
-                    ''',
-                    ChalConst.STATE_AC,
-                    acct_id,
-                )
-                ac_chal_cnt = ac_chal_cnt['count']
-
                 result = await con.fetch(
-                    '''
+                    f'''
                         SELECT
-                        SUM("test_valid_rate"."rate") AS "rate" FROM "test_valid_rate"
-                        INNER JOIN (
-                            SELECT "test"."pro_id","test"."test_idx",
-                            MIN("test"."timestamp") AS "timestamp"
-                            FROM "test"
-                            INNER JOIN "account"
-                            ON "test"."acct_id" = "account"."acct_id"
-                            INNER JOIN "problem"
-                            ON "test"."pro_id" = "problem"."pro_id"
-                            WHERE "account"."acct_id" = $1
-                            AND "test"."state" = $2
-                            GROUP BY "test"."pro_id","test"."test_idx"
-                        ) AS "valid_test"
-                        ON "test_valid_rate"."pro_id" = "valid_test"."pro_id"
-                        AND "test_valid_rate"."test_idx" = "valid_test"."test_idx";
+                            COUNT(*) AS all_chal_cnt,
+                            COUNT(CASE WHEN challenge_state.state = {ChalConst.STATE_AC} THEN 1 END) AS ac_chal_cnt
+                        FROM challenge
+                        INNER JOIN challenge_state
+                        ON challenge_state.chal_id = challenge.chal_id AND challenge.acct_id = $1
                     ''',
                     acct_id,
-                    int(ChalConst.STATE_AC),
                 )
                 if len(result) != 1:
                     return 'Eunk', None
+                result = result[0]
 
-                if (rate := result[0]['rate']) is None:
+                ac_chal_cnt, all_chal_cnt = (
+                    result['ac_chal_cnt'],
+                    result['all_chal_cnt'],
+                )
+
+                result = await con.fetch(
+                    '''
+                        SELECT SUM(max_rate) AS total_rate
+                        FROM (
+                            SELECT MAX(cs.rate) AS max_rate
+                            FROM public.account a
+                            JOIN public.challenge c ON a.acct_id = c.acct_id
+                            JOIN public.challenge_state cs ON c.chal_id = cs.chal_id
+                            WHERE a.acct_id = $1
+                            GROUP BY c.pro_id
+                        ) AS subquery;
+                    ''',
+                    acct_id
+                )
+                if len(result) != 1:
+                    return 'Eunk', None
+                rate = result[0]['total_rate']
+                if rate is None:
                     rate = 0
 
                 rate_data = {
-                    'rate': rate,
+                    'rate': str(rate),
                     'ac_cnt': ac_chal_cnt,
                     'all_cnt': all_chal_cnt,
                 }
                 await self.rs.hset(key, acct_id, packb(rate_data))
         else:
             rate_data = unpackb(rate_data)
+
+        rate_data['rate'] = decimal.Decimal(rate_data['rate'])
 
         return None, rate_data
 
@@ -155,8 +154,10 @@ class RateService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 f'''
-                    SELECT "challenge"."pro_id", MAX("challenge_state"."rate") AS "score",
-                    COUNT("challenge_state") AS "count", MIN("challenge_state"."state") as "state"
+                    SELECT "challenge"."pro_id",
+                    ROUND(MAX("challenge_state"."rate"), (SELECT rate_precision FROM problem WHERE pro_id = challenge.pro_id)) AS "score",
+                    COUNT("challenge_state") AS "count",
+                    MIN("challenge_state"."state") as "state"
                     FROM "challenge"
                     INNER JOIN "challenge_state"
                     ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
@@ -191,7 +192,8 @@ class RateService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "challenge"."acct_id", "challenge"."pro_id", MAX("challenge_state"."rate") AS "score",
+                    SELECT "challenge"."acct_id", "challenge"."pro_id",
+                    ROUND(MAX("challenge_state"."rate"), (SELECT rate_precision FROM problem WHERE pro_id = challenge.pro_id)) AS "rate",
                     COUNT("challenge_state") AS "count"
                     FROM "challenge"
                     INNER JOIN "challenge_state"

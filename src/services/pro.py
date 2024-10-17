@@ -13,6 +13,10 @@ class ProConst:
     NAME_MIN = 1
     NAME_MAX = 64
     CODE_MAX = 16384
+
+    RATE_PRECISION_MIN = 0
+    RATE_PRECISION_MAX = 3
+
     STATUS_ONLINE = 0
     STATUS_CONTEST = 1
     STATUS_HIDDEN = 2
@@ -73,7 +77,7 @@ class ProService:
             result = await con.fetch(
                 """
                     SELECT "name", "status", "tags", "allow_submit",
-                    "check_type", "is_makefile", "chalmeta", "limit"
+                    "check_type", "is_makefile", "chalmeta", "limit", "rate_precision"
                     FROM "problem" WHERE "pro_id" = $1 AND "status" <= $2;
                 """,
                 pro_id,
@@ -83,13 +87,14 @@ class ProService:
                 return "Enoext", None
             result = result[0]
 
-            name, status, tags, allow_submit, check_type, is_makefile, limit, chalmeta = (
+            name, status, tags, allow_submit, check_type, is_makefile, rate_precision, limit, chalmeta = (
                 result["name"],
                 result["status"],
                 result["tags"],
                 result["allow_submit"],
                 result["check_type"],
                 result["is_makefile"],
+                result["rate_precision"],
                 json.loads(result["limit"]),
                 json.loads(result["chalmeta"]),
             )
@@ -115,6 +120,7 @@ class ProService:
             "check_type": check_type,
             "is_makefile": is_makefile,
             "test_group": test_groups,
+            "rate_precision": rate_precision,
         }
 
         return (
@@ -259,6 +265,7 @@ class ProService:
         check_type = testm_conf['check_type']
         chalmeta = testm_conf['chalmeta']
         limit = testm_conf['limit']
+        rate_precision = testm_conf['rate_precision']
         for test_group_idx, test_group_conf in testm_conf['test_group'].items():
             weight = test_group_conf['weight']
 
@@ -268,8 +275,8 @@ class ProService:
         async with self.db.acquire() as con:
             await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
             await con.execute(
-                'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4 WHERE pro_id = $5',
-                is_makefile, check_type, json.dumps(chalmeta), json.dumps(limit), pro_id
+                'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4, "rate_precision" = $5 WHERE pro_id = $6',
+                is_makefile, check_type, json.dumps(chalmeta), json.dumps(limit), rate_precision, pro_id
             )
 
             if insert_sql:
@@ -303,37 +310,7 @@ class ProService:
 
     async def unpack_pro(self, pro_id, pack_type, pack_token):
         from services.chal import ChalConst
-        def _clean_cont(prefix):
-            try:
-                os.remove(f"{prefix}cont.html")
-
-            except OSError:
-                pass
-
-            try:
-                os.remove(f"{prefix}cont.pdf")
-
-            except OSError:
-                pass
-
-        if (
-                pack_type != ProService.PACKTYPE_FULL
-                and pack_type != ProService.PACKTYPE_CONTHTML
-                and pack_type != ProService.PACKTYPE_CONTPDF
-        ):
-            return "Eparam", None
-
-        if pack_type == ProService.PACKTYPE_CONTHTML:
-            prefix = f"problem/{pro_id}/http/"
-            _clean_cont(prefix)
-            await PackService.inst.direct_copy(pack_token, f"{prefix}cont.html")
-
-        elif pack_type == ProService.PACKTYPE_CONTPDF:
-            prefix = f"problem/{pro_id}/http/"
-            _clean_cont(prefix)
-            await PackService.inst.direct_copy(pack_token, f"{prefix}cont.pdf")
-
-        elif pack_type == ProService.PACKTYPE_FULL:
+        if pack_type == ProService.PACKTYPE_FULL:
             err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
             if err:
                 return err, None
