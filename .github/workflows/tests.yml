@@ -47,7 +47,7 @@ jobs:
           cd $HOME
           git clone https://github.com/tobiichi3227/NTOJ-Judge
           cd NTOJ-Judge/src
-          sudo pip3 install tornado cffi --break-system-packages
+          sudo pip3 install tornado cffi
           chmod +x ./runserver.sh
           sudo ./runserver.sh > output.log 2>&1 &
 
