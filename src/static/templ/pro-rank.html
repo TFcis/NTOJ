@@ -27,6 +27,7 @@
                     <th>Rank</th>
                     <th>#</th>
                     <th>Account</th>
+                    <th>Score</th>
                     <th>Runtime(ms)</th>
                     <th>Memory(KB)</th>
                     <th>Time</th>
@@ -49,6 +50,7 @@
                     <td>{{ rank }}</td>
                     <td><a href="/oj/chal/{{chal['chal_id']}}/">{{ chal['chal_id']}}</a></td>
                     <td><a href="/oj/acct/{{chal['acct_id']}}/">{{ chal['acct_name']}}</a></td>
+                    <td>{{ chal['rate'] }}</td>
                     <td>{{ chal['runtime'] }}</td>
                     <td>{{ round(chal['memory'] / 1024) }}</td>
                     <td>{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>

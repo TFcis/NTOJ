@@ -510,7 +510,7 @@ class ChalService:
         total_chal = result[0]['count']
         return None, {'total_chal': total_chal}
 
-    async def update_test(self, chal_id, test_idx, state, runtime, memory, rate, response, refresh_db=True):
+    async def update_test(self, chal_id, test_idx, state, runtime, memory, rate, response, rate_is_cms_type=False, refresh_db=True):
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             await con.execute(
@@ -527,6 +527,20 @@ class ChalService:
                 chal_id,
                 test_idx,
             )
+
+            if rate_is_cms_type:
+                await con.execute(
+                    '''
+                        UPDATE "test"
+                        SET "rate" = $1::decimal * "test_config"."weight"::decimal
+                        FROM "test_config"
+                        WHERE "test"."chal_id" = $2 AND
+                              "test_config"."pro_id" = "test"."pro_id" AND
+                              "test_config"."test_idx" = $3 AND
+                              "test"."test_idx" = $3;
+                    ''',
+                    rate, chal_id, test_idx
+                )
 
         if refresh_db:
             await self.update_challenge_state(chal_id)

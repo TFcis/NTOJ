@@ -331,9 +331,13 @@ class ProService:
             except json.decoder.JSONDecodeError:
                 return "Econf", None
 
-            is_makefile = conf["compile"] == 'makefile'
+            is_makefile = False
+            if 'compile' in conf:
+                is_makefile = conf["compile"] == 'makefile'
+            elif 'is_makefile' in conf:
+                is_makefile = conf["is_makefile"]
+
             check_type = self._get_check_type(conf["check"])
-            chalmeta = conf["metadata"]  # INFO: ioredir data
 
             ALLOW_COMPILERS = list(ChalConst.ALLOW_COMPILERS) + ['default']
             if is_makefile:
@@ -341,13 +345,19 @@ class ProService:
 
             if "limit" in conf:
                 limit = {lang: lim for lang, lim in conf["limit"].items() if lang in ALLOW_COMPILERS}
-            else:
+            elif 'timelimit' in conf and 'memlimit' in conf:
                 limit = {
                     'default': {
                         'timelimit': conf["timelimit"],
                         'memlimit': conf["memlimit"] * 1024
                     }
                 }
+            else:
+                return "Econf", None
+
+            chalmeta = {}
+            if 'metadata' in conf:
+                chalmeta = conf["metadata"]  # INFO: ioredir data
 
             async with self.db.acquire() as con:
                 await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))

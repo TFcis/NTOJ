@@ -4,6 +4,7 @@ import tornado.web
 
 from handlers.base import RequestHandler, reqenv
 from services.user import UserConst, UserService, Account
+from services.chal import ChalConst
 
 
 class ProRankHandler(RequestHandler):
@@ -26,26 +27,33 @@ class ProRankHandler(RequestHandler):
 
         async with self.db.acquire() as con:
             result = await con.fetch(
-                '''
+                f'''
                 SELECT *
                 FROM (
                 SELECT DISTINCT ON ("challenge"."acct_id")
-                "challenge"."chal_id",
-                "challenge"."acct_id",
-                "challenge"."timestamp",
-                "account"."name" AS "acct_name",
-                "challenge_state"."runtime",
-                "challenge_state"."memory"
-                FROM "challenge"
-                INNER JOIN "account"
-                ON "challenge"."acct_id"="account"."acct_id"
-                INNER JOIN "challenge_state"
-                ON "challenge"."chal_id"="challenge_state"."chal_id"
-                WHERE "challenge"."pro_id"= $1
-                AND "challenge_state"."state"=1
-                ORDER BY "challenge"."acct_id" ASC,
-                "challenge_state"."runtime" ASC, "challenge_state"."memory" ASC,
-                "challenge"."timestamp" ASC, "challenge"."acct_id" ASC
+                        "challenge"."chal_id",
+                        "challenge"."acct_id",
+                        "challenge"."timestamp",
+                        "account"."name" AS "acct_name",
+                        "challenge_state"."runtime",
+                        "challenge_state"."memory",
+                        ROUND("challenge_state"."rate", "problem"."rate_precision")
+
+                    FROM "challenge"
+                    INNER JOIN "account"
+                    ON "challenge"."acct_id"="account"."acct_id"
+
+                    INNER JOIN "challenge_state"
+                    ON "challenge"."chal_id"="challenge_state"."chal_id"
+
+                    INNER JOIN "problem"
+                    ON "challenge"."pro_id" = $1
+
+                    WHERE "challenge_state"."state"={ChalConst.STATE_AC}
+
+                    ORDER BY "challenge"."acct_id" ASC, "challenge_state"."rate" ASC,
+                    "challenge_state"."runtime" ASC, "challenge_state"."memory" ASC,
+                    "challenge"."timestamp" ASC
                 ) temp
                 ORDER BY "runtime" ASC, "memory" ASC,
                 "timestamp" ASC, "acct_id" ASC OFFSET $2 LIMIT $3;
@@ -73,7 +81,7 @@ class ProRankHandler(RequestHandler):
             total_cnt = total_cnt[0]['count']
 
         chal_list = []
-        for rank, (chal_id, acct_id, timestamp, acct_name, runtime, memory) in enumerate(result):
+        for rank, (chal_id, acct_id, timestamp, acct_name, runtime, memory, rate) in enumerate(result):
             chal_list.append(
                 {
                     'rank': rank + pageoff + 1,
@@ -82,6 +90,7 @@ class ProRankHandler(RequestHandler):
                     'acct_name': acct_name,
                     'runtime': int(runtime),
                     'memory': int(memory),
+                    'rate': rate,
                     'timestamp': timestamp.astimezone(tz),
                 }
             )

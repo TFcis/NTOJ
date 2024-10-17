@@ -1,5 +1,6 @@
-import asyncio
 import json
+import decimal
+import asyncio
 import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
@@ -51,17 +52,23 @@ class JudgeServerService:
             await self.response_handle(ret)
 
     async def response_handle(self, ret):
-        from services.chal import ChalService
+        from services.chal import ChalService, ChalConst
 
         res = json.loads(ret)
 
         if res['results'] is not None:
             for test_idx, result in enumerate(res['results']):
-                # INFO: CE會回傳 result['verdict']
 
                 score = None
-                if 'score' in result and result['score'] != -1:
-                    score = result['score']
+                is_cms_type = False
+                if 'score_type' in result and result['score_type'] in ["CMS", "CF"]:
+                    is_cms_type = result['score_type'] == "CMS"
+                    if 'score' in result:
+                        try:
+                            score = decimal.Decimal(result['score'])
+                        except decimal.DecimalException:
+                            score = None
+                            result['status'] = ChalConst.STATE_SJE
 
                 _, ret = await ChalService.inst.update_test(
                     res['chal_id'],
@@ -71,6 +78,7 @@ class JudgeServerService:
                     result['memory'],
                     score,
                     result['verdict'],
+                    rate_is_cms_type=is_cms_type,
                     refresh_db=False,
                 )
 
