@@ -178,7 +178,7 @@ class ManageProFileManagerTest(AsyncTest):
                 self.assertEqual(res.text, '12')
             await self.wait_for_judge_finish(callback)
             chal_states_result = self.get_chal_state(chal_id=12, session=admin_session)
-            self.assertEqual(chal_states_result, [ChalConst.STATE_ERR])
+            self.assertEqual(chal_states_result, [ChalConst.STATE_SJE])
 
             self.assertTable(
                 {

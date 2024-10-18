@@ -775,6 +775,11 @@ class ManageProHandler(RequestHandler):
                 tags = self.get_argument('tags')
                 allow_submit = self.get_argument('allow_submit') == "true"
                 # NOTE: test config
+                rate_precision = int(self.get_argument('rate_precision'))
+                if rate_precision > ProConst.RATE_PRECISION_MAX or rate_precision < ProConst.RATE_PRECISION_MIN:
+                    self.error('Eparam')
+                    return
+
                 is_makefile = self.get_argument('is_makefile') == "true"
                 check_type = int(self.get_argument('check_type'))
 
@@ -811,6 +816,7 @@ class ManageProHandler(RequestHandler):
                 if check_type == ProConst.CHECKER_IOREDIR:
                     chalmeta = json.dumps(chalmeta)
 
+                pro['testm_conf']['rate_precision'] = rate_precision
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
                     f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.pro',
@@ -822,6 +828,7 @@ class ManageProHandler(RequestHandler):
                         'is_makefile': is_makefile,
                         'chalmeta': chalmeta,
                         'check_type': check_type,
+                        'rate_precision': rate_precision,
                     }
                 )
                 if err:

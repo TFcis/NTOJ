@@ -1,9 +1,9 @@
-import asyncio
 import json
+import decimal
+import asyncio
 import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
-from queue import PriorityQueue
 from typing import Dict, List, Literal, Union
 
 from tornado.websocket import websocket_connect
@@ -51,13 +51,23 @@ class JudgeServerService:
             await self.response_handle(ret)
 
     async def response_handle(self, ret):
-        from services.chal import ChalService
+        from services.chal import ChalService, ChalConst
 
         res = json.loads(ret)
 
         if res['results'] is not None:
             for test_idx, result in enumerate(res['results']):
-                # INFO: CE會回傳 result['verdict']
+
+                score = None
+                is_cms_type = False
+                if 'score_type' in result and result['score_type'] in ["CMS", "CF"]:
+                    is_cms_type = result['score_type'] == "CMS"
+                    if 'score' in result:
+                        try:
+                            score = decimal.Decimal(result['score'])
+                        except decimal.DecimalException:
+                            score = None
+                            result['status'] = ChalConst.STATE_SJE
 
                 _, ret = await ChalService.inst.update_test(
                     res['chal_id'],
@@ -65,7 +75,9 @@ class JudgeServerService:
                     result['status'],
                     int(result['time'] / 10 ** 6),  # ns to ms
                     result['memory'],
+                    score,
                     result['verdict'],
+                    rate_is_cms_type=is_cms_type,
                     refresh_db=False,
                 )
 
@@ -145,7 +157,7 @@ class JudgeServerService:
 class JudgeServerClusterService:
     def __init__(self, rs, server_urls: List[Dict]) -> None:
         JudgeServerClusterService.inst = self
-        self.queue = PriorityQueue()
+        self.queue = asyncio.PriorityQueue()
         self.rs = rs
         self.servers: List[JudgeServerService] = []
         self.idx = 0
@@ -173,7 +185,7 @@ class JudgeServerClusterService:
 
     async def start(self) -> None:
         for idx, judge_server in enumerate(self.servers):
-            self.queue.put([0, idx])
+            await self.queue.put([0, idx])
             await judge_server.start()
 
     async def connect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
@@ -186,7 +198,7 @@ class JudgeServerClusterService:
             if not self.servers[idx].status:
                 return 'Ejudge'
 
-        self.queue.put([0, idx])
+        await self.queue.put([0, idx])
         return 'S'
 
     async def disconnect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
@@ -201,7 +213,7 @@ class JudgeServerClusterService:
 
     async def disconnect_all_server(self) -> None:
         for server in self.servers:
-            self.queue.get()
+            await self.queue.get()
             await server.disconnect_server()
 
     def get_server_status(self, idx):
@@ -233,8 +245,8 @@ class JudgeServerClusterService:
         if not self.is_server_online():
             return
 
-        while not self.queue.empty():
-            running_cnt, idx = self.queue.get()
+        while True:
+            running_cnt, idx = await self.queue.get()
             _, status = self.get_server_status(idx)
             if not status['status']:
                 continue
@@ -242,13 +254,13 @@ class JudgeServerClusterService:
             judge_id = status['judge_id']
 
             if data['chal_id'] in self.servers[judge_id].chal_map:
-                self.queue.put([running_cnt, idx])
+                await self.queue.put([running_cnt, idx])
                 break
 
             await self.servers[judge_id].send(data)
             _, status = self.get_server_status(idx)
 
-            self.queue.put([status['running_chal_cnt'], judge_id])
+            await self.queue.put([status['running_chal_cnt'], judge_id])
             self.servers[idx].chal_map[data['chal_id']] = {"pro_id": pro_id, "contest_id": contest_id}
 
             break

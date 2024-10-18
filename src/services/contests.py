@@ -247,7 +247,7 @@ class ContestService:
                 "challenge"."pro_id",
                 "challenge"."acct_id",
                 "challenge"."timestamp",
-                "challenge_state"."rate",
+                ROUND("challenge_state"."rate", problem.rate_precision),
 
                 ROW_NUMBER() OVER (
                     PARTITION BY "challenge"."pro_id", "challenge"."acct_id"
@@ -263,7 +263,8 @@ class ContestService:
             INNER JOIN "challenge_state"
             ON "challenge"."contest_id" = $1 AND "challenge"."acct_id" in ({user}) AND "challenge"."pro_id" = $2
             AND "challenge"."timestamp" < $3 AND "challenge"."chal_id" = "challenge_state"."chal_id"
-
+            INNER JOIN "problem"
+            ON "problem"."pro_id" = $2
         )
         SELECT
             acct_id,
@@ -312,7 +313,11 @@ class ContestService:
                 pt.pro_id,
                 pt.test_idx,
                 pt.weight,
-                CASE WHEN t.state = 1 THEN pt.weight ELSE 0 END AS rate,
+                CASE
+                    WHEN t.state = 1 AND t.rate IS NULL THEN pt.weight
+                    WHEN t.state = 1 AND t.rate IS NOT NULL THEN t.rate
+                    ELSE 0
+                END AS rate,
                 t.timestamp
             FROM problem_tests pt
             JOIN test t ON pt.pro_id = t.pro_id AND pt.test_idx = t.test_idx
@@ -363,12 +368,13 @@ class ContestService:
         SELECT
             ar.acct_id,
             ar.last_chal_id AS chal_id,
-            ar.total_rate AS score,
+            ROUND(ar.total_rate, problem.rate_precision) AS score,
             ar.best_timestamp,
             cc.challenges_before
         FROM aggregated_results ar
         JOIN challenge_counts cc ON ar.acct_id = cc.acct_id AND ar.pro_id = cc.pro_id
         JOIN account a ON ar.acct_id = a.acct_id
+        INNER JOIN problem ON problem.pro_id = $2
         ORDER BY ar.acct_id, ar.pro_id;
         ''', contest_id, pro_id, before_time)
 

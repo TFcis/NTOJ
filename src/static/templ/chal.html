@@ -4,18 +4,9 @@
 <script type="text/javascript">
     var ws;
     var state_map = {
-        1: 'Accepted',
-        2: 'Wrong Answer',
-        3: 'Runtime Error',
-        4: 'Time Limit Exceed',
-        5: 'Memory Limit Exceed',
-        6: 'Compile Error',
-        7: 'Internal Error',
-        8: 'Output Limit Exceed',
-        9: 'Runtime Error (Killed by signal)',
-        10: 'Compilation Limit Exceed',
-        100: 'Challenging',
-        101: 'Not Started'
+        {% for state, desc in ChalConst.STATE_LONG_STR.items() %}
+            {% raw f"{state}: '{desc}'," %}
+        {% end %}
     };
 
     function init() {
@@ -23,7 +14,7 @@
         const contest_id = "{{ chal['contest_id'] }}";
         ws = index.get_ws("chalnewstatesub");
 
-        if ((document.querySelectorAll('td.state-100').length == 0 && document.querySelectorAll('td.state-101') == 0)) {
+        if ((document.querySelectorAll('td.state-{{ ChalConst.STATE_JUDGE }}').length == 0 && document.querySelectorAll('td.state-{{ ChalConst.STATE_NOTSTARTED }}') == 0)) {
         } else {
             function update_state_data(chal_state_data) {
                 var states = document.querySelectorAll('tr.states');
@@ -33,6 +24,7 @@
                     state.className = `state state-${chal_state_data[idx]['state']}`;
                     element.querySelector('td.runtime').innerHTML = chal_state_data[idx]['runtime'];
                     element.querySelector('td.memory').innerHTML = Math.round((chal_state_data[idx]['memory'] / 1024));
+                    element.querySelector('td.score').innerHTML = chal_state_data[idx]['rate'];
                 });
                 index.reload();
             };
@@ -166,6 +158,7 @@
                     <th>State</th>
                     <th>Runtime(ms)</th>
                     <th>Memory(KB)</th>
+                    <th>Score</th>
                 </tr>
             </thead>
             <tbody>
@@ -175,6 +168,7 @@
                     <td class="state state-{{ test['state'] }}">{{ ChalConst.STATE_LONG_STR[test['state']] }}</td>
                     <td class="runtime">{{ test['runtime'] }}</td>
                     <td class="memory">{{ round(test['memory'] / 1024) }}</td>
+                    <td class="score">{{ test['rate'] }}</td>
                 </tr>
             {% end %}
             </tbody>

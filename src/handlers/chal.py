@@ -1,4 +1,5 @@
 import asyncio
+import decimal
 import json
 
 import tornado.web
@@ -132,6 +133,11 @@ class ChalHandler(RequestHandler):
         await self.render('chal', pro=pro, chal=chal, rechal=rechal)
         return
 
+class _Encoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            return str(o)
+        return super().default(o)
 
 class ChalListNewChalHandler(WebSocketSubHandler):
     async def listen_challistnewchal(self):
@@ -156,7 +162,7 @@ class ChalListNewStateHandler(WebSocketSubHandler):
             chal_id = int(msg['data'])
             if self.first_chal_id <= chal_id <= self.last_chal_id:
                 _, new_state = await ChalService.inst.get_single_chal_state_in_list(chal_id, self.acct)
-                await self.write_message(json.dumps(new_state))
+                await self.write_message(json.dumps(new_state, cls=_Encoder))
 
     async def open(self):
         self.first_chal_id = -1
@@ -189,7 +195,7 @@ class ChalNewStateHandler(WebSocketSubHandler):
 
             if int(msg['data']) == self.chal_id:
                 _, chal_states = await ChalService.inst.get_chal_state(self.chal_id)
-                await self.write_message(json.dumps(chal_states))
+                await self.write_message(json.dumps(chal_states, cls=_Encoder))
 
     async def open(self):
         self.chal_id = -1

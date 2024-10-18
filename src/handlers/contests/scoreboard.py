@@ -25,7 +25,7 @@ class _JsonDatetimeEncoder(json.JSONEncoder):
             return f"{minutes}:{seconds:02}"
 
         elif isinstance(o, Decimal):
-            return int(o)
+            return float(o)
 
         else:
             return json.JSONEncoder.default(self, o)
@@ -35,6 +35,9 @@ class ContestScoreboardHandler(RequestHandler):
     def _encoder(self, obj):
         if isinstance(obj, datetime.datetime):
             return obj.timestamp()
+
+        elif isinstance(obj, Decimal):
+            return str(obj)
 
         return obj
 
@@ -97,6 +100,7 @@ class ContestScoreboardHandler(RequestHandler):
                 for pro_score in s[pro_id].values():
                     pro_score['timestamp'] = datetime.datetime.fromtimestamp(pro_score['timestamp']).replace(
                         tzinfo=UTC8)
+                    pro_score['score'] = Decimal(pro_score['score'])
 
             if is_ended:
                 await self.rs.expire(cache_name, time=60 * 60)

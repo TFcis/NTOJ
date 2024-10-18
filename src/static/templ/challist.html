@@ -6,18 +6,9 @@
 <script type="text/javascript">
     var newchal_ws, newstate_ws;
     var state_map = {
-        1: 'Accepted',
-        2: 'Wrong Answer',
-        3: 'Runtime Error',
-        4: 'Time Limit Exceed',
-        5: 'Memory Limit Exceed',
-        6: 'Compile Error',
-        7: 'Internal Error',
-        8: 'Output Limit Exceed',
-        9: 'Runtime Error (Killed by signal)',
-        10: 'Compilation Limit Exceed',
-        100: 'Challenging',
-        101: 'Not Started'
+        {% for state, desc in ChalConst.STATE_LONG_STR.items() %}
+            {% raw f"{state}: '{desc}'," %}
+        {% end %}
     };
     var chalsub_count;
     var re = /[^0-9,\ ]/
@@ -112,10 +103,11 @@
         })();
 
         (() => {
-            let update_state = ({chal_id, state, runtime, memory}) => {
+            let update_state = ({chal_id, state, runtime, memory, rate}) => {
                 let tr = document.querySelector(`#chal${chal_id}`);
                 tr.querySelector('#runtime').innerText = parseInt(runtime);
                 tr.querySelector('#memory').innerText = Math.round(memory / 1024);
+                tr.querySelector('#score').innerText = rate;
 
                 let state_el = tr.querySelector('#state');
                 state_el.className = `state-${state}`
@@ -182,18 +174,13 @@
                 <label class="form-label">Status</label>
                 <select id="state" class="form-select">
                     <option value=0 {% if flt.state == 0 %}selected{% end %}>All</option>
-                    <option value=1 {% if flt.state == 1 %}selected{% end %}>AC</option>
-                    <option value=2 {% if flt.state == 2 %}selected{% end %}>WA</option>
-                    <option value=4 {% if flt.state == 4 %}selected{% end %}>TLE</option>
-                    <option value=5 {% if flt.state == 5 %}selected{% end %}>MLE</option>
-                    <option value=8 {% if flt.state == 8 %}selected{% end %}>OLE</option>
-                    <option value=3 {% if flt.state == 3 %}selected{% end %}>RE</option>
-                    <option value=9 {% if flt.state == 9 %}selected{% end %}>RE(SIG)</option>
-                    <option value=6 {% if flt.state == 6 %}selected{% end %}>CE</option>
-                    <option value=10 {% if flt.state == 10 %}selected{% end %}>CLE</option>
-                    <option value=7 {% if flt.state == 7 %}selected{% end %}>IE</option>
-                    <option value=100 {% if flt.state == 100 %}selected{% end %}>Challenging</option>
-                    <option value=101 {% if flt.state == 101 %}selected{% end %}>Not started</option>
+                    {% for state, desc in ChalConst.STATE_STR.items() %}
+                        {% if state == ChalConst.STATE_JUDGE %}
+                            {% set desc = "Challenging" %}
+                        {% end %}
+                        {% raw f'<option value="{ state }" {{ "selected" if flt.state == state else "" }}>{ desc }</option>' %}
+                    {% end %}
+                    <option value="{{ ChalConst.STATE_NOTSTARTED }}" {% if flt.state == ChalConst.STATE_NOTSTARTED %} selected {% end %}">Not Started</option>
                 </select>
             </div>
 
@@ -214,7 +201,7 @@
 
             <div class="mb-1">
                 <button type="button" class="btn btn-primary mx-auto submit">Filter</button>
-                {% if (flt.state == 100 or flt.state == 101) and isadmin %}
+                {% if (flt.state == ChalConst.STATE_NOTSTARTED or flt.state == ChalConst.STATE_JUDGE) and isadmin %}
                     <button type="button" id="rechalall" class="btn btn-warning btn-sm">Rechallenge all</button>
                 {% end %}
             </div>
@@ -231,6 +218,7 @@
                     <th scope="col">State</th>
                     <th scope="col">Runtime</th>
                     <th scope="col">Memory</th>
+                    <th scope="col">Score</th>
                     <th scope="col">Compiler</th>
                     <th scope="col">Time</th>
                 </tr>
@@ -254,6 +242,7 @@
                     <td id="state" class="state-{{ chal['state'] }}">{{ ChalConst.STATE_LONG_STR[chal['state']] }}</td>
                     <td id="runtime">{{ chal['runtime'] }}</td>
                     <td id="memory">{{ round(chal['memory'] / 1024) }}</td>
+                    <td id="score">{{ chal['rate'] }}</td>
                     <td>{{ chal['comp_type'] }}</td>
                     <td class="time">{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
                 </tr>

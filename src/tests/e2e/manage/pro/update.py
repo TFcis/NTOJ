@@ -17,6 +17,7 @@ class ManageProUpdateTest(AsyncTest):
                 'allow_submit': "false",
                 "is_makefile": "false",
                 "check_type": ProConst.CHECKER_DIFF,
+                "rate_precision": ProConst.RATE_PRECISION_MIN,
             })
             self.assertEqual(res.text, 'S')
             html = self.get_html('http://localhost:5501/manage/pro/update?proid=1', admin_session)
@@ -56,6 +57,7 @@ class ManageProUpdateTest(AsyncTest):
                 'allow_submit': 'true',
                 'is_makefile': 'false',
                 'check_type': ProConst.CHECKER_DIFF,
+                "rate_precision": ProConst.RATE_PRECISION_MIN,
             })
             self.assertEqual(res.text, 'S')
             res = admin_session.get('http://localhost:5501/submit/1')
@@ -81,6 +83,7 @@ class ManageProUpdateTest(AsyncTest):
                 'allow_submit': 'true',
                 'is_makefile': 'false',
                 'check_type': ProConst.CHECKER_DIFF,
+                "rate_precision": ProConst.RATE_PRECISION_MIN,
             })
 
             res = admin_session.post('http://localhost:5501/manage/pro/update', data={

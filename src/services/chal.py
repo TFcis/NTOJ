@@ -11,20 +11,23 @@ TZ = datetime.timezone(datetime.timedelta(hours=+8))
 
 class ChalConst:
     STATE_AC = 1
-    STATE_WA = 2
-    STATE_RE = 3
-    STATE_RESIG = 9
-    STATE_TLE = 4
-    STATE_MLE = 5
-    STATE_CE = 6
-    STATE_CLE = 10
-    STATE_ERR = 7
+    STATE_PC = 2
+    STATE_WA = 3
+    STATE_RE = 4
+    STATE_RESIG = 5
+    STATE_TLE = 6
+    STATE_MLE = 7
     STATE_OLE = 8
+    STATE_CE = 9
+    STATE_CLE = 10
+    STATE_ERR = 11
+    STATE_SJE = 12
     STATE_JUDGE = 100
     STATE_NOTSTARTED = 101
 
     STATE_STR = {
         STATE_AC: 'AC',
+        STATE_PC: 'PC',
         STATE_WA: 'WA',
         STATE_RE: 'RE',
         STATE_RESIG: 'RE(SIG)',
@@ -33,12 +36,14 @@ class ChalConst:
         STATE_CE: 'CE',
         STATE_CLE: 'CLE',
         STATE_OLE: 'OLE',
+        STATE_SJE: 'SJE',
         STATE_ERR: 'IE',
         STATE_JUDGE: 'JDG',
     }
 
     STATE_LONG_STR = {
         STATE_AC: 'Accepted',
+        STATE_PC: 'Partial Correct',
         STATE_WA: 'Wrong Answer',
         STATE_RE: 'Runtime Error',
         STATE_RESIG: 'Runtime Error (Killed by signal)',
@@ -48,6 +53,7 @@ class ChalConst:
         STATE_CE: 'Compile Error',
         STATE_CLE: 'Compilation Limit Exceed',
         STATE_ERR: 'Internal Error',
+        STATE_SJE: 'Special Judge Error',
         STATE_JUDGE: 'Challenging',
         STATE_NOTSTARTED: 'Not Started',
     }
@@ -114,7 +120,7 @@ class ChalSearchingParam:
         if self.contest != 0:
             query += f' AND "challenge"."contest_id"={self.contest} '
         else:
-            query += f' AND "challenge"."contest_id"=0 '
+            query += ' AND "challenge"."contest_id"=0 '
 
         return query
 
@@ -196,15 +202,24 @@ class ChalService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "test_idx", "state", "runtime", "memory", "response"
+                    SELECT "test"."test_idx", "state", "runtime", "memory", "response",
+                    ROUND(COALESCE(test.rate, tvr.rate), problem.rate_precision)
                     FROM "test"
+                    INNER JOIN test_valid_rate AS tvr
+                    ON test.pro_id = tvr.pro_id AND test.test_idx = tvr.test_idx
+                    INNER JOIN problem
+                    ON test.pro_id = problem.pro_id
                     WHERE "chal_id" = $1 ORDER BY "test_idx" ASC;
                 ''',
                 chal_id,
             )
 
         tests = []
-        for test_idx, state, runtime, memory, response in result:
+        for test_idx, state, runtime, memory, response, rate in result:
+            r = 0
+            if state in [ChalConst.STATE_AC, ChalConst.STATE_PC]:
+                r = rate
+
             tests.append(
                 {
                     'test_idx': test_idx,
@@ -212,6 +227,7 @@ class ChalService:
                     'runtime': int(runtime),
                     'memory': int(memory),
                     'response': response,
+                    'rate': r,
                 }
             )
 
@@ -249,17 +265,26 @@ class ChalService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "test_idx", "state", "runtime", "memory", "response"
+                    SELECT "test"."test_idx", "state", "runtime", "memory", "response",
+                    ROUND(COALESCE(test.rate, tvr.rate), problem.rate_precision)
                     FROM "test"
+                    INNER JOIN test_valid_rate AS tvr
+                    ON test.pro_id = tvr.pro_id AND test.test_idx = tvr.test_idx
+                    INNER JOIN problem
+                    ON test.pro_id = problem.pro_id
                     WHERE "chal_id" = $1 ORDER BY "test_idx" ASC;
                 ''',
                 chal_id,
             )
 
         testl = []
-        for test_idx, state, runtime, memory, response in result:
+        for test_idx, state, runtime, memory, response, rate in result:
             if final_response == "":
                 final_response = response
+
+            r = 0
+            if state in [ChalConst.STATE_AC, ChalConst.STATE_PC]:
+                r = rate
 
             testl.append(
                 {
@@ -267,6 +292,7 @@ class ChalService:
                     'state': state,
                     'runtime': int(runtime),
                     'memory': int(memory),
+                    'rate': r,
                 }
             )
 
@@ -336,7 +362,7 @@ class ChalService:
 
         if not os.path.isfile(f"code/{chal_id}/main.{file_ext}"):
             for test in testl:
-                await self.update_test(chal_id, test['test_idx'], ChalConst.STATE_ERR, 0, 0, '', refresh_db=False)
+                await self.update_test(chal_id, test['test_idx'], ChalConst.STATE_ERR, 0, 0, None, '', refresh_db=False)
                 await self.update_challenge_state(chal_id)
             return None, None
 
@@ -375,7 +401,8 @@ class ChalService:
                 f'''
                     SELECT "challenge"."chal_id", "challenge"."pro_id", "challenge"."acct_id", "challenge"."contest_id",
                     "challenge"."compiler_type", "challenge"."timestamp", "account"."name" AS "acct_name",
-                    "challenge_state"."state", "challenge_state"."runtime", "challenge_state"."memory"
+                    "challenge_state"."state", "challenge_state"."runtime", "challenge_state"."memory",
+                    ROUND("challenge_state"."rate", problem.rate_precision)
                     FROM "challenge"
                     INNER JOIN "account"
                     ON "challenge"."acct_id" = "account"."acct_id"
@@ -392,7 +419,7 @@ class ChalService:
             )
 
         challist = []
-        for chal_id, pro_id, acct_id, contest_id, comp_type, timestamp, acct_name, state, runtime, memory in result:
+        for chal_id, pro_id, acct_id, contest_id, comp_type, timestamp, acct_name, state, runtime, memory, rate in result:
             if state is None:
                 state = ChalConst.STATE_NOTSTARTED
 
@@ -420,6 +447,7 @@ class ChalService:
                     'state': state,
                     'runtime': runtime,
                     'memory': memory,
+                    'rate': rate,
                 }
             )
 
@@ -436,7 +464,9 @@ class ChalService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "challenge"."chal_id", "challenge_state"."state", "challenge_state"."runtime", "challenge_state"."memory"
+                    SELECT "challenge"."chal_id",
+                    "challenge_state"."state", "challenge_state"."runtime", "challenge_state"."memory",
+                    ROUND("challenge_state"."rate", problem.rate_precision) AS "rate"
                     FROM "challenge"
                     INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
                     INNER JOIN "problem" ON "challenge"."pro_id" = "problem"."pro_id"
@@ -456,6 +486,7 @@ class ChalService:
             'state': result['state'],
             'runtime': int(result['runtime']),
             'memory': int(result['memory']),
+            'rate': result['rate'],
         }
 
     async def get_stat(self, acct: Account, flt: ChalSearchingParam):
@@ -479,22 +510,37 @@ class ChalService:
         total_chal = result[0]['count']
         return None, {'total_chal': total_chal}
 
-    async def update_test(self, chal_id, test_idx, state, runtime, memory, response, refresh_db=True):
+    async def update_test(self, chal_id, test_idx, state, runtime, memory, rate, response, rate_is_cms_type=False, refresh_db=True):
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             await con.execute(
                 '''
                     UPDATE "test"
-                    SET "state" = $1, "runtime" = $2, "memory" = $3, "response" = $4
-                    WHERE "chal_id" = $5 AND "test_idx" = $6;
+                    SET "state" = $1, "runtime" = $2, "memory" = $3, "response" = $4, "rate" = $5
+                    WHERE "chal_id" = $6 AND "test_idx" = $7;
                 ''',
                 state,
                 runtime,
                 memory,
                 response,
+                rate,
                 chal_id,
                 test_idx,
             )
+
+            if rate_is_cms_type:
+                await con.execute(
+                    '''
+                        UPDATE "test"
+                        SET "rate" = $1::decimal * "test_config"."weight"::decimal
+                        FROM "test_config"
+                        WHERE "test"."chal_id" = $2 AND
+                              "test_config"."pro_id" = "test"."pro_id" AND
+                              "test_config"."test_idx" = $3 AND
+                              "test"."test_idx" = $3;
+                    ''',
+                    rate, chal_id, test_idx
+                )
 
         if refresh_db:
             await self.update_challenge_state(chal_id)

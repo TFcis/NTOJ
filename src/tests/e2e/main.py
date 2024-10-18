@@ -13,6 +13,7 @@ from .manage.acct import ManageAcctTest
 from .manage.pro.filemanager import ManageProFileManagerTest
 from .manage.pro.update import ManageProUpdateTest
 from .manage.pro.updatetests import ManageProUpdateTestsTest
+from .manage.pro.specialscore import ManageProSpecialScoreTest
 from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
@@ -238,6 +239,7 @@ class E2ETest(AsyncTest):
                 ManageProUpdateTest().main,
                 ManageProUpdateTestsTest().main,
                 ManageProFileManagerTest().main,
+                ManageProSpecialScoreTest().main,
                 ManagePackTest().main,
                 ContestTest().main
             ]

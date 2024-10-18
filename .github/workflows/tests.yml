@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   e2etest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v5
@@ -26,9 +26,10 @@ jobs:
           echo deb [arch=amd64 signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main | sudo tee /etc/apt/sources.list.d/postgresql.list
           sudo apt update -y
           sudo apt install -f -y postgresql-16 postgresql-client-16 redis dos2unix
-          sudo sed -i 's/peer/trust/' /etc/postgresql/16/main/pg_hba.conf
-          sudo service postgresql start
-          sudo service redis-server start
+          sudo sed -i 's/peer/trust/g' /etc/postgresql/16/main/pg_hba.conf
+          sudo sed -i 's/scram-sha-256/trust/g' /etc/postgresql/16/main/pg_hba.conf
+          sudo service postgresql restart
+          sudo service redis-server restart
 
       - name: Install Coverage
         run: |
