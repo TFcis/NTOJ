@@ -90,7 +90,7 @@ class ContestManageProHandler(RequestHandler):
                 self.error('Ejudge')
                 return
 
-            err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=True)
             if err:
                 self.error(err)
                 return

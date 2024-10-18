@@ -4,7 +4,6 @@ import asyncio
 import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
-from queue import PriorityQueue
 from typing import Dict, List, Literal, Union
 
 from tornado.websocket import websocket_connect
@@ -158,7 +157,7 @@ class JudgeServerService:
 class JudgeServerClusterService:
     def __init__(self, rs, server_urls: List[Dict]) -> None:
         JudgeServerClusterService.inst = self
-        self.queue = PriorityQueue()
+        self.queue = asyncio.PriorityQueue()
         self.rs = rs
         self.servers: List[JudgeServerService] = []
         self.idx = 0
@@ -186,7 +185,7 @@ class JudgeServerClusterService:
 
     async def start(self) -> None:
         for idx, judge_server in enumerate(self.servers):
-            self.queue.put([0, idx])
+            await self.queue.put([0, idx])
             await judge_server.start()
 
     async def connect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
@@ -199,7 +198,7 @@ class JudgeServerClusterService:
             if not self.servers[idx].status:
                 return 'Ejudge'
 
-        self.queue.put([0, idx])
+        await self.queue.put([0, idx])
         return 'S'
 
     async def disconnect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
@@ -214,7 +213,7 @@ class JudgeServerClusterService:
 
     async def disconnect_all_server(self) -> None:
         for server in self.servers:
-            self.queue.get()
+            await self.queue.get()
             await server.disconnect_server()
 
     def get_server_status(self, idx):
@@ -246,8 +245,8 @@ class JudgeServerClusterService:
         if not self.is_server_online():
             return
 
-        while not self.queue.empty():
-            running_cnt, idx = self.queue.get()
+        while True:
+            running_cnt, idx = await self.queue.get()
             _, status = self.get_server_status(idx)
             if not status['status']:
                 continue
@@ -255,13 +254,13 @@ class JudgeServerClusterService:
             judge_id = status['judge_id']
 
             if data['chal_id'] in self.servers[judge_id].chal_map:
-                self.queue.put([running_cnt, idx])
+                await self.queue.put([running_cnt, idx])
                 break
 
             await self.servers[judge_id].send(data)
             _, status = self.get_server_status(idx)
 
-            self.queue.put([status['running_chal_cnt'], judge_id])
+            await self.queue.put([status['running_chal_cnt'], judge_id])
             self.servers[idx].chal_map[data['chal_id']] = {"pro_id": pro_id, "contest_id": contest_id}
 
             break

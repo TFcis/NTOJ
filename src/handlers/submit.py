@@ -133,7 +133,7 @@ class SubmitHandler(RequestHandler):
 
                 pro_id = chal['pro_id']
                 comp_type = chal['comp_type']
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
                 if err:
                     self.finish(err)
                     return
