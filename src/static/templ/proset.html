@@ -320,7 +320,8 @@
     </div>
 
     <div class="col-lg-10 col-12">
-        <table id="prolist" class="table table-striped table-hover table-responsive col mx-lg-3">
+        <div class="table-responsive">
+        <table id="prolist" class="table table-striped table-hover table-responsive-sm col mx-lg-3">
             <thead>
                 <tr>
                     <th scope="col">#</th>
@@ -372,8 +373,8 @@
             {% end %}
             </tbody>
         </table>
+        </div>
 
-        <!-- TODO: Sort By & Problem Selector -->
         {% set postfix = '' %}
         {% if cur_proclass != None %}
         {% set postfix = postfix + '&proclass_id=%s' % cur_proclass['proclass_id'] %}
