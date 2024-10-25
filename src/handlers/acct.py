@@ -44,12 +44,17 @@ class AcctHandler(RequestHandler):
         ac_pro_cnt = 0
         for pro in prolist:
             pro_id = pro['pro_id']
-            tmp = {'pro_id': pro_id, 'score': -1}
+            tmp = {'pro_id': pro_id, 'score': -1, 'state': None}
             if pro_id in ratemap:
                 tmp['score'] = ratemap[pro_id]['rate']
+                tmp['state'] = ratemap[pro_id]['state']
                 ac_pro_cnt += ratemap[pro_id]['state'] == ChalConst.STATE_AC
 
             prolist2.append(tmp)
+
+        def chunk_list(la, size):
+            for i in range(0, len(la), size):
+                yield la[i: i + size]
 
         rate_data['rate'] = math.floor(rate_data['rate'])
         rate_data['ac_pro_cnt'] = ac_pro_cnt
@@ -58,7 +63,7 @@ class AcctHandler(RequestHandler):
         acct.photo = re.sub(r'^http://', 'https://', acct.photo)
         acct.cover = re.sub(r'^http://', 'https://', acct.cover)
 
-        await self.render('acct/profile', acct=acct, rate=rate_data, prolist=prolist2)
+        await self.render('acct/profile', acct=acct, rate=rate_data, prolist=chunk_list(prolist2, 10))
 
 
 class AcctConfigHandler(RequestHandler):
@@ -127,6 +132,7 @@ class AcctConfigHandler(RequestHandler):
 
 class AcctProClassHandler(RequestHandler):
     @reqenv
+    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def get(self, acct_id):
         acct_id = int(acct_id)
         try:
@@ -152,6 +158,7 @@ class AcctProClassHandler(RequestHandler):
             await self.render('acct/proclass-update', proclass_id=proclass_id, proclass=proclass)
 
     @reqenv
+    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def post(self, acct_id):
         reqtype = self.get_argument('reqtype')
         acct_id = int(acct_id)

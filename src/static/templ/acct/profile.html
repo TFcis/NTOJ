@@ -1,3 +1,4 @@
+{% from services.chal import ChalConst %}
 <style>
     #cover {
         height: 512px;
@@ -124,32 +125,24 @@
     <div class="col-lg-9">
         <table class="table" style="font-size: 130%;" border="1px" bordercolor="gray">
             <tbody>
-                {% set count = 0 %}
-                {% for pro in prolist%}
-                    {% if count == 10 %}
-                    </tr>
-                    {% set count = 0 %}
-                    {% end %}
-                    {% if count == 0 %}
+                {% for chunk in prolist %}
                     <tr>
+                    {% for cnt, pro in enumerate(chunk, start=1) %}
+                        {% if pro['state'] is None %}
+                            <td class="_state"><a class="_state-4" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                        {% elif pro['state'] == ChalConst.STATE_AC %}
+                            <td class="_state"><a class="_state-1" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                        {% elif pro['state'] in [ChalConst.STATE_PC, ChalConst.STATE_WA] and pro['score'] > 0 %}
+                            <td class="_state"><a class="_state-2" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                        {% else %}
+                            <td class="_state"><a class="_state-3" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                        {% end %}
                     {% end %}
-                    {% if pro['score'] == 100 %}
-                    <td class="_state"><a class="_state-1" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
-                    {% elif pro['score'] == -1 %}
-                    <td class="_state"><a class="_state-4" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
-                    {% elif pro['score'] >= 50 %}
-                    <td class="_state"><a class="_state-2" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
-                    {% else %}
-                    <td class="_state"><a class="_state-3" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                    </tr>
+                    {% while cnt != 10 %}
+                        <td></td>
+                        {% set cnt = cnt + 1 %}
                     {% end %}
-                {% set count = count + 1 %}
-                {% end %}
-                {%if count != 10%}
-                {% while count != 10 %}
-                    <td></td>
-                    {% set count = count + 1 %}
-                {% end %}
-                </tr>
                 {% end %}
 	        </tbody>
        </table>
