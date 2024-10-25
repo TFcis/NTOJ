@@ -12,7 +12,6 @@ from .util import AsyncTest, AccountContext
 
 class ContestTest(AsyncTest):
     async def main(self):
-        # TODO: update chal_id counter
         # TOOD: add special score test
         self.signup('contest1', 'contest1@test', 'test')  # acct_id = 4
         self.signup('contest2', 'contest2@test', 'test')
@@ -79,9 +78,9 @@ class ContestTest(AsyncTest):
             self.assertEqual(res.text, 'S')
 
             res = admin_session.get('contests/1/manage/desc')
-            self.assertEqual(re.findall(r'let desc_before_contest = `(.*)`', res.text, re.I)[0], 'desc before contest')
-            self.assertEqual(re.findall(r'let desc_during_contest = `(.*)`', res.text, re.I)[0], 'desc during contest')
-            self.assertEqual(re.findall(r'let desc_after_contest = `(.*)`', res.text, re.I)[0], 'desc after contest')
+            self.assertEqual(re.findall(r'let desc_before_contest = index\.unescape_html\(`(.*)`\)', res.text, re.I)[0], 'desc before contest')
+            self.assertEqual(re.findall(r'let desc_during_contest = index\.unescape_html\(`(.*)`\)', res.text, re.I)[0], 'desc during contest')
+            self.assertEqual(re.findall(r'let desc_after_contest = index\.unescape_html\(`(.*)`\)', res.text, re.I)[0], 'desc after contest')
 
             res = admin_session.get('contests/1')
             self.assertEqual(re.findall(r'let desc_tex = `(.*)`', res.text, re.I)[0], 'desc before contest')

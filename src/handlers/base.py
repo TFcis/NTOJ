@@ -15,7 +15,8 @@ from services.user import UserService, Account
 import utils.htmlgen
 
 TEMPLATE_NAMESPACE = {
-    'set_page_title': utils.htmlgen.set_page_title
+    'set_page_title': utils.htmlgen.set_page_title,
+    'markdown_escape': utils.htmlgen.markdown_escape,
 }
 
 class RequestHandler(tornado.web.RequestHandler):

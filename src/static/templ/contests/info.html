@@ -2,15 +2,15 @@
 <script>
     function init() {
         {% if not contest.is_start() %}
-            let desc_tex = `{% raw contest.desc_before_contest.replace('\\', '\\\\').replace('`', '\\`') %}`;
+            let desc_tex = `{{ markdown_escape(contest.desc_before_contest) }}`;
         {% elif contest.is_running() %}
-            let desc_tex = `{% raw contest.desc_during_contest.replace('\\', '\\\\').replace('`', '\\`') %}`;
+            let desc_tex = `{{ markdown_escape(contest.desc_during_contest) }}`;
         {% elif contest.is_end() %}
-            let desc_tex = `{% raw contest.desc_after_contest.replace('\\', '\\\\').replace('`', '\\`') %}`;
+            let desc_tex = `{{ markdown_escape(contest.desc_after_contest) }}`;
         {% end %}
 
         let descEle = document.getElementById('desc');
-        descEle.innerHTML = DOMPurify.sanitize(marked.parse(desc_tex));
+        descEle.innerHTML = DOMPurify.sanitize(marked.parse(index.unescape_html(desc_tex)));
         MathJax.Hub.Queue(["Typeset",MathJax.Hub, descEle]);
     }
 </script>

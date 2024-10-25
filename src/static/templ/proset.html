@@ -60,12 +60,12 @@
         });
 
         {% if cur_proclass %}
-            let cur_proclass_desc = `{% raw cur_proclass['desc'].replace('`', '\\`').replace('\\', '\\\\') %}`;
+            let cur_proclass_desc = `{{ markdown_escape(cur_proclass['desc']) }}`;
             let info_dialog = document.getElementById('proclassInfoDialog');
             let info_dialog_modal = new bootstrap.Modal(info_dialog);
             $("#infoProClass").on('click', function(e) {
                 let body = info_dialog.querySelector('.modal-body');
-                body.innerHTML = DOMPurify.sanitize(marked.parse(cur_proclass_desc));
+                body.innerHTML = DOMPurify.sanitize(marked.parse(index.unescape_html(cur_proclass_desc)));
 
                 // NOTE: close info dialog before navigating to another page.
                 info_dialog.querySelectorAll('a').forEach(el => {

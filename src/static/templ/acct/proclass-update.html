@@ -2,7 +2,7 @@
     function init() {
         let j_form = $("#form");
         let re = /[^0-9,\ ]/;
-        j_form.find("#desc").val(`{% raw proclass['desc'].replace('`', '\\`').replace('\\', '\\\\') %}`);
+        j_form.find("#desc").val(index.unescape_html(`{{ markdown_escape(proclass['desc']) }}`));
 
         let desc_textarea = document.getElementById('desc');
         let desc_preview = document.getElementById('descPreviewDialog');

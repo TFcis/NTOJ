@@ -7,9 +7,9 @@
         let desc_preview = document.getElementById('descPreviewDialog');
         let desc_preview_modal = new bootstrap.Modal(desc_preview);
 
-        let desc_before_contest = `{% raw contest.desc_before_contest.replace('\\', '\\\\').replace('`', '\\`') %}`;
-        let desc_during_contest = `{% raw contest.desc_during_contest.replace('\\', '\\\\').replace('`', '\\`') %}`;
-        let desc_after_contest = `{% raw contest.desc_after_contest.replace('\\', '\\\\').replace('`', '\\`') %}`;
+        let desc_before_contest = index.unescape_html(`{{ markdown_escape(contest.desc_before_contest) }}`);
+        let desc_during_contest = index.unescape_html(`{{ markdown_escape(contest.desc_during_contest) }}`);
+        let desc_after_contest = index.unescape_html(`{{ markdown_escape(contest.desc_after_contest) }}`);
 
         let cur_desc_type = 'before';
         const is_unsaved = () => {

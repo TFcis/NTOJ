@@ -368,5 +368,11 @@ var index = new function() {
         }
 	    return new WebSocket(ws_link);
     };
+
+    that.unescape_html = function(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        return doc.documentElement.textContent;
+    };
 };
 

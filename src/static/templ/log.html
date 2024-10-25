@@ -9,4 +9,4 @@
 <p>{{ log['message'] }}</p>
 
 <label for="" class="form-control">Params</label>
-<p style="white-space: pre-wrap;">{% raw log['params'] %}</p>
+<p style="white-space: pre-wrap;">{{ json.dumps(log['params'], indent=4) }}</p>

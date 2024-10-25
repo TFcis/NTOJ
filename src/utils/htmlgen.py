@@ -15,3 +15,6 @@ def set_page_title(title: str, site_title: str = None):
         document.title = "{t}";
     </script>
     """
+
+def markdown_escape(code: str) -> str:
+    return code.replace('`', '\\`').replace('\\', '\\\\')

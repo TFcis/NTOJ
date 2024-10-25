@@ -5,7 +5,7 @@
     function init() {
         // TODO: 有更改尚未儲存跳個通知出來
         let j_form = $("#form");
-        j_form.find("#content").val(`{% raw bulletin['content'].replace('`', '\\`').replace('\\', '\\\\') %}`);
+        j_form.find("#content").val(index.unescape_html(`{{ markdown_escape(bulletin['content']) }}`));
 
         let content_textarea = document.getElementById('content');
         let desc_preview = document.getElementById('descPreviewDialog');

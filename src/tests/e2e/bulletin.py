@@ -1,6 +1,9 @@
 import re
 
 from tornado.websocket import websocket_connect
+from tornado.escape import xhtml_escape
+
+from utils.htmlgen import markdown_escape
 
 from .util import AsyncTest, AccountContext
 
@@ -61,6 +64,32 @@ class BulletinTest(AsyncTest):
             self.assertEqual(html.select_one('h2').text.strip(), 'bulletin 2 (pinned) updated')
             res = admin_session.get('bulletin/2')
             self.assertEqual(re.findall(r'let desc_tex = `(.*)`', res.text, re.I)[0], 'bulletin 2')
+
+            markdown_content ='''<script>alert(1)</script>
+```cpp
+#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "escape test\\n" << endl;
+    cout << "escape test\\" << endl;
+}
+```
+            '''
+            res = admin_session.post('manage/bulletin/update', data={
+                'reqtype': 'update',
+                'bulletin_id': 2,
+                'title': 'bulletin 2 (pinned) updated',
+                'content': markdown_content,
+                'color': 'red',
+                'pinned': 'true',
+            })
+            self.assertEqual(res.text, 'S')
+
+            html = self.get_html('bulletin/2', admin_session)
+            self.assertEqual(html.select_one('h2').text.strip(), 'bulletin 2 (pinned) updated')
+            res = admin_session.get('bulletin/2')
+            self.assertEqual(re.findall(r'let desc_tex = `(.*)`;', res.text, re.DOTALL)[0].strip(), xhtml_escape(markdown_escape(markdown_content)).strip())
 
             res = admin_session.post('manage/bulletin/update', data={
                 'reqtype': 'remove',

@@ -22,7 +22,7 @@ class ProClassTest(AsyncTest):
             self.assertEqual(html.select_one('input#list').attrs.get('value'), '1')
             self.assertIsNotNone(html.select('select#type > option')[1].attrs.get('selected'))
             res = admin_session.get('manage/proclass/update?proclassid=1')
-            self.assertEqual(re.findall(r'j_form\.find\("#desc"\)\.val\(`(.*)`\);', res.text, re.I)[0], 'desc')
+            self.assertEqual(re.findall(r'j_form\.find\("#desc"\)\.val\(index\.unescape_html\(`(.*)`\)\);', res.text, re.I)[0], 'desc')
 
             html = self.get_html('proset?proclass_id=1', admin_session)
             trs = html.select('#prolist > tbody > tr')
@@ -78,7 +78,7 @@ class ProClassTest(AsyncTest):
             self.assertEqual(html.select_one('input#list').attrs.get('value'), '1, 2')
             self.assertIsNotNone(html.select('select#type > option')[0].attrs.get('selected'))
             res = admin_session.get('manage/proclass/update?proclassid=1')
-            self.assertEqual(re.findall(r'j_form\.find\("#desc"\)\.val\(`(.*)`\);', res.text, re.I)[0], 'desc desc')
+            self.assertEqual(re.findall(r'j_form\.find\("#desc"\)\.val\(index\.unescape_html\(`(.*)`\)\);', res.text, re.I)[0], 'desc desc')
 
             html = self.get_html('proset?proclass_id=1', admin_session)
             trs = html.select('#prolist > tbody > tr')
@@ -204,7 +204,7 @@ class ProClassTest(AsyncTest):
             self.assertEqual(html.select_one('input#list').attrs.get('value'), '1')
             self.assertIsNotNone(html.select('select#type > option')[0].attrs.get('selected'))
             res = admin_session.get('acct/proclass/1?page=update&proclassid=2')
-            self.assertEqual(re.findall(r'j_form\.find\("#desc"\)\.val\(`(.*)`\);', res.text, re.I)[0], 'desc desc')
+            self.assertEqual(re.findall(r'j_form\.find\("#desc"\)\.val\(index\.unescape_html\(`(.*)`\)\);', res.text, re.I)[0], 'desc desc')
 
             with AccountContext('test1@test', 'test') as user_session:
                 res = user_session.get('proset?proclass_id=2')
