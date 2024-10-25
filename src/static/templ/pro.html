@@ -1,4 +1,5 @@
 <link rel="stylesheet" type="text/css" href="/oj/pro.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf_viewer.min.css" integrity="sha512-8LkkqbXJPviYJENC5Z8qC2uKz27x0tNgrZbzsAzt7zkw0/2lXtSdrslVhfrkcR+6LRmxjZxlqniSyWXimoaH5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script type="text/x-mathjax-config">
     MathJax.Hub.Config({
         tex2jax:{
@@ -18,23 +19,8 @@
     {% end %}
 
     function init() {
-        var scriptTag = document.createElement('script');
-        scriptTag.src = 'https://toj.tfcis.org/oj/third/pdf_find_bar.js';
-        document.head.appendChild(scriptTag);
-
-        scriptTag = document.createElement('script');
-        scriptTag.src = 'https://toj.tfcis.org/oj/third/pdf_find_controller.js';
-        document.head.appendChild(scriptTag);
-
-        scriptTag = document.createElement('script');
-        scriptTag.src = 'https://toj.tfcis.org/oj/third/text_layer_builder.js';
-        document.head.appendChild(scriptTag);
-
-        scriptTag = document.createElement('script');
-        scriptTag.src = 'https://toj.tfcis.org/oj/third/ui_utils.js';
-        document.head.appendChild(scriptTag);
-
-        PDFJS.workerSrc = 'https://toj.tfcis.org/oj/third/pdf.worker.js'
+        let PDFJS = pdfjsLib;
+        PDFJS.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.mjs';
 
         $('#tags').keydown(function(event) {
             if (event.which == 13) // return
@@ -69,7 +55,7 @@
             downloadLink.click();
         });
 
-        var viewer = 1;
+        let viewer = 1;
         $('#switchviewer').on('click', function() {
             if (viewer == 1) {
                 _load_pdf_embed();
@@ -80,7 +66,7 @@
             }
         });
 
-        var j_cont = $('#cont');
+        let j_cont = $('#cont');
 
         function _load_html() {
             scriptTag = document.createElement('script');
@@ -109,58 +95,50 @@
         }
 
         function _load_pdf_js() {
-            PDFJS.getDocument(pdf_url).then(function(pdf) {
-                var i;
+            PDFJS.getDocument(pdf_url).promise.then(function(pdf) {
                 j_cont.empty();
-                for (i = 1; i <= pdf.numPages; i++) {
-                    var j_page = $('<div id="pdf-page-' + i + '"></div>');
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    let j_page = $('<div id="pdf-page-' + i + '"></div>');
                     j_cont.append(j_page)
                 }
 
-                for (i = 0;i < pdf.numPages; i++) {
+                for (let i = 0; i < pdf.numPages; i++) {
                     pdf.getPage(i + 1).then(function(idx){return function(page) {
-                        var j_page = $('#pdf-page-' + idx);
-                        var j_canvas = $('<canvas style="width:100%; margin-bottom:16px; display:block;"></canvas>');
-                        var j_div = $('<div></div>');
-                        var ctx = j_canvas[0].getContext('2d');
-                        var offset;
-                        var viewport;
+                        let j_page = $('#pdf-page-' + idx);
+                        let j_canvas = $('<canvas style="width:100%; margin: 0; display:block;"></canvas>');
+                        let j_div = $('<div></div>');
+                        let ctx = j_canvas[0].getContext('2d');
+                        let offset = j_canvas[0].getBoundingClientRect();
+                        let viewport;
 
                         j_page.append(j_canvas);
 
-                        offset = j_canvas.offset();
-                        viewport = page.getViewport(
-                            j_canvas.width() / page.getViewport(1.0).width);
+                        scale = j_canvas.width() / page.getViewport({scale: 1}).width;
+                        viewport = page.getViewport({scale: scale});
 
                         j_canvas.attr('width', viewport.width);
                         j_canvas.attr('height', viewport.height);
-
-                        j_div.addClass('textlayer');
-                        j_div.css('width', viewport.width);
-                        j_div.css('height', viewport.height);
-                        j_div.offset({'top':offset.top, 'left':offset.left});
+                        j_div.addClass('textLayer');
+                        j_div.offset({'top': offset.top, 'left': offset.left});
+                        j_div[0].style.setProperty('--scale-factor', viewport.scale);
 
                         j_page.append(j_div);
 
-                        page.getTextContent().then(function(text) {
-                            var textlayer = new TextLayerBuilder({
-                                'textLayerDiv': j_div[0],
-                                'viewport': viewport,
-                                'pageIndex': idx
+                        page.render({canvasContext: ctx, viewport: viewport}).promise.then(function () {
+                            return page.getTextContent();
+                        }).then(function (text) {
+                            const textLayer = new PDFJS.TextLayer({
+                                textContentSource: text,
+                                container: j_div[0],
+                                viewport: viewport,
                             });
-
-                            textlayer.setTextContent(text);
-
-                            page.render({
-                                'canvasContext': ctx,
-                                'viewport': viewport,
-                                'textLayer': textlayer
-                            });
+                            textLayer.render();
                         });
                     };}(i + 1));
                 }
             });
         }
+
         function _load_pdf_embed() {
             j_cont.empty();
             var embed = $(`<embed width="100%" height="100%" src="${pdf_url}" type="application/pdf">`);
