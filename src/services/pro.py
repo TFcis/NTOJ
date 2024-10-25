@@ -339,19 +339,37 @@ class ProService:
 
             check_type = self._get_check_type(conf["check"])
 
-            ALLOW_COMPILERS = list(ChalConst.ALLOW_COMPILERS) + ['default']
+            ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
             if is_makefile:
-                ALLOW_COMPILERS = ['default', 'gcc', 'g++', 'clang', 'clang++']
+                ALLOW_COMPILERS = {'default', 'gcc', 'g++', 'clang', 'clang++'}
 
             if "limit" in conf:
-                limit = {lang: lim for lang, lim in conf["limit"].items() if lang in ALLOW_COMPILERS}
+                limits = {}
+                for comp_type, limit in conf["limit"].items():
+                    if comp_type not in ALLOW_COMPILERS:
+                        continue
+
+                    try:
+                        limit['timelimit'] = max(int(limit['timelimit']), 0)
+                        limit['memlimit'] = max(int(limit['memlimit']) * 1024, 0)
+                    except (ValueError, KeyError):
+                        continue
+
+                    limits[comp_type] = limit
+
+                if 'default' not in limits:
+                    return "Econf", None
+
             elif 'timelimit' in conf and 'memlimit' in conf:
-                limit = {
-                    'default': {
-                        'timelimit': conf["timelimit"],
-                        'memlimit': conf["memlimit"] * 1024
+                try:
+                    limits = {
+                        'default': {
+                            'timelimit': int(conf["timelimit"]),
+                            'memlimit': int(conf["memlimit"]) * 1024
+                        }
                     }
-                }
+                except ValueError:
+                    return "Econf", None
             else:
                 return "Econf", None
 
@@ -363,7 +381,7 @@ class ProService:
                 await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
                 await con.execute(
                     'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4 WHERE pro_id = $5',
-                    is_makefile, check_type, json.dumps(chalmeta), json.dumps(limit), pro_id
+                    is_makefile, check_type, json.dumps(chalmeta), json.dumps(limits), pro_id
                 )
 
                 insert_sql = []

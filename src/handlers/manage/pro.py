@@ -890,54 +890,34 @@ class ManageProHandler(RequestHandler):
                     self.error(err)
                     return
 
-                ALLOW_COMPILERS = ChalConst.ALLOW_COMPILERS
+                ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
                 if pro['testm_conf']['is_makefile']:
-                    ALLOW_COMPILERS = ['gcc', 'g++', 'clang', 'clang++', 'default']
+                    ALLOW_COMPILERS = {'gcc', 'g++', 'clang', 'clang++', 'default'}
 
-                def _check(comp_type, limit):
-                    if comp_type not in ALLOW_COMPILERS and comp_type != "default":
-                        return False
-
-                    if 'timelimit' not in limit:
-                        return False
+                new_limits = {}
+                for comp_type, limit in limits.items():
+                    if comp_type not in ALLOW_COMPILERS:
+                        continue
                     try:
-                        int(limit['timelimit'])
-                    except ValueError:
-                        return False
+                        limit['timelimit'] = max(int(limit['timelimit']), 0)
+                        limit['memlimit'] = max(int(limit['memlimit']) * 1024, 0)
+                    except (ValueError, KeyError):
+                        continue
 
-                    if 'memlimit' not in limit:
-                        return False
+                    new_limits[comp_type] = limit
 
-                    try:
-                        int(limit['memlimit'])
-                    except ValueError:
-                        return False
-
-                    return True
-
-                limits = { comp_type:limit for comp_type, limit in limits.items() if _check(comp_type, limit) }
-                if 'default' not in limits:
+                if 'default' not in new_limits:
                     self.error('Eparam')
                     return
 
-                for _, limit in limits.items():
-                    limit['timelimit'] = int(limit['timelimit'])
-                    limit['memlimit'] = int(limit['memlimit']) * 1024
-
-                    if limit['timelimit'] < 0:
-                        limit['timelimit'] = 0
-
-                    if limit['memlimit'] < 0:
-                        limit['memlimit'] = 0
-
-                pro['testm_conf']['limit'] = limits
+                pro['testm_conf']['limit'] = new_limits
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
 
                 await LogService.inst.add_log(
                     f"{self.acct.name} has sent a request to update the problem #{pro_id}",
                     'manage.pro.update.limit',
                     {
-                        'limits': limits
+                        'limits': new_limits
                     }
                 )
 
