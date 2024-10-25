@@ -999,11 +999,14 @@ class ManageProHandler(RequestHandler):
                 self.error(err)
                 return
 
+            log_type = ""
             async with self.db.acquire() as con:
                 if is_all_chal:
                     sql = ""
+                    log_type = "manage.chal.rechalall"
                 else:
                     sql = '''AND "challenge_state"."chal_id" IS NULL'''
+                    log_type = "manage.chal.rechal"
                 result = await con.fetch(
                     f'''
                         SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"
@@ -1015,7 +1018,7 @@ class ManageProHandler(RequestHandler):
                 )
             await LogService.inst.add_log(
                 f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
-                'manage.chal.rechal',
+                log_type,
             )
 
             # TODO: send notify to user
