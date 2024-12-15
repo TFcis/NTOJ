@@ -82,9 +82,16 @@ class WebSocketSubHandler(tornado.websocket.WebSocketHandler):
     def check_origin(self, _: str) -> bool:
         return True
 
+    async def cleanup(self):
+        await self.p.unsubscribe()
+        if self.task:
+            self.task.cancel()
+
+        await self.p.aclose()
+        await self.rs.aclose()
+
     def on_close(self) -> None:
-        self.task.cancel()
-        asyncio.create_task(self.rs.aclose())
+        asyncio.create_task(self.cleanup())
 
 
 def reqenv(func):
