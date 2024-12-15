@@ -20,7 +20,7 @@
 
     function init() {
         let PDFJS = pdfjsLib;
-        PDFJS.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.mjs';
+        PDFJS.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.mjs';
 
         $('#tags').keydown(function(event) {
             if (event.which == 13) // return
