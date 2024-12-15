@@ -17,4 +17,4 @@ def set_page_title(title: str, site_title: str = None):
     """
 
 def markdown_escape(code: str) -> str:
-    return code.replace('`', '\\`').replace('\\', '\\\\')
+    return code.replace('\\', '\\\\').replace('`', '\\`')
