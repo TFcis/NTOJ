@@ -40,14 +40,15 @@ class ProRankHandler(RequestHandler):
                         ROUND("challenge_state"."rate", "problem"."rate_precision") AS rate
 
                     FROM "challenge"
+
+                    INNER JOIN "problem"
+                    ON "challenge"."pro_id" = "problem"."pro_id" AND "problem"."pro_id" = $1
+
                     INNER JOIN "account"
                     ON "challenge"."acct_id"="account"."acct_id"
 
                     INNER JOIN "challenge_state"
                     ON "challenge"."chal_id"="challenge_state"."chal_id"
-
-                    INNER JOIN "problem"
-                    ON "challenge"."pro_id" = $1
 
                     WHERE "challenge_state"."state"={ChalConst.STATE_AC}
 
