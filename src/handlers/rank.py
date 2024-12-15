@@ -37,7 +37,7 @@ class ProRankHandler(RequestHandler):
                         "account"."name" AS "acct_name",
                         "challenge_state"."runtime",
                         "challenge_state"."memory",
-                        ROUND("challenge_state"."rate", "problem"."rate_precision")
+                        ROUND("challenge_state"."rate", "problem"."rate_precision") AS rate
 
                     FROM "challenge"
                     INNER JOIN "account"
@@ -51,11 +51,11 @@ class ProRankHandler(RequestHandler):
 
                     WHERE "challenge_state"."state"={ChalConst.STATE_AC}
 
-                    ORDER BY "challenge"."acct_id" ASC, "challenge_state"."rate" ASC,
+                    ORDER BY "challenge"."acct_id" ASC, "challenge_state"."rate" DESC,
                     "challenge_state"."runtime" ASC, "challenge_state"."memory" ASC,
                     "challenge"."timestamp" ASC
                 ) temp
-                ORDER BY "runtime" ASC, "memory" ASC,
+                ORDER BY "rate" DESC, "runtime" ASC, "memory" ASC,
                 "timestamp" ASC, "acct_id" ASC OFFSET $2 LIMIT $3;
                 '''
                 ,
