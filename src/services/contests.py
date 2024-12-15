@@ -247,7 +247,7 @@ class ContestService:
                 "challenge"."pro_id",
                 "challenge"."acct_id",
                 "challenge"."timestamp",
-                ROUND("challenge_state"."rate", problem.rate_precision),
+                ROUND("challenge_state"."rate", problem.rate_precision) AS rate,
 
                 ROW_NUMBER() OVER (
                     PARTITION BY "challenge"."pro_id", "challenge"."acct_id"
