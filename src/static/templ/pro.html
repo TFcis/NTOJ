@@ -121,7 +121,7 @@
                         j_canvas.attr('width', viewport.width);
                         j_canvas.attr('height', viewport.height);
                         j_div.addClass('textLayer');
-                        j_div.offset({'top': offset.top, 'left': offset.left});
+                        j_div.offset({'top': offset.top + window.scrollY, 'left': offset.left + window.scrollX});
                         j_div[0].style.setProperty('--scale-factor', viewport.scale);
 
                         j_page.append(j_div);
