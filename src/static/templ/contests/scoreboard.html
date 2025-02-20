@@ -67,24 +67,32 @@ font-weight: bolder;
      * @returns { string }
      */
     function secsToText(secs) {
-        let ss = 0, mm = 0, hh = 0;
+        let ss = 0, mm = 0, hh = 0, dd = 0;
         ss = Math.floor(secs % 60);
-        if (secs >= 0) {
-            mm = Math.floor(secs / 60) % 60;
-            hh = Math.floor(secs / 3600);
-        } else {
-            mm = Math.ceil(secs / 60) % 60;
-            hh = Math.ceil(secs / 3600);
-        }
-        return hh + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+
+        let round = (secs >= 0 ? Math.floor : Math.ceil);
+        dd = round(secs / 86400);
+        secs %= 86400;
+        hh = round(secs / 3600);
+        secs %= 3600;
+        mm = round(secs / 60) % 60;
+
+        return (dd > 0 ? (dd + ' Day' + (Math.abs(dd) > 1 ? 's ': ' ')) : '')
+                + hh + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
     }
 
     function timer() {
         let cur_time = new Date();
-        let diff_sec = parseInt((cur_time - contest_start) / 1000);
+        let diff_sec_from_start = parseInt((cur_time - contest_start) / 1000);
         if (cur_time < contest_end) {
-            slider.val(diff_sec);
-            display_time_label.text(secsToText(diff_sec));
+            slider.val(diff_sec_from_start);
+
+            if (diff_sec_from_start < 0) {
+                display_time_label.text(secsToText(diff_sec_from_start));
+            } else {
+                let diff_sec_from_end = parseInt((contest_end - cur_time) / 1000);
+                display_time_label.text(`${secsToText(diff_sec_from_start)} / ${secsToText(diff_sec_from_end)}`);
+            }
         } else {
             slider.val(contest_length);
             display_time_label.text("Ended");
