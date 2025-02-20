@@ -56,17 +56,25 @@ class ChalListHandler(RequestHandler):
         if self.contest:
             contest_id = self.contest.contest_id
 
-            if self.contest.hide_admin and not self.contest.is_admin(self.acct):
-                if query_accts is None:
-                    query_accts = self.contest.acct_list
-                    if not query_accts:
-                        query_accts = [-1]
-                else:
-                    query_accts = list(filter(lambda acct_id: not self.contest.is_admin(acct_id=acct_id), query_accts))
-            elif self.contest.is_admin(self.acct) and query_accts is None:
+            if self.contest.is_admin(self.acct) and query_accts is None:
                 query_accts = []
                 query_accts.extend(self.contest.acct_list)
                 query_accts.extend(self.contest.admin_list)
+            else:
+                if not self.contest.is_start():
+                    query_accts = [-1]
+                elif self.contest.is_running():
+                    query_accts = [self.acct.acct_id]
+                else:
+                    if self.contest.is_public_scoreboard:
+                        if query_accts is None:
+                            query_accts = self.contest.acct_list
+                            if not query_accts:
+                                query_accts = [-1]
+                        else:
+                            query_accts = list(filter(lambda acct_id: not self.contest.is_admin(acct_id=acct_id), query_accts))
+                    else:
+                        query_accts = [self.acct.acct_id]
 
         flt = ChalSearchingParamBuilder().pro(query_pros).acct(query_accts).state(state).compiler(
             compiler_type).contest(contest_id).build()
