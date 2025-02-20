@@ -12,4 +12,5 @@ class ContestListHandler(RequestHandler):
     @reqenv
     async def get(self):
         _, contest_list = await ContestService.inst.get_contest_list()
+        contest_list.sort(key=lambda contest: contest['contest_start'], reverse=True)
         await self.render('contests/contests-list', contests=contest_list)
