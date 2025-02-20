@@ -85,7 +85,7 @@ font-weight: bolder;
                         <a href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro['pro_id'] }}/">p{{chr(65+idx)}}. {{ pro['name'] }}</a>
                     </td>
                     {% set state_idx = int(pro['score'] / 10) %}
-                    {% if state_idx > 10 %}
+                    {% if pro['state'] == ChalConst.STATE_AC or state_idx > 10 %}
                         {% set state_idx = 10 %}
                     {% elif state_idx < 0 %}
                         {% set state_idx = 0 %}
