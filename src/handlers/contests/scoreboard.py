@@ -62,7 +62,7 @@ class ContestScoreboardHandler(RequestHandler):
             has_end_time = False
             end_time = self.contest.contest_end
 
-        if self.contest.freeze_scoreboard_period != 0 and self.contest.is_running():
+        if self.contest.freeze_scoreboard_period != 0 and self.contest.is_running() and not self.contest.is_admin(self.acct):
             if not has_end_time:
                 end_time = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8)))
 
