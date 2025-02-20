@@ -119,8 +119,25 @@ font-weight: bolder;
         return p_min > q_min;
     }
 
+    // from https://www.explainthis.io/zh-hant/swe/throttle
+    function throttle(fn, delay = 500) {
+        let timer = null;
+
+        return (...args) => {
+            if (timer) return;
+            timer = setTimeout(() => {
+            fn(...args);
+            timer = null;
+            }, delay);
+        };
+    }
 
     function init() {
+        let refresh_button = $("#refresh");
+        const refresh_scoreboard = throttle((timestamp) => {
+            update_scoreboard(timestamp);
+        });
+
         ws = index.get_ws(`contests/${contest_id}/scoreboardsub`);
         ws.onopen = (e) => {
             ws.send(contest_id);
@@ -132,8 +149,9 @@ font-weight: bolder;
         };
 
         ws.onmessage = (e) => {
-            if (e.data == contest_id)
-                $("#refresh").click();
+            if (e.data == contest_id) {
+                refresh_scoreboard(-1);
+            }
         };
 
         ws.onclose = (e) => {
@@ -153,13 +171,13 @@ font-weight: bolder;
 
             if (sec > contest_length) {
                 slider.val(contest_length);
-                display_time_label.text("Ended");
-                update_scoreboard(-1);
+                timer();
+                refresh_scoreboard(-1);
 
             } else if (sec >= cur_length) {
                 slider.val(cur_length);
-                display_time_label.text(secsToText(cur_length));
-                update_scoreboard(-1);
+                timer();
+                refresh_scoreboard(-1);
 
                 clearInterval(timer_id); // make sure only one timer running
                 timer_id = setInterval(timer, 1);
@@ -169,13 +187,13 @@ font-weight: bolder;
 
                 let start = new Date(contest_start);
                 start.setSeconds(start.getSeconds() + sec);
-                display_time_label.text(secsToText(sec));
-                update_scoreboard(start.toISOString());
+                timer();
+                refresh_scoreboard(start.toISOString());
             }
         });
 
-        $("#refresh").on('click', e => {
-            index.reload();
+        refresh_button.on('click', e => {
+            refresh_scoreboard(-1);
         });
 
         update_scoreboard(-1);
