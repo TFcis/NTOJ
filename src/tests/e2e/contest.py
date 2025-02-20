@@ -429,7 +429,7 @@ class ContestTest(AsyncTest):
                 'code': 'cc3',
                 'comp_type': 'g++',
             })
-            self.assertEqual(res.text, 'Einternal60')
+            self.assertTrue(res.text.startswith('Einternal60:'))
             while True:
                 msg = await ws.read_message()
                 if msg is None:
