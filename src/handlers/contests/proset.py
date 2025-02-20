@@ -1,23 +1,26 @@
 import tornado
 
 from handlers.base import reqenv, RequestHandler
-from handlers.contests.base import contest_require_permission
 from services.pro import ProService
 from services.rate import RateService
 
 
 class ContestProsetHandler(RequestHandler):
     @reqenv
-    @contest_require_permission('all')
     async def get(self):
         try:
             pageoff = int(self.get_argument('pageoff'))
         except tornado.web.HTTPError:
             pageoff = 0
 
-        if not (self.contest.is_start() or self.contest.is_admin(self.acct)):
-            prolist = []
-            show_ac_ratio = False
+        show_ac_ratio = False
+        if not self.contest.is_start() and not self.contest.is_admin(self.acct):
+            self.error('Eacces')
+            return
+
+        elif self.contest.is_running() and not self.contest.is_member(self.acct):
+            self.error('Eacces')
+            return
 
         else:
             _, acct_rates = await RateService.inst.map_rate_acct(self.acct, contest_id=self.contest.contest_id)
