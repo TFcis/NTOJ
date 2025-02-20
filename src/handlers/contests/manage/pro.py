@@ -26,6 +26,7 @@ class ContestManageProHandler(RequestHandler):
     async def post(self):
         reqtype = self.get_argument('reqtype')
         pro_id = self.get_argument('pro_id')
+        prolist_updated = False
 
         if reqtype == "add":
             pro_id = int(pro_id)
@@ -42,6 +43,7 @@ class ContestManageProHandler(RequestHandler):
 
             await ContestService.inst.update_contest(self.acct, self.contest)
             await self.finish('S')
+            prolist_updated = True
 
         elif reqtype == "remove":
             pro_id = int(pro_id)
@@ -58,6 +60,7 @@ class ContestManageProHandler(RequestHandler):
 
             await ContestService.inst.update_contest(self.acct, self.contest)
             await self.finish('S')
+            prolist_updated = True
 
         elif reqtype == "multi_add":
             pro_list = []
@@ -74,6 +77,7 @@ class ContestManageProHandler(RequestHandler):
 
             await ContestService.inst.update_contest(self.acct, self.contest)
             await self.finish('S')
+            prolist_updated = True
 
         elif reqtype == "multi_remove":
             pro_list = parse_list_str(pro_id)
@@ -82,6 +86,7 @@ class ContestManageProHandler(RequestHandler):
 
             await ContestService.inst.update_contest(self.acct, self.contest)
             await self.finish('S')
+            prolist_updated = True
 
         elif reqtype == "rechal":
             pro_id = int(pro_id)
@@ -128,3 +133,7 @@ class ContestManageProHandler(RequestHandler):
 
         else:
             self.error('Eunk')
+            return
+
+        if prolist_updated:
+            await self.rs.delete(f"contest_{self.contest.contest_id}_scores")

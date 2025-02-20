@@ -127,3 +127,7 @@ class ContestManageAcctHandler(RequestHandler):
 
         else:
             self.error('Eunk')
+            return
+
+        if list_type == "normal" or (list_type == "admin" and not self.contest.hide_admin):
+            await self.rs.delete(f"contest_{self.contest.contest_id}_scores")

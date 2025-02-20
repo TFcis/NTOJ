@@ -90,7 +90,10 @@ class ContestManageGeneralHandler(RequestHandler):
             self.contest.allow_view_other_page = allow_view_other_page
             self.contest.hide_admin = hide_admin
             self.contest.submission_cd_time = submission_cd_time
-            self.contest.freeze_scoreboard_period = freeze_scoreboard_period
+            if self.contest.freeze_scoreboard_period != freeze_scoreboard_period:
+                self.contest.freeze_scoreboard_period = freeze_scoreboard_period
+                if self.contest.is_start():
+                    await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
             await ContestService.inst.update_contest(self.acct, self.contest)
 
