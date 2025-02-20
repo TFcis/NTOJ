@@ -17,6 +17,7 @@ class ContestProsetHandler(RequestHandler):
 
         if not (self.contest.is_start() or self.contest.is_admin(self.acct)):
             prolist = []
+            show_ac_ratio = False
 
         else:
             _, acct_rates = await RateService.inst.map_rate_acct(self.acct, contest_id=self.contest.contest_id)
@@ -37,8 +38,14 @@ class ContestProsetHandler(RequestHandler):
 
             prolist = list(map(get_score, prolist))
 
+            if self.contest.is_public_scoreboard or self.contest.is_admin(self.acct):
+                show_ac_ratio = True
+                for pro in prolist:
+                    _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'], contest_id=self.contest.contest_id)
+                    pro['rate_data'] = rate
+
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff: pageoff + 40]
 
-        await self.render('contests/proset', contest=self.contest,
+        await self.render('contests/proset', contest=self.contest, show_ac_ratio=show_ac_ratio,
                           prolist=prolist, pro_total_cnt=pro_total_cnt, pageoff=pageoff)
