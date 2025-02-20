@@ -94,7 +94,15 @@
         (() => {
             chalsub_count = 0;
 
-            newchal_ws = index.get_ws('challistnewchalsub');
+            {% if contest %}
+                newchal_ws = index.get_ws('contests/{{ contest.contest_id }}/scoreboardsub');
+                newchal_ws.onopen = function(e) {
+                    newchal_ws.send('{{ contest.contest_id }}')
+                }
+            {% else %}
+                newchal_ws = index.get_ws('challistnewchalsub');
+            {% end %}
+
             newchal_ws.onmessage = function(e) {
                 chalsub_count += 1;
                 j_chalsub.find('a').text(chalsub_count + ' new challenges');

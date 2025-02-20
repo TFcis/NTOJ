@@ -153,7 +153,7 @@ class SubmitHandler(RequestHandler):
             self.error(err)
             return
 
-        if reqtype == 'submit' and pro['status'] in [ProService.STATUS_ONLINE, ProService.STATUS_CONTEST]:
+        if reqtype == 'submit' and pro['status'] == ProService.STATUS_ONLINE:
             await self.rs.publish('challist_sub', str(1))
 
         self.finish(json.dumps(chal_id))

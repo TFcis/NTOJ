@@ -91,6 +91,7 @@ class ChalListHandler(RequestHandler):
             pacct_id=pacct_id,
             chalids=json.dumps(chalids),
             isadmin=isadmin,
+            contest=self.contest,
         )
 
 
