@@ -64,7 +64,7 @@ jobs:
           cat output.log
 
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: src/htmlcov
