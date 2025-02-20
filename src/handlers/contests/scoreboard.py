@@ -63,21 +63,16 @@ class ContestScoreboardHandler(RequestHandler):
             end_time = self.contest.contest_end
 
         if self.contest.freeze_scoreboard_period != 0 and self.contest.is_running():
-            if has_end_time:
-                total_seconds = int((end_time - self.contest.contest_start).total_seconds())
-                minutes = total_seconds // 60
+            if not has_end_time:
+                end_time = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8)))
 
-                if minutes >= self.contest.freeze_scoreboard_period:
-                    end_time = self.contest.contest_start + datetime.timedelta(
-                        minutes=self.contest.freeze_scoreboard_period)
-            else:
-                now = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8)))
-                total_seconds = int((now - self.contest.contest_start).total_seconds())
-                minutes = total_seconds // 60
+            total_seconds = int((end_time - self.contest.contest_start).total_seconds())
+            minutes = total_seconds // 60
 
-                if minutes >= self.contest.freeze_scoreboard_period:
-                    end_time = self.contest.contest_start + datetime.timedelta(
-                        minutes=self.contest.freeze_scoreboard_period)
+            if minutes >= self.contest.freeze_scoreboard_period:
+                end_time = self.contest.contest_start + datetime.timedelta(
+                    minutes=self.contest.freeze_scoreboard_period)
+
         is_ended = self.contest.is_end()
 
         contest_id = self.contest.contest_id
