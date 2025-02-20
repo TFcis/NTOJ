@@ -50,7 +50,7 @@ class ContestScoreboardHandler(RequestHandler):
         if not self.contest.is_start() and not self.contest.is_admin(self.acct):
             self.error('Eacces')
             return
-        elif not self.contest.is_end() and not self.contest.is_public_scoreboard and not self.contest.is_admin(self.acct):
+        elif not self.contest.is_public_scoreboard and not self.contest.is_member(self.acct):
             self.error('Eacces')
             return
 
@@ -77,10 +77,19 @@ class ContestScoreboardHandler(RequestHandler):
 
         contest_id = self.contest.contest_id
 
-        # TODO: 並行
-        acct_list = self.contest.acct_list
-        if not self.contest.hide_admin:
-            acct_list.extend(self.contest.admin_list)
+
+        acct_list = []
+        if self.contest.is_public_scoreboard:
+            acct_list = self.contest.acct_list
+            if not self.contest.hide_admin:
+                acct_list.extend(self.contest.admin_list)
+        else:
+            if not self.contest.is_admin(self.acct):
+                acct_list = [self.acct.acct_id]
+            else:
+                acct_list = self.contest.acct_list
+                if not self.contest.hide_admin:
+                    acct_list.extend(self.contest.admin_list)
 
         s: dict[int, dict[int, dict]] = {}
         cache_name = f'contest_{contest_id}_scores'
