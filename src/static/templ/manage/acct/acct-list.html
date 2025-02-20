@@ -40,5 +40,18 @@
         {% end %}
         </tbody>
     </table>
+
+    {% set postfix = '' %}
+
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col pt-3">
+            {% set _p_pageoff = pageoff %}
+            {% set _p_pagenum = 40 %}
+            {% set _p_total_cnt = acct_total_cnt %}
+            {% set _p_postfix = postfix %}
+            {% include "../../pagination.html" %}
+        </div>
+    </div>
 </div>
 {% end %}

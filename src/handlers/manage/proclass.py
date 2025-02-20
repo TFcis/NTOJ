@@ -1,3 +1,5 @@
+import tornado
+
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
 from services.pro import ProClassService, ProClassConst
@@ -10,10 +12,19 @@ class ManageProClassHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page=None):
         if page is None:
+            try:
+                pageoff = int(self.get_argument('pageoff'))
+            except tornado.web.HTTPError:
+                pageoff = 0
+
             _, proclass_list = await ProClassService.inst.get_proclass_list()
-            proclass_list = filter(lambda proclass: proclass['type'] in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN],
-                                   proclass_list)
-            await self.render('manage/proclass/proclass-list', page='proclass', proclass_list=proclass_list)
+            proclass_list = list(filter(lambda proclass: proclass['type'] in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN],
+                        proclass_list))
+            proclass_total_cnt = len(proclass_list)
+            proclass_list = proclass_list[pageoff: pageoff + 20]
+
+            await self.render('manage/proclass/proclass-list', page='proclass', proclass_list=proclass_list,
+                              pageoff=pageoff, proclass_total_cnt=proclass_total_cnt)
 
         elif page == "add":
             await self.render('manage/proclass/add', page='proclass')

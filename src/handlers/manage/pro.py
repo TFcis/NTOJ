@@ -22,14 +22,23 @@ class ManageProHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page=None):
         if page is None:
+            try:
+                pageoff = int(self.get_argument('pageoff'))
+            except tornado.web.HTTPError:
+                pageoff = 0
+
             err, prolist = await ProService.inst.list_pro(self.acct)
+            pro_total_cnt = len(prolist)
+            prolist = prolist[pageoff: pageoff + 40]
 
             if (lock_list := (await self.rs.get('lock_list'))) is not None:
                 lock_list = unpackb(lock_list)
             else:
                 lock_list = []
 
-            await self.render('manage/pro/pro-list', page='pro', prolist=prolist, lock_list=lock_list)
+            await self.render('manage/pro/pro-list', page='pro', prolist=prolist, lock_list=lock_list,
+                            pageoff=pageoff, pro_total_cnt=pro_total_cnt)
+
         elif page == "update":
             pro_id = int(self.get_argument('proid'))
 

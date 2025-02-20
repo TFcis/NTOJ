@@ -1,3 +1,5 @@
+import tornado
+
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.group import GroupService
 from services.log import LogService
@@ -9,8 +11,16 @@ class ManageAcctHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page=None):
         if page is None:
+            try:
+                pageoff = int(self.get_argument('pageoff'))
+            except tornado.web.HTTPError:
+                pageoff = 0
+
             _, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, True)
-            await self.render('manage/acct/acct-list', page='acct', acctlist=acctlist)
+            acct_total_cnt = len(acctlist)
+            acctlist = acctlist[pageoff:pageoff + 40]
+            await self.render('manage/acct/acct-list', page='acct', acctlist=acctlist,
+                              pageoff=pageoff, acct_total_cnt=acct_total_cnt)
 
         elif page == 'update':
             acct_id = int(self.get_argument('acctid'))
