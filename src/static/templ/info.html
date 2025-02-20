@@ -1,28 +1,28 @@
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" /> 
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
 <style>
 .green-row > td {
-  color: #01c201; 
+  color: #01c201;
   background-color: #ddf0d8;
 }
 
 .pink-row > td {
-  color: #ca673f; 
+  color: #ca673f;
   background-color: #e6d8d0;
 }
 
 .purple-row > td {
-  color: #70649a; 
+  color: #70649a;
   background-color: #dbd8e7;
 }
 
 .red-row > td {
-  color: #961804; 
+  color: #961804;
   background-color: #e4d6d4;
 }
 
 .light-blue-row > td {
-  color: #1fb0ab; 
+  color: #1fb0ab;
   background-color: #d6e7e7;
 }
 
@@ -32,7 +32,7 @@
 }
 
 .yellow-row > td {
-  color: #b1a200; 
+  color: #b1a200;
   background-color: #e4e3d2;
 }
 
@@ -46,49 +46,49 @@
 } */
 </style>
 
-<script type="text/javascript"> 
+<script type="text/javascript">
     function init() {}
-</script> 
+</script>
 
 <body>
-<div class="g-lg-12"> 
-  <h1 style="font-weight: bolder;">公告</h1> 
-    {% if judge_server_status == False %} 
+<div class="g-lg-12">
+  <h1 style="font-weight: bolder;">公告</h1>
+    {% if judge_server_status == False %}
 	<h1 style="color: #F0F280;">目前NTOJ不能Judge，造成不便之處，敬請見諒</h1>
     {% end %}
   <table border="2" class="table">
     <thead>
       <tr>
-        <td style="width:71%;"> 
-          <span class="material-symbols-outlined">push_pin</span> 
-          Title 
-        </td> 
-        <td style="width:15%;">Time</td> 
-        <td style="width:15%;">Author</td> 
-      </tr> 
-    </thead> 
-    <tbody> 
-    {% for bulletin in bulletin_list %} 
-      <tr> 
-        <td> 
-          <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/" style="color: {{ bulletin['color'] }}"> 
-            <font size=5> 
-              {% if bulletin['pinned'] %} 
-                <span class="material-symbols-outlined">push_pin</span> 
-              {% end %} 
-              {{ bulletin['title'] }} 
-            </font> 
-          </a> 
-        </td> 
+        <td style="width:71%;">
+          <span class="material-symbols-outlined">push_pin</span>
+          Title
+        </td>
+        <td style="width:15%;">Time</td>
+        <td style="width:15%;">Author</td>
+      </tr>
+    </thead>
+    <tbody>
+    {% for bulletin in bulletin_list %}
+      <tr>
+        <td>
+          <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/" style="color: {{ bulletin['color'] }}">
+            <font size=5>
+              {% if bulletin['pinned'] %}
+                <span class="material-symbols-outlined">push_pin</span>
+              {% end %}
+              {{ bulletin['title'] }}
+            </font>
+          </a>
+        </td>
         <td>
           <font size=4>{{ bulletin['timestamp'].strftime('%Y-%m-%d') }}</font>
-        </td> 
+        </td>
         <td>
-          <font size=4> 
-            <a href="/oj/acct/{{ bulletin['acct_id'] }}/">{{ bulletin['name'] }}</a> 
+          <font size=4>
+            <a href="/oj/acct/{{ bulletin['acct_id'] }}/">{{ bulletin['name'] }}</a>
           </font>
-        </td> 
-      </tr> 
+        </td>
+      </tr>
     {% end %}
     </tbody>
   </table>
@@ -102,46 +102,46 @@
   </div>
   <div class="card border-0">
     <div class="card-body" style="padding-top: 5px;">
-      <table class="table table-borderless" style="font-size: 125%;"> 
-        <thead> 
-          <tr class="verdict-table-head"> 
+      <table class="table table-borderless" style="font-size: 125%;">
+        <thead>
+          <tr class="verdict-table-head">
             <th scope="col-1">Verdict</th>
             <th scope="col-3">Full Name</th>
             <th scope="col-8">Conditions Explanation</th>
-          </tr> 
-        </thead> 
-        <tbody> 
-          <tr class="green-row"> 
-            <td class="col-1">AC</td> 
-            <td class="col-3">Accepted</td> 
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="green-row">
+            <td class="col-1">AC</td>
+            <td class="col-3">Accepted</td>
             <td class="col-8">
-              Your program is correct! <br> 
+              Your program is correct! <br>
               It outputs the right answer in reasoneable time and within the limit memory usage. <br>
               <!-- Congratulations!  -->
               你的程式輸出完全正確! <br>
             它在要求的時間和記憶體限制內輸出了正確答案。
             <!-- 恭喜! -->
             </td>
-          </tr> 
-          <tr class="pink-row"> 
-            <td class="col-1">WA</td> 
-            <td class="col-3">Wrong Answer</td> 
+          </tr>
+          <tr class="pink-row">
+            <td class="col-1">WA</td>
+            <td class="col-3">Wrong Answer</td>
             <td class="col-8">
-              Your program didn't output the correct answer, but it terminated normally. <br> 
+              Your program didn't output the correct answer, but it terminated normally. <br>
               If you truly think your code is correct, contact the administrator through Question page. <br>
               你的程式輸出了錯誤的答案，但有正常結束。<br>
               如果你認為你的程式碼真的正確，可以透過Question頁面聯絡管理員。
             </td>
-          </tr> 
-          <tr class="purple-row"> 
-            <td class="col-1">TLE</td> 
+          </tr>
+          <tr class="purple-row">
+            <td class="col-1">TLE</td>
             <td class="col-3">Time Limit Exceeded</td>
             <td class="col-8">
               Your program tried to run for too much time. <br>
               If you are sure that the problem needs more time, please contact the administrator through Question page. <br>
               你的程式嘗試運行的時間太久。 <br>
               如果你認為題目需要更長的時間限制，可以透過Question頁面聯絡管理員。
-            </td> 
+            </td>
           </tr>
           <tr class="red-row">
             <td class="col-1">MLE</td>
@@ -153,17 +153,17 @@
               如果你認為題目需要更大的記憶體範圍，可以透過Question頁面聯絡管理員。
             </td>
           </tr>
-          <tr class="light-blue-row"> 
-            <td class="col-1">RE</td> 
-            <td class="col-3">Runtime Error</td> 
+          <tr class="light-blue-row">
+            <td class="col-1">RE</td>
+            <td class="col-3">Runtime Error</td>
             <td class="col-8">
               Your program doesn't return a 0 code. <br>
               你的程式退出狀態不為 0。
             </td>
-          </tr> 
+          </tr>
           <tr class="blue-row">
-            <td class="col-1">RE</td> 
-            <td class="col-3">Runtime Error(killed by signal)</td> 
+            <td class="col-1">RE</td>
+            <td class="col-3">Runtime Error(killed by signal)</td>
             <td class="col-8">
               Your program failed during the execution. <br>
               There are some common reasons for this result: <br>
@@ -188,27 +188,27 @@
                   <li>呼叫 abort() 函數</li>
                   <li>assert</li>
                 </ol>
-              </ol> 
+              </ol>
             </td>
           </tr>
-          <tr class="yellow-row"> 
-            <td class="col-1">CE</td> 
-            <td class="col-3">Compile Error</td> 
+          <tr class="yellow-row">
+            <td class="col-1">CE</td>
+            <td class="col-3">Compile Error</td>
             <td class="col-8">
               The compiler fails to compile your program. <br>
               編譯器無法編譯你的程式。
             </td>
-          </tr> 
-          <tr class="white-row"> 
-            <td class="col-1">IE</td> 
-            <td class="col-3">Internal Error</td> 
+          </tr>
+          <tr class="white-row">
+            <td class="col-1">IE</td>
+            <td class="col-3">Internal Error</td>
             <td class="col-8">
               The judge is in a state of collapse. <br>
               Please contact the administrator through Question page. <br>
               評測系統處於崩潰狀態。 <br>
               請透過Question頁面聯絡管理員。
             </td>
-          </tr> 
+          </tr>
           <tr class="white-row">
             <td class="col-1">PE</td>
             <td class="col-3">Presentation Error</td>
@@ -219,18 +219,18 @@
               可能會有多餘的空白行和空格。
             </td>
           </tr>
-        </tbody> 
-      </table> 
+        </tbody>
+      </table>
     </div>
   </div>
-  
+
   <!-- Question -->
   <div class="row">
-    <h3 class="col" style="font-weight: bolder;">Question Page</h3> 
+    <h3 class="col" style="font-weight: bolder;">Question Page</h3>
   </div>
   <div class="card border-0">
     <div class="card-body">
-      <ul> 
+      <ul>
         <li> 提供使用者與管理員溝通的管道 </li>
         <li> 同時最多10筆發問，超過10筆會刪除最早的一筆發問 </li>
       </ul>
@@ -256,7 +256,7 @@
   </div>
   <div class="card border-0">
     <div class="card-body">
-      <ul> 
+      <ul>
         <li> rank 僅顯示每個user <b>最佳的submission</b> </li>
         <li> 先依照 <b>Runtime</b> 排序再依照 <b>Memory</b> 排序 </li>
       </ul>
@@ -269,7 +269,7 @@
   </div>
   <div class="card border-0">
     <div class="card-body">
-      <ul> 
+      <ul>
         <li> 記分板分數的顏色根據分數，以10分為一區間遞增 </li>
         <li> 滿分時(即AC)分數會以 <b>粗體</b> 顯示 </li>
         <li> 名次排序方式: 以分數為優先，若分數相同，以 <b>AC submission count</b> 較少者名次較前 </li>
@@ -277,5 +277,5 @@
       </ul>
     </div>
   </div>
-</div> 
+</div>
 </body>

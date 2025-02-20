@@ -95,8 +95,7 @@ class ContestTest(AsyncTest):
             self.assertEqual(during_section.select('h5')[1].text, contest_end.strftime('%Y-%m-%d %H:%M:%S'))
             self.assertEqual(contest_style_section.select('h5')[0].text, 'IOI')
             self.assertEqual(contest_style_section.select('h5')[1].text, 'Scoreboard')
-            self.assertEqual(registration_info.select('h5')[0].text, reg_end.strftime('%Y-%m-%d %H:%M:%S'))
-            self.assertEqual(registration_info.select('h5')[1].text, 'Invited')
+            self.assertEqual(registration_info.select('h5')[0].text, 'Invited')
             self.assertEqual(registration_status.select('h5')[0].text, 'Admin, no registration needed')
 
             html = self.get_html('contests', admin_session)

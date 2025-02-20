@@ -43,14 +43,15 @@
             <div class="card mb-1">
                 <div class="card-header">Registration Before</div>
                 <div class="card-body">
-                    <h5>{{ contest.reg_end.strftime("%Y-%m-%d %H:%M:%S") }}</h5>
-
                     {% if contest.reg_mode is RegMode.INVITED %}
                         <h5>Invited</h5>
-                    {% elif contest.reg_mode is RegMode.FREE_REG %}
-                        <h5>Free Registration, no approval needed</h5>
-                    {% elif contest.reg_mode is RegMode.REG_APPROVAL %}
-                        <h5>Free Registration, approval needed </h5>
+                    {% else %}
+                        <h5>{{ contest.reg_end.strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+                        {% if contest.reg_mode is RegMode.FREE_REG %}
+                            <h5>Free Registration, no approval needed</h5>
+                        {% elif contest.reg_mode is RegMode.REG_APPROVAL %}
+                            <h5>Free Registration, approval needed </h5>
+                        {% end %}
                     {% end %}
                 </div>
             </div>
