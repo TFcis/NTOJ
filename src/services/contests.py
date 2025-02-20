@@ -47,19 +47,19 @@ class Contest:
     submission_cd_time: int = 30
     freeze_scoreboard_period: int = 0
 
-    def is_start(self):
+    def is_start(self) -> bool:
         return datetime.datetime.now().replace(
             tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) >= self.contest_start
 
-    def is_end(self):
+    def is_end(self) -> bool:
         return datetime.datetime.now().replace(
             tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) >= self.contest_end
 
-    def is_running(self):
+    def is_running(self) -> bool:
         return self.contest_start <= datetime.datetime.now().replace(
             tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) < self.contest_end
 
-    def is_member(self, acct: Account | None = None, acct_id: int | None = None):
+    def is_member(self, acct: Account | None = None, acct_id: int | None = None) -> bool:
         if acct is not None:
             return acct.acct_id in self.acct_list or acct.acct_id in self.admin_list
 
@@ -68,7 +68,7 @@ class Contest:
 
         assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
 
-    def is_admin(self, acct: Account | None = None, acct_id: int | None = None):
+    def is_admin(self, acct: Account | None = None, acct_id: int | None = None) -> bool:
         if acct is not None:
             return acct.acct_id in self.admin_list
 
@@ -76,6 +76,9 @@ class Contest:
             return acct_id in self.admin_list
 
         assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
+
+    def is_pro(self, pro_id: int) -> bool:
+        return pro_id in self.pro_list
 
 
 class ContestService:

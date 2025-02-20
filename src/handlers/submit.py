@@ -27,7 +27,7 @@ class SubmitHandler(RequestHandler):
                 self.error('Eacces')
                 return
 
-            if pro_id not in self.contest.pro_list:
+            if not self.contest.is_pro(pro_id):
                 self.error('Enoext')
                 return
 
@@ -85,7 +85,7 @@ class SubmitHandler(RequestHandler):
                     self.error('Eacces')
                     return
 
-                if pro_id not in self.contest.pro_list:
+                if not self.contest.is_pro(pro_id):
                     self.error('Enoext')
                     return
             else:

@@ -27,7 +27,7 @@ class ContestProsetHandler(RequestHandler):
             _, prolist = await ProService.inst.list_pro(self.acct, is_contest=True)
 
             prolist_order = {pro_id: idx for idx, pro_id in enumerate(self.contest.pro_list)}
-            prolist = sorted(filter(lambda pro: pro['pro_id'] in self.contest.pro_list, prolist),
+            prolist = sorted(filter(lambda pro: self.contest.is_pro(pro['pro_id']), prolist),
                                   key=lambda pro: prolist_order[pro['pro_id']])
 
             def get_score(pro):

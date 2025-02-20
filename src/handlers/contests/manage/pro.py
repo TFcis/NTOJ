@@ -34,7 +34,7 @@ class ContestManageProHandler(RequestHandler):
                 self.error(err)
                 return
 
-            if pro_id in self.contest.pro_list:
+            if self.contest.is_pro(pro_id):
                 self.error('Eexist')
                 return
 
@@ -50,7 +50,7 @@ class ContestManageProHandler(RequestHandler):
                 self.error(err)
                 return
 
-            if pro_id not in self.contest.pro_list:
+            if not self.contest.is_pro(pro_id):
                 self.error('Enoext')
                 return
 
@@ -69,7 +69,7 @@ class ContestManageProHandler(RequestHandler):
 
                 pro_list.append(p_id)
 
-            pro_list = list(filter(lambda pro_id: pro_id not in self.contest.pro_list, pro_list))
+            pro_list = list(filter(lambda pro_id: not self.contest.is_pro(pro_id), pro_list))
             self.contest.pro_list.extend(pro_list)
 
             await ContestService.inst.update_contest(self.acct, self.contest)
