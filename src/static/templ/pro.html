@@ -106,12 +106,14 @@
                     pdf.getPage(i + 1).then(function(idx){return function(page) {
                         let j_page = $('#pdf-page-' + idx);
                         let j_canvas = $('<canvas style="width:100%; margin: 0; display:block;"></canvas>');
+
+                        j_page.append(j_canvas);
+
                         let j_div = $('<div></div>');
                         let ctx = j_canvas[0].getContext('2d');
                         let offset = j_canvas[0].getBoundingClientRect();
                         let viewport;
 
-                        j_page.append(j_canvas);
 
                         scale = j_canvas.width() / page.getViewport({scale: 1}).width;
                         viewport = page.getViewport({scale: scale});
@@ -119,7 +121,7 @@
                         j_canvas.attr('width', viewport.width);
                         j_canvas.attr('height', viewport.height);
                         j_div.addClass('textLayer');
-                        j_div.offset({'top': offset.top, 'left': offset.left});
+                        j_div.offset({'top': offset.top + window.scrollY, 'left': offset.left + window.scrollX});
                         j_div[0].style.setProperty('--scale-factor', viewport.scale);
 
                         j_page.append(j_div);
