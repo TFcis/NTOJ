@@ -7,7 +7,7 @@ import tornado.web
 from msgpack import packb, unpackb
 
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
-from services.contests import ContestService
+from services.contests import ContestService, ProblemScoreType
 from services.user import UserService
 
 UTC8 = datetime.timezone(datetime.timedelta(hours=8))
@@ -93,9 +93,12 @@ class ContestScoreboardHandler(RequestHandler):
 
         s: dict[int, dict[int, dict]] = {}
         cache_name = f'contest_{contest_id}_scores'
-        for pro_id in self.contest.pro_list:
+        for pro_id, pro_options in self.contest.pro_list.items():
             if has_end_time or (scores := (await self.rs.hget(cache_name, str(pro_id)))) is None:
-                s[pro_id] = await ContestService.inst.get_ioi2017_scores(contest_id, pro_id, end_time)
+                if pro_options["score_type"] == ProblemScoreType.IOI2017:
+                    s[pro_id] = await ContestService.inst.get_ioi2017_scores(contest_id, pro_id, end_time)
+                elif pro_options["score_type"] == ProblemScoreType.IOI2013:
+                    s[pro_id] = await ContestService.inst.get_ioi2013_scores(contest_id, pro_id, end_time)
 
                 if not has_end_time:
                     await self.rs.hset(cache_name, str(pro_id), packb(s[pro_id], default=self._encoder))

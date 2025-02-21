@@ -153,6 +153,12 @@ class ContestTest(AsyncTest):
             html = self.get_html('contests/1/proset', admin_session)
             self.assertEqual(len(html.select('tr')[1:]), 6)
 
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'multi_add',
+                'pro_id': '7..20'
+            })
+            self.assertEqual(res.text, 'S')
+
             # test reg
             # current reg mode is invite
         with AccountContext('contest1@test', 'test') as user_session:

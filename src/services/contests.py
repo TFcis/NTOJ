@@ -1,3 +1,4 @@
+import re
 import datetime
 import enum
 from dataclasses import dataclass, field
@@ -18,6 +19,9 @@ class ContestMode(enum.IntEnum):
     IOI = 0
     ACM = 1
 
+class ProblemScoreType(enum.IntEnum):
+    IOI2013 = 0
+    IOI2017 = 1
 
 @dataclass(slots=True, kw_only=True)
 class Contest:
@@ -33,8 +37,8 @@ class Contest:
     contest_end: datetime.datetime
 
     acct_list: list[int] = field(default_factory=list)
-    pro_list: list[int] = field(default_factory=list)
     admin_list: list[int]
+    pro_list: dict[int, dict] = field(default_factory=dict)
 
     reg_mode: RegMode
     reg_end: datetime.datetime
@@ -107,7 +111,7 @@ class ContestService:
                         "desc_after_contest",
 
                         "contest_mode", "contest_start", "contest_end",
-                        "acct_list", "pro_list", "admin_list",
+                        "acct_list", "admin_list",
                         "reg_mode", "reg_end", "reg_list",
 
                         "allow_compilers",
@@ -126,12 +130,18 @@ class ContestService:
 
                 result = result[0]
 
-            contest = Contest(**result)
-            contest.reg_mode = RegMode(contest.reg_mode)
-            contest.contest_mode = ContestMode(contest.contest_mode)
-            contest.contest_start = contest.contest_start.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
-            contest.contest_end = contest.contest_end.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
-            contest.reg_end = contest.reg_end.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
+                contest = Contest(**result)
+                contest.reg_mode = RegMode(contest.reg_mode)
+                contest.contest_mode = ContestMode(contest.contest_mode)
+                contest.contest_start = contest.contest_start.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
+                contest.contest_end = contest.contest_end.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
+                contest.reg_end = contest.reg_end.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
+
+                result = await con.fetch('SELECT pro_id, score_type FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "id";', contest_id)
+                for pro_id, score_type in result:
+                    contest.pro_list[pro_id] = {
+                        "score_type": ProblemScoreType(int(score_type))
+                    }
 
             if contest.is_running():
                 b_contest = pickle.dumps(contest)
@@ -191,7 +201,7 @@ class ContestService:
 
         return None, contest_id
 
-    async def update_contest(self, acct: Account, contest: Contest):
+    async def update_contest(self, acct: Account, contest: Contest, prolist_updated=False):
         # update db
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -203,16 +213,16 @@ class ContestService:
                     "desc_during_contest" = $3,
                     "desc_after_contest" = $4,
                     "contest_mode" = $5, "contest_start" = $6, "contest_end" = $7,
-                    "acct_list" = $8, "admin_list" = $9, "pro_list" = $10,
-                    "reg_mode" = $11, "reg_end" = $12, "reg_list" = $13,
+                    "acct_list" = $8, "admin_list" = $9,
+                    "reg_mode" = $10, "reg_end" = $11, "reg_list" = $12,
 
-                    "allow_compilers" = $14,
-                    "is_public_scoreboard" = $15,
-                    "allow_view_other_page" = $16,
-                    "hide_admin" = $17,
-                    "submission_cd_time" = $18,
-                    "freeze_scoreboard_period" = $19
-                    WHERE "contest_id" = $20;
+                    "allow_compilers" = $13,
+                    "is_public_scoreboard" = $14,
+                    "allow_view_other_page" = $15,
+                    "hide_admin" = $16,
+                    "submission_cd_time" = $17,
+                    "freeze_scoreboard_period" = $18
+                    WHERE "contest_id" = $19;
                 ''',
                 contest.name,
                 contest.desc_before_contest,
@@ -220,7 +230,7 @@ class ContestService:
                 contest.desc_after_contest,
 
                 contest.contest_mode, contest.contest_start, contest.contest_end,
-                contest.acct_list, contest.admin_list, contest.pro_list,
+                contest.acct_list, contest.admin_list,
                 contest.reg_mode, contest.reg_end, contest.reg_list,
 
                 contest.allow_compilers,
@@ -231,6 +241,29 @@ class ContestService:
                 contest.freeze_scoreboard_period,
                 contest.contest_id
             )
+
+            if prolist_updated:
+                await con.execute('DELETE FROM contest_problem_joints WHERE contest_id = $1', contest.contest_id)
+                insert_sql = {}
+                for pro_id, v in contest.pro_list.items():
+                    insert_sql[pro_id] = f"({contest.contest_id}, {pro_id}, {int(v['score_type'])})"
+
+                while True:
+                    if not insert_sql:
+                        break
+
+                    try:
+                        await con.execute(
+                        f'''
+                            INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type")
+                            VALUES {','.join(insert_sql.values())};
+                        '''
+                        )
+                        break
+                    except asyncpg.ForeignKeyViolationError as e:
+                        illegal_pro_id = int(re.search(r'Key \(pro_id\)=\((\d+)\)', e.detail).group(1))
+                        insert_sql.pop(illegal_pro_id)
+                        continue
 
         b_contest = pickle.dumps(contest)
         await self.rs.hset('contest', str(contest.contest_id), b_contest)

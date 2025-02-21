@@ -26,7 +26,7 @@ class ContestProsetHandler(RequestHandler):
             _, acct_rates = await RateService.inst.map_rate_acct(self.acct, contest_id=self.contest.contest_id)
             _, prolist = await ProService.inst.list_pro(self.acct, is_contest=True)
 
-            prolist_order = {pro_id: idx for idx, pro_id in enumerate(self.contest.pro_list)}
+            prolist_order = {pro_id: idx for idx, pro_id in enumerate(self.contest.pro_list.keys())}
             prolist = sorted(filter(lambda pro: self.contest.is_pro(pro['pro_id']), prolist),
                                   key=lambda pro: prolist_order[pro['pro_id']])
 
