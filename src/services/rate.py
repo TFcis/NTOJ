@@ -6,6 +6,7 @@ from msgpack import packb, unpackb
 
 from services.chal import ChalConst
 from services.user import Account
+from services.contests import UserStatus
 
 
 class RateService:
@@ -75,30 +76,46 @@ class RateService:
 
     async def get_pro_ac_rate(self, pro_id, contest_id: int = 0):
         # problem submission ac rate
-        ALL_CHAL_SQL = """
+
+        contest_user_filter_sql = ''
+        if contest_id:
+            contest_user_filter_sql = f'''
+            INNER JOIN
+                "contest_users"
+            ON "contest_users"."contest_id" = $2 AND
+               "contest_users"."acct_id" = "challenge"."acct_id" AND
+               "contest_users"."status" = {UserStatus.APPROVED.value}
+
+            '''
+
+        ALL_CHAL_SQL = f"""
         SELECT COUNT(*) FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
         LEFT JOIN "challenge_state"
         ON "challenge"."chal_id" = "challenge_state"."chal_id"
+        {contest_user_filter_sql}
         WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2;
         """
         AC_CHAL_SQL = f"""
         SELECT COUNT(*) FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
         LEFT JOIN "challenge_state"
         ON "challenge"."chal_id" = "challenge_state"."chal_id"
+        {contest_user_filter_sql}
         WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2 AND "challenge_state"."state" = {ChalConst.STATE_AC};
         """
 
         # problem user ac rate
-        USER_ALL_CHAL_SQL = """
+        USER_ALL_CHAL_SQL = f"""
         SELECT COUNT(*) FROM (SELECT DISTINCT "account"."acct_id" FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
         LEFT JOIN "challenge_state"
         ON "challenge"."chal_id" = "challenge_state"."chal_id"
+        {contest_user_filter_sql}
         WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2) as user_cnt;
         """
         USER_AC_CHAL_SQL = f"""
         SELECT COUNT(*) FROM (SELECT DISTINCT "account"."acct_id" FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
         LEFT JOIN "challenge_state"
         ON "challenge"."chal_id" = "challenge_state"."chal_id"
+        {contest_user_filter_sql}
         WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2 AND "challenge_state"."state" = {ChalConst.STATE_AC}) as user_cnt;
         """
 
