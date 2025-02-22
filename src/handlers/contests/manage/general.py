@@ -5,7 +5,7 @@ from handlers.base import RequestHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst
 from services.user import UserConst
-from services.contests import ContestService, ContestMode, RegMode
+from services.contests import ContestService, ContestMode, RegMode, UserStatus
 
 
 class ContestManageDashHandler(RequestHandler):
@@ -80,7 +80,9 @@ class ContestManageGeneralHandler(RequestHandler):
 
             # NOTE: when registration mode change from approval to free, we should approval all account which waiting approval
             if self.contest.reg_mode is RegMode.REG_APPROVAL and reg_mode is RegMode.FREE_REG:
-                self.contest.acct_list.extend(self.contest.reg_list)
+                for acct_id, v in self.contest.user_list.items():
+                    if v['status'] == UserStatus.REQUESTED:
+                        self.contest.user_list[acct_id]['status'] = UserStatus.APPROVED
 
             self.contest.reg_mode = reg_mode
             self.contest.reg_end = reg_end

@@ -8,6 +8,7 @@ from services.chal import ChalConst, ChalService
 from services.judge import JudgeServerClusterService
 from services.pro import ProService
 from services.user import UserConst
+from services.contests import UserStatus
 
 
 class SubmitHandler(RequestHandler):
@@ -180,7 +181,7 @@ class SubmitHandler(RequestHandler):
         should_check_submit_cd = (
             self.contest is None and not self.acct.is_kernel()  # not in contest
             or
-            self.contest and self.acct.acct_id in self.contest.acct_list  # in contest
+            self.contest and self.contest.member_is_status(self.acct, UserStatus.APPROVED)
         )
 
         name = ''

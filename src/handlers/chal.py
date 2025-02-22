@@ -9,6 +9,7 @@ from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService, ChalSearchingParamBuilder
 from services.pro import ProService
 from services.user import UserService
+from services.contests import UserStatus
 from utils.numeric import parse_list_str
 
 
@@ -58,8 +59,8 @@ class ChalListHandler(RequestHandler):
 
             if self.contest.is_admin(self.acct) and query_accts is None:
                 query_accts = []
-                query_accts.extend(self.contest.acct_list)
-                query_accts.extend(self.contest.admin_list)
+                query_accts.extend((acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.ADMIN))
+                query_accts.extend((acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.APPROVED))
             else:
                 if not self.contest.is_start():
                     query_accts = [-1]
@@ -68,7 +69,7 @@ class ChalListHandler(RequestHandler):
                 else:
                     if self.contest.is_public_scoreboard:
                         if query_accts is None:
-                            query_accts = self.contest.acct_list
+                            query_accts = [acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.APPROVED]
                             if not query_accts:
                                 query_accts = [-1]
                         else:

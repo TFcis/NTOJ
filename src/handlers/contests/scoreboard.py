@@ -7,7 +7,7 @@ import tornado.web
 from msgpack import packb, unpackb
 
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
-from services.contests import ContestService, ProblemScoreType
+from services.contests import ContestService, ProblemScoreType, UserStatus
 from services.user import UserService
 
 UTC8 = datetime.timezone(datetime.timedelta(hours=8))
@@ -77,19 +77,18 @@ class ContestScoreboardHandler(RequestHandler):
 
         contest_id = self.contest.contest_id
 
-
         acct_list = []
         if self.contest.is_public_scoreboard:
-            acct_list = self.contest.acct_list
+            acct_list = [acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.APPROVED]
             if not self.contest.hide_admin:
-                acct_list.extend(self.contest.admin_list)
+                acct_list.extend(acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.ADMIN)
         else:
             if not self.contest.is_admin(self.acct):
                 acct_list = [self.acct.acct_id]
             else:
-                acct_list = self.contest.acct_list
+                acct_list = [acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.APPROVED]
                 if not self.contest.hide_admin:
-                    acct_list.extend(self.contest.admin_list)
+                    acct_list.extend(acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.ADMIN)
 
         s: dict[int, dict[int, dict]] = {}
         cache_name = f'contest_{contest_id}_scores'

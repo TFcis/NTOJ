@@ -23,9 +23,17 @@ class ProblemScoreType(enum.IntEnum):
     IOI2013 = 0
     IOI2017 = 1
 
+class UserStatus(enum.IntEnum):
+    REJECTED = 0
+    REQUESTED = 1
+    APPROVED = 2
+    ADMIN = 3
+
+
 @dataclass(slots=True, kw_only=True)
 class Contest:
     contest_id: int
+    contest_creator: int
     name: str
     desc_before_contest: str = ''
     desc_during_contest: str = ''
@@ -36,13 +44,11 @@ class Contest:
     contest_start: datetime.datetime
     contest_end: datetime.datetime
 
-    acct_list: list[int] = field(default_factory=list)
-    admin_list: list[int]
+    user_list: dict[int, dict] = field(default_factory=dict)
     pro_list: dict[int, dict] = field(default_factory=dict)
 
     reg_mode: RegMode
     reg_end: datetime.datetime
-    reg_list: list[int] = field(default_factory=list)
 
     allow_compilers: list[str] = field(default_factory=list)
     is_public_scoreboard: bool = False
@@ -63,27 +69,42 @@ class Contest:
         return self.contest_start <= datetime.datetime.now().replace(
             tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) < self.contest_end
 
-    def is_member(self, acct: Account | None = None, acct_id: int | None = None) -> bool:
-        if acct is not None:
-            return acct.acct_id in self.acct_list or acct.acct_id in self.admin_list
-
-        if acct_id is not None:
-            return acct_id in self.acct_list or acct_id in self.admin_list
-
-        assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
-
-    def is_admin(self, acct: Account | None = None, acct_id: int | None = None) -> bool:
-        if acct is not None:
-            return acct.acct_id in self.admin_list
-
-        if acct_id is not None:
-            return acct_id in self.admin_list
-
-        assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
-
     def is_pro(self, pro_id: int) -> bool:
         return pro_id in self.pro_list
 
+    def is_admin(self, acct: Account | None = None, acct_id: int | None = None) -> bool:
+        if acct is not None:
+            return acct.acct_id == self.contest_creator \
+                or (acct.acct_id in self.user_list and self.user_list[acct.acct_id]['status'] == UserStatus.ADMIN)
+
+        if acct_id is not None:
+            return acct_id == self.contest_creator \
+                    or (acct_id in self.user_list and self.user_list[acct_id]['status'] == UserStatus.ADMIN)
+
+        assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
+
+    def is_member(self, acct: Account | None = None, acct_id: int | None = None) -> bool:
+        if acct is not None:
+            return acct.acct_id in self.user_list
+
+        if acct_id is not None:
+            return acct_id in self.user_list
+
+        assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
+
+    def member_is_status(self, acct: Account | int, status: UserStatus) -> bool:
+        acct_id = None
+        if isinstance(acct, Account):
+            acct_id = acct.acct_id
+            if acct.acct_id not in self.user_list:
+                return False
+
+        elif isinstance(acct, int):
+            acct_id = acct
+            if acct not in self.user_list:
+                return False
+
+        return self.user_list[acct_id]['status'] == status
 
 class ContestService:
     def __init__(self, db, rs):
@@ -103,7 +124,7 @@ class ContestService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "contest_id",
+                        SELECT "contest_id", "contest_creator",
                         "name",
 
                         "desc_before_contest",
@@ -111,8 +132,7 @@ class ContestService:
                         "desc_after_contest",
 
                         "contest_mode", "contest_start", "contest_end",
-                        "acct_list", "admin_list",
-                        "reg_mode", "reg_end", "reg_list",
+                        "reg_mode", "reg_end",
 
                         "allow_compilers",
                         "is_public_scoreboard",
@@ -141,6 +161,12 @@ class ContestService:
                 for pro_id, score_type in result:
                     contest.pro_list[pro_id] = {
                         "score_type": ProblemScoreType(int(score_type))
+                    }
+
+                result = await con.fetch('SELECT acct_id, status FROM contest_users WHERE contest_id = $1 ORDER BY acct_id', contest_id)
+                for acct_id, status in result:
+                    contest.user_list[acct_id] = {
+                        "status": UserStatus(int(status))
                     }
 
             if contest.is_running():
@@ -179,11 +205,13 @@ class ContestService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        INSERT INTO "contest" ("name", "admin_list") VALUES($1, $2) RETURNING "contest_id";
+                        INSERT INTO "contest" ("name", "contest_creator") VALUES($1, $2) RETURNING "contest_id";
                     ''',
                     contest_name,
-                    [acct.acct_id],
+                    acct.acct_id,
                 )
+                await con.execute('INSERT INTO contest_users ("contest_id", "acct_id", "status") VALUES ($1, $2, $3);',
+                                  result[0]['contest_id'], acct.acct_id, UserStatus.ADMIN)
 
         except asyncpg.IntegrityConstraintViolationError:
             return 'Eexist', None
@@ -201,7 +229,7 @@ class ContestService:
 
         return None, contest_id
 
-    async def update_contest(self, acct: Account, contest: Contest, prolist_updated=False):
+    async def update_contest(self, acct: Account, contest: Contest, prolist_updated=False, userlist_updated=False):
         # update db
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -213,16 +241,14 @@ class ContestService:
                     "desc_during_contest" = $3,
                     "desc_after_contest" = $4,
                     "contest_mode" = $5, "contest_start" = $6, "contest_end" = $7,
-                    "acct_list" = $8, "admin_list" = $9,
-                    "reg_mode" = $10, "reg_end" = $11, "reg_list" = $12,
-
-                    "allow_compilers" = $13,
-                    "is_public_scoreboard" = $14,
-                    "allow_view_other_page" = $15,
-                    "hide_admin" = $16,
-                    "submission_cd_time" = $17,
-                    "freeze_scoreboard_period" = $18
-                    WHERE "contest_id" = $19;
+                    "reg_mode" = $8, "reg_end" = $9,
+                    "allow_compilers" = $10,
+                    "is_public_scoreboard" = $11,
+                    "allow_view_other_page" = $12,
+                    "hide_admin" = $13,
+                    "submission_cd_time" = $14,
+                    "freeze_scoreboard_period" = $15
+                    WHERE "contest_id" = $16;
                 ''',
                 contest.name,
                 contest.desc_before_contest,
@@ -230,8 +256,7 @@ class ContestService:
                 contest.desc_after_contest,
 
                 contest.contest_mode, contest.contest_start, contest.contest_end,
-                contest.acct_list, contest.admin_list,
-                contest.reg_mode, contest.reg_end, contest.reg_list,
+                contest.reg_mode, contest.reg_end,
 
                 contest.allow_compilers,
                 contest.is_public_scoreboard,
@@ -265,6 +290,30 @@ class ContestService:
                         insert_sql.pop(illegal_pro_id)
                         continue
 
+            # TODO: improve update method
+            if userlist_updated:
+                await con.execute('DELETE FROM contest_users WHERE contest_id = $1', contest.contest_id)
+                insert_sql = {}
+                for acct_id, v in contest.user_list.items():
+                    insert_sql[acct_id] = f"({contest.contest_id}, {acct_id}, {int(v['status'])})"
+
+                while True:
+                    if not insert_sql:
+                        break
+
+                    try:
+                        await con.execute(
+                        f'''
+                            INSERT INTO contest_users ("contest_id", "acct_id", "status")
+                            VALUES {','.join(insert_sql.values())};
+                        '''
+                        )
+                        break
+                    except asyncpg.ForeignKeyViolationError as e:
+                        illegal_acct_id = int(re.search(r'Key \(acct_id\)=\((\d+)\)', e.detail).group(1))
+                        insert_sql.pop(illegal_acct_id)
+                        continue
+
         b_contest = pickle.dumps(contest)
         await self.rs.hset('contest', str(contest.contest_id), b_contest)
 
@@ -274,7 +323,6 @@ class ContestService:
 
     async def get_ioi2013_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
         _, contest = await self.get_contest(contest_id)
-        user = ','.join(list(map(str, contest.acct_list + contest.admin_list)))
         res = await self.db.fetch(
             f'''
         WITH ranked_challenges AS (
@@ -296,9 +344,13 @@ class ContestService:
                     ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
                 ) AS challenge_count_before_first_max_rate_challenge
             FROM "challenge"
+            INNER JOIN "contest_users"
+                ON "contest_users"."contest_id" = $1 AND "contest_users"."acct_id" = "challenge"."acct_id"
+                AND "contest_users"."status" = {UserStatus.APPROVED.value} OR "contest_users"."status" = {UserStatus.ADMIN}
+
             INNER JOIN "challenge_state"
-            ON "challenge"."contest_id" = $1 AND "challenge"."acct_id" in ({user}) AND "challenge"."pro_id" = $2
-            AND "challenge"."timestamp" < $3 AND "challenge"."chal_id" = "challenge_state"."chal_id"
+                ON "challenge"."contest_id" = $1 AND "challenge"."pro_id" = $2
+                AND "challenge"."timestamp" < $3 AND "challenge"."chal_id" = "challenge_state"."chal_id"
             INNER JOIN "problem"
             ON "problem"."pro_id" = $2
         )
