@@ -43,7 +43,7 @@ class SubmitTest(AsyncTest):
                 'code': 'cc',
                 'comp_type': 'g++',
             })
-            self.assertEqual(res.text, 'Einternal30')
+            self.assertTrue(res.text.startswith('Einternal30:'))
 
             # NOTE: makefile problem only allow C/C++ language
             html = self.get_html('submit/2', user_session)

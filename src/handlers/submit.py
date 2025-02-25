@@ -200,8 +200,9 @@ class SubmitHandler(RequestHandler):
 
             else:
                 last_submit_time = int(str(last_submit_time)[2:-1])
-                if int(time.time()) - last_submit_time < submit_cd_time:
-                    return f'Einternal{submit_cd_time}'
+                elapsed_time = int(time.time()) - last_submit_time
+                if elapsed_time < submit_cd_time:
+                    return f'Einternal{submit_cd_time}:{elapsed_time}'
 
                 else:
                     await self.rs.set(last_submit_name, int(time.time()))

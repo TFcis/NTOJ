@@ -37,8 +37,13 @@
                 if (res[0] == 'E') {
                     let msg = '';
                     if (res.startsWith('Einternal')) {
-                        let cd_time = parseInt(res.slice(9));
-                        msg = `interval < ${cd_time} sec`;
+                        res = res.slice('Einternal'.length).split(':').map(num => parseInt(num))
+                        let cd_time = res[0];
+                        let elapsed_time = res[1];
+                        let remaining_time = cd_time - elapsed_time;
+                        if (remaining_time < 0) remaining_time = 0;
+                        msg = `Submit CD Time: ${cd_time} Secs, Remaining: ${remaining_time} Secs`;
+
                     } else if (res == 'Eempty') {
                         msg = 'Do not submit empty code';
                     } else if (res == 'Ejudge') {

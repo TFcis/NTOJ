@@ -175,6 +175,60 @@
 				}
 			});
 		});
+
+        j_form.find('button.rechal').on('click', function (e) {
+			$.post('/oj/be/manage/pro', {
+				'reqtype': 'rechal',
+				'pro_id': pro_id
+			}, function (res) {
+				let msg = '';
+				let dialog_type = null;
+
+				if (res[0] == 'E') {
+					dialog_type = index.DIALOG_TYPE.error;
+					if (res == 'Ejudge') {
+						msg = 'All Judge Server Offline';
+					} else {
+						msg = 'Unknown';
+					}
+				} else {
+					dialog_type = index.DIALOG_TYPE.info;
+					msg = 'Processing...';
+				}
+
+				index.show_notify_dialog(msg, dialog_type);
+			});
+		});
+
+		j_form.find('button.rechalall').on('click', function (e) {
+			let pwd = prompt('server config password');
+
+			$.post('/oj/be/manage/pro', {
+				'reqtype': 'rechalall',
+				'pro_id': pro_id,
+				'pwd': pwd,
+			}, function (res) {
+				let msg = '';
+				let dialog_type = null;
+
+				if (res[0] == 'E') {
+					dialog_type = index.DIALOG_TYPE.error;
+
+					if (res == 'Eacces') {
+						msg = 'Password Wrong';
+					} else if (res == 'Ejudge') {
+						msg = 'All Judge Server Offline';
+					} else {
+						msg = 'Unknown';
+					}
+				} else {
+					dialog_type = index.DIALOG_TYPE.info;
+					msg = 'Processing...';
+				}
+
+				index.show_notify_dialog(msg, dialog_type);
+			});
+		});
     }
 </script>
 {% end %}
@@ -229,6 +283,8 @@
 			<button type="button" class="btn btn-primary lock">Lock</button>
 			<button type="button" class="btn btn-secondary unlock">UnLock</button>
 			<button type="button" class="btn btn-secondary cancel">Cancel</button>
+            <button type="button" class="btn btn-warning rechal">Rechallenge</button>
+            <button type="button" class="btn btn-danger rechalall">All Challenges (Danger)</button>
 		</div>
     </form>
 
