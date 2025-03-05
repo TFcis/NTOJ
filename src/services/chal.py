@@ -337,7 +337,7 @@ class ChalService:
 
         async with self.db.acquire() as con:
             testl = []
-            insert_sql = []
+            insert_values = []
             for test_group_idx, test in testm_conf['test_group'].items():
                 testl.append(
                     {
@@ -347,14 +347,13 @@ class ChalService:
                         'metadata': test['metadata'],
                     }
                 )
-                insert_sql.append(f'({chal_id}, {acct_id}, {pro_id}, {test_group_idx}, {ChalConst.STATE_JUDGE}, \'{timestamp}\')')
+                insert_values.append((chal_id, acct_id, pro_id, test_group_idx, ChalConst.STATE_JUDGE, timestamp))
 
-            await con.execute(
-            f'''
-                INSERT INTO "test"
-                ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp") VALUES
-                {','.join(insert_sql)};
-            '''
+            await con.executemany(
+            '''INSERT INTO "test"
+                ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp")
+                VALUES ($1, $2, $3, $4, $5, $6);''',
+
             )
 
         await self.update_challenge_state(chal_id)

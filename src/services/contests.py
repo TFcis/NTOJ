@@ -269,49 +269,47 @@ class ContestService:
 
             if prolist_updated:
                 await con.execute('DELETE FROM contest_problem_joints WHERE contest_id = $1', contest.contest_id)
-                insert_sql = {}
+                insert_values = {}
                 for pro_id, v in contest.pro_list.items():
-                    insert_sql[pro_id] = f"({contest.contest_id}, {pro_id}, {int(v['score_type'])})"
+                    insert_values[pro_id] = (contest.contest_id, pro_id, int(v['score_type']))
 
                 while True:
-                    if not insert_sql:
+                    if not insert_values:
                         break
 
                     try:
-                        await con.execute(
-                        f'''
-                            INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type")
-                            VALUES {','.join(insert_sql.values())};
-                        '''
+                        await con.executemany(
+                            '''INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type")
+                            VALUES ($1, $2, $3)''',
+                            insert_values.values()
                         )
                         break
                     except asyncpg.ForeignKeyViolationError as e:
                         illegal_pro_id = int(re.search(r'Key \(pro_id\)=\((\d+)\)', e.detail).group(1))
-                        insert_sql.pop(illegal_pro_id)
+                        insert_values.pop(illegal_pro_id)
                         continue
 
             # TODO: improve update method
             if userlist_updated:
                 await con.execute('DELETE FROM contest_users WHERE contest_id = $1', contest.contest_id)
-                insert_sql = {}
+                insert_values = {}
                 for acct_id, v in contest.user_list.items():
-                    insert_sql[acct_id] = f"({contest.contest_id}, {acct_id}, {int(v['status'])})"
+                    insert_values[acct_id] = (contest.contest_id, acct_id, int(v['status']))
 
                 while True:
-                    if not insert_sql:
+                    if not insert_values:
                         break
 
                     try:
-                        await con.execute(
-                        f'''
-                            INSERT INTO contest_users ("contest_id", "acct_id", "status")
-                            VALUES {','.join(insert_sql.values())};
-                        '''
+                        await con.executemany(
+                            '''INSERT INTO contest_users ("contest_id", "acct_id", "status")
+                            VALUES ($1, $2, $3)''',
+                            insert_values.values()
                         )
                         break
                     except asyncpg.ForeignKeyViolationError as e:
                         illegal_acct_id = int(re.search(r'Key \(acct_id\)=\((\d+)\)', e.detail).group(1))
-                        insert_sql.pop(illegal_acct_id)
+                        insert_values.pop(illegal_acct_id)
                         continue
 
         b_contest = pickle.dumps(contest)
