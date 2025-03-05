@@ -1,4 +1,4 @@
-{% from services.contests import ContestMode, RegMode %}
+{% from services.contests import ContestMode, RegMode, UserStatus %}
 <script>
     function init() {
         {% if not contest.is_start() %}
@@ -43,14 +43,15 @@
             <div class="card mb-1">
                 <div class="card-header">Registration Before</div>
                 <div class="card-body">
-                    <h5>{{ contest.reg_end.strftime("%Y-%m-%d %H:%M:%S") }}</h5>
-
                     {% if contest.reg_mode is RegMode.INVITED %}
                         <h5>Invited</h5>
-                    {% elif contest.reg_mode is RegMode.FREE_REG %}
-                        <h5>Free Registration, no approval needed</h5>
-                    {% elif contest.reg_mode is RegMode.REG_APPROVAL %}
-                        <h5>Free Registration, approval needed </h5>
+                    {% else %}
+                        <h5>{{ contest.reg_end.strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+                        {% if contest.reg_mode is RegMode.FREE_REG %}
+                            <h5>Free Registration, no approval needed</h5>
+                        {% elif contest.reg_mode is RegMode.REG_APPROVAL %}
+                            <h5>Free Registration, approval needed </h5>
+                        {% end %}
                     {% end %}
                 </div>
             </div>
@@ -70,13 +71,13 @@
                         {% end %}
 
                         {% if contest.reg_mode is RegMode.INVITED %}
-                            {% if user.acct_id in contest.acct_list %}
+                            {% if contest.member_is_status(user, UserStatus.APPROVED) %}
                                 <h5>Invited</h5>
                             {% else %}
                                 <h5>Not Invited</h5>
                             {% end %}
                         {% elif contest.reg_mode is RegMode.FREE_REG %}
-                            {% if user.acct_id in contest.acct_list %}
+                            {% if contest.member_is_status(user, UserStatus.APPROVED) %}
                                 <h5>Registered</h5>
                             {% else %}
                                 <h5>Not Registered</h5>
@@ -85,9 +86,9 @@
                                 <a href="/oj/contests/{{ contest.contest_id }}/reg/" class="btn btn-primary">Go to Register</a>
                             {% end %}
                         {% else %}
-                            {% if user.acct_id in contest.reg_list %}
+                            {% if contest.member_is_status(user, UserStatus.REQUESTED) %}
                                 <h5>Waiting Approval</h5>
-                            {% elif user.acct_id in contest.acct_list %}
+                            {% elif contest.member_is_status(user, UserStatus.APPROVED) %}
                                 <h5>Registered</h5>
                             {% else %}
                                 <h5>Not Registered</h5>

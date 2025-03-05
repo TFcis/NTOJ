@@ -95,8 +95,7 @@ class ContestTest(AsyncTest):
             self.assertEqual(during_section.select('h5')[1].text, contest_end.strftime('%Y-%m-%d %H:%M:%S'))
             self.assertEqual(contest_style_section.select('h5')[0].text, 'IOI')
             self.assertEqual(contest_style_section.select('h5')[1].text, 'Scoreboard')
-            self.assertEqual(registration_info.select('h5')[0].text, reg_end.strftime('%Y-%m-%d %H:%M:%S'))
-            self.assertEqual(registration_info.select('h5')[1].text, 'Invited')
+            self.assertEqual(registration_info.select('h5')[0].text, 'Invited')
             self.assertEqual(registration_status.select('h5')[0].text, 'Admin, no registration needed')
 
             html = self.get_html('contests', admin_session)
@@ -153,6 +152,12 @@ class ContestTest(AsyncTest):
 
             html = self.get_html('contests/1/proset', admin_session)
             self.assertEqual(len(html.select('tr')[1:]), 6)
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'multi_add',
+                'pro_id': '7..20'
+            })
+            self.assertEqual(res.text, 'S')
 
             # test reg
             # current reg mode is invite

@@ -8,6 +8,7 @@ from services.chal import ChalConst, ChalService
 from services.judge import JudgeServerClusterService
 from services.pro import ProService
 from services.user import UserConst
+from services.contests import UserStatus
 
 
 class SubmitHandler(RequestHandler):
@@ -27,7 +28,7 @@ class SubmitHandler(RequestHandler):
                 self.error('Eacces')
                 return
 
-            if pro_id not in self.contest.pro_list:
+            if not self.contest.is_pro(pro_id):
                 self.error('Enoext')
                 return
 
@@ -85,7 +86,7 @@ class SubmitHandler(RequestHandler):
                     self.error('Eacces')
                     return
 
-                if pro_id not in self.contest.pro_list:
+                if not self.contest.is_pro(pro_id):
                     self.error('Enoext')
                     return
             else:
@@ -153,7 +154,7 @@ class SubmitHandler(RequestHandler):
             self.error(err)
             return
 
-        if reqtype == 'submit' and pro['status'] in [ProService.STATUS_ONLINE, ProService.STATUS_CONTEST]:
+        if reqtype == 'submit' and pro['status'] == ProService.STATUS_ONLINE:
             await self.rs.publish('challist_sub', str(1))
 
         self.finish(json.dumps(chal_id))
@@ -180,7 +181,7 @@ class SubmitHandler(RequestHandler):
         should_check_submit_cd = (
             self.contest is None and not self.acct.is_kernel()  # not in contest
             or
-            self.contest and self.acct.acct_id in self.contest.acct_list  # in contest
+            self.contest and self.contest.member_is_status(self.acct, UserStatus.APPROVED)
         )
 
         name = ''

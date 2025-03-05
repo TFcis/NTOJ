@@ -242,7 +242,7 @@ class ProStaticHandler(RequestHandler):
     async def get(self, pro_id, path):
         pro_id = int(pro_id)
         if self.contest:
-            if pro_id not in self.contest.pro_list:
+            if not self.contest.is_pro(pro_id):
                 self.error('Enoext')
                 return
 
@@ -289,15 +289,15 @@ class ProHandler(RequestHandler):
         pro_id = int(pro_id)
 
         if self.contest:
-            if pro_id not in self.contest.pro_list:
+            if not self.contest.is_pro(pro_id):
                 self.error('Enoext')
                 return
 
-            if not self.contest.is_member(self.acct):
+            if not self.contest.is_start() and not self.contest.is_admin(self.acct):
                 self.error('Eacces')
                 return
 
-            if not self.contest.is_running() and not self.contest.is_admin(self.acct):
+            elif not self.contest.is_running() and not self.contest.is_member(self.acct):
                 self.error('Eacces')
                 return
 

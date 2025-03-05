@@ -3,7 +3,7 @@ import asyncio
 from handlers.base import reqenv, RequestHandler
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService
-from services.contests import ContestService
+from services.contests import ContestService, ProblemScoreType
 from services.judge import JudgeServerClusterService
 from services.pro import ProService
 from utils.numeric import parse_list_str
@@ -14,7 +14,7 @@ class ContestManageProHandler(RequestHandler):
     @contest_require_permission('admin')
     async def get(self):
         pro_list = []
-        for pro_id in self.contest.pro_list:
+        for pro_id in self.contest.pro_list.keys():
             _, pro = await ProService.inst.get_pro(pro_id, is_contest=True)
             pro_list.append(pro)
 
@@ -24,64 +24,62 @@ class ContestManageProHandler(RequestHandler):
     @reqenv
     @contest_require_permission('admin')
     async def post(self):
+        # TODO: update problem score type
+        # TODO: frontend: drag problem to change order
         reqtype = self.get_argument('reqtype')
         pro_id = self.get_argument('pro_id')
+        prolist_updated = False
 
         if reqtype == "add":
             pro_id = int(pro_id)
-            err, _ = await ProService.inst.get_pro(pro_id, is_contest=True)
-            if err:
-                self.error(err)
-                return
 
-            if pro_id in self.contest.pro_list:
+            if self.contest.is_pro(pro_id):
                 self.error('Eexist')
                 return
 
-            self.contest.pro_list.append(pro_id)
+            self.contest.pro_list[pro_id] = {
+                "score_type": ProblemScoreType.IOI2017.value
+            }
 
-            await ContestService.inst.update_contest(self.acct, self.contest)
+            await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
             await self.finish('S')
+            prolist_updated = True
 
         elif reqtype == "remove":
             pro_id = int(pro_id)
-            err, _ = await ProService.inst.get_pro(pro_id, is_contest=True)
-            if err:
-                self.error(err)
-                return
 
-            if pro_id not in self.contest.pro_list:
+            if not self.contest.is_pro(pro_id):
                 self.error('Enoext')
                 return
 
-            self.contest.pro_list.remove(pro_id)
+            self.contest.pro_list.pop(pro_id)
 
-            await ContestService.inst.update_contest(self.acct, self.contest)
+            await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
             await self.finish('S')
+            prolist_updated = True
 
         elif reqtype == "multi_add":
-            pro_list = []
-
             for p_id in parse_list_str(pro_id):
-                err, _ = await ProService.inst.get_pro(p_id, is_contest=True)
-                if err:
-                    continue
+                self.contest.pro_list[p_id] = {
+                    "score_type": ProblemScoreType.IOI2017.value
+                }
 
-                pro_list.append(p_id)
-
-            pro_list = list(filter(lambda pro_id: pro_id not in self.contest.pro_list, pro_list))
-            self.contest.pro_list.extend(pro_list)
-
-            await ContestService.inst.update_contest(self.acct, self.contest)
+            await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
             await self.finish('S')
+            prolist_updated = True
 
         elif reqtype == "multi_remove":
             pro_list = parse_list_str(pro_id)
 
-            self.contest.pro_list = list(filter(lambda pro_id: pro_id not in pro_list, self.contest.pro_list))
+            for pro_id in pro_list:
+                try:
+                    self.contest.pro_list.pop(pro_id)
+                except KeyError:
+                    continue
 
-            await ContestService.inst.update_contest(self.acct, self.contest)
+            await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
             await self.finish('S')
+            prolist_updated = True
 
         elif reqtype == "rechal":
             pro_id = int(pro_id)
@@ -128,3 +126,7 @@ class ContestManageProHandler(RequestHandler):
 
         else:
             self.error('Eunk')
+            return
+
+        if prolist_updated:
+            await self.rs.delete(f"contest_{self.contest.contest_id}_scores")

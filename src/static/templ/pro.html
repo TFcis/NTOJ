@@ -153,7 +153,7 @@
     <div id="side" class="col-lg-2 col-12 mt-lg-2">
         <h3>{{ pro['pro_id']}} / {{ pro['name'] }}</h3>
         {% if can_submit and pro['allow_submit'] %}
-            {% if contest %}
+            {% if contest and not contest.is_end() %}
                 <a class="btn btn-primary btn-lg my-lg-1" href="/oj/contests/{{ contest.contest_id }}/submit/{{ pro['pro_id'] }}/">Submit</a><br />
             {% else %}
                 <a class="btn btn-primary btn-lg my-lg-1" href="/oj/submit/{{ pro['pro_id'] }}/">Submit</a><br />

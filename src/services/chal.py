@@ -88,11 +88,11 @@ class ChalConst:
 
 @dataclass
 class ChalSearchingParam:
-    pro: list[int]
-    acct: list[int]
-    state: int
-    compiler: str
-    contest: int
+    pro: list[int] | None
+    acct: list[int] | None
+    state: int | None
+    compiler: str | None
+    contest: int = 0
 
     def get_sql_query_str(self):
         query = ' '
@@ -129,24 +129,25 @@ class ChalSearchingParamBuilder:
     def __init__(self):
         self.param = ChalSearchingParam([], [], 0, "all", 0)
 
-    def pro(self, pro: list[int]):
+    def pro(self, pro: list[int] | None):
         self.param.pro = pro
         return self
 
-    def acct(self, acct: list[int]):
+    def acct(self, acct: list[int] | None):
         self.param.acct = acct
         return self
 
-    def state(self, state: int):
+    def state(self, state: int | None):
         self.param.state = state
         return self
 
-    def compiler(self, compiler: str):
+    def compiler(self, compiler: str | None):
         self.param.compiler = compiler
         return self
 
-    def contest(self, contest: int):
-        self.param.contest = contest
+    def contest(self, contest: int | None):
+        if contest is not None:
+            self.param.contest = contest
         return self
 
     def build(self) -> ChalSearchingParam:
@@ -336,7 +337,7 @@ class ChalService:
 
         async with self.db.acquire() as con:
             testl = []
-            insert_sql = []
+            insert_values = []
             for test_group_idx, test in testm_conf['test_group'].items():
                 testl.append(
                     {
@@ -346,14 +347,13 @@ class ChalService:
                         'metadata': test['metadata'],
                     }
                 )
-                insert_sql.append(f'({chal_id}, {acct_id}, {pro_id}, {test_group_idx}, {ChalConst.STATE_JUDGE}, \'{timestamp}\')')
+                insert_values.append((chal_id, acct_id, pro_id, test_group_idx, ChalConst.STATE_JUDGE, timestamp))
 
-            await con.execute(
-            f'''
-                INSERT INTO "test"
-                ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp") VALUES
-                {','.join(insert_sql)};
-            '''
+            await con.executemany(
+            '''INSERT INTO "test"
+                ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp")
+                VALUES ($1, $2, $3, $4, $5, $6);''',
+
             )
 
         await self.update_challenge_state(chal_id)

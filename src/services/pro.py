@@ -260,7 +260,7 @@ class ProService:
         return None, None
 
     async def update_test_config(self, pro_id, testm_conf: dict):
-        insert_sql = []
+        insert_values = []
         is_makefile = testm_conf['is_makefile']
         check_type = testm_conf['check_type']
         chalmeta = testm_conf['chalmeta']
@@ -268,9 +268,7 @@ class ProService:
         rate_precision = testm_conf['rate_precision']
         for test_group_idx, test_group_conf in testm_conf['test_group'].items():
             weight = test_group_conf['weight']
-
-            sql = '({}, {}, {}, \'{}\')'.format(pro_id, test_group_idx, weight, json.dumps(test_group_conf['metadata']))
-            insert_sql.append(sql)
+            insert_values.append((pro_id, test_group_idx, weight, json.dumps(test_group_conf['metadata'])))
 
         async with self.db.acquire() as con:
             await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
@@ -279,13 +277,12 @@ class ProService:
                 is_makefile, check_type, json.dumps(chalmeta), json.dumps(limit), rate_precision, pro_id
             )
 
-            if insert_sql:
-                await con.execute(
-                    f"""
-                        INSERT INTO "test_config"
+            if insert_values:
+                await con.executemany(
+                    '''INSERT INTO "test_config"
                         ("pro_id", "test_idx", "weight", "metadata")
-                        VALUES {','.join(insert_sql)};
-                    """
+                        VALUES ($1, $2, $3, $4);''',
+                    insert_values
                 )
 
         await self.db.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
@@ -384,21 +381,20 @@ class ProService:
                     is_makefile, check_type, json.dumps(chalmeta), json.dumps(limits), pro_id
                 )
 
-                insert_sql = []
+                insert_values = []
 
                 for test_idx, test_conf in enumerate(conf["test"]):
                     for i in range(len(test_conf["data"])):
                         test_conf["data"][i] = str(test_conf["data"][i])
 
                     metadata = {"data": test_conf["data"]}
-                    insert_sql.append(f"({pro_id}, {test_idx}, {test_conf['weight']}, \'{json.dumps(metadata)}\')")
+                    insert_values.append((pro_id, test_idx, test_conf['weight'], json.dumps(metadata)))
 
-                await con.execute(
-                    f"""
-                        INSERT INTO "test_config"
+                await con.executemany(
+                    '''INSERT INTO "test_config"
                         ("pro_id", "test_idx", "weight", "metadata")
-                        VALUES {",".join(insert_sql)}
-                    """
+                        VALUES ($1, $2, $3, $4);''',
+                    insert_values
                 )
 
 

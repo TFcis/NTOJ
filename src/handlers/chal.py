@@ -9,6 +9,7 @@ from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService, ChalSearchingParamBuilder
 from services.pro import ProService
 from services.user import UserService
+from services.contests import UserStatus
 from utils.numeric import parse_list_str
 
 
@@ -56,17 +57,23 @@ class ChalListHandler(RequestHandler):
         if self.contest:
             contest_id = self.contest.contest_id
 
-            if self.contest.hide_admin and not self.contest.is_admin(self.acct):
-                if query_accts is None:
-                    query_accts = self.contest.acct_list
-                    if not query_accts:
-                        query_accts = [-1]
+            # NOTE: if user is admin, specifying contest_id will list all challenges for that contest; there's no need to specify an account separately.
+            EMPTY = [-1]
+            if not self.contest.is_admin(self.acct):
+                if not self.contest.is_start():
+                    query_accts = EMPTY
+                elif self.contest.is_running():
+                    query_accts = [self.acct.acct_id] # NOTE: display self
                 else:
-                    query_accts = list(filter(lambda acct_id: not self.contest.is_admin(acct_id=acct_id), query_accts))
-            elif self.contest.is_admin(self.acct) and query_accts is None:
-                query_accts = []
-                query_accts.extend(self.contest.acct_list)
-                query_accts.extend(self.contest.admin_list)
+                    if self.contest.is_public_scoreboard:
+                        if query_accts is None:
+                            query_accts = [acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.APPROVED]
+                            if not query_accts:
+                                query_accts = EMPTY
+                        else:
+                            query_accts = list(filter(lambda acct_id: not self.contest.is_admin(acct_id=acct_id), query_accts))
+                    else:
+                        query_accts = [self.acct.acct_id]
 
         flt = ChalSearchingParamBuilder().pro(query_pros).acct(query_accts).state(state).compiler(
             compiler_type).contest(contest_id).build()
@@ -91,6 +98,7 @@ class ChalListHandler(RequestHandler):
             pacct_id=pacct_id,
             chalids=json.dumps(chalids),
             isadmin=isadmin,
+            contest=self.contest,
         )
 
 

@@ -1,3 +1,6 @@
+from services.contests import UserStatus
+
+
 def contest_require_permission(acct_type: str):
     def decorator(func):
         async def wrap(self, *args, **kwargs):
@@ -8,7 +11,7 @@ def contest_require_permission(acct_type: str):
                         return
 
                 elif acct_type == 'normal':
-                    if self.acct.acct_id not in self.contest.acct_list:
+                    if not self.contest.member_is_status(self.acct, UserStatus.APPROVED):
                         self.finish('Eacces')
                         return
 

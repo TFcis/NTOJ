@@ -54,6 +54,9 @@ font-weight: bolder;
 
 </style>
 
+{% set score_color_class_map = ["state-0", "state-1", "state-2", "state-3", "state-4", "state-5", "state-6", "state-7", "state-8", "state-9", "state-10"] %}
+{% set is_end = contest.is_end() %}
+
 <div class="row">
     <div class="col-lg-10 col-12">
         <table id="prolist" class="table table-striped table-hover table-responsive col mx-lg-3">
@@ -63,23 +66,34 @@ font-weight: bolder;
                     <th scope="col">State</th>
                     <th scope="col">Problem Name</th>
                     <th scope="col">Score</th>
+                    {% if show_ac_ratio %}
+                        <th scope="col">AC Ratio (User)</th>
+                        <th scope="col">AC Ratio (Submission)</th>
+                    {% end %}
                 </tr>
             </thead>
             <tbody>
-            {% set score_color_class_map = ["state-0", "state-1", "state-2", "state-3", "state-4", "state-5", "state-6", "state-7", "state-8", "state-9", "state-10"] %}
             {% for idx, pro in enumerate(prolist) %}
                 <tr>
                     <td class="id">{{ pro['pro_id'] }}</td>
                     {% if pro['state'] is None %}
                         <td>Todo</td>
                     {% else %}
-                        <td class="state-{{ pro['state'] }}">{{ChalConst.STATE_LONG_STR[pro['state']]}}</td>
+                        <td class="state-{{ pro['state'] }}">{{ ChalConst.STATE_LONG_STR[pro['state']] }}</td>
                     {% end %}
-                    <td class="name">
-                        <a href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro['pro_id'] }}/">p{{chr(65+idx)}}. {{ pro['name'] }}</a>
-                    </td>
+
+                    {% if is_end and pro['status'] == ProConst.STATUS_ONLINE %}
+                        <td class="name">
+                            <a href="/oj/pro/{{ pro['pro_id'] }}/">p{{chr(65+idx)}}. {{ pro['name'] }}</a>
+                        </td>
+                    {% else %}
+                        <td class="name">
+                            <a href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro['pro_id'] }}/">p{{chr(65+idx)}}. {{ pro['name'] }}</a>
+                        </td>
+                    {% end %}
+
                     {% set state_idx = int(pro['score'] / 10) %}
-                    {% if state_idx > 10 %}
+                    {% if pro['state'] == ChalConst.STATE_AC or state_idx > 10 %}
                         {% set state_idx = 10 %}
                     {% elif state_idx < 0 %}
                         {% set state_idx = 0 %}
@@ -87,6 +101,28 @@ font-weight: bolder;
                     <td class="{{ score_color_class_map[state_idx] }} score">
                         {{ pro['score'] }}
                     </td>
+
+                    {% if show_ac_ratio %}
+                        {% set rate = pro['rate_data'] %}
+                        <td>
+                            {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
+                                {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}%
+                            {% else %}
+                                {{ '0.00%' }}
+                            {% end %}
+                        </td>
+
+                        <td>
+                            {% if rate['all_chal_cnt'] and rate['ac_chal_cnt'] %}
+                                {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}%
+                            {% else %}
+                                {{ '0.00%' }}
+                            {% end %}
+                            (<a href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}&state={{ ChalConst.STATE_AC }}">{{ rate['ac_chal_cnt'] }}</a>
+                            /
+                            <a href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}">{{ rate['all_chal_cnt'] }}</a>)
+                        </td>
+                    {% end %}
                 </tr>
             {% end %}
             </tbody>

@@ -6,6 +6,7 @@ from msgpack import packb, unpackb
 
 from services.chal import ChalConst
 from services.user import Account
+from services.contests import UserStatus
 
 
 class RateService:
@@ -73,33 +74,49 @@ class RateService:
 
         return None, rate_data
 
-    async def get_pro_ac_rate(self, pro_id):
+    async def get_pro_ac_rate(self, pro_id, contest_id: int = 0):
         # problem submission ac rate
-        ALL_CHAL_SQL = """
+
+        contest_user_filter_sql = ''
+        if contest_id:
+            contest_user_filter_sql = f'''
+            INNER JOIN
+                "contest_users"
+            ON "contest_users"."contest_id" = $2 AND
+               "contest_users"."acct_id" = "challenge"."acct_id" AND
+               "contest_users"."status" = {UserStatus.APPROVED.value}
+
+            '''
+
+        ALL_CHAL_SQL = f"""
         SELECT COUNT(*) FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
         LEFT JOIN "challenge_state"
         ON "challenge"."chal_id" = "challenge_state"."chal_id"
-        WHERE "challenge"."pro_id" = $1;
+        {contest_user_filter_sql}
+        WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2;
         """
         AC_CHAL_SQL = f"""
         SELECT COUNT(*) FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
         LEFT JOIN "challenge_state"
         ON "challenge"."chal_id" = "challenge_state"."chal_id"
-        WHERE "challenge"."pro_id" = $1 AND "challenge_state"."state" = {ChalConst.STATE_AC};
+        {contest_user_filter_sql}
+        WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2 AND "challenge_state"."state" = {ChalConst.STATE_AC};
         """
 
         # problem user ac rate
-        USER_ALL_CHAL_SQL = """
+        USER_ALL_CHAL_SQL = f"""
         SELECT COUNT(*) FROM (SELECT DISTINCT "account"."acct_id" FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
         LEFT JOIN "challenge_state"
         ON "challenge"."chal_id" = "challenge_state"."chal_id"
-        WHERE "challenge"."pro_id" = $1) as user_cnt;
+        {contest_user_filter_sql}
+        WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2) as user_cnt;
         """
         USER_AC_CHAL_SQL = f"""
         SELECT COUNT(*) FROM (SELECT DISTINCT "account"."acct_id" FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
         LEFT JOIN "challenge_state"
         ON "challenge"."chal_id" = "challenge_state"."chal_id"
-        WHERE "challenge"."pro_id" = $1 AND "challenge_state"."state" = {ChalConst.STATE_AC}) as user_cnt;
+        {contest_user_filter_sql}
+        WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2 AND "challenge_state"."state" = {ChalConst.STATE_AC}) as user_cnt;
         """
 
         key = "pro_rate"
@@ -107,16 +124,16 @@ class RateService:
 
         if (rate_data := await self.rs.hget(key, str(pro_id))) is None:
             async with self.db.acquire() as con:
-                all_chal_cnt = await con.fetchrow(ALL_CHAL_SQL, pro_id)
+                all_chal_cnt = await con.fetchrow(ALL_CHAL_SQL, pro_id, contest_id)
                 all_chal_cnt = all_chal_cnt['count']
 
-                ac_chal_cnt = await con.fetchrow(AC_CHAL_SQL, pro_id)
+                ac_chal_cnt = await con.fetchrow(AC_CHAL_SQL, pro_id, contest_id)
                 ac_chal_cnt = ac_chal_cnt['count']
 
-                user_all_chal_cnt = await con.fetchrow(USER_ALL_CHAL_SQL, pro_id)
+                user_all_chal_cnt = await con.fetchrow(USER_ALL_CHAL_SQL, pro_id, contest_id)
                 user_all_chal_cnt = user_all_chal_cnt['count']
 
-                user_ac_chal_cnt = await con.fetchrow(USER_AC_CHAL_SQL, pro_id)
+                user_ac_chal_cnt = await con.fetchrow(USER_AC_CHAL_SQL, pro_id, contest_id)
                 user_ac_chal_cnt = user_ac_chal_cnt['count']
 
             rate_data = {

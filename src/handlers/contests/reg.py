@@ -1,6 +1,6 @@
 import datetime
 
-from services.contests import RegMode, ContestService
+from services.contests import RegMode, ContestService, UserStatus
 from services.user import UserConst
 from handlers.base import RequestHandler, reqenv, require_permission
 
@@ -23,6 +23,7 @@ class ContestRegHandler(RequestHandler):
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def post(self):
         reqtype = self.get_argument("reqtype")
+        acct_id = self.acct.acct_id
 
         if reqtype == 'reg':
             if self.contest.is_admin(self.acct):
@@ -30,11 +31,14 @@ class ContestRegHandler(RequestHandler):
                 return
 
             else:
-                if self.contest.reg_mode is RegMode.FREE_REG and self.acct.acct_id in self.contest.acct_list:
-                    self.error('Eexist')
-                    return
+                status = None
+                if self.contest.reg_mode is RegMode.FREE_REG:
+                    status = UserStatus.APPROVED
 
-                elif self.contest.reg_mode is RegMode.REG_APPROVAL and self.acct.acct_id in self.contest.reg_list:
+                elif self.contest.reg_mode is RegMode.REG_APPROVAL:
+                    status = UserStatus.REQUESTED
+
+                if acct_id in self.contest.user_list and self.contest.user_list[acct_id]['status'] == status:
                     self.error('Eexist')
                     return
 
@@ -47,48 +51,34 @@ class ContestRegHandler(RequestHandler):
                 return
 
             elif self.contest.reg_mode is RegMode.FREE_REG:
-                self.contest.acct_list.append(self.acct.acct_id)
-                self.contest.acct_list.sort()
+                self.contest.user_list[acct_id] = {
+                    "status": UserStatus.APPROVED
+                }
 
             elif self.contest.reg_mode is RegMode.REG_APPROVAL:
-                self.contest.reg_list.append(self.acct.acct_id)
-                self.contest.reg_list.sort()
+                self.contest.user_list[acct_id] = {
+                    "status": UserStatus.REQUESTED
+                }
 
-            await ContestService.inst.update_contest(self.acct, self.contest)
+            await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
             self.finish('S')
 
         elif reqtype == 'unreg':
             if self.contest.is_admin(self.acct):
                 self.error('Eacces')
                 return
-            else:
-                if self.contest.reg_mode is RegMode.FREE_REG and self.acct.acct_id not in self.contest.acct_list:
-                    self.error('Enoext')
-                    return
-
-                elif (self.contest.reg_mode is RegMode.REG_APPROVAL and
-                      (self.acct.acct_id not in self.contest.reg_list and self.acct.acct_id not in self.contest.acct_list)):
-                    self.error('Enoext')
-                    return
 
             if self.contest.reg_mode is RegMode.INVITED:
                 self.error('Eacces')
                 return
 
-            elif self.contest.reg_mode is RegMode.FREE_REG:
-                self.contest.acct_list.remove(self.acct.acct_id)
-                self.contest.acct_list.sort()
+            if acct_id not in self.contest.user_list:
+                self.error('Enoext')
+                return
 
-            elif self.contest.reg_mode is RegMode.REG_APPROVAL:
-                if self.acct.acct_id in self.contest.reg_list:
-                    changed_list = self.contest.reg_list
-                else:
-                    changed_list = self.contest.acct_list
+            self.contest.user_list.pop(acct_id)
 
-                changed_list.remove(self.acct.acct_id)
-                changed_list.sort()
-
-            await ContestService.inst.update_contest(self.acct, self.contest)
+            await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
             self.finish('S')
 
         else:
