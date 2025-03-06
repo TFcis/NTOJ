@@ -16,34 +16,22 @@
 				acct_id: acct_id,
 				type: target_type,
 			}, res => {
-				let msg = '';
-				if (res[0] == 'E') {
-					if (res == 'Enoext') {
-						msg = `Account(#${acct_id}) not found.`;
-					} else if (res == 'Eexist') {
-						msg = `Account(#${acct_id}) already added to ${target_type}-account list.`;
-					}
-
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+					setTimeout(() => index.reload(), 1000);
+                } else {
 					$("#acctIdNormal").val('');
 					$("#acctListNormal").val('');
 					$("#acctIdAdmin").val('');
 					$("#acctListAdmin").val('');
-					index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-				} else {
-					if (reqtype == "add" || reqtype == "multi_add") {
-						msg = `Account(#${acct_id}) successfully add to ${target_type} list.`;						
-					} else if (reqtype == "remove" || reqtype == "multi_remove") {
-						msg = `Account(#${acct_id}) successfully remove from ${target_type} list.`;						
-					}
-
-					index.show_notify_dialog(msg, index.DIALOG_TYPE.success);	
-					setTimeout(() => index.reload(), 1000);
-				}
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
 			});
 		};
-	
+
 		document.querySelectorAll('button.remove').forEach(el => {
-			el.addEventListener('click', () => post_func('remove', $(el).attr('acct_id'), 
+			el.addEventListener('click', () => post_func('remove', $(el).attr('acct_id'),
 				$(el).hasClass('normal') ? "normal" : "admin"
 			));
 		});

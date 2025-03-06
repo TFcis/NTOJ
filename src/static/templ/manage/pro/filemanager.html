@@ -24,15 +24,8 @@
                     'filename': filename,
                     'path': path,
 				}, function (res) {
-					if (res[0] == 'E') {
-						if (res == 'Efile') {
-							file_content = 'File is too large or not utf-8';
-						} else if (res == 'Enoext') {
-							file_content = 'File not found';
-						}
-					} else {
-						file_content = JSON.parse(res);
-					}
+                    res = JSON.parse(res);
+                    file_content = res.data;
 
 					$("#code").find("code").html(file_content);
                     $("#preview-title").text(filename);
@@ -56,17 +49,14 @@
 				}, function (res) {
 					let msg = '';
 					let dialog_type = null;
-					if (res[0] == 'E') {
-						dialog_type = index.DIALOG_TYPE.error;
-						if (res == 'Eexist') {
-                            msg = `${new_filename} already exist.`;
-						} else {
-							msg = res;
-						}
-					} else {
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
                         msg = `Rename ${old_filename} to ${new_filename} successfully.`;
-					}
+                    } else {
+                        msg = res.data;
+                    }
 
 					index.show_notify_dialog(msg, dialog_type);
                     index.reload();
@@ -85,19 +75,16 @@
                     'filename': filename,
                     'path': path,
 				}, function (res) {
-					let msg = '';
+                    let msg = '';
 					let dialog_type = null;
-					if (res[0] == 'E') {
-						dialog_type = index.DIALOG_TYPE.error;
-						if (res == 'Enoext') {
-							msg = 'File not found';
-						} else {
-							msg = res;
-						}
-					} else {
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
                         msg = `Delete ${filename} successfully.`;
-					}
+                    } else {
+                        msg = res.data;
+                    }
 
 					index.show_notify_dialog(msg, dialog_type);
                     index.reload();
@@ -127,15 +114,16 @@
                     'filename': filename,
                     'path': path,
 				}, function (res) {
-					let msg = '';
+                    let msg = '';
 					let dialog_type = null;
-					if (res[0] == 'E') {
-                        msg = res;
-						dialog_type = index.DIALOG_TYPE.error;
-					} else {
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
                         msg = `Upload single file ${filename} successfully`;
-					}
+                    } else {
+                        msg = res.data;
+                    }
 
 					index.show_notify_dialog(msg, dialog_type);
                     index.reload();
@@ -184,19 +172,16 @@
                     'filename': filename,
                     'path': path,
 				}, function (res) {
-					let msg = '';
+                    let msg = '';
 					let dialog_type = null;
-					if (res[0] == 'E') {
-						dialog_type = index.DIALOG_TYPE.error;
-						if (res == 'Enoext') {
-							msg = 'File not found';
-						} else {
-							msg = res;
-						}
-					} else {
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
                         msg = `Update ${filename} successfully.`;
-					}
+                    } else {
+                        msg = res.data;
+                    }
 
 					index.show_notify_dialog(msg, dialog_type);
                     index.reload();

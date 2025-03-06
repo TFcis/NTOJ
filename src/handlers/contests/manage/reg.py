@@ -28,7 +28,7 @@ class ContestManageRegHandler(RequestHandler):
             acct_id = int(self.get_argument('acct_id'))
 
             if not self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
-                self.error('Enoext')
+                self.error(('Enoext', f'Account(#{acct_id}) should be in the request status'))
                 return
 
             self.contest.user_list[acct_id]['status'] = UserStatus.APPROVED
@@ -36,13 +36,13 @@ class ContestManageRegHandler(RequestHandler):
             # TODO: send notify to user
 
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            await self.finish('S')
+            self.error(('S', f'Approve account(#{acct_id}) successfully.'))
 
         elif reqtype == 'reject':
             acct_id = int(self.get_argument('acct_id'))
 
             if not self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
-                self.error('Enoext')
+                self.error(('Enoext', f'Account(#{acct_id}) should be in the request status'))
                 return
 
             self.contest.user_list[acct_id]['status'] = UserStatus.REJECTED
@@ -50,7 +50,7 @@ class ContestManageRegHandler(RequestHandler):
             # TODO: send notify to user
 
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            await self.finish('S')
+            self.error(('S', f'Reject account(#{acct_id}) successfully.'))
 
         else:
-            self.error('Eunk')
+            self.error(('Eunk', 'Unknown error'))

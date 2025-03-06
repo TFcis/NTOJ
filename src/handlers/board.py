@@ -22,11 +22,11 @@ class BoardHandler(RequestHandler):
             return
 
         if meta['status'] == BoardConst.STATUS_OFFLINE:
-            self.error('Eacces')
+            self.error(('Eacces', 'Permission denied'))
             return
 
         if meta['status'] == BoardConst.STATUS_HIDDEN and not self.acct.is_kernel():
-            self.error('Eacces')
+            self.error(('Eacces', 'Permission denied'))
             return
 
         min_type = UserConst.ACCTTYPE_USER

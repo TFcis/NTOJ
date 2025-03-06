@@ -15,11 +15,11 @@ class ContestProsetHandler(RequestHandler):
 
         show_ac_ratio = False
         if not self.contest.is_start() and not self.contest.is_admin(self.acct):
-            self.error('Eacces')
+            self.error(('Eacces', 'Permission denied'))
             return
 
         elif self.contest.is_running() and not self.contest.is_member(self.acct):
-            self.error('Eacces')
+            self.error(('Eacces', 'Permission denied'))
             return
 
         else:

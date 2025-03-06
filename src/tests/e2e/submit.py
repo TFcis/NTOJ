@@ -1,3 +1,4 @@
+import json
 from .util import AsyncTest, AccountContext
 
 
@@ -11,7 +12,7 @@ class SubmitTest(AsyncTest):
                 'code': '',
                 'comp_type': 'g++',
             })
-            self.assertEqual(res.text, 'Eempty')
+            self.assertAPIReturnValue(res.text, ('Eempty', 'Submitted code should not be empty'))
 
             res = user_session.post('submit', data={
                 'reqtype': 'submit',
@@ -19,7 +20,7 @@ class SubmitTest(AsyncTest):
                 'code': open('tests/static_file/code/large.cpp').read(),
                 'comp_type': 'g++',
             })
-            self.assertEqual(res.text, 'Ecodemax')
+            self.assertAPIReturnValue(res.text, ('Ecodemax', 'Submitted code too long'))
 
             res = user_session.post('submit', data={
                 'reqtype': 'submit',
@@ -27,7 +28,7 @@ class SubmitTest(AsyncTest):
                 'code': 'cc',
                 'comp_type': 'tobiichi',
             })
-            self.assertEqual(res.text, 'Ecomp')
+            self.assertAPIReturnValue(res.text, ('Ecomp', 'The compiler is not allowed'))
 
             res = user_session.post('submit', data={
                 'reqtype': 'submit',
@@ -35,7 +36,7 @@ class SubmitTest(AsyncTest):
                 'code': 'cc',
                 'comp_type': 'g++',
             })
-            self.assertEqual(res.text, '10')
+            self.assertAPIReturnValue(res.text, ('S', 10))
 
             res = user_session.post('submit', data={
                 'reqtype': 'submit',
@@ -43,7 +44,8 @@ class SubmitTest(AsyncTest):
                 'code': 'cc',
                 'comp_type': 'g++',
             })
-            self.assertTrue(res.text.startswith('Einternal30:'))
+            res = json.loads(res.text)
+            self.assertEqual(res['status'], 'Einternal')
 
             # NOTE: makefile problem only allow C/C++ language
             html = self.get_html('submit/2', user_session)

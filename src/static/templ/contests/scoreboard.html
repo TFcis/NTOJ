@@ -211,7 +211,8 @@ font-weight: bolder;
         }
 
         $.post(post_url, param, res => {
-            if (res == 'Eacces') {
+            res = JSON.parse(res);
+            if (res.status == 'Eacces') {
                 $("#scoreboard").html("No Scoreboard");
                 return;
             }
@@ -219,7 +220,7 @@ font-weight: bolder;
             /**
              * @type { Array<Object> }
              */
-            let scores = JSON.parse(res);
+            let scores = res.data;
             scores.sort((p, q) => {
                 if (q.total_score == p.total_score) {
                     let p_max_timestamp = '';

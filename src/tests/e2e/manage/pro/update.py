@@ -19,14 +19,14 @@ class ManageProUpdateTest(AsyncTest):
                 "check_type": ProConst.CHECKER_DIFF,
                 "rate_precision": ProConst.RATE_PRECISION_MIN,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             html = self.get_html('manage/pro/update?proid=1', admin_session)
             self.assertIsNone(html.select_one('input.allow-submit').get('checked'))
             self.assertEqual(html.select_one('select.status > option[selected]').text, 'Hidden')
             self.assertEqual(int(html.select_one('select.status > option[selected]').get('value')), ProConst.STATUS_HIDDEN)
 
             res = admin_session.get('pro/1')
-            self.assertNotEqual(res.text, 'Eacces')
+            self.assertNotIn('Eacces', res.text)
 
             html = self.get_html('pro/1', admin_session)
             submit_button = html.select_one('a.btn')
@@ -35,7 +35,7 @@ class ManageProUpdateTest(AsyncTest):
 
             with AccountContext('test1@test', 'test') as user_session:
                 res = user_session.get('pro/1')
-                self.assertEqual(res.text, 'Enoext')
+                self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not found'))
 
                 html = self.get_html('proset', user_session)
                 trs = html.select('#prolist > tbody > tr')
@@ -46,7 +46,7 @@ class ManageProUpdateTest(AsyncTest):
                 self.assertEqual(trs[1].select('td')[2].text.strip().replace('\n', ''), 'Move')
 
                 res = user_session.get('submit/1')
-                self.assertEqual(res.text, 'Enoext')
+                self.assertIn('Enoext', res.text)
 
             res = admin_session.post('manage/pro/update', data={
                 'reqtype': 'updatepro',
@@ -59,12 +59,12 @@ class ManageProUpdateTest(AsyncTest):
                 'check_type': ProConst.CHECKER_DIFF,
                 "rate_precision": ProConst.RATE_PRECISION_MIN,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.get('submit/1')
-            self.assertEqual(res.text, 'Eacces')
+            self.assertIn('Eacces', res.text)
 
             res = admin_session.get('pro/1')
-            self.assertEqual(res.text, 'Eacces')
+            self.assertIn('Eacces', res.text)
 
             # html = self.get_html('proset', admin_session)
             # trs = html.select('tr')[1:]
@@ -92,7 +92,7 @@ class ManageProUpdateTest(AsyncTest):
                 'limits': json.dumps({
                 })
             })
-            self.assertEqual(res.text, 'Eparam')
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Missing default limit config'))
 
             res = admin_session.post('manage/pro/update', data={
                 'reqtype': 'updatelimit',
@@ -113,7 +113,7 @@ class ManageProUpdateTest(AsyncTest):
                     }
                 })
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('pro/1', admin_session)
             limit_table = html.select_one('table > tbody')
@@ -147,4 +147,4 @@ class ManageProUpdateTest(AsyncTest):
                 'pro_id': 1,
                 'pack_token': pack_token,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)

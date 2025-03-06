@@ -48,7 +48,7 @@ class BulletinService:
             )
 
         if len(result) != 1:
-            return 'Enoext', None
+            return ('Enoext', 'Bulletin not found'), None
         result = result[0]
         result = {
             'title': result['title'],
@@ -64,7 +64,7 @@ class BulletinService:
 
     async def add_bulletin(self, title, content, acct_id, color='White', pinned=False):
         async with self.db.acquire() as con:
-            result = await con.execute(
+            result = await con.fetch(
                 '''
                     INSERT INTO "bulletin" ("title", "content", "color", "pinned", "author_id")
                     VALUES ($1, $2, $3, $4, $5) RETURNING "bulletin_id";
@@ -75,17 +75,18 @@ class BulletinService:
                 pinned,
                 acct_id,
             )
-        if len(result) != 1:
-            return 'Eunk', None
+            if len(result) != 1:
+                return ('Eunk', 'Unknown error'), None
 
-        await self.rs.publish('bulletinsub', 1)
+            return None, result[0]['bulletin_id']
+
 
     async def edit_bulletin(self, bulletin_id, title, content, acct_id, color, pinned):
         async with self.db.acquire() as con:
-            await con.execute(
+            result = await con.fetch(
                 '''
                     UPDATE "bulletin" SET "title" = $1, "content" = $2, "author_id" = $3, "color" = $4, "pinned" = $5
-                    WHERE "bulletin_id" = $6;
+                    WHERE "bulletin_id" = $6 RETURNING "bulletin_id";
                 ''',
                 title,
                 content,
@@ -95,10 +96,16 @@ class BulletinService:
                 int(bulletin_id),
             )
 
-        await self.rs.publish('bulletinsub', 1)
+            if len(result) != 1:
+                return ('Eunk', 'Unknown error'), None
+
+            return None, None
 
     async def del_bulletin(self, bulletin_id):
         async with self.db.acquire() as con:
-            await con.execute('DELETE FROM "bulletin" WHERE "bulletin_id" = $1', int(bulletin_id))
+            result: str = await con.execute('DELETE FROM "bulletin" WHERE "bulletin_id" = $1', int(bulletin_id))
+            affected_row_cnt = int(result.split(" ")[1]) # DELETE \d+
+            if affected_row_cnt == 0:
+                return ('Enoext', 'Bulletin not found'), None
 
-        await self.rs.publish('bulletinsub', 1)
+            return None, None

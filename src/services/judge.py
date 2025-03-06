@@ -106,9 +106,9 @@ class JudgeServerService:
             await self.rs.hdel('pro_rate', str(pro_id))
             self.chal_map.pop(res['chal_id'])
 
-    async def disconnect_server(self) -> Union[str, None]:
+    async def disconnect_server(self):
         if not self.status:
-            return 'Ejudge'
+            return ('Ejudge', 'Judge already disconnected')
 
         try:
             self.status = False
@@ -117,7 +117,7 @@ class JudgeServerService:
             self.main_task.cancel()
             self.main_task = None
         except:
-            return 'Ejudge'
+            return ('Ejudge', 'Disconnect judge failed')
 
         return None
 
@@ -188,26 +188,26 @@ class JudgeServerClusterService:
             await self.queue.put([0, idx])
             await judge_server.start()
 
-    async def connect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
+    async def connect_server(self, idx):
         if idx < 0 or idx >= len(self.servers):
-            return 'Eparam'
+            return ('Eparam', 'Invalid judge index')
 
         if not self.servers[idx].status:
             await self.servers[idx].start()
 
             if not self.servers[idx].status:
-                return 'Ejudge'
+                return ('Ejudge', 'Connect judge failed')
 
         await self.queue.put([0, idx])
         return 'S'
 
-    async def disconnect_server(self, idx) -> Literal['Eparam', 'Ejudge', 'S']:
+    async def disconnect_server(self, idx):
         if idx < 0 or idx >= len(self.servers):
-            return 'Eparam'
+            return ('Eparam', 'Invalid judge index')
 
         err = await self.servers[idx].disconnect_server()
-        if err is not None:
-            return 'Ejudge'
+        if err:
+            return err
 
         return 'S'
 
@@ -218,7 +218,7 @@ class JudgeServerClusterService:
 
     def get_server_status(self, idx):
         if idx < 0 or idx >= len(self.servers):
-            return 'Eparam'
+            return ('Eparam', 'Invalid judge index')
 
         _, status = self.servers[idx].get_server_status()
         return None, status

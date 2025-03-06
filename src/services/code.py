@@ -20,7 +20,7 @@ class CodeService:
                 chal_id,
             )
             if len(result) != 1:
-                return 'Enoext', None, None
+                return ('Enoext', 'Challenge not found'), None, None
             result = result[0]
 
             target_acct_id, pro_id, contest_id, comp_type = int(result['acct_id']), int(result['pro_id']), int(
@@ -52,6 +52,6 @@ class CodeService:
                 code = 'EROOR: The code is lost on server.'
 
         else:
-            return 'Eacces', None, None
+            return ('Eacces', 'Permission denied'), None, None
 
         return None, code, comp_type

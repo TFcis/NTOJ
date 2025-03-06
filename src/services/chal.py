@@ -153,6 +153,8 @@ class ChalSearchingParamBuilder:
     def build(self) -> ChalSearchingParam:
         return self.param
 
+from typing import Any
+ReturnType = tuple[tuple[str, Any], None] | tuple[None, Any]
 
 class ChalService:
     def __init__(self, db, rs):
@@ -177,7 +179,7 @@ class ChalService:
                 contest_id,
             )
         if len(result) != 1:
-            return 'Eunk', None
+            return ('Eunk', 'Unknown error'), None
         result = result[0]
 
         chal_id = result['chal_id']
@@ -234,7 +236,7 @@ class ChalService:
 
         return None, tests
 
-    async def get_chal(self, chal_id):
+    async def get_chal(self, chal_id) -> ReturnType:
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -249,7 +251,7 @@ class ChalService:
                 chal_id,
             )
         if len(result) != 1:
-            return 'Enoext', None
+            return ('Enoext', 'Challenge Not Found'), None
 
         result = result[0]
 
@@ -327,7 +329,7 @@ class ChalService:
                 chal_id,
             )
         if len(result) != 1:
-            return 'Enoext', None
+            return ('Enoext', 'Challenge not found'), None
         result = result[0]
 
         acct_id, contest_id, timestamp = int(result['acct_id']), int(result['contest_id']), result['timestamp']
@@ -478,7 +480,7 @@ class ChalService:
             )
 
         if len(result) != 1:
-            return 'Enoext', None
+            return ('Enoext', 'Challenge not found'), None
         result = result[0]
 
         return None, {
@@ -505,7 +507,7 @@ class ChalService:
             )
 
         if len(result) != 1:
-            return 'Eunk', None
+            return ('Eunk', 'Unknown error'), None
 
         total_chal = result[0]['count']
         return None, {'total_chal': total_chal}

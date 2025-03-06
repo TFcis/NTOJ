@@ -46,7 +46,7 @@ class ManageJudgeHandler(RequestHandler):
                 f"{self.acct.name} had been connected {server_name} succesfully.", 'manage.judge.connect'
             )
 
-            self.finish('S')
+            self.error(('S', ''))
 
         elif reqtype == 'disconnect':
             index = int(self.get_argument('index'))
@@ -60,7 +60,7 @@ class ManageJudgeHandler(RequestHandler):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to disconnect {server_name} but failed.", 'manage.judge.disconnect.failure'
                 )
-                self.error('Eacces')
+                self.error(('Eacces', 'Wrong password'))
                 return
 
             err = await JudgeServerClusterService.inst.disconnect_server(index)
@@ -71,7 +71,7 @@ class ManageJudgeHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish('S')
+            self.error(('S', ''))
 
 
 class JudgeChalCntSub(WebSocketSubHandler):

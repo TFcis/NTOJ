@@ -14,22 +14,12 @@
 				'reqtype': 'rechal',
 				'pro_id': pro_id
 			}, function (res) {
-				let msg = '';
-				let dialog_type = null;
-
-				if (res[0] == 'E') {
-					dialog_type = index.DIALOG_TYPE.error;
-					if (res == 'Ejudge') {
-						msg = 'All Judge Server Offline';
-					} else {
-						msg = 'Unknown';
-					}
-				} else {
-					dialog_type = index.DIALOG_TYPE.info;
-					msg = 'Processing...';
-				}
-
-				index.show_notify_dialog(msg, dialog_type);
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Processing...', index.DIALOG_TYPE.success);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
 			});
 		});
 
@@ -43,25 +33,12 @@
 				'pro_id': pro_id,
 				'pwd': pwd,
 			}, function (res) {
-				let msg = '';
-				let dialog_type = null;
-
-				if (res[0] == 'E') {
-					dialog_type = index.DIALOG_TYPE.error;
-
-					if (res == 'Eacces') {
-						msg = 'Password Wrong';
-					} else if (res == 'Ejudge') {
-						msg = 'All Judge Server Offline';
-					} else {
-						msg = 'Unknown';
-					}
-				} else {
-					dialog_type = index.DIALOG_TYPE.info;
-					msg = 'Processing...';
-				}
-
-				index.show_notify_dialog(msg, dialog_type);
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Processing...', index.DIALOG_TYPE.success);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
 			});
 		});
 	}

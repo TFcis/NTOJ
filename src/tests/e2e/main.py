@@ -59,14 +59,14 @@ class E2ETest(AsyncTest):
         for cookie in self.session.cookies:
             cookie.path = '/'
 
-        self.assertEqual(res.text, 'S')
+        self.assertAPIReturnSuccess(res.text)
         self.assertIn('id', self.session.cookies.get_dict())
 
     def logout(self):
         res = self.session.post('sign', data={
             'reqtype': 'signout',
         })
-        self.assertEqual(res.text, 'S')
+        self.assertAPIReturnSuccess(res.text)
         self.assertNotIn('id', self.session.cookies.get_dict())
 
     async def test_main(self):
@@ -165,10 +165,10 @@ class E2ETest(AsyncTest):
                 res = admin_session.post('code', {
                     'chal_id': 1
                 })
-                self.assertNotEqual(res.text, 'Eacces')
                 res = json.loads(res.text)
-                self.assertEqual(res['comp_type'], 'python')
-                self.assertEqual(res['code'].strip(),
+                self.assertNotEqual(res['status'], 'Eacces')
+                self.assertEqual(res['data']['comp_type'], 'python')
+                self.assertEqual(res['data']['code'].strip(),
                                  tornado.escape.xhtml_escape(open('tests/static_file/code/toj3.ac.py').read().strip()))
 
                 # view challist
@@ -218,7 +218,7 @@ class E2ETest(AsyncTest):
 
                 # check manage permission
                 res = user_session.get('manage/dash')
-                self.assertEqual(res.text, 'Eacces')
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             # pro test, tags
             s = [

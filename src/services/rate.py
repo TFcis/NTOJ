@@ -33,7 +33,7 @@ class RateService:
                     acct_id,
                 )
                 if len(result) != 1:
-                    return 'Eunk', None
+                    return ('Eunk', 'Unknown error'), None
                 result = result[0]
 
                 ac_chal_cnt, all_chal_cnt = (
@@ -56,7 +56,7 @@ class RateService:
                     acct_id
                 )
                 if len(result) != 1:
-                    return 'Eunk', None
+                    return ('Eunk', 'Unknown error'), None
                 rate = result[0]['total_rate']
                 if rate is None:
                     rate = 0

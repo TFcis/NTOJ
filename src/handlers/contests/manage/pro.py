@@ -34,7 +34,7 @@ class ContestManageProHandler(RequestHandler):
             pro_id = int(pro_id)
 
             if self.contest.is_pro(pro_id):
-                self.error('Eexist')
+                self.error(('Eexist', f'Problem(#{pro_id}) is already in contest'))
                 return
 
             self.contest.pro_list[pro_id] = {
@@ -42,30 +42,31 @@ class ContestManageProHandler(RequestHandler):
             }
 
             await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
-            await self.finish('S')
+            self.error(('S', f'Problem(#{pro_id}) successfully add to problem list.'))
             prolist_updated = True
 
         elif reqtype == "remove":
             pro_id = int(pro_id)
 
             if not self.contest.is_pro(pro_id):
-                self.error('Enoext')
+                self.error(('Enoext', f'Problem(#{pro_id}) not in contest'))
                 return
 
             self.contest.pro_list.pop(pro_id)
 
             await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
-            await self.finish('S')
+            self.error(('S', f'Problem(#${pro_id}) successfully remove from problem list.'))
             prolist_updated = True
 
         elif reqtype == "multi_add":
-            for p_id in parse_list_str(pro_id):
+            pro_id = parse_list_str(pro_id)
+            for p_id in pro_id:
                 self.contest.pro_list[p_id] = {
                     "score_type": ProblemScoreType.IOI2017.value
                 }
 
             await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
-            await self.finish('S')
+            self.error(('S', f'Problems(#{pro_id}) successfully add to problem list.'))
             prolist_updated = True
 
         elif reqtype == "multi_remove":
@@ -78,14 +79,14 @@ class ContestManageProHandler(RequestHandler):
                     continue
 
             await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
-            await self.finish('S')
+            self.error(('S', f'Problems(#${pro_id}) successfully remove from problem list.'))
             prolist_updated = True
 
         elif reqtype == "rechal":
             pro_id = int(pro_id)
             can_submit = JudgeServerClusterService.inst.is_server_online()
             if not can_submit:
-                self.error('Ejudge')
+                self.error(('Ejudge', 'No judge available'))
                 return
 
             err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=True)
@@ -122,10 +123,10 @@ class ContestManageProHandler(RequestHandler):
                     )
 
             await asyncio.create_task(_rechal(rechals=result))
-            await self.finish('S')
+            self.error(('S', f'Problem(#{pro_id}) is rechallenging.'))
 
         else:
-            self.error('Eunk')
+            self.error(('Eunk', 'Unknown error'))
             return
 
         if prolist_updated:

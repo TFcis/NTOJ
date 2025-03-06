@@ -146,7 +146,7 @@ class ContestService:
                 )
 
                 if len(result) != 1:
-                    return 'Enoext', None
+                    return ('Enoext', 'Contest not found'), None
 
                 result = result[0]
 
@@ -214,10 +214,10 @@ class ContestService:
                                   result[0]['contest_id'], acct.acct_id, UserStatus.ADMIN)
 
         except asyncpg.IntegrityConstraintViolationError:
-            return 'Eexist', None
+            return ('Eexist', 'Contest already exists'), None
 
         if len(result) != 1:
-            return 'Eexist', None
+            return ('Eexist', 'Contest already exists'), None
 
         contest_id = result[0]['contest_id']
 

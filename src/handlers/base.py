@@ -2,6 +2,7 @@ import re
 import asyncio
 import datetime
 import json
+from typing import Any
 
 import asyncpg
 import tornado.gen
@@ -37,8 +38,11 @@ class RequestHandler(tornado.web.RequestHandler):
         except tornado.web.HTTPError:
             self.res_json = False
 
-    def error(self, err):
-        self.finish(err)
+    def error(self, err: tuple[str, Any], encoder=None):
+        if encoder:
+            self.finish(json.dumps({'status': err[0], 'data': err[1]}, cls=encoder))
+        else:
+            self.finish(json.dumps({'status': err[0], 'data': err[1]}))
         return
 
     async def render(self, templ, **kwargs):
@@ -100,12 +104,12 @@ def reqenv(func):
         if (g := re.search(r'contests/(\d+)/?', path)) is not None:
             contest_id = g.group(1)
             if not contest_id.isnumeric():
-                await self.finish('Enoext')
+                await self.finish(json.dumps({'status': 'Eparam', 'data': 'Invalid contest_id'}))
                 return
 
             _, self.contest = await ContestService.inst.get_contest(int(contest_id))
             if self.contest is None:
-                await self.finish('Enoext')
+                await self.finish(json.dumps({'status': 'Enoext', 'data': 'Contest not found'}))
                 return
 
         _, acct_id, _ = await UserService.inst.info_sign(self)
@@ -133,7 +137,7 @@ def require_permission(acct_type):
                         self.finish(GOTO_SIGN)
                         return
 
-                    await self.finish('Eacces')
+                    await self.finish(json.dumps({'status': 'Eacces', 'data': 'Permission denied'}))
                     return
 
             elif self.acct.acct_type != acct_type:
@@ -141,7 +145,7 @@ def require_permission(acct_type):
                     self.finish(GOTO_SIGN)
                     return
 
-                await self.finish('Eacces')
+                await self.finish(json.dumps({'status': 'Eacces', 'data': 'Permission denied'}))
                 return
 
             ret = await func(self, *args, **kwargs)

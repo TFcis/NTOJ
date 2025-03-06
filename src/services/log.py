@@ -39,7 +39,7 @@ class LogService:
         async with self.db.acquire() as con:
             res = await con.fetch('SELECT log_id, message, "timestamp", params FROM log WHERE log_id = $1', int(log_id))
             if len(res) == 0:
-                return 'Enoext', None
+                return ('Enoext', 'Log not found'), None
             res = res[0]
 
             params = '{}'

@@ -20,19 +20,12 @@
             'reqtype': 'connect',
             'index': idx,
         }, function(res) {
-            var msg = 'Unknown';
-
-            if (res[0] == 'E') {
-                if (res == 'Ejudge') {
-                    msg = 'Cannot connect to server';
-                } else {
-                    msg = res;
-                }
-
-                index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-            } else {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
                 index.show_notify_dialog('Connect Server Successfully', index.DIALOG_TYPE.success);
 	    		setTimeout(() => index.reload(), 1000);
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
             }
         });
     }
@@ -44,21 +37,12 @@
             'index': idx,
             'pwd': pwd,
         }, function(res) {
-            var msg = 'Unknown';
-
-            if (res[0] == 'E') {
-                if (res == 'Ejudge') {
-                    msg = 'server was offline';
-                } else if (res == 'Eacces') {
-                    msg = 'password incorrect';
-                } else {
-                    msg = res;
-                }
-
-                index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-            } else {
-                index.show_notify_dialog('Connect Server Successfully', index.DIALOG_TYPE.success);
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('Disconnect Server Successfully', index.DIALOG_TYPE.success);
 	    		setTimeout(() => index.reload(), 1000);
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
             }
         });
     }

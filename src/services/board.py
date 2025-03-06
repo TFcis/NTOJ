@@ -27,7 +27,7 @@ class BoardService:
             res = await con.fetchrow('SELECT * FROM "board" WHERE "board_id" = $1', board_id)
 
             if res is None:
-                return 'Enoext', None
+                return ('Enoext', 'Board not found'), None
 
         name, status, start, end, pro_list, acct_list = (
             res['name'],
@@ -54,10 +54,10 @@ class BoardService:
         acct_list = list(set(acct_list))
 
         async with self.db.acquire() as con:
-            await con.execute(
+            res = await con.fetch(
                 '''
                     INSERT INTO "board" ("name", "status", "start", "end", "pro_list", "acct_list")
-                    VALUES ($1, $2, $3, $4, $5, $6);
+                    VALUES ($1, $2, $3, $4, $5, $6) RETURNING "board_id";
                 ''',
                 name,
                 status,
@@ -67,7 +67,10 @@ class BoardService:
                 acct_list,
             )
 
-        return None, None
+            if len(res) != 1:
+                return ('Eunk', 'Unknown error'), None
+
+            return None, res[0]['board_id']
 
     async def update_board(self, board_id, name, status, start, end, pro_list: list[int], acct_list: list[int]):
         board_id = int(board_id)
@@ -90,13 +93,16 @@ class BoardService:
                 board_id,
             )
             if len(res) != 1:
-                return 'Enoext', None
+                return ('Enoext', 'Board not found'), None
 
         return None, None
 
     async def remove_board(self, board_id):
         board_id = int(board_id)
         async with self.db.acquire() as con:
-            await con.execute('DELETE FROM "board" WHERE "board_id" = $1', board_id)
+            result: str = await con.execute('DELETE FROM "board" WHERE "board_id" = $1', board_id)
+            affected_row_cnt = int(result.split(" ")[1]) # DELETE \d+
+            if affected_row_cnt == 0:
+                return ('Enoext', 'Bulletin not found'), None
 
         return None, None

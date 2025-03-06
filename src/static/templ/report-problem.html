@@ -19,13 +19,12 @@
                 其他資訊: ${info}
                 `,
             }, function(res) {
-                if (res[0] == 'E') {
-                    let msg = res;
-
-                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-                } else {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
                     index.show_notify_dialog('Report Successfully', index.DIALOG_TYPE.success);
                     setTimeout(() => index.go("/oj/info/"), 2000);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
         });

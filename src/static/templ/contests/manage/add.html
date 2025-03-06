@@ -6,7 +6,12 @@
                 reqtype: 'add',
                 name: name,
             }, res => {
-                index.go(`/oj/contests/${JSON.parse(res)}/manage/general/`);
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.go(`/oj/contests/${res.data}/manage/general/`);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
             });
         });
     }

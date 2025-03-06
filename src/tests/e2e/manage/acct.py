@@ -13,7 +13,7 @@ class ManageAcctTest(AsyncTest):
                 'acct_type': UserConst.ACCTTYPE_KERNEL,
                 'group': GroupConst.KERNEL_GROUP,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('admin2@test', 'testtest') as admin2_session:
             html = self.get_html('index/', session=admin2_session)

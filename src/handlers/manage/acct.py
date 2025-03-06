@@ -60,4 +60,4 @@ class ManageAcctHandler(RequestHandler):
                 return
 
             _ = await GroupService.inst.set_acct_group(acct_id, group)
-            self.finish('S')
+            self.error(('S', ''))

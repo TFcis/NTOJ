@@ -99,7 +99,7 @@ class ContestManageGeneralHandler(RequestHandler):
 
             await ContestService.inst.update_contest(self.acct, self.contest)
 
-            self.finish('S')
+            self.error(('S', ''))
 
 
 class ContestManageDescEditHandler(RequestHandler):
@@ -128,11 +128,11 @@ class ContestManageDescEditHandler(RequestHandler):
                 self.contest.desc_after_contest = desc
 
             else:
-                self.error('Eunk')
+                self.error(('Eunk', 'Unknown error'))
 
             await ContestService.inst.update_contest(self.acct, self.contest)
 
-            await self.finish('S')
+            self.error(('S', ''))
 
 
 class ContestManageAddHandler(RequestHandler):
@@ -150,9 +150,9 @@ class ContestManageAddHandler(RequestHandler):
             name = self.get_argument('name')
 
             _, contest_id = await ContestService.inst.add_default_contest(self.acct, name)
-            await self.finish(json.dumps(contest_id))
+            self.error(('S', contest_id))
         else:
-            self.error('Eunk')
+            self.error(('Eunk', 'Unknown error'))
 
 
 def trantime(time):
@@ -165,6 +165,6 @@ def trantime(time):
             time = time.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8)))
 
         except ValueError:
-            return 'Eparam', None
+            return ('Eparam', 'Invalid time'), None
 
     return None, time

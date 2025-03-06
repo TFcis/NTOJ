@@ -47,7 +47,7 @@ class ManageGroupHandler(RequestHandler):
             gtype = int(self.get_argument('gtype'))
             gclas = int(self.get_argument('gclas'))
             if gname == GroupConst.KERNEL_GROUP:
-                self.error('Ekernel')
+                self.error(('Ekernel', 'Cannot edit kernel group'))
                 return
 
             await LogService.inst.add_log(
@@ -58,7 +58,7 @@ class ManageGroupHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish('S')
+            self.error(('S', ''))
 
         elif reqtype == 'add_group':
             gname = str(self.get_argument('gname'))
@@ -73,12 +73,12 @@ class ManageGroupHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish('S')
+            self.error(('S', ''))
 
         elif reqtype == 'del_group':
             gname = str(self.get_argument('gname'))
             if gname in [GroupConst.KERNEL_GROUP, GroupConst.DEFAULT_GROUP]:
-                self.error('Ekernel')
+                self.error(('Ekernel', 'Cannot remove kernel and default group'))
                 return
 
             await LogService.inst.add_log(f"{self.acct.name} deleted group={gname}", 'manage.group.delete')
@@ -87,5 +87,5 @@ class ManageGroupHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish('S')
+            self.error(('S', ''))
             return

@@ -16,7 +16,7 @@ class BoardTest(AsyncTest):
                 'pro_list': '1, 2',
                 'acct_list': '1',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('manage/board', admin_session)
             self.assertEqual(len(html.select('tr')[1:]), 1)
@@ -66,7 +66,7 @@ class BoardTest(AsyncTest):
                 'pro_list': '1, 2',
                 'acct_list': '1',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('board', admin_session)
             trs = html.select('tr')
@@ -83,7 +83,7 @@ class BoardTest(AsyncTest):
                 self.assertEqual(len(trs[1:]), 0)
 
                 res = user_session.get('board/1')
-                self.assertEqual(res.text, 'Eacces')
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             html = self.get_html('board/1', admin_session)
             self.assertEqual(html.select('th._pro')[0].text, '1')
@@ -105,15 +105,15 @@ class BoardTest(AsyncTest):
                 'pro_list': '1, 2',
                 'acct_list': '1',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.get('board/1')
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             res = admin_session.post('manage/board/update', data={
                 'reqtype': 'remove',
                 'board_id': 1,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             res = admin_session.get('board/1')
-            self.assertEqual(res.text, 'Enoext')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Board not found'))

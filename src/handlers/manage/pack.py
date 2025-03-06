@@ -13,4 +13,4 @@ class ManagePackHandler(RequestHandler):
 
         if reqtype == 'gettoken':
             _, pack_token = await PackService.inst.gen_token()
-            self.finish(json.dumps(pack_token))
+            self.error(('S', pack_token))

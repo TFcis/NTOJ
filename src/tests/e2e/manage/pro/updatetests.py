@@ -23,7 +23,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                 d[key] = val
 
             res = session.post('manage/pro/updatetests', data=d)
-            self.assertEqual(res.text, equal_value)
+            self.assertAPIReturnValue(res.text, equal_value)
 
     async def main(self):
         with AccountContext("admin@test", "testtest") as admin_session:
@@ -34,7 +34,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'filename': '1',
                 'type': 'out',
             })
-            self.assertEqual(json.loads(res.text), open('tests/static_file/toj3/res/testdata/1.out').read())
+            self.assertEqual(json.loads(res.text)['data'], open('tests/static_file/toj3/res/testdata/1.out').read())
 
             self.assertTable(
                 {
@@ -44,10 +44,10 @@ class ManageProUpdateTestsTest(AsyncTest):
                     'type': 'out',
                 },
                 [
-                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found
-                    {'filename': '2', 'equal_value': 'Efile'}, # file has more than 25 lines or cannot be decoded as UTF-8.
-                    {'filename': '../conf.json', 'equal_value': 'Eacces'}, # illegal filepath access
-                    {'filename': '5', 'equal_value': 'Enoext'} # file not found
+                    {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
+                    {'filename': '2', 'equal_value': ('Efile', 'File too large')}, # file has more than 25 lines or cannot be decoded as UTF-8.
+                    {'filename': '../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'filename': '5', 'equal_value': ('Enoext', 'File not found')} # file not found
                 ],
                 admin_session
             )
@@ -59,7 +59,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'weight': 60,
                 'group': 0,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             html = self.get_html('pro/1', admin_session)
             scores_table = html.select('table')[1]
             trs = scores_table.select('tbody > tr')
@@ -75,7 +75,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'pro_id': 1,
                 'weight': 20,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             html = self.get_html('pro/1', admin_session)
             scores_table = html.select('table')[1]
             trs = scores_table.select('tbody > tr')
@@ -95,7 +95,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'input_pack_token': inputfile_token,
                 'output_pack_token': outputfile_token,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             self.assertTrue(os.path.exists('problem/1/res/testdata/3.in'))
             self.assertTrue(os.path.exists('problem/1/res/testdata/3.out'))
             self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/res/testdata/3.in').read())
@@ -110,9 +110,9 @@ class ManageProUpdateTestsTest(AsyncTest):
                     'output_pack_token': outputfile_token,
                 },
                 [
-                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found,
-                    {'filename': '../etc', 'equal_value': 'Eacces'}, # illegal filepath access
-                    {'filename': '3', 'equal_value': 'Eexist'} # file already exists
+                    {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
+                    {'filename': '../etc', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'filename': '3', 'equal_value': ('Eexist', 'File already exists')} # file already exists
                 ],
                 admin_session
             )
@@ -124,7 +124,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'testcase': '3',
                 'group': 2,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
             groups = html.select_one('div#tests').select('div.accordion-item')
             testcase_trs = groups[2].select('tbody > tr')
@@ -139,10 +139,10 @@ class ManageProUpdateTestsTest(AsyncTest):
                     'group': 2,
                 },
                 [
-                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found,
-                    {'testcase': '300', 'equal_value': 'Enoext'}, # testcase not found
-                    {'group': '300', 'equal_value': 'Enoext'}, # group not found
-                    {'testcase': '3', 'equal_value': 'Eexist'}, # testcase already exists
+                    {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
+                    {'testcase': '300', 'equal_value': ('Enoext', 'Testcase file not found')}, # testcase not found
+                    {'group': '300', 'equal_value': ('Enoext', 'Group not found')}, # group not found
+                    {'testcase': '3', 'equal_value': ('Eexist', 'Testcase already exists')}, # testcase already exists
                 ],
                 admin_session
             )
@@ -152,7 +152,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                     'reqtype': 'rechal',
                     'chal_id': 1
                 })
-                self.assertEqual(res.text, '1')
+                self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
             chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
             self.assertEqual(chal_states_result, [ChalConst.STATE_AC] * len(chal_states_result))
@@ -164,7 +164,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'old_filename': '3',
                 'new_filename': '4',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             self.assertTrue(os.path.exists('problem/1/res/testdata/4.in'))
             self.assertTrue(os.path.exists('problem/1/res/testdata/4.out'))
             self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/res/testdata/4.in').read())
@@ -183,10 +183,10 @@ class ManageProUpdateTestsTest(AsyncTest):
                     'new_filename': '4',
                 },
                 [
-                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found,
-                    {'old_filename': '../conf.json', 'new_filename': '../tw87.json', 'equal_value': 'Eacces'}, # illegal filepath access
-                    {'old_filename': '4', 'new_filename': '4', 'equal_value': 'Eexist'}, # new file already exists
-                    {'old_filename': '5', 'equal_value': 'Enoext'}, # old file not found
+                    {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
+                    {'old_filename': '../conf.json', 'new_filename': '../tw87.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'old_filename': '4', 'new_filename': '4', 'equal_value': ('Eexist', 'New filename already exists')}, # new file already exists
+                    {'old_filename': '5', 'equal_value': ('Enoext', 'Old filename not found')}, # old file not found
                 ],
                 admin_session
             )
@@ -200,7 +200,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'type': 'output',
                 'pack_token': pack_token,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             self.assertTable(
                 {
@@ -211,10 +211,10 @@ class ManageProUpdateTestsTest(AsyncTest):
                     'pack_token': pack_token,
                 },
                 [
-                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found,
-                    {'type': '../../', 'equal_value': 'Eparam'}, # type in ['output', 'input']
-                    {'filename': '../conf.json', 'equal_value': 'Eacces'}, # illegal filepath access
-                    {'filename': '5', 'equal_value': 'Enoext'}, # file not found
+                    {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
+                    {'type': '../../', 'equal_value': ('Eparam', 'Invalid testcase file type')}, # type in ['output', 'input']
+                    {'filename': '../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'filename': '5', 'equal_value': ('Enoext', 'Testcase file not found')}, # file not found
                 ],
                 admin_session
             )
@@ -224,7 +224,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                     'reqtype': 'rechal',
                     'chal_id': 1
                 })
-                self.assertEqual(res.text, '1')
+                self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
             chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
             self.assertEqual(chal_states_result, [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA])
@@ -239,27 +239,27 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'input_pack_token': inputfile_token,
                 'output_pack_token': outputfile_token,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
                 'reqtype': 'addsingletestcase',
                 'pro_id': 1,
                 'testcase': '3',
                 'group': 2,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
                 'reqtype': 'deletesingletestcase',
                 'pro_id': 1,
                 'testcase': '4',
                 'group': 2,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             def callback():
                 res = admin_session.post('submit', data={
                     'reqtype': 'rechal',
                     'chal_id': 1
                 })
-                self.assertEqual(res.text, '1')
+                self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
             chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
             self.assertEqual(chal_states_result, [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_AC])
@@ -270,7 +270,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'pro_id': 1,
                 'filename': '4',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             self.assertFalse(os.path.exists('problem/1/res/testdata/4.in'))
             self.assertFalse(os.path.exists('problem/1/res/testdata/4.out'))
 
@@ -281,9 +281,9 @@ class ManageProUpdateTestsTest(AsyncTest):
                     'filename': '4',
                 },
                 [
-                    {'pro_id': '100', 'equal_value': 'Enoext'}, # problem not found,
-                    {'filename': '../conf.json', 'equal_value': 'Eacces'}, # illegal filepath access
-                    {'filename': '5', 'equal_value': 'Enoext'}, # file not found
+                    {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
+                    {'filename': '../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'filename': '5', 'equal_value': ('Enoext', 'Testcase file not found')}, # file not found
                 ],
                 admin_session
             )
@@ -294,13 +294,13 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'pro_id': 1,
                 'group': 2,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             def callback():
                 res = admin_session.post('submit', data={
                     'reqtype': 'rechal',
                     'chal_id': 1
                 })
-                self.assertEqual(res.text, '1')
+                self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
             chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
             self.assertEqual(chal_states_result, [ChalConst.STATE_AC, ChalConst.STATE_AC])
