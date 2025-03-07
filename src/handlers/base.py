@@ -39,11 +39,7 @@ class RequestHandler(tornado.web.RequestHandler):
             self.res_json = False
 
     def error(self, err: tuple[str, Any], encoder=None):
-        if encoder:
-            self.finish(json.dumps({'status': err[0], 'data': err[1]}, cls=encoder))
-        else:
-            self.finish(json.dumps({'status': err[0], 'data': err[1]}))
-        return
+        self.finish(json.dumps({'status': err[0], 'data': err[1]}, cls=encoder))
 
     async def render(self, templ, **kwargs):
 
