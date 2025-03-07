@@ -17,6 +17,7 @@ from services.pro import ProService, ProConst
 from services.user import UserConst
 from services.pack import PackService
 
+PERMISSION_DENIED_ERROR = ('Eacces', 'Permission denied')
 
 class ManageProHandler(RequestHandler):
     @reqenv
@@ -190,7 +191,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to preview file:{filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.preview.failed'
                     )
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 filepath = os.path.join(basepath, filename)
@@ -381,7 +382,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.renamesinglefile.failed'
                     )
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 if not os.path.exists(old_inputfile_path) or not os.path.exists(old_outputfile_path):
@@ -445,7 +446,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to update {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.updatesinglefile.failed'
                     )
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 if not os.path.exists(filepath):
@@ -491,7 +492,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to add a single file:{filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.addsinglefile.failed'
                     )
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 if os.path.exists(inputfile_path) or os.path.exists(outputfile_path):
@@ -529,7 +530,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to delete a single file:{filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.deletesinglefile.failed'
                     )
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 if not os.path.exists(f'{basepath}/{filename}.in') or not os.path.exists(f'{basepath}/{filename}.out'):
@@ -580,7 +581,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to preview {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.preview.failed'
                     )
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 filepath = os.path.join(basepath, filename)
@@ -627,7 +628,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.renamesinglefile.failed'
                     )
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 if not os.path.exists(old_filepath):
@@ -677,7 +678,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to update {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.updatesinglefile.failed'
                     )
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 if not os.path.exists(filepath):
@@ -721,7 +722,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to add {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.addsinglefile.failed'
                     )
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 if os.path.exists(filepath):
@@ -762,7 +763,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to delete {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.deletesinglefile.failed'
                     )
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 if not os.path.exists(filepath):

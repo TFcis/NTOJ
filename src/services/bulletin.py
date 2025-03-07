@@ -2,6 +2,7 @@ import datetime
 
 
 class BulletinService:
+    BULLETIN_NOT_FOUND = BulletinService.BULLETIN_NOT_FOUND
     def __init__(self, db, rs) -> None:
         self.db = db
         self.rs = rs
@@ -48,7 +49,7 @@ class BulletinService:
             )
 
         if len(result) != 1:
-            return ('Enoext', 'Bulletin not found'), None
+            return ('Enoext', BulletinService.BULLETIN_NOT_FOUND), None
         result = result[0]
         result = {
             'title': result['title'],
@@ -106,6 +107,6 @@ class BulletinService:
             result: str = await con.execute('DELETE FROM "bulletin" WHERE "bulletin_id" = $1', int(bulletin_id))
             affected_row_cnt = int(result.split(" ")[1]) # DELETE \d+
             if affected_row_cnt == 0:
-                return ('Enoext', 'Bulletin not found'), None
+                return ('Enoext', BulletinService.BULLETIN_NOT_FOUND), None
 
             return None, None

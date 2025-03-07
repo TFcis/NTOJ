@@ -199,7 +199,7 @@ class JudgeServerClusterService:
                 return ('Ejudge', 'Connect judge failed')
 
         await self.queue.put([0, idx])
-        return 'S'
+        return ('S', '')
 
     async def disconnect_server(self, idx):
         if idx < 0 or idx >= len(self.servers):
@@ -209,7 +209,7 @@ class JudgeServerClusterService:
         if err:
             return err
 
-        return 'S'
+        return ('S', '')
 
     async def disconnect_all_server(self) -> None:
         for server in self.servers:

@@ -6,6 +6,7 @@ from services.pro import ProClassService, ProClassConst
 from services.user import UserConst
 from utils.numeric import parse_list_str
 
+PERMISSION_DENIED_ERROR = ('Eacces', 'Permission denied')
 
 class ManageProClassHandler(RequestHandler):
     @reqenv
@@ -33,7 +34,7 @@ class ManageProClassHandler(RequestHandler):
             proclass_id = int(self.get_argument('proclassid'))
             _, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if proclass['type'] not in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN]:
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             await self.render('manage/proclass/update', page='proclass', proclass_id=proclass_id, proclass=proclass)
@@ -86,7 +87,7 @@ class ManageProClassHandler(RequestHandler):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to update proclass name={proclass['name']}, but an admin cannot modify a user's own proclass", 'manage.proclass.update.failed'
                 )
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             if proclass_type not in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN]:
@@ -124,7 +125,7 @@ class ManageProClassHandler(RequestHandler):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to remove proclass name={proclass['name']}, but an admin cannot modify a user's own proclass", 'manage.proclass.remove.failed'
                 )
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             await LogService.inst.add_log(
