@@ -11,6 +11,7 @@ from services.user import UserConst, UserService
 from services.chal import ChalConst
 from utils.numeric import parse_list_str
 
+PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
 
 class AcctHandler(RequestHandler):
     @reqenv
@@ -93,7 +94,7 @@ class AcctConfigHandler(RequestHandler):
             target_acct_id = self.get_argument('acct_id')
 
             if target_acct_id != str(self.acct.acct_id):
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             err, _ = await UserService.inst.update_acct(
@@ -112,7 +113,7 @@ class AcctConfigHandler(RequestHandler):
             target_acct_id = int(self.get_argument('acct_id'))
 
             if not (self.acct.acct_id == target_acct_id or self.acct.is_kernel()):
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             err, _ = await UserService.inst.update_pw(target_acct_id, old, pw, self.acct.is_kernel())
@@ -152,7 +153,7 @@ class AcctProClassHandler(RequestHandler):
             proclass_id = int(self.get_argument('proclassid'))
             _, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if proclass['acct_id'] != self.acct.acct_id:
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             await self.render('acct/proclass-update', proclass_id=proclass_id, proclass=proclass)
@@ -207,7 +208,7 @@ class AcctProClassHandler(RequestHandler):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them", 'user.proclass.update.failed'
                 )
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             if proclass_type not in [ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN]:
@@ -245,7 +246,7 @@ class AcctProClassHandler(RequestHandler):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them", 'user.proclass.remove.failed'
                 )
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             await LogService.inst.add_log(

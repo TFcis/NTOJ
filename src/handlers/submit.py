@@ -10,6 +10,7 @@ from services.pro import ProService
 from services.user import UserConst
 from services.contests import UserStatus
 
+PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
 
 class SubmitHandler(RequestHandler):
     @reqenv
@@ -25,7 +26,7 @@ class SubmitHandler(RequestHandler):
         allow_compilers = ChalConst.ALLOW_COMPILERS
         if self.contest:
             if not self.contest.is_running() and not self.contest.is_admin(self.acct):
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             if not self.contest.is_pro(pro_id):
@@ -47,7 +48,7 @@ class SubmitHandler(RequestHandler):
             return
 
         if pro['status'] == ProService.STATUS_OFFLINE:
-            self.error(('Eacces', 'Permission denied'))
+            self.error(PERMISSION_DENIED_ERROR)
             return
 
         if not pro['allow_submit']:
@@ -83,7 +84,7 @@ class SubmitHandler(RequestHandler):
             if self.contest:
                 pri = ChalConst.CONTEST_PRI
                 if not self.contest.is_running() and not self.contest.is_admin(self.acct):
-                    self.error(('Eacces', 'Permission denied'))
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 if not self.contest.is_pro(pro_id):
@@ -103,11 +104,11 @@ class SubmitHandler(RequestHandler):
                 return
 
             if pro['status'] == ProService.STATUS_OFFLINE:
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             elif pro['status'] == ProService.STATUS_CONTEST and not self.contest:
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             if not pro['allow_submit']:

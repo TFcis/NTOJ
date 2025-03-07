@@ -10,6 +10,7 @@ from services.pro import ProClassService, ProClassConst, ProConst, ProService
 from services.rate import RateService
 from services.user import UserService, UserConst
 
+PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
 
 def user_ac_cmp(pro):
     user_ac_chal_cnt = pro['rate_data']['user_ac_chal_cnt']
@@ -90,10 +91,10 @@ class ProsetHandler(RequestHandler):
             proclass = dict(proclass)
 
             if proclass['type'] == ProClassConst.OFFICIAL_HIDDEN and not self.acct.is_kernel():
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
             elif proclass['type'] == ProClassConst.USER_HIDDEN and proclass['acct_id'] != self.acct.acct_id:
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             p_list = proclass['list']
@@ -252,16 +253,16 @@ class ProStaticHandler(RequestHandler):
             return
 
         if pro['status'] == ProConst.STATUS_OFFLINE:
-            self.error(('Eacces', 'Permission denied'))
+            self.error(PERMISSION_DENIED_ERROR)
             return
 
         elif pro['status'] == ProConst.STATUS_CONTEST:
             if not self.contest:
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             elif not (self.contest.is_running() or self.contest.is_admin(self.acct)):
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
         if path.endswith('pdf'):
@@ -294,11 +295,11 @@ class ProHandler(RequestHandler):
                 return
 
             if not self.contest.is_start() and not self.contest.is_admin(self.acct):
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             elif not self.contest.is_running() and not self.contest.is_member(self.acct):
-                self.error(('Eacces', 'Permission denied'))
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
         err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
@@ -307,11 +308,11 @@ class ProHandler(RequestHandler):
             return
 
         if pro['status'] == ProConst.STATUS_OFFLINE:
-            self.error(('Eacces', 'Permission denied'))
+            self.error(PERMISSION_DENIED_ERROR)
             return
 
         elif pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
-            self.error(('Eacces', 'Permission denied'))
+            self.error(PERMISSION_DENIED_ERROR)
             return
 
         # NOTE: Guest cannot see tags

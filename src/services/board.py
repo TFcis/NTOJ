@@ -7,6 +7,7 @@ class BoardConst:
 
 
 class BoardService:
+    BOARD_NOT_FOUND = 'Board not found'
     def __init__(self, db, rs):
         self.db = db
         self.rs = rs
@@ -27,7 +28,7 @@ class BoardService:
             res = await con.fetchrow('SELECT * FROM "board" WHERE "board_id" = $1', board_id)
 
             if res is None:
-                return ('Enoext', 'Board not found'), None
+                return ('Enoext', BoardService.BOARD_NOT_FOUND), None
 
         name, status, start, end, pro_list, acct_list = (
             res['name'],
@@ -93,7 +94,7 @@ class BoardService:
                 board_id,
             )
             if len(res) != 1:
-                return ('Enoext', 'Board not found'), None
+                return ('Enoext', BoardService.BOARD_NOT_FOUND), None
 
         return None, None
 
@@ -103,6 +104,6 @@ class BoardService:
             result: str = await con.execute('DELETE FROM "board" WHERE "board_id" = $1', board_id)
             affected_row_cnt = int(result.split(" ")[1]) # DELETE \d+
             if affected_row_cnt == 0:
-                return ('Enoext', 'Bulletin not found'), None
+                return ('Enoext', BoardService.BOARD_NOT_FOUND), None
 
         return None, None
