@@ -42,7 +42,7 @@ class ContestManageProHandler(RequestHandler):
             }
 
             await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
-            self.error(('S', f'Problem(#{pro_id}) successfully add to problem list.'))
+            self.error(('S', f'Problem(#{pro_id}) successfully added to problem list.'))
             prolist_updated = True
 
         elif reqtype == "remove":
@@ -55,7 +55,7 @@ class ContestManageProHandler(RequestHandler):
             self.contest.pro_list.pop(pro_id)
 
             await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
-            self.error(('S', f'Problem(#${pro_id}) successfully remove from problem list.'))
+            self.error(('S', f'Problem(#${pro_id}) successfully removed from problem list.'))
             prolist_updated = True
 
         elif reqtype == "multi_add":
@@ -66,7 +66,7 @@ class ContestManageProHandler(RequestHandler):
                 }
 
             await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
-            self.error(('S', f'Problems(#{pro_id}) successfully add to problem list.'))
+            self.error(('S', f'Problems(#{pro_id}) successfully added to problem list.'))
             prolist_updated = True
 
         elif reqtype == "multi_remove":
@@ -79,7 +79,7 @@ class ContestManageProHandler(RequestHandler):
                     continue
 
             await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
-            self.error(('S', f'Problems(#${pro_id}) successfully remove from problem list.'))
+            self.error(('S', f'Problems(#${pro_id}) successfully removed from problem list.'))
             prolist_updated = True
 
         elif reqtype == "rechal":

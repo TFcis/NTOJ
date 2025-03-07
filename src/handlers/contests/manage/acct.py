@@ -44,7 +44,7 @@ class ContestManageAcctHandler(RequestHandler):
             }
 
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            self.error(('S', f'Account(#{acct_id}) successfully add to user list with {status.name}.'))
+            self.error(('S', f'Account(#{acct_id}) successfully added to user list with {status.name}.'))
 
         elif reqtype == "remove":
             acct_id = int(acct_id)
@@ -54,7 +54,7 @@ class ContestManageAcctHandler(RequestHandler):
 
             self.contest.user_list.pop(acct_id)
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            self.error(('S', f'Account(#{acct_id} successfully remove from user list.'))
+            self.error(('S', f'Account(#{acct_id} successfully removed from user list.'))
 
         elif reqtype == "multi_add":
             acct_list = parse_list_str(acct_id)
@@ -65,7 +65,7 @@ class ContestManageAcctHandler(RequestHandler):
                 }
 
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            self.error(('S', f'Accounts({acct_list}) successfully add to user list with {status.name}.'))
+            self.error(('S', f'Accounts({acct_list}) successfully added to user list with {status.name}.'))
 
         elif reqtype == "multi_remove":
             acct_list = parse_list_str(acct_id)
@@ -77,7 +77,7 @@ class ContestManageAcctHandler(RequestHandler):
                     continue
 
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            self.error(('S', f'Accounts(#{acct_list} successfully remove from user list.'))
+            self.error(('S', f'Accounts(#{acct_list} successfully removed from user list.'))
 
         else:
             self.error(('Eunk', 'Unknown error'))
