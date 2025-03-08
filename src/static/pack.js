@@ -9,11 +9,12 @@ var pack = new function() {
 	    $.post('/oj/be/manage/pack', {
 	        'reqtype':'gettoken'
 	    }, function(res) {
-	        if (res[0] == 'E') {
+            res = JSON.parse(res);
+            if (res.status[0] == 'E') {
 	    		defer.reject(res[0]);
-	        } else {
-	    		defer.resolve(JSON.parse(res));
-	        }
+            } else {
+	    		defer.resolve(res.data);
+            }
 	    });
 
 	    return defer.promise();

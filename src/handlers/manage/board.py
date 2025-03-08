@@ -17,7 +17,7 @@ def trantime(time):
             time = time.replace(tzinfo=datetime.timezone.utc)
 
         except ValueError:
-            return 'Eparam', None
+            return ('Eparam', 'Invalid time'), None
 
     return None, time
 
@@ -75,9 +75,11 @@ class ManageBoardHandler(RequestHandler):
                 }
             )
 
-            await BoardService.inst.add_board(name, status, start, end, pro_list, acct_list)
+            err, board_id = await BoardService.inst.add_board(name, status, start, end, pro_list, acct_list)
+            if err:
+                self.error(err)
 
-            self.finish('S')
+            self.error(('S', board_id))
 
         elif page == "update" and reqtype == 'update':
             board_id = int(self.get_argument('board_id'))
@@ -113,15 +115,15 @@ class ManageBoardHandler(RequestHandler):
             )
             await BoardService.inst.update_board(board_id, name, status, start, end, pro_list, acct_list)
 
-            self.finish('S')
+            self.error(('S', ''))
 
         elif page == "update" and reqtype == 'remove':
             board_id = int(self.get_argument('board_id'))
             await BoardService.inst.remove_board(board_id)
-            self.finish('S')
             await LogService.inst.add_log(
                 f"{self.acct.name} was removed the contest \"{board_id}\".", 'manage.board.remove'
             )
+            self.error(('S', ''))
 
     async def _get_acct_list(self, acct_list_str: str) -> list[int]:
         acct_list = acct_list_str.replace(' ', '').split(',')

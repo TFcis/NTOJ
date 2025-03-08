@@ -17,12 +17,13 @@
 				'pro_id': pro_id,
 				'pwd': pwd,
 		    }, function(res) {
-				if (res[0] == 'E') {
-                    index.show_notify_dialog(res, index.DIALOG_TYPE.error);
-				} else {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
                     index.show_notify_dialog('Unlock Successfully', index.DIALOG_TYPE.success);
                     index.reload();
-				}
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
 		    });
 		});
 
@@ -31,12 +32,13 @@
 				'reqtype': 'pro-lock',
 				'pro_id': pro_id,
 		    }, function(res) {
-				if (res[0] == 'E') {
-					index.show_notify_dialog(res, index.DIALOG_TYPE.error);
-				} else {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
                     index.show_notify_dialog('Lock Successfully', index.DIALOG_TYPE.success);
                     index.reload();
-				}
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
 		    });
 		});
 
@@ -75,21 +77,12 @@
                 'is_makefile': is_makefile,
                 'chalmeta': chalmeta,
             }, function(res) {
-                let msg = 'Unknown';
-                if (res[0] == 'E') {
-                    if (res == 'Enamemin') {
-                        msg = '	Name length < min';
-                    } else if (res == 'Enamemax') {
-                        msg = 'Name length > max';
-                    } else if (res == 'Eparam') {
-                        msg = 'Parameter Error';
-                    } else {
-                        msg = res;
-                    }
-                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-                } else {
-                    index.show_notify_dialog('Upload Successfully', index.DIALOG_TYPE.success);
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
                     index.reload();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
 		});
@@ -101,21 +94,13 @@
                     'pro_id': pro_id,
                     'pack_token': token,
                 }, function(res) {
-                    let dialog_type = null;
-                    let msg = '';
-                    if (res[0] == 'E') {
-                        dialog_type = index.DIALOG_TYPE.error;
-                        if (res == 'Econf') {
-                            msg = 'conf.json syntax error';
-                        } else {
-                            msg = res;
-                        }
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        index.show_notify_dialog('Update problem by uploading package successfully', index.DIALOG_TYPE.success);
+                        index.reload();
                     } else {
-                        msg = 'Update problem by uploading package successfully';
+                        index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                     }
-
-                    index.show_notify_dialog(msg, dialog_type);
-                    index.reload();
                 });
             }
 
@@ -158,21 +143,13 @@
 			    'pro_id': pro_id,
                 'limits': JSON.stringify(limits),
 			}, function(res) {
-				let msg = 'Unknown';
-				if (res[0] == 'E') {
-					if (res == 'Etimelimitmin') {
-						msg = 'Time limit is too short';
-					} else if (res == 'Ememlimitmin') {
-						msg = 'Mem limit is too small';
-					} else {
-						msg = res;
-					}
-
-					index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-				} else {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
                     index.show_notify_dialog('Update limit Successfully', index.DIALOG_TYPE.success);
                     index.reload();
-				}
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
 			});
 		});
 
@@ -181,22 +158,12 @@
 				'reqtype': 'rechal',
 				'pro_id': pro_id
 			}, function (res) {
-				let msg = '';
-				let dialog_type = null;
-
-				if (res[0] == 'E') {
-					dialog_type = index.DIALOG_TYPE.error;
-					if (res == 'Ejudge') {
-						msg = 'All Judge Server Offline';
-					} else {
-						msg = 'Unknown';
-					}
-				} else {
-					dialog_type = index.DIALOG_TYPE.info;
-					msg = 'Processing...';
-				}
-
-				index.show_notify_dialog(msg, dialog_type);
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Processing...', index.DIALOG_TYPE.success);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
 			});
 		});
 
@@ -208,25 +175,12 @@
 				'pro_id': pro_id,
 				'pwd': pwd,
 			}, function (res) {
-				let msg = '';
-				let dialog_type = null;
-
-				if (res[0] == 'E') {
-					dialog_type = index.DIALOG_TYPE.error;
-
-					if (res == 'Eacces') {
-						msg = 'Password Wrong';
-					} else if (res == 'Ejudge') {
-						msg = 'All Judge Server Offline';
-					} else {
-						msg = 'Unknown';
-					}
-				} else {
-					dialog_type = index.DIALOG_TYPE.info;
-					msg = 'Processing...';
-				}
-
-				index.show_notify_dialog(msg, dialog_type);
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Processing...', index.DIALOG_TYPE.success);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
 			});
 		});
     }

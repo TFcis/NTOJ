@@ -6,6 +6,7 @@ class GroupConst:
 class GroupService:
     DEFAULT_GROUP = 'normal_user'
     KERNEL_GROUP = 'kernel'
+    GROUP_NOT_FOUND = GroupService.GROUP__NOT_FOUND
 
     def __init__(self, db, rs):
         self.db = db
@@ -15,7 +16,7 @@ class GroupService:
     async def add_group(self, gname, gtype, gclas):
         glist = await self.list_group()
         if gname in glist:
-            return 'Eexist'
+            return ('Eexist', 'Group already exists')
 
         async with self.db.acquire() as con:
             await con.execute(
@@ -34,7 +35,7 @@ class GroupService:
     async def del_group(self, gname):
         glist = await self.list_group()
         if gname not in glist:
-            return 'Eexist'
+            return ('Enoext', GroupService.GROUP_NOT_FOUND)
 
         async with self.db.acquire() as con:
             await con.execute('DELETE FROM "group" WHERE "group"."group_name" = $1;', gname)
@@ -84,7 +85,7 @@ class GroupService:
         acct_id = int(acct_id)
         glist = await self.list_group()
         if gname not in glist:
-            return 'Eexist'
+            return ('Enoext', GroupService.GROUP_NOT_FOUND)
 
         async with self.db.acquire() as con:
             result = await con.fetchrow(
@@ -125,15 +126,16 @@ class GroupService:
                 gname,
             )
 
+        # TODO: update multiple group should not allow
         if len(result) != 1:
-            return 'Eexist'
+            return ('Eunk', 'Unknown error')
 
         return None
 
     async def update_group(self, gname, gtype, gclas):
         glist = await self.list_group()
         if gname not in glist:
-            return 'Enoext'
+            return ('Enoext', GroupService.GROUP_NOT_FOUND)
 
         err = await self._update_group(gname, int(gtype), int(gclas))
         if err:

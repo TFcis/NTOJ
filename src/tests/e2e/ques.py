@@ -8,13 +8,13 @@ class QuesTest(AsyncTest):
                 'reqtype': 'ask',
                 'qtext': 'question 1'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             res = user_session.post('question', data={
                 'reqtype': 'ask',
                 'qtext': ''
             })
-            self.assertEqual(res.text, 'Equesempty')
+            self.assertAPIReturnValue(res.text, ('Equesempty', 'Question should not be empty'))
 
             html = self.get_html('question', user_session)
             self.assertEqual(html.select_one('p').text, 'Wait for Reply')
@@ -36,7 +36,7 @@ class QuesTest(AsyncTest):
                 'index': 0,
                 'rtext': 'reply question 1'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('manage/question/reply?qacct=2', admin_session)
             self.assertEqual(html.select('tr')[1:][0].select_one('td > textarea').text.strip(), 'reply question 1')
@@ -52,7 +52,7 @@ class QuesTest(AsyncTest):
                 'reqtype': 'rm_ques',
                 'index': 0
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('question', user_session)
             self.assertIsNone(html.select_one('div#abc'))

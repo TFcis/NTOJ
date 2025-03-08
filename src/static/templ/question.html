@@ -9,17 +9,12 @@
             'acct_id': acct_id,
             'qtext': qtext,
             }, function(res) {
-                let msg = 'Unknown';
-                if (res[0] == 'E') {
-                    msg = res;
-                    if (res == 'Equesempty') {
-                        msg = 'Do not submit empty question';
-                    }
-
-                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-                } else {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
                     index.show_notify_dialog('Done', index.DIALOG_TYPE.success);
                     setTimeout(() => index.reload(), 1000);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
         });
@@ -34,13 +29,12 @@
             'acct_id': acct_id,
             'index': idx,
         }, function(res) {
-            msg = 'Unknown';
-            if (res[0] == 'E') {
-                msg = res;
-                index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-            } else {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
                 index.show_notify_dialog('Done', index.DIALOG_TYPE.success);
                 setTimeout(() => index.reload(), 1000);
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
             }
         });
     }

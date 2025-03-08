@@ -12,20 +12,12 @@
                     'reqtype': 'approval',
                     'acct_id': acct_id,
                 }, res => {
-                    let msg = '';
-                    if (res[0] == 'E') {
-                        if (res == 'Enoext') {
-                            msg = `Account(#${acct_id}) not found.`;
-                        } else if (res == 'Eexist') {
-                            msg = `Problem(#${acct_id}) already added to account list.`;
-                        }
-
-                        index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-                    } else {
-                        msg = `Approval account(#${acct_id}) successfully.`;
-
-                        index.show_notify_dialog(msg, index.DIALOG_TYPE.success);
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
                         setTimeout(() => index.reload(), 1000);
+                    } else {
+                        index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                     }
                 });
             });
@@ -38,20 +30,12 @@
                     'reqtype': 'reject',
                     'acct_id': acct_id,
                 }, res => {
-                    let msg = '';
-                    if (res[0] == 'E') {
-                        if (res == 'Enoext') {
-                            msg = `Account(#${acct_id}) not found.`;
-                        } else if (res == 'Eexist') {
-                            msg = `Problem(#${acct_id}) already added to account list.`;
-                        }
-
-                        index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-                    } else {
-                        msg = `Reject account(#${acct_id}) successfully.`;
-
-                        index.show_notify_dialog(msg, index.DIALOG_TYPE.success);
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
                         setTimeout(() => index.reload(), 1000);
+                    } else {
+                        index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                     }
                 });
             });

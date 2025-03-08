@@ -28,7 +28,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'add',
                 'name': 'contest 1'
             })
-            self.assertEqual(json.loads(res.text), 1)
+            self.assertEqual(json.loads(res.text)['data'], 1)
 
             # update general
             now = datetime.datetime.now()
@@ -55,7 +55,7 @@ class ContestTest(AsyncTest):
                 'freeze_scoreboard_period': 0
             }
             res = admin_session.post('contests/1/manage/general', data=default_config)
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             # test desc
             res = admin_session.post('contests/1/manage/desc', data={
@@ -63,19 +63,19 @@ class ContestTest(AsyncTest):
                 'desc_type': 'before',
                 'desc': 'desc before contest',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('contests/1/manage/desc', data={
                 'reqtype': 'update',
                 'desc_type': 'during',
                 'desc': 'desc during contest',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('contests/1/manage/desc', data={
                 'reqtype': 'update',
                 'desc_type': 'after',
                 'desc': 'desc after contest',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             res = admin_session.get('contests/1/manage/desc')
             self.assertEqual(re.findall(r'let desc_before_contest = index\.unescape_html\(`(.*)`\)', res.text, re.I)[0], 'desc before contest')
@@ -113,7 +113,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'add',
                 'pro_id': 7
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('contests/1/manage/pro', admin_session)
             self.assertEqual(len(html.select('tr')[1:]), 1)
@@ -122,7 +122,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'remove',
                 'pro_id': 7
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             html = self.get_html('contests/1/manage/pro', admin_session)
             self.assertEqual(len(html.select('tr')[1:]), 0)
 
@@ -130,7 +130,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'multi_add',
                 'pro_id': '7..13'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             html = self.get_html('contests/1/manage/pro', admin_session)
             self.assertEqual(len(html.select('tr')[1:]), 6)
 
@@ -138,7 +138,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'multi_remove',
                 'pro_id': '7..13'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             html = self.get_html('contests/1/manage/pro', admin_session)
             self.assertEqual(len(html.select('tr')[1:]), 0)
 
@@ -146,7 +146,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'multi_add',
                 'pro_id': '7..13'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             html = self.get_html('contests/1/manage/pro', admin_session)
             self.assertEqual(len(html.select('tr')[1:]), 6)
 
@@ -157,7 +157,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'multi_add',
                 'pro_id': '7..20'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             # test reg
             # current reg mode is invite
@@ -175,7 +175,7 @@ class ContestTest(AsyncTest):
                 'acct_id': 4,
                 'type': 'normal',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('contest1@test', 'test') as user_session:
             html = self.get_html('contests/1/reg', user_session)
@@ -193,7 +193,7 @@ class ContestTest(AsyncTest):
                 'acct_id': 4,
                 'type': 'normal',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('contest1@test', 'test') as user_session:
             html = self.get_html('contests/1/reg', user_session)
@@ -203,7 +203,7 @@ class ContestTest(AsyncTest):
             config = copy.deepcopy(default_config)
             config['reg_mode'] = RegMode.FREE_REG.value
             res = admin_session.post('contests/1/manage/general', data=config)
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('contest1@test', 'test') as user_session:
             html = self.get_html('contests/1/reg', user_session)
@@ -218,7 +218,7 @@ class ContestTest(AsyncTest):
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('contests/1/reg', user_session)
             self.assertEqual(html.select('label')[0].text, 'Status: Registered')
@@ -241,12 +241,12 @@ class ContestTest(AsyncTest):
                 'acct_id': 4,
                 'type': 'normal',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             config = copy.deepcopy(default_config)
             config['reg_mode'] = RegMode.REG_APPROVAL.value
             res = admin_session.post('contests/1/manage/general', data=config)
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('contest1@test', 'test') as user_session:
             html = self.get_html('contests/1/reg', user_session)
@@ -256,7 +256,7 @@ class ContestTest(AsyncTest):
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('contests/1/reg', user_session)
             self.assertEqual(html.select('label')[0].text, 'Status: Waiting Approval')
@@ -278,7 +278,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'approval',
                 'acct_id': 4,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('contest1@test', 'test') as user_session:
             html = self.get_html('contests/1/reg', user_session)
@@ -297,7 +297,7 @@ class ContestTest(AsyncTest):
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'unreg'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('contests/1/info', user_session)
             registration_status = html.select('.card-body')[3]
@@ -313,7 +313,7 @@ class ContestTest(AsyncTest):
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             html = self.get_html('contests/1/manage/reg', admin_session)
@@ -324,7 +324,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'reject',
                 'acct_id': 4,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('contest1@test', 'test') as user_session:
             html = self.get_html('contests/1/info', user_session)
@@ -342,24 +342,24 @@ class ContestTest(AsyncTest):
                 'acct_id': '3,4,5,6,7,8,9',
                 'type': 'normal',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('contest1@test', 'test') as user_session:
             html = self.get_html('contests/1/proset', user_session)
             self.assertEqual(len(html.select('tr')[1:]), 0)
 
             res = user_session.get('contests/1/pro/7')
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             res = user_session.get('contests/1/pro/7/cont.pdf')
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             contest_start = now - datetime.timedelta(days=1)
             config = copy.deepcopy(default_config)
             config['contest_start'] = self.get_isoformat(contest_start)
             res = admin_session.post('contests/1/manage/general', data=config)
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('contest1@test', 'test') as user_session:
             html = self.get_html('contests', user_session)
@@ -391,7 +391,7 @@ class ContestTest(AsyncTest):
                 'code': 'cc1',
                 'comp_type': 'g++',
             })
-            self.assertEqual(res.text, 'Enoext')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not in contest'))
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
@@ -399,7 +399,7 @@ class ContestTest(AsyncTest):
                 'code': 'cc2',
                 'comp_type': 'python3',
             })
-            self.assertEqual(res.text, 'Ecomp')
+            self.assertAPIReturnValue(res.text, ('Ecomp', 'The compiler is not allowed'))
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
@@ -407,7 +407,7 @@ class ContestTest(AsyncTest):
                 'code': open('tests/static_file/code/toj674.ac.cpp').read(),
                 'comp_type': 'g++',
             })
-            self.assertEqual(res.text, '17')
+            self.assertAPIReturnValue(res.text, ('S', 17))
 
             ws = await websocket_connect('ws://localhost:5501/manage/judgecntws')
 
@@ -426,7 +426,7 @@ class ContestTest(AsyncTest):
                 'code': open('tests/static_file/code/toj674.ac.cpp').read(),
                 'comp_type': 'g++',
             })
-            self.assertEqual(res.text, 'Esame')
+            self.assertAPIReturnValue(res.text, ('Esame', 'Do not submit same code'))
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
@@ -434,7 +434,8 @@ class ContestTest(AsyncTest):
                 'code': 'cc3',
                 'comp_type': 'g++',
             })
-            self.assertTrue(res.text.startswith('Einternal60:'))
+            res = json.loads(res.text)
+            self.assertEqual(res['status'], 'Einternal')
             while True:
                 msg = await ws.read_message()
                 if msg is None:
@@ -450,7 +451,9 @@ class ContestTest(AsyncTest):
 
             # test scoreboard
             res = user_session.post('contests/1/scoreboard', data={})
-            scoreboard_data = json.loads(res.text)
+            res = json.loads(res.text)
+            self.assertNotEqual(res['status'], 'Eacces')
+            scoreboard_data = res['data']
             for scores in scoreboard_data:
                 if scores['acct_id'] == 4:
                     self.assertEqual(scores['name'], 'contest1')

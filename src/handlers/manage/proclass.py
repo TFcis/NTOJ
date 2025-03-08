@@ -6,6 +6,7 @@ from services.pro import ProClassService, ProClassConst
 from services.user import UserConst
 from utils.numeric import parse_list_str
 
+PERMISSION_DENIED_ERROR = ('Eacces', 'Permission denied')
 
 class ManageProClassHandler(RequestHandler):
     @reqenv
@@ -33,7 +34,7 @@ class ManageProClassHandler(RequestHandler):
             proclass_id = int(self.get_argument('proclassid'))
             _, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if proclass['type'] not in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN]:
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             await self.render('manage/proclass/update', page='proclass', proclass_id=proclass_id, proclass=proclass)
@@ -51,11 +52,11 @@ class ManageProClassHandler(RequestHandler):
             p_list = parse_list_str(p_list_str)
 
             if proclass_type not in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN]:
-                self.error('Eparam')
+                self.error(('Eparam', 'Invalid problem class type'))
                 return
 
             if len(p_list) == 0:
-                self.error('E')
+                self.error(('Eparam', 'Problem list should not be empty'))
                 return
 
             await LogService.inst.add_log(
@@ -71,7 +72,7 @@ class ManageProClassHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish(str(proclass_id))
+            self.error(('S', proclass_id))
 
         elif page == "update" and reqtype == "update":
             proclass_id = int(self.get_argument('proclass_id'))
@@ -86,15 +87,15 @@ class ManageProClassHandler(RequestHandler):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to update proclass name={proclass['name']}, but an admin cannot modify a user's own proclass", 'manage.proclass.update.failed'
                 )
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             if proclass_type not in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN]:
-                self.error('Eparam')
+                self.error(('Eparam', 'Invalid problem class type'))
                 return
 
             if len(p_list) == 0:
-                self.error('E')
+                self.error(('Eparam', 'Problem list should not be empty'))
                 return
 
             await LogService.inst.add_log(
@@ -110,7 +111,7 @@ class ManageProClassHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish('S')
+            self.error(('S', ''))
 
         elif page == "update" and reqtype == "remove":
             proclass_id = int(self.get_argument('proclass_id'))
@@ -124,7 +125,7 @@ class ManageProClassHandler(RequestHandler):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to remove proclass name={proclass['name']}, but an admin cannot modify a user's own proclass", 'manage.proclass.remove.failed'
                 )
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             await LogService.inst.add_log(
@@ -132,4 +133,4 @@ class ManageProClassHandler(RequestHandler):
             )
             await ProClassService.inst.remove_proclass(proclass_id)
 
-            self.finish('S')
+            self.error(('S', ''))

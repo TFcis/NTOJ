@@ -41,22 +41,12 @@
                 'cover': cover,
                 'motto': motto,
             }, function(res) {
-                let msg = 'Unknown';
-
-                if (res[0] == 'E') {
-                    dialog_type = index.DIALOG_TYPE.error;
-                    if (res == 'Enamemin') {
-                        msg = 'Name length < min';
-                    } else if (res == 'Enamemax') {
-                        msg = 'Name length > max';
-                    } else if (res == 'Emottomax') {
-                        msg = 'Your motto is too long';
-                    }
-
-                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-                } else {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
                     index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
                     index.reload();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
         });
@@ -77,21 +67,12 @@
                 'old': old,
                 'pw': pw,
             }, function(res) {
-		        let msg = 'Unknown';
-
-                if (res[0] == 'E') {
-		            if (res == 'Epwmin') {
-			            msg = 'Password length < min';
-		            } else if (res == 'Epwmax') {
-			            msg = 'Password length > max';
-                    } else if (res == 'Epwold') {
-                        msg = 'Previous incorrect';
-                    }
-
-                    index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-                } else {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
                     index.show_notify_dialog('Update Password Successfully', index.DIALOG_TYPE.success);
                     j_reset.find('input').val('');
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
         });

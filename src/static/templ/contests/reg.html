@@ -7,24 +7,12 @@
             $.post(`/oj/be/contests/{{ contest.contest_id }}/reg`, {
                 'reqtype': 'reg',
             }, res => {
-                let dialog_type = null;
-                let msg = '';
-                if (res[0] == 'E') {
-                    dialog_type = index.DIALOG_TYPE.error;
-                    if (res == 'Eacces') {
-                        msg = 'invited mode';
-                    } else if (res == 'Eexist') {
-                        msg = 'Already registered';
-                    } else if (res == 'Etime') {
-                        msg = 'Over registered time';
-                    } else if (res == 'Enoext') {
-                    }
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Register Successfully', index.DIALOG_TYPE.success);
                 } else {
-                    dialog_type = index.DIALOG_TYPE.success;
-                    msg = 'Register Successfully';
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
-
-                index.show_notify_dialog(msg, dialog_type);
                 index.reload();
             })
         });
@@ -33,24 +21,12 @@
             $.post(`/oj/be/contests/{{ contest.contest_id }}/reg`, {
                 'reqtype': 'unreg',
             }, res => {
-                let dialog_type = null;
-                let msg = '';
-                if (res[0] == 'E') {
-                    dialog_type = index.DIALOG_TYPE.error;
-                    dialog_type = index.DIALOG_TYPE.error;
-                    if (res == 'Eacces') {
-                        msg = 'invited mode';
-                    } else if (res == 'Eexist') {
-                        msg = 'you not registered';
-                    } else if (res == 'Enoext') {
-                        msg = 'over registered time';
-                    }
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Unregister Successfully', index.DIALOG_TYPE.success);
                 } else {
-                    dialog_type = index.DIALOG_TYPE.success;
-                    msg = 'Unregister Successfully';
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
-
-                index.show_notify_dialog(msg, dialog_type);
                 index.reload();
             })
         });

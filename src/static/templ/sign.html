@@ -36,9 +36,8 @@
                 'mail': mail,
                 'pw': pw,
             }, function(res) {
-                if (res[0] == 'E') {
-                    $('#signin div.print').print('Login failed');
-                } else {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
 		            $('#signin div.print').print('Success, reloading...', true);
 
                     if (index.prev_url == null) {
@@ -46,6 +45,8 @@
                         return;
                     }
                     location.href = index.prev_url;
+                } else {
+                    $('#signin div.print').print('Login failed');
                 }
             });
         });
@@ -76,7 +77,7 @@
             let repeat = j_signup.find('input.repeat').val();
 
 	        if(pw != repeat) {
-		        $('#signup div.print').print('Repeat incorrect');
+                index.show_notify_dialog('Repeat password incorrect', index.DIALOG_TYPE.warning);
 		        return;
 	        }
 
@@ -86,31 +87,12 @@
                 'pw': pw,
                 'name': name,
             }, function(res) {
-		        let msg = 'Unknown';
-
-                if (res[0] == 'E') {
-		            if (res == 'Eexist') {
-			            msg = 'Account existed';
-		            } else if (res == 'Emailmin') {
-			            msg = 'Mail length < min';
-                    } else if (res == 'Emailmax') {
-			            msg = 'Mail length > max';
-		            } else if (res == 'Epwmin') {
-			            msg = 'Password length < min';
-		            } else if (res == 'Epwmax') {
-			            msg = 'Password length > max';
-		            } else if (res == 'Enamemin') {
-			            msg = 'Name length < min';
-		            } else if (res == 'Enamemax') {
-			            msg = 'Name length > max';
-		            } else if (res == 'Errmail') {
-			            msg = 'Invalid mail';
-		            }
-
-		            $('#signup div.print').print(msg);
-                } else {
-		            $('#signup div.print').print('Success, reloading...', true);
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Success, reloading...', index.DIALOG_TYPE.success);
 		            index.go('/oj/info/');
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
         });
@@ -162,7 +144,6 @@
                 <button class="btn btn-primary submit" tabindex=8 type="button">註冊</button>
                 <button class="btn btn-secondary cancel" type="button">取消</button>
             </div>
-            <div class="print"></div>
         </form>
     </div>
     <div id="warning" class="g-lg-6 g-off-lg-3">

@@ -84,7 +84,7 @@ class ProService:
                 max_status,
             )
             if len(result) != 1:
-                return "Enoext", None
+                return ("Enoext", "Problem not found"), None
             result = result[0]
 
             name, status, tags, allow_submit, check_type, is_makefile, rate_precision, limit, chalmeta = (
@@ -179,11 +179,11 @@ class ProService:
     async def add_pro(self, name, status, pack_token):
         name_len = len(name)
         if name_len < ProService.NAME_MIN:
-            return "Enamemin", None
+            return ("Enamemin", "Problem name too short"), None
         if name_len > ProService.NAME_MAX:
-            return "Enamemax", None
+            return ("Enamemax", "Problem name too long"), None
         if status < ProService.STATUS_ONLINE or status > ProService.STATUS_OFFLINE:
-            return "Eparam", None
+            return ("Eparam", "Invalid problem status"), None
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -196,12 +196,15 @@ class ProService:
                 status,
             )
             if len(result) != 1:
-                return "Eunk", None
+                return ("Eunk", "Unknown error"), None
 
             pro_id = int(result[0]["pro_id"])
 
             if pack_token:
-                _, _ = await self.unpack_pro(pro_id, ProService.PACKTYPE_FULL, pack_token)
+                err, _ = await self.unpack_pro(pro_id, ProService.PACKTYPE_FULL, pack_token)
+                if err:
+                    return err, None
+
                 await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
 
             else:
@@ -223,14 +226,14 @@ class ProService:
     async def update_pro(self, pro_id, name, status, pack_type, pack_token=None, tags="", allow_submit=True):
         name_len = len(name)
         if name_len < ProService.NAME_MIN:
-            return "Enamemin", None
+            return ("Enamemin", "Problem name too short"), None
         if name_len > ProService.NAME_MAX:
-            return "Enamemax", None
+            return ("Enamemax", "Problem name too long"), None
         del name_len
         if status < ProService.STATUS_ONLINE or status > ProService.STATUS_OFFLINE:
-            return "Eparam", None
+            return ("Eparam", "Invalid problem status"), None
         if tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", tags):
-            return "Etags", None
+            return ("Etags", "Invalid problem tag"), None
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -246,7 +249,7 @@ class ProService:
                 int(pro_id),
             )
             if len(result) != 1:
-                return "Enoext", None
+                return ("Enoext", "Problem not found"), None
 
             if pack_token is not None:
                 err, _ = await self.unpack_pro(pro_id, pack_type, pack_token)
@@ -326,7 +329,7 @@ class ProService:
                 with open(f"problem/{pro_id}/conf.json") as conf_f:
                     conf = json.load(conf_f)
             except json.decoder.JSONDecodeError:
-                return "Econf", None
+                return ("Econf", "Problem config json syntax error"), None
 
             is_makefile = False
             if 'compile' in conf:
@@ -355,7 +358,7 @@ class ProService:
                     limits[comp_type] = limit
 
                 if 'default' not in limits:
-                    return "Econf", None
+                    return ("Econf", "Problem limit config require default value"), None
 
             elif 'timelimit' in conf and 'memlimit' in conf:
                 try:
@@ -366,9 +369,9 @@ class ProService:
                         }
                     }
                 except ValueError:
-                    return "Econf", None
+                    return ("Econf", "Problem limit config have invalid value"), None
             else:
-                return "Econf", None
+                 return ("Econf", "Problem config require limit or timelimit/memlimit"), None
 
             chalmeta = {}
             if 'metadata' in conf:
@@ -432,7 +435,7 @@ class ProClassService:
             )
 
             if len(res) != 1:
-                return "Enoext", None
+                return ("Enoext", "Problem class not found"), None
 
         return None, res[0]
 
@@ -460,7 +463,10 @@ class ProClassService:
 
     async def remove_proclass(self, proclass_id: int):
         async with self.db.acquire() as con:
-            await con.execute('DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id))
+            result: str = await con.execute('DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id))
+            affected_row_cnt = int(result.split(" ")[1]) # DELETE \d+
+            if affected_row_cnt == 0:
+                return ('Enoext', 'Bulletin not found'), None
 
     async def update_proclass(self, proclass_id, name, p_list, desc, proclass_type):
         proclass_id = int(proclass_id)

@@ -10,11 +10,11 @@ class ContestRegHandler(RequestHandler):
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def get(self):
         if not self.contest:
-            self.error('Enoext')
+            self.error(('Enoext', 'Contest not found'))
             return
 
         if self.contest.is_admin(self.acct):
-            self.error('Eacces')
+            self.error(('Eacces', 'Contest admin do not need to register'))
             return
 
         await self.render('contests/reg', contest=self.contest)
@@ -27,7 +27,7 @@ class ContestRegHandler(RequestHandler):
 
         if reqtype == 'reg':
             if self.contest.is_admin(self.acct):
-                self.error('Eacces')
+                self.error(('Eacces', 'Contest admin do not need to register'))
                 return
 
             else:
@@ -39,15 +39,15 @@ class ContestRegHandler(RequestHandler):
                     status = UserStatus.REQUESTED
 
                 if acct_id in self.contest.user_list and self.contest.user_list[acct_id]['status'] == status:
-                    self.error('Eexist')
+                    self.error(('Eexist', 'Already registered'))
                     return
 
             if datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) > self.contest.reg_end:
-                self.error('Etime')
+                self.error(('Etime', 'Registration time has passed. Please remember to register earlier next time'))
                 return
 
             if self.contest.reg_mode is RegMode.INVITED:
-                self.error('Eacces')
+                self.error(('Eacces', 'Invited mode do not allow register'))
                 return
 
             elif self.contest.reg_mode is RegMode.FREE_REG:
@@ -61,25 +61,25 @@ class ContestRegHandler(RequestHandler):
                 }
 
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            self.finish('S')
+            self.error(('S', 'Register Successfully'))
 
         elif reqtype == 'unreg':
             if self.contest.is_admin(self.acct):
-                self.error('Eacces')
+                self.error(('Eacces', 'Contest admin do not need to register'))
                 return
 
             if self.contest.reg_mode is RegMode.INVITED:
-                self.error('Eacces')
+                self.error(('Eacces', 'Invited mode do not allow register'))
                 return
 
             if acct_id not in self.contest.user_list:
-                self.error('Enoext')
+                self.error(('Enoext', 'You have not registered yet' ))
                 return
 
             self.contest.user_list.pop(acct_id)
 
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            self.finish('S')
+            self.error(('S', 'Unregister Successfully'))
 
         else:
-            self.error('Eunk')
+            self.error(('Eunk', 'Unknown error'))

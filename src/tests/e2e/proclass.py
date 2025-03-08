@@ -15,7 +15,7 @@ class ProClassTest(AsyncTest):
                 'type': ProClassConst.OFFICIAL_HIDDEN,
                 'desc': 'desc'
             })
-            self.assertEqual(res.text, '1')
+            self.assertAPIReturnValue(res.text, ('S', 1))
 
             html = self.get_html('manage/proclass/update?proclassid=1', admin_session)
             self.assertEqual(html.select_one('input#name').attrs.get('value'), 'test')
@@ -31,7 +31,8 @@ class ProClassTest(AsyncTest):
             res = admin_session.post('proset', data={
                 'reqtype': 'listproclass'
             })
-            proclass_cata = json.loads(res.text)
+            res = json.loads(res.text)
+            proclass_cata = res['data']
             self.assertNotEqual(proclass_cata['official'], [])
             self.assertEqual(proclass_cata['shared'], [])
             self.assertEqual(proclass_cata['own'], [])
@@ -41,14 +42,15 @@ class ProClassTest(AsyncTest):
                 res = user_session.post('proset', data={
                     'reqtype': 'listproclass'
                 })
-                proclass_cata = json.loads(res.text)
+                res = json.loads(res.text)
+                proclass_cata = res['data']
                 self.assertEqual(proclass_cata['official'], [])
                 self.assertEqual(proclass_cata['shared'], [])
                 self.assertEqual(proclass_cata['own'], [])
                 self.assertEqual(proclass_cata['collection'], [])
 
                 res = self.get_html('proset?proclass_id=1', user_session)
-                self.assertEqual(res.text, 'Eacces')
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             res = admin_session.post('manage/proclass/add', data={
                 'reqtype': 'add',
@@ -57,7 +59,7 @@ class ProClassTest(AsyncTest):
                 'type': ProClassConst.USER_PUBLIC,
                 'desc': 'desc'
             })
-            self.assertEqual(res.text, 'Eparam')
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid problem class type'))
 
             html = self.get_html('proset?proclass_id=1', admin_session)
             trs = html.select('#prolist > tbody > tr')
@@ -71,7 +73,7 @@ class ProClassTest(AsyncTest):
                 'type': ProClassConst.OFFICIAL_PUBLIC,
                 'desc': 'desc desc',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('manage/proclass/update?proclassid=1', admin_session)
             self.assertEqual(html.select_one('input#name').attrs.get('value'), 'test')
@@ -95,22 +97,23 @@ class ProClassTest(AsyncTest):
 
             with AccountContext('test1@test', 'test') as user_session:
                 res = user_session.get('proset?proclass_id=1')
-                self.assertNotEqual(res.text, 'Eacces')
+                self.assertNotIn('Eacces', res.text)
 
             res = admin_session.post('proset', data={
                 'reqtype': 'collect',
                 'proclass_id': 1,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('proset', data={
                 'reqtype': 'collect',
                 'proclass_id': 1,
             })
-            self.assertEqual(res.text, 'Eexist')
+            self.assertAPIReturnValue(res.text, ('Eexist', 'Problem class is already collected'))
             res = admin_session.post('proset', data={
                 'reqtype': 'listproclass'
             })
-            proclass_cata = json.loads(res.text)
+            res = json.loads(res.text)
+            proclass_cata = res['data']
             self.assertNotEqual(proclass_cata['collection'], [])
             self.assertEqual(len(proclass_cata['collection']), 1)
             self.assertEqual(proclass_cata['collection'][0]['proclass_id'], 1)
@@ -119,16 +122,17 @@ class ProClassTest(AsyncTest):
                 'reqtype': 'decollect',
                 'proclass_id': 1,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('proset', data={
                 'reqtype': 'decollect',
                 'proclass_id': 1,
             })
-            self.assertEqual(res.text, 'Enoext')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem class is not in your collection'))
             res = admin_session.post('proset', data={
                 'reqtype': 'listproclass'
             })
-            proclass_cata = json.loads(res.text)
+            res = json.loads(res.text)
+            proclass_cata = res['data']
             self.assertEqual(proclass_cata['collection'], [])
             self.assertEqual(len(proclass_cata['collection']), 0)
 
@@ -139,7 +143,7 @@ class ProClassTest(AsyncTest):
                 'type': ProClassConst.USER_HIDDEN,
                 'desc': 'desc'
             })
-            self.assertEqual(res.text, '2')
+            self.assertAPIReturnValue(res.text, ('S', 2))
             res = admin_session.post('acct/proclass/1', data={
                 'reqtype': 'add',
                 'name': 'user shared',
@@ -147,24 +151,26 @@ class ProClassTest(AsyncTest):
                 'type': ProClassConst.OFFICIAL_HIDDEN,
                 'desc': 'desc'
             })
-            self.assertEqual(res.text, 'Eparam')
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid problem class type'))
 
             res = admin_session.post('proset', data={
                 'reqtype': 'listproclass'
             })
-            proclass_cata = json.loads(res.text)
+            res = json.loads(res.text)
+            proclass_cata = res['data']
             self.assertNotEqual(proclass_cata['own'], [])
             self.assertEqual(len(proclass_cata['own']), 1)
             self.assertEqual(proclass_cata['own'][0]['proclass_id'], 2)
 
             with AccountContext('test1@test', 'test') as user_session:
                 res = user_session.get('proset?proclass_id=2')
-                self.assertEqual(res.text, 'Eacces')
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
                 res = user_session.post('proset', data={
                     'reqtype': 'listproclass'
                 })
-                proclass_cata = json.loads(res.text)
+                res = json.loads(res.text)
+                proclass_cata = res['data']
                 self.assertEqual(proclass_cata['shared'], [])
                 self.assertEqual(len(proclass_cata['shared']), 0)
 
@@ -173,11 +179,12 @@ class ProClassTest(AsyncTest):
                 'reqtype': 'collect',
                 'proclass_id': 2,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('proset', data={
                 'reqtype': 'listproclass'
             })
-            proclass_cata = json.loads(res.text)
+            res = json.loads(res.text)
+            proclass_cata = res['data']
             self.assertNotEqual(proclass_cata['collection'], [])
             self.assertEqual(len(proclass_cata['collection']), 1)
             self.assertEqual(proclass_cata['collection'][0]['proclass_id'], 2)
@@ -190,11 +197,12 @@ class ProClassTest(AsyncTest):
                 'type': ProClassConst.USER_PUBLIC,
                 'desc': 'desc desc'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('proset', data={
                 'reqtype': 'listproclass'
             })
-            proclass_cata = json.loads(res.text)
+            res = json.loads(res.text)
+            proclass_cata = res['data']
             self.assertNotEqual(proclass_cata['shared'], [])
             self.assertEqual(len(proclass_cata['shared']), 1)
             self.assertEqual(proclass_cata['shared'][0]['proclass_id'], 2)
@@ -208,12 +216,13 @@ class ProClassTest(AsyncTest):
 
             with AccountContext('test1@test', 'test') as user_session:
                 res = user_session.get('proset?proclass_id=2')
-                self.assertNotEqual(res.text, 'Eacces')
+                self.assertNotIn('Eacces', res.text)
 
                 res = user_session.post('proset', data={
                     'reqtype': 'listproclass'
                 })
-                proclass_cata = json.loads(res.text)
+                res = json.loads(res.text)
+                proclass_cata = res['data']
                 self.assertNotEqual(proclass_cata['shared'], [])
                 self.assertEqual(len(proclass_cata['shared']), 1)
                 self.assertEqual(proclass_cata['shared'][0]['proclass_id'], 2)
@@ -237,7 +246,7 @@ class ProClassTest(AsyncTest):
                 'type': ProClassConst.USER_PUBLIC,
                 'desc': 'desc desc'
             })
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             res = admin_session.post('manage/proclass/update', data={
                 'reqtype': 'update',
@@ -247,50 +256,50 @@ class ProClassTest(AsyncTest):
                 'type': ProClassConst.OFFICIAL_PUBLIC,
                 'desc': 'desc desc',
             })
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             # NOTE: permission
             res = admin_session.post('manage/proclass/update', data={
                 'reqtype': 'remove',
                 'proclass_id': 2, # user
             })
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
             res = admin_session.post('acct/proclass/1', data={
                 'reqtype': 'remove',
                 'proclass_id': 1,
             })
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             # NOTE: permission
             res = admin_session.get('manage/proclass/update?proclassid=2')
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
             res = admin_session.get('acct/proclass/1?page=update&proclassid=1')
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             res = admin_session.post('manage/proclass/update', data={
                 'reqtype': 'remove',
                 'proclass_id': 1,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.get('proset?proclass_id=1')
-            self.assertEqual(res.text, 'Enoext')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem class not found'))
 
             res = admin_session.post('acct/proclass/1', data={
                 'reqtype': 'remove',
                 'proclass_id': 2,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.get('proset?proclass_id=2')
-            self.assertEqual(res.text, 'Enoext')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem class not found'))
 
             res = admin_session.post('manage/proclass/update', data={
                 'reqtype': 'remove',
                 'proclass_id': 1,
             })
-            self.assertEqual(res.text, 'Enoext')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem class not found'))
             res = admin_session.post('acct/proclass/1', data={
                 'reqtype': 'remove',
                 'proclass_id': 2,
             })
-            self.assertEqual(res.text, 'Enoext')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem class not found'))
 

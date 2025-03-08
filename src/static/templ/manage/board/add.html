@@ -74,10 +74,11 @@
                 pro_list: pro_list,
                 acct_list: acct_list,
             }, function(res) {
-                if (res[0] == 'E') {
-
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.go(`/oj/manage/board/update/?boardid=${res.data}`);
                 } else {
-                    index.go("/oj/manage/board/");
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
         });

@@ -45,7 +45,7 @@ class ManageQuestionHandler(RequestHandler):
                 index = self.get_argument('index')
                 qacct_id = int(self.get_argument('qacct_id'))
                 await QuestionService.inst.reply(qacct_id, index, rtext)
-                self.finish('S')
+                self.error(('S', ''))
 
             elif reqtype == 'rrpl':
                 rtext = self.get_argument('rtext')
@@ -60,4 +60,4 @@ class ManageQuestionHandler(RequestHandler):
                 index = self.get_argument('index')
                 qacct_id = int(self.get_argument('qacct_id'))
                 await QuestionService.inst.reply(qacct_id, index, rtext)
-                self.finish('S')
+                self.error(('S', ''))

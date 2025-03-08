@@ -22,21 +22,12 @@
                     'mode': mode,
                     'pack_token': pack_token,
                 }, function(res) {
-                    let msg = 'Unknown';
-                    if (res[0] == 'E') {
-                        if (res == 'Enamemin') {
-                            msg = 'Name length < min';
-                        } else if (res == 'Enamemax') {
-                            msg = 'Name length > max';
-                        } else if (res == 'Eparam') {
-                            msg = 'Parameter Error';
-                        } else if (res == 'Econf') {
-                            msg = 'Syntax error';
-                        }
-
-                        index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                        index.go(`/oj/manage/pro/update/?proid=${res.data}`);
                     } else {
-                        index.go(`/oj/manage/pro/update/?proid=${JSON.parse(res)}`);
+                        index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                     }
                 });
             }

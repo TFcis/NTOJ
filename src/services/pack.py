@@ -20,7 +20,7 @@ class PackService:
 
         ret = await self.rs.get(f'PACK_TOKEN@{pack_token}')
         if ret is None:
-            return 'Enoext', None
+            return ('Enoext', 'Pack token not found'), None
 
         await self.rs.delete(f'PACK_TOKEN@{pack_token}')
 
@@ -53,7 +53,7 @@ class PackService:
 
         ret = await self.rs.get(f'PACK_TOKEN@{pack_token}')
         if ret is None:
-            return 'Enoext', None
+            return ('Enoext', 'Pack token not found'), None
 
         await self.rs.delete(f'PACK_TOKEN@{pack_token}')
 
@@ -68,7 +68,7 @@ class PackService:
         # FIXME: Detect zip bomb
         returncode = await self._run_and_wait_process('/bin/tar', '-Jxf', f'tmp/{pack_token}', '-C', dst)
         if returncode != 0:
-            return 'Eunk', None
+            return ('Eunk', 'Unknown error (tar)'), None
 
         os.remove(f'tmp/{pack_token}')
         await self._run_and_wait_process('/bin/bash', 'newline.sh', f'{dst}/res/testdata')

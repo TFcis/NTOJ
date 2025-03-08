@@ -29,15 +29,8 @@
                     'filename': filename,
 					'type': type,
 				}, function (res) {
-					if (res[0] == 'E') {
-						if (res == 'Efile') {
-							file_content = 'File is too large or not utf-8';
-						} else if (res == 'Enoext') {
-							file_content = 'File not found';
-						}
-					} else {
-						file_content = JSON.parse(res);
-					}
+                    res = JSON.parse(res);
+                    file_content = res.data;
 
 					$("#code").find("code").html(file_content);
                     $("#preview-title").text(`${filename}.${type}`);
@@ -63,18 +56,17 @@
 					'weight': weight,
 				}, function (res) {
                     let msg = '';
-                    let dialog_type = null;
-					if (res[0] == 'E') {
-                        dialog_type = index.DIALOG_TYPE.error;
-                        if (res == 'Enoext') {
-                            msg = 'Group not exist';
-                        }
-					} else {
-                        msg = `Update weight of task#${group} successfully.`;
-                        dialog_type = index.DIALOG_TYPE.success;
-					}
+					let dialog_type = null;
 
-                    index.show_notify_dialog(msg, dialog_type);
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+						dialog_type = index.DIALOG_TYPE.success;
+                        msg = `Update weight of task#${group} successfully.`;
+                    } else {
+                        msg = res.data;
+                    }
+
+					index.show_notify_dialog(msg, dialog_type);
                     index.reload();
 				});
 			});
@@ -91,19 +83,16 @@
                     'old_filename': old_filename,
                     'new_filename': new_filename,
 				}, function (res) {
-					let msg = '';
+                    					let msg = '';
 					let dialog_type = null;
-					if (res[0] == 'E') {
-						dialog_type = index.DIALOG_TYPE.error;
-                        if (res == 'Eexist') {
-                            msg = `${new_filename} already exist.`;
-						} else {
-							msg = res;
-						}
-					} else {
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
                         msg = `Rename ${old_filename} to ${new_filename} successfully.`;
-					}
+                    } else {
+                        msg = res.data;
+                    }
 
 					index.show_notify_dialog(msg, dialog_type);
                     index.reload();
@@ -161,15 +150,16 @@
 					'pro_id': pro_id,
                     'filename': filename,
 				}, function (res) {
-					let msg = '';
+                    let msg = '';
 					let dialog_type = null;
-					if (res[0] == 'E') {
-                        msg = res;
-						dialog_type = index.DIALOG_TYPE.error;
-					} else {
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
                         msg = `Upload single file successfully`;
-					}
+                    } else {
+                        msg = res.data;
+                    }
 
 					index.show_notify_dialog(msg, dialog_type);
                     index.reload();
@@ -233,19 +223,16 @@
                     'filename': filename,
 					'type': type,
 				}, function (res) {
-					let msg = '';
+                    					let msg = '';
 					let dialog_type = null;
-					if (res[0] == 'E') {
-						dialog_type = index.DIALOG_TYPE.error;
-						if (res == 'Enoext') {
-							msg = 'File not found';
-						} else {
-							msg = res;
-						}
-					} else {
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
                         msg = `Update ${type} File ${filename} successfully.`;
-					}
+                    } else {
+                        msg = res.data;
+                    }
 
 					index.show_notify_dialog(msg, dialog_type);
                     index.reload();
@@ -296,16 +283,13 @@
             }, function (res) {
                 let msg = '';
                 let dialog_type = null;
-                if (res[0] == 'E') {
-                    dialog_type = index.DIALOG_TYPE.error;
-                    if (res == 'Enoext') {
-                        msg = 'Group not found.';
-                    } else {
-                        msg = res;
-                    }
-                } else {
+
+                res = JSON.parse(res);
+                if (res.status == 'S') {
                     dialog_type = index.DIALOG_TYPE.success;
                     msg = `Add task group successfully.`;
+                } else {
+                    msg = res.data;
                 }
 
                 index.show_notify_dialog(msg, dialog_type);
@@ -321,19 +305,16 @@
 					'pro_id': pro_id,
                     'group': group
 				}, function (res) {
-					let msg = '';
+                    let msg = '';
 					let dialog_type = null;
-					if (res[0] == 'E') {
-						dialog_type = index.DIALOG_TYPE.error;
-						if (res == 'Enoext') {
-							msg = 'Group not found.';
-						} else {
-							msg = res;
-						}
-					} else {
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
                         msg = `Delete task group #${group} successfully.`;
-					}
+                    } else {
+                        msg = res.data;
+                    }
 
 					index.show_notify_dialog(msg, dialog_type);
                     index.reload();
@@ -352,19 +333,16 @@
                     'group': group,
                     'testcase': testcase,
 				}, function (res) {
-					let msg = '';
+                    let msg = '';
 					let dialog_type = null;
-					if (res[0] == 'E') {
-						dialog_type = index.DIALOG_TYPE.error;
-						if (res == 'Enoext') {
-							msg = 'Group or File not found.';
-						} else {
-							msg = res;
-						}
-					} else {
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
                         msg = `Add single testcase ${testcase} to task group #${group} successfully.`;
-					}
+                    } else {
+                        msg = res.data;
+                    }
 
 					index.show_notify_dialog(msg, dialog_type);
                     index.reload();
@@ -382,19 +360,16 @@
                     'group': group,
                     'testcase': testcase,
 				}, function (res) {
-					let msg = '';
+                    let msg = '';
 					let dialog_type = null;
-					if (res[0] == 'E') {
-						dialog_type = index.DIALOG_TYPE.error;
-						if (res == 'Enoext') {
-							msg = 'Group not found.';
-						} else {
-							msg = res;
-						}
-					} else {
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
                         msg = `Delete single testcase ${testcase} from task group #${group} successfully.`;
-					}
+                    } else {
+                        msg = res.data;
+                    }
 
 					index.show_notify_dialog(msg, dialog_type);
                     index.reload();

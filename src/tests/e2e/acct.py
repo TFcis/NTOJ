@@ -10,7 +10,7 @@ class SignTest(AsyncTest):
             'mail': 'admin@test',
             'pw': 'test',
         })
-        self.assertEqual(res.text, 'Esign')
+        self.assertAPIReturnValue(res.text, ('Esign', 'Login failed'))
 
         # signup but failed
         res = requests.post('http://localhost:5501/sign', data={
@@ -19,7 +19,7 @@ class SignTest(AsyncTest):
             'mail': 'test1@test',
             'pw': 'test',
         })
-        self.assertEqual(res.text, 'Eexist')
+        self.assertAPIReturnValue(res.text, ('Eexist', 'Account already exists'))
         async with self.db.acquire() as con:
             result = await con.fetch("SELECT last_value FROM account_acct_id_seq;")
             self.assertEqual(result[0]['last_value'], 2)
@@ -48,7 +48,7 @@ class AcctPageTest(AsyncTest):
                 'cover': 'https://wallpaper.forfun.com/fetch/eb/eb9a621bbe1ceeb38a4387153a4376eb.jpeg',
                 'motto': 'motto test',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('acct/2', user_session)
             trs = html.select_one('form#profile').select('tr')
@@ -72,7 +72,7 @@ class AcctPageTest(AsyncTest):
                 'cover': 'https://wallpaper.forfun.com/fetch/eb/eb9a621bbe1ceeb38a4387153a4376eb.jpeg',
                 'motto': 'motto test',
             })
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text , ('Eacces', 'Permission denied'))
             html = self.get_html('acct/1', user_session)
             self.assertEqual(html.select_one('div#summary > h1').text, 'admin')
             self.assertNotEqual(html.select_one('script#contjs').attrs.get('photo'),
@@ -88,7 +88,7 @@ class AcctPageTest(AsyncTest):
                 'old': 'test',
                 'pw': 'testtest'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             # test change password permission
             res = user_session.post('acctedit', data={
@@ -97,14 +97,14 @@ class AcctPageTest(AsyncTest):
                 'old': 'test',
                 'pw': 'testtest'
             })
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text , ('Eacces', 'Permission denied'))
 
         res = requests.post('http://localhost:5501/sign', data={
             'reqtype': 'signin',
             'mail': 'test1@test',
             'pw': 'test',
         })
-        self.assertEqual(res.text, 'Esign')
+        self.assertAPIReturnValue(res.text, ('Esign', 'Login failed'))
 
         # test admin change password
         with AccountContext('admin@test', 'testtest') as admin_session:
@@ -118,7 +118,7 @@ class AcctPageTest(AsyncTest):
                 'old': '',
                 'pw': 'test'
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('test1@test', 'test') as user_session:
             html = self.get_html('index/', user_session)

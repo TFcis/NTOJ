@@ -37,11 +37,12 @@
                 desc: desc_textarea.value,
                 type: proclass_type,
             }, function(res) {
-                if (res[0] == 'E') {
-
-                } else {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
                     index.show_notify_dialog(`Add Proclass#${res} success`, index.DIALOG_TYPE.success);
-                    index.go(`/oj/acct/proclass/{{ user.acct_id }}?page=update&proclassid=${res}`);
+                    index.go(`/oj/acct/proclass/{{ user.acct_id }}?page=update&proclassid=${res.data}`);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
         });

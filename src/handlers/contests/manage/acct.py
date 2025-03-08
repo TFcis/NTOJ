@@ -34,7 +34,7 @@ class ContestManageAcctHandler(RequestHandler):
         elif list_type == "admin":
             status = UserStatus.ADMIN
         else:
-            self.error('Eparam')
+            self.error(('Eparam', 'Invalid list type'))
             return
 
         if reqtype == "add":
@@ -44,28 +44,28 @@ class ContestManageAcctHandler(RequestHandler):
             }
 
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            await self.finish('S')
+            self.error(('S', f'Account(#{acct_id}) successfully added to user list with {status.name}.'))
 
         elif reqtype == "remove":
             acct_id = int(acct_id)
             if acct_id not in self.contest.user_list:
-                self.error('Enoext')
+                self.error(('Enoext', 'User is not in contest'))
                 return
 
             self.contest.user_list.pop(acct_id)
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            await self.finish('S')
+            self.error(('S', f'Account(#{acct_id} successfully removed from user list.'))
 
         elif reqtype == "multi_add":
-            acct_list = []
+            acct_list = parse_list_str(acct_id)
 
-            for a_id in parse_list_str(acct_id):
+            for a_id in acct_list:
                 self.contest.user_list[a_id] = {
                     "status": status,
                 }
 
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            await self.finish('S')
+            self.error(('S', f'Accounts({acct_list}) successfully added to user list with {status.name}.'))
 
         elif reqtype == "multi_remove":
             acct_list = parse_list_str(acct_id)
@@ -77,10 +77,10 @@ class ContestManageAcctHandler(RequestHandler):
                     continue
 
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
-            await self.finish('S')
+            self.error(('S', f'Accounts(#{acct_list} successfully removed from user list.'))
 
         else:
-            self.error('Eunk')
+            self.error(('Eunk', 'Unknown error'))
             return
 
         if list_type == "normal" or (list_type == "admin" and not self.contest.hide_admin):

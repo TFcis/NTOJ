@@ -25,11 +25,13 @@
 			'gtype': gtype,
 			'gclas': gclas,
 	    }, function(res) {
-			if (res[0] == 'E') {
-			    j_form.find('div.print').print(res);
-			} else {
-			    j_form.find('div.print').print('Done', true);
-			}
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                index.reload();
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
 	    });
 	});
 
@@ -39,7 +41,7 @@
 	    var gclas = j_form.find('#gclas').val();
 
 	    if (gname == '') {
-			j_form.find('div.print').print('name error');
+            index.show_notify_dialog('Group name should not be empty.', index.DIALOG_TYPE.error);
 			return;
 	    }
 
@@ -49,12 +51,13 @@
 			'gtype': gtype,
 			'gclas': gclas
 	    }, function(res) {
-			if (res[0] == 'E') {
-			    j_form.find('div.print').print(res);
-			} else {
-			    j_form.find('div.print').print('Done', true);
-			    index.reload();
-			}
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                index.reload();
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
 	    });
 	});
 
@@ -64,12 +67,13 @@
 			'reqtype': 'del_group',
 			'gname': gname,
 	    }, function(res) {
-			if (res[0] == 'E') {
-			    j_form.find('div.print').print(res);
-			} else {
-			    j_form.find('div.print').print('Done', true);
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
 			    index.go('/oj/manage/group/');
-			}
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
 	    });
 	});
     }

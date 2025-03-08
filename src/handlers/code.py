@@ -9,7 +9,7 @@ from services.code import CodeService
 class CodeHandler(RequestHandler):
     @reqenv
     async def get(self):
-        await self.finish('Eacces')
+        self.error(('Eacces', 'Permission denied'))
 
     @reqenv
     async def post(self):
@@ -35,5 +35,4 @@ class CodeHandler(RequestHandler):
             'comp_type': comp_type,
             'code': tornado.escape.xhtml_escape(code),
         }
-
-        await self.finish(json.dumps(res))
+        self.error(('S', res))

@@ -38,7 +38,10 @@ class ManageBulletinHandler(RequestHandler):
                 pinned = False
 
             color = self.get_argument('color')
-            await BulletinService.inst.add_bulletin(title, content, self.acct.acct_id, color, pinned)
+            err, bulletin_id = await BulletinService.inst.add_bulletin(title, content, self.acct.acct_id, color, pinned)
+            if err:
+                self.error(err)
+                return
 
             await LogService.inst.add_log(
                 f"{self.acct.name} added a line on bulletin: \"{title}\".", 'manage.inform.add',
@@ -48,7 +51,9 @@ class ManageBulletinHandler(RequestHandler):
                     "color": color,
                 }
             )
-            await self.finish('S')
+
+            await self.rs.publish('bulletinsub', 1)
+            self.error(('S', bulletin_id))
 
         elif page == 'update' and reqtype == 'update':
             bulletin_id = int(self.get_argument('bulletin_id'))
@@ -72,13 +77,23 @@ class ManageBulletinHandler(RequestHandler):
                     "color": color,
                 }
             )
-            await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct.acct_id, color, pinned)
-            await self.finish('S')
+            err, _ = await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct.acct_id, color, pinned)
+            if err:
+                self.error(err)
+                return
+
+            await self.rs.publish('bulletinsub', 1)
+            self.error(('S', ''))
 
         elif page == 'update' and reqtype == 'remove':
             bulletin_id = int(self.get_argument('bulletin_id'))
             await LogService.inst.add_log(
                 f"{self.acct.name} removed a line on bulletin which id is #{bulletin_id}.", 'manage.inform.remove'
             )
-            await BulletinService.inst.del_bulletin(bulletin_id)
-            await self.finish('S')
+            err, _ = await BulletinService.inst.del_bulletin(bulletin_id)
+            if err:
+                self.error(err)
+                return
+
+            await self.rs.publish('bulletinsub', 1)
+            self.error(('S', ''))

@@ -10,6 +10,7 @@ from services.pro import ProService
 from services.user import UserConst
 from services.contests import UserStatus
 
+PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
 
 class SubmitHandler(RequestHandler):
     @reqenv
@@ -17,7 +18,7 @@ class SubmitHandler(RequestHandler):
     @contest_require_permission('all')
     async def get(self, pro_id=None):
         if pro_id is None:
-            self.error('Enoext')
+            self.error(('Enoext', 'Missing parameter pro_id'))
             return
 
         pro_id = int(pro_id)
@@ -25,11 +26,11 @@ class SubmitHandler(RequestHandler):
         allow_compilers = ChalConst.ALLOW_COMPILERS
         if self.contest:
             if not self.contest.is_running() and not self.contest.is_admin(self.acct):
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             if not self.contest.is_pro(pro_id):
-                self.error('Enoext')
+                self.error(('Enoext', 'Problem not in contest'))
                 return
 
             allow_compilers = self.contest.allow_compilers
@@ -47,11 +48,11 @@ class SubmitHandler(RequestHandler):
             return
 
         if pro['status'] == ProService.STATUS_OFFLINE:
-            self.error('Eacces')
+            self.error(PERMISSION_DENIED_ERROR)
             return
 
         if not pro['allow_submit']:
-            self.error('Eacces')
+            self.error(('Eacces', 'Problem did not allow submit'))
             return
 
         if pro['testm_conf']['is_makefile']:
@@ -67,7 +68,7 @@ class SubmitHandler(RequestHandler):
         can_submit = JudgeServerClusterService.inst.is_server_online()
 
         if not can_submit:
-            self.error('Ejudge')
+            self.error(('Ejudge', 'No available judge'))
             return
 
         contest_id = 0
@@ -83,11 +84,11 @@ class SubmitHandler(RequestHandler):
             if self.contest:
                 pri = ChalConst.CONTEST_PRI
                 if not self.contest.is_running() and not self.contest.is_admin(self.acct):
-                    self.error('Eacces')
+                    self.error(PERMISSION_DENIED_ERROR)
                     return
 
                 if not self.contest.is_pro(pro_id):
-                    self.error('Enoext')
+                    self.error(('Enoext', 'Problem not in contest'))
                     return
             else:
                 pri = ChalConst.NORMAL_PRI
@@ -103,15 +104,15 @@ class SubmitHandler(RequestHandler):
                 return
 
             if pro['status'] == ProService.STATUS_OFFLINE:
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             elif pro['status'] == ProService.STATUS_CONTEST and not self.contest:
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             if not pro['allow_submit']:
-                self.error('Eacces')
+                self.error(('Eacces', 'Problem did not allow submit'))
                 return
 
             err, chal_id = await ChalService.inst.add_chal(pro_id, self.acct.acct_id, contest_id, comp_type, code)
@@ -136,11 +137,11 @@ class SubmitHandler(RequestHandler):
                 comp_type = chal['comp_type']
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
                 if err:
-                    self.finish(err)
+                    self.error(err)
                     return
 
         else:
-            self.error('Eparam')
+            self.error(('Eunk', 'Unknown error'))
             return
 
         err, _ = await ChalService.inst.emit_chal(
@@ -157,8 +158,7 @@ class SubmitHandler(RequestHandler):
         if reqtype == 'submit' and pro['status'] == ProService.STATUS_ONLINE:
             await self.rs.publish('challist_sub', str(1))
 
-        self.finish(json.dumps(chal_id))
-        return
+        self.error(('S', chal_id))
 
     async def is_allow_submit(self, code: str, comp_type: str, pro_id: int):
         # limits variable config
@@ -169,14 +169,14 @@ class SubmitHandler(RequestHandler):
             submit_cd_time = self.contest.submission_cd_time
 
         if len(code.strip()) == 0:
-            return 'Eempty'
+            return ('Eempty', 'Submitted code should not be empty')
 
         if len(code) > ProService.CODE_MAX:
-            return 'Ecodemax'
+            return ('Ecodemax', 'Submitted code too long')
 
         # TODO: if problem is makefile type, we should restrict compiler type
         if comp_type not in allow_compilers:
-            return 'Ecomp'
+            return ('Ecomp', 'The compiler is not allowed')
 
         should_check_submit_cd = (
             self.contest is None and not self.acct.is_kernel()  # not in contest
@@ -191,7 +191,7 @@ class SubmitHandler(RequestHandler):
             crc32 = str(zlib.crc32(code.encode('utf-8')))
 
             if (await self.rs.sismember(name, crc32)):
-                return 'Esame'
+                return ('Esame', 'Do not submit same code')
 
         if should_check_submit_cd:
             last_submit_name = f"last_submit_time_{self.acct.acct_id}"
@@ -203,7 +203,9 @@ class SubmitHandler(RequestHandler):
                 last_submit_time = int(str(last_submit_time)[2:-1])
                 elapsed_time = int(time.time()) - last_submit_time
                 if elapsed_time < submit_cd_time:
-                    return f'Einternal{submit_cd_time}:{elapsed_time}'
+                    remaining_time = submit_cd_time - elapsed_time
+                    remaining_time = max(remaining_time, 0)
+                    return ('Einternal', f'Submit CD Time: {submit_cd_time} Secs, Remaining: {remaining_time} Secs')
 
                 else:
                     await self.rs.set(last_submit_name, int(time.time()))

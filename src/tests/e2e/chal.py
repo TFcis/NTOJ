@@ -14,7 +14,7 @@ class ChalTest(AsyncTest):
             res = user_session.post('code', data={
                 'chal_id': 1
             })
-            self.assertEqual(res.text, 'Eacces')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             # NOTE: If STATE_ERR(IE), judge request will not send
@@ -22,16 +22,16 @@ class ChalTest(AsyncTest):
             res = admin_session.post('code', data={
                 'chal_id': 1
             })
-            self.assertNotEqual(res.text, 'Eacces')
             res = json.loads(res.text)
-            self.assertEqual(res['comp_type'], 'python')
-            self.assertEqual(res['code'].strip(), 'EROOR: The code is lost on server.')
+            self.assertNotEqual(res['status'], 'Eacces')
+            self.assertEqual(res['data']['comp_type'], 'python')
+            self.assertEqual(res['data']['code'].strip(), 'EROOR: The code is lost on server.')
 
             res = admin_session.post('submit', data={
                 'reqtype': 'rechal',
                 'chal_id': 1
             })
-            self.assertEqual(res.text, '1')
+            self.assertAPIReturnValue(res.text, ('S', 1))
             chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
             self.assertEqual(chal_states_result, [ChalConst.STATE_ERR] * len(chal_states_result))
             shutil.move('code/1/main.cpp', 'code/1/main.py')
@@ -44,7 +44,7 @@ class ChalTest(AsyncTest):
                     'reqtype': 'rechal',
                     'chal_id': 1
                 })
-                self.assertEqual(res.text, '1')
+                self.assertAPIReturnValue(res.text, ('S', 1))
 
             await self.wait_for_judge_finish(callback)
 

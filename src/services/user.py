@@ -81,7 +81,7 @@ class UserService:
                 mail,
             )
         if len(result) != 1:
-            return 'Esign', None
+            return ('Esign', 'Login failed'), None
 
         acct_id = result[0]['acct_id']
         hpw = result[0]['password']
@@ -90,24 +90,24 @@ class UserService:
         if bcrypt.hashpw(pw.encode('utf-8'), hpw) == hpw:
             return None, acct_id
 
-        return 'Esign', None
+        return ('Esign', 'Login failed'), None
 
     async def sign_up(self, mail, pw, name):
         tmp_len = len(mail)
         if tmp_len < UserConst.MAIL_MIN:
-            return 'Emailmin', None
+            return ('Emailmin', 'Mail too short'), None
         if tmp_len > UserConst.MAIL_MAX:
-            return 'Emailmax', None
+            return ('Emailmax', 'Mail too long'), None
         tmp_len = len(pw)
         if tmp_len < UserConst.PW_MIN:
-            return 'Epwmin', None
+            return ('Epwmin', 'Password too short'), None
         if tmp_len > UserConst.PW_MAX:
-            return 'Epwmax', None
+            return ('Epwmax', 'Password too long'), None
         tmp_len = len(name)
         if tmp_len < UserConst.NAME_MIN:
-            return 'Enamemin', None
+            return ('Enamemin', 'Username too short'), None
         if tmp_len > UserConst.NAME_MAX:
-            return 'Enamemax', None
+            return ('Enamemax', 'Username too long'), None
         del tmp_len
 
         hpw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
@@ -133,15 +133,16 @@ class UserService:
                 cur_acct_id = int(result[0]['last_value'])
                 await con.execute(f"SELECT setval('account_acct_id_seq', {cur_acct_id - 1}, true);")
 
-            return 'Eexist', None
+            return ('Eexist', 'Account already exists'), None
 
         if len(result) != 1:
-            return 'Eexist', None
+            return ('Eexist', 'Account already exists'), None
 
         await self.rs.delete('acctlist')
         return None, result[0]['acct_id']
 
     async def info_sign(self, req):
+        # TODO: There is no check for the return error value of this function anywhere.
         acct_id = req.get_secure_cookie('id')
         try:
             ip = req.request.remote_ip
@@ -192,7 +193,7 @@ class UserService:
 
         return None, acct_id, ip
 
-    async def info_acct(self, acct_id) -> Tuple[None, Account] | Tuple[Literal['Enoext'], None]:
+    async def info_acct(self, acct_id):
         if acct_id is None:
             return None, GUEST_ACCOUNT
 
@@ -211,7 +212,7 @@ class UserService:
                     acct_id,
                 )
             if len(result) != 1:
-                return 'Enoext', None
+                return ('Enoext', 'Account not found'), None
 
             result = result[0]
 
@@ -235,17 +236,17 @@ class UserService:
 
     async def update_acct(self, acct_id, acct_type, name, photo, cover, motto, proclass_collection):
         if acct_type not in [UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER]:
-            return 'Eparam1', None
+            return ('Eparam', 'Invalid account type'), None
         name_len = len(name)
         if name_len < UserConst.NAME_MIN:
-            return 'Enamemin', None
+            return ('Enamemin', 'Username too short'), None
         if name_len > UserConst.NAME_MAX:
-            return 'Enamemax', None
+            return ('Enamemax', 'Username too long'), None
         motto_len = len(motto)
         if motto_len < UserConst.MOTTO_MIN:
-            return 'Emottomin', None
+            return ('Emottomin', 'Motto too short'), None
         if motto_len > UserConst.MOTTO_MAX:
-            return 'Emottomax', None
+            return ('Emottomax', 'Motto too long'), None
 
         acct_id = int(acct_id)
 
@@ -264,7 +265,7 @@ class UserService:
                 acct_id,
             )
             if len(result) != 1:
-                return 'Enoext', None
+                return ('Enoext', 'Account not found'), None
 
             await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
 
@@ -276,21 +277,21 @@ class UserService:
     async def update_pw(self, acct_id, old, pw, isadmin):
         pw_len = len(pw)
         if pw_len < UserConst.PW_MIN:
-            return 'Epwmin', None
+            return ('Epwmin', 'Password too short'), None
         if pw_len > UserConst.PW_MAX:
-            return 'Epwmax', None
+            return ('Epwmax', 'Password too long'), None
         acct_id = int(acct_id)
 
         async with self.db.acquire() as con:
             result = await con.fetch('SELECT "password" FROM "account" WHERE "acct_id" = $1;', acct_id)
             if len(result) != 1:
-                return 'Eexist', None
+                return ('Enoext', 'Account not found'), None
             result = result[0]
 
             hpw = base64.b64decode(result['password'].encode('utf-8'))
             # NOTE: old != current password
             if (bcrypt.hashpw(old.encode('utf-8'), hpw) != hpw) and not isadmin:
-                return 'Epwold', None
+                return ('Epwold', 'New password same as old password'), None
 
             hpw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
             await con.execute(

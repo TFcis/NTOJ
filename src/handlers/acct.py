@@ -11,6 +11,7 @@ from services.user import UserConst, UserService
 from services.chal import ChalConst
 from utils.numeric import parse_list_str
 
+PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
 
 class AcctHandler(RequestHandler):
     @reqenv
@@ -70,7 +71,7 @@ class AcctConfigHandler(RequestHandler):
     @reqenv
     async def get(self, acct_id=None):
         if acct_id is None:
-            self.error('Enoext')
+            self.error(('Enoext', 'Missing parameter acct_id'))
             return
         acct_id = int(acct_id)
         err, acct = await UserService.inst.info_acct(acct_id)
@@ -93,7 +94,7 @@ class AcctConfigHandler(RequestHandler):
             target_acct_id = self.get_argument('acct_id')
 
             if target_acct_id != str(self.acct.acct_id):
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             err, _ = await UserService.inst.update_acct(
@@ -103,7 +104,7 @@ class AcctConfigHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish('S')
+            self.error(('S', ''))
             return
 
         elif reqtype == 'reset':
@@ -112,7 +113,7 @@ class AcctConfigHandler(RequestHandler):
             target_acct_id = int(self.get_argument('acct_id'))
 
             if not (self.acct.acct_id == target_acct_id or self.acct.is_kernel()):
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             err, _ = await UserService.inst.update_pw(target_acct_id, old, pw, self.acct.is_kernel())
@@ -125,10 +126,10 @@ class AcctConfigHandler(RequestHandler):
                     f"{self.acct.name} was changing the password of user #{target_acct_id}.", 'manage.acct.update.pwd'
                 )
 
-            self.finish('S')
+            self.error(('S', ''))
             return
 
-        self.error('Eunk')
+        self.error(('Eunk', 'Unknown error'))
 
 class AcctProClassHandler(RequestHandler):
     @reqenv
@@ -152,7 +153,7 @@ class AcctProClassHandler(RequestHandler):
             proclass_id = int(self.get_argument('proclassid'))
             _, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if proclass['acct_id'] != self.acct.acct_id:
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             await self.render('acct/proclass-update', proclass_id=proclass_id, proclass=proclass)
@@ -171,11 +172,11 @@ class AcctProClassHandler(RequestHandler):
             p_list = parse_list_str(p_list_str)
 
             if proclass_type not in [ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN]:
-                self.error('Eparam')
+                self.error(('Eparam', 'Invalid problem class type'))
                 return
 
             if len(p_list) == 0:
-                self.error('E')
+                self.error(('Eparam', 'Problem list should not be empty'))
                 return
 
             await LogService.inst.add_log(
@@ -191,7 +192,7 @@ class AcctProClassHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish(str(proclass_id))
+            self.error(('S', proclass_id))
 
         elif reqtype == "update":
             proclass_id = int(self.get_argument('proclass_id'))
@@ -207,15 +208,15 @@ class AcctProClassHandler(RequestHandler):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them", 'user.proclass.update.failed'
                 )
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             if proclass_type not in [ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN]:
-                self.error('Eparam')
+                self.error(('Eparam', 'Invalid problem class type'))
                 return
 
             if len(p_list) == 0:
-                self.error('E')
+                self.error(('Eparam', 'Problem list should not be empty'))
                 return
 
             await LogService.inst.add_log(
@@ -231,7 +232,7 @@ class AcctProClassHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish('S')
+            self.error(('S', ''))
 
         elif reqtype == "remove":
             proclass_id = int(self.get_argument('proclass_id'))
@@ -245,7 +246,7 @@ class AcctProClassHandler(RequestHandler):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them", 'user.proclass.remove.failed'
                 )
-                self.error('Eacces')
+                self.error(PERMISSION_DENIED_ERROR)
                 return
 
             await LogService.inst.add_log(
@@ -253,7 +254,7 @@ class AcctProClassHandler(RequestHandler):
             )
             await ProClassService.inst.remove_proclass(proclass_id)
 
-            self.finish('S')
+            self.error(('S', ''))
 
 class SignHandler(RequestHandler):
     @reqenv
@@ -287,7 +288,7 @@ class SignHandler(RequestHandler):
             )
 
             self.set_secure_cookie('id', str(acct_id), path='/oj', httponly=True)
-            self.finish('S')
+            self.error(('S', ''))
 
         elif reqtype == 'signup':
             mail = self.get_argument('mail')
@@ -300,7 +301,7 @@ class SignHandler(RequestHandler):
                 return
 
             self.set_secure_cookie('id', str(acct_id), path='/oj', httponly=True)
-            self.finish('S')
+            self.error(('S', ''))
 
         elif reqtype == 'signout':
             await LogService.inst.add_log(
@@ -314,4 +315,4 @@ class SignHandler(RequestHandler):
             )
 
             self.clear_cookie('id', path='/oj')
-            self.finish('S')
+            self.error(('S', ''))

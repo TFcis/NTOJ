@@ -48,10 +48,10 @@ class ContestScoreboardHandler(RequestHandler):
     @reqenv
     async def post(self):
         if not self.contest.is_start() and not self.contest.is_admin(self.acct):
-            self.error('Eacces')
+            self.error(('Eacces', 'Permission denied'))
             return
         elif not self.contest.is_public_scoreboard and not self.contest.is_member(self.acct):
-            self.error('Eacces')
+            self.error(('Eacces', 'Permission denied'))
             return
 
         has_end_time = True
@@ -137,7 +137,7 @@ class ContestScoreboardHandler(RequestHandler):
                 'total_score': total_score
             })
 
-        self.finish(json.dumps(all_scores, cls=_JsonDatetimeEncoder))
+        self.error(('S', all_scores), encoder=_JsonDatetimeEncoder)
 
 
 class ContestScoreboardNewChalHandler(WebSocketSubHandler):

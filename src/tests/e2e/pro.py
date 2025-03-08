@@ -16,7 +16,7 @@ class ProTest(AsyncTest):
                 'pro_id': 1,
                 'tags': 'GCD',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('pro/1', admin_session)
             self.assertEqual(html.select_one('input#tags').attrs.get('value'), 'GCD')
@@ -39,7 +39,7 @@ class ProTest(AsyncTest):
                 'pro_id': 1,
                 'tags': '',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('pro/1', admin_session)
             self.assertEqual(html.select_one('input#tags').attrs.get('value'), '')

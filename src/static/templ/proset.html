@@ -115,18 +115,8 @@
                         'reqtype': action,
                         'proclass_id': proclass.proclass_id,
                     }, function(res) {
-                        if (res[0] == 'E') {
-                            // TODO: notify dialog will cover by current dialog, we should make notify dialog on the top
-                            let msg = '';
-                            if (res == 'Eacces') {
-                                msg = 'You should login first';
-                            } else if (res == 'Enoext') {
-                                msg = 'Proclass not in your collection';
-                            } else if (res == 'Eexist') {
-                                msg = 'Proclass already in your collection';
-                            }
-                            index.show_notify_dialog(msg, index.DIALOG_TYPE.error);
-                        } else {
+                        res = JSON.parse(res);
+                        if (res.status == 'S') {
                             if (action == "decollect") {
                                 j_this.attr("actionType", "collect");
                                 j_this.text("Collect");
@@ -135,6 +125,8 @@
                                 j_this.text("Decollect");
                             }
                             proclass_cata = null;
+                        } else {
+                            index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                         }
                     });
                 });
@@ -158,7 +150,7 @@
                 $.post("/oj/be/proset", {
                     "reqtype": "listproclass"
                 }, function (e) {
-                    proclass_cata = JSON.parse(e);
+                    proclass_cata = JSON.parse(e).data;
                     render_proclass_list("official");
                 });
             } else {
@@ -178,7 +170,7 @@
                     $.post("/oj/be/proset", {
                         "reqtype": "listproclass"
                     }, function (e) {
-                        proclass_cata = JSON.parse(e);
+                        proclass_cata = JSON.parse(e).data;
                         render_proclass_list(proclass_type);
                     });
                 } else {

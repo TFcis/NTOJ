@@ -25,7 +25,7 @@ class QuestionHandler(RequestHandler):
         if reqtype == 'ask':
             qtext = str(self.get_argument('qtext'))
             if len(qtext.strip()) == 0:
-                self.error('Equesempty')
+                self.error(('Equesempty', 'Question should not be empty'))
                 return
 
             err = await QuestionService.inst.set_ques(self.acct.acct_id, qtext)
@@ -33,7 +33,7 @@ class QuestionHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish('S')
+            self.error(('S', ''))
 
         elif reqtype == 'rm_ques':
             index = int(self.get_argument('index'))
@@ -42,4 +42,4 @@ class QuestionHandler(RequestHandler):
                 self.error(err)
                 return
 
-            self.finish('S')
+            self.error(('S', ''))

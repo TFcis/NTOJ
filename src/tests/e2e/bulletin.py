@@ -26,7 +26,7 @@ class BulletinTest(AsyncTest):
                 'color': 'white',
                 'pinned': 'false',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('manage/bulletin/add', data={
                 'reqtype': 'add',
                 'title': 'bulletin 2 (pinned)',
@@ -34,7 +34,7 @@ class BulletinTest(AsyncTest):
                 'color': 'red',
                 'pinned': 'true',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             # view info
             html = self.get_html('info', admin_session)
@@ -58,7 +58,7 @@ class BulletinTest(AsyncTest):
                 'color': 'red',
                 'pinned': 'true',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('bulletin/2', admin_session)
             self.assertEqual(html.select_one('h2').text.strip(), 'bulletin 2 (pinned) updated')
@@ -84,7 +84,7 @@ int main() {
                 'color': 'red',
                 'pinned': 'true',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             html = self.get_html('bulletin/2', admin_session)
             self.assertEqual(html.select_one('h2').text.strip(), 'bulletin 2 (pinned) updated')
@@ -95,8 +95,8 @@ int main() {
                 'reqtype': 'remove',
                 'bulletin_id': '2',
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             res = admin_session.get('bulletin/2')
-            self.assertEqual(res.text, 'Enoext')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Bulletin not found'))
 
             ws.close()

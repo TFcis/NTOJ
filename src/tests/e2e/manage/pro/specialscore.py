@@ -23,7 +23,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                 'status': ProConst.STATUS_ONLINE,
                 'mode': 'manual',
             })
-            self.assertEqual(res.text, str(expected_pro_id))
+            self.assertAPIReturnValue(res.text, ('S', expected_pro_id))
 
             res = admin_session.post('manage/pro/update', data={
                 'reqtype': 'updatepro',
@@ -36,7 +36,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                 "check_type": ProConst.CHECKER_CMS,
                 "rate_precision": 2,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             res = admin_session.post('manage/pro/update', data={
                 'reqtype': 'updatelimit',
@@ -48,7 +48,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                     }
                 })
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             # NOTE: In this case, the testcase is not important, but we need at least one testcase because without any test cases, the judge cannot function.
             inputfile_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
@@ -60,7 +60,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                 'input_pack_token': inputfile_token,
                 'output_pack_token': outputfile_token,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             # NOTE: add checker
             pack_token = await self._upload_file(f'{checker_path}/res/check/check.cpp', admin_session)
@@ -71,7 +71,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                 'path': 'res/check',
                 'pack_token': pack_token,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
             pack_token = await self._upload_file(f'{checker_path}/res/check/build', admin_session)
             res = admin_session.post('manage/pro/filemanager', data={
                 'reqtype': 'addsinglefile',
@@ -80,7 +80,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                 'path': 'res/check',
                 'pack_token': pack_token,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
     async def cf_style_special_score(self):
         with AccountContext("admin@test", "testtest") as admin_session:
@@ -91,7 +91,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                 'pro_id': 5,
                 'weight': 100, # NOTE: weight is not important, because we will be overwritten by the checker
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
                 'reqtype': 'addsingletestcase',
@@ -99,7 +99,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                 'testcase': '1',
                 'group': 0,
             })
-            self.assertEqual(res.text, 'S')
+            self.assertAPIReturnSuccess(res.text)
 
             def callback():
                 chal_id = self.submit_problem(5, 'print(32.27)', 'python3', admin_session)
@@ -141,7 +141,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                     'pro_id': 6,
                     'weight': weight,
                 })
-                self.assertEqual(res.text, 'S')
+                self.assertAPIReturnSuccess(res.text)
 
                 res = admin_session.post('manage/pro/updatetests?proid=1', data={
                     'reqtype': 'addsingletestcase',
@@ -149,7 +149,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                     'testcase': '1',
                     'group': group_idx,
                 })
-                self.assertEqual(res.text, 'S')
+                self.assertAPIReturnSuccess(res.text)
 
             def callback():
                 chal_id = self.submit_problem(6, 'print(50)', 'python3', admin_session)
