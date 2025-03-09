@@ -60,6 +60,37 @@
         on = false;
         index.go('/oj/info/');
       });
+
+      {% if is_in_contest and not contest.is_end() %}
+        var contest_start = new Date("{{ contest.contest_start }}");
+        var contest_end = new Date("{{ contest.contest_end }}");
+        var started = false, ended = false;
+        function timer1() {
+            let cur_time = new Date();
+            if (cur_time >= contest_start && !started) {
+                started = true;
+                if (confirm("The contest has started. Do you want to reload the page?")) {
+                    index.reload();
+                }
+            }
+        }
+        function timer2() {
+            let cur_time = new Date();
+            if (cur_time >= contest_end && !ended) {
+                ended = true;
+                if (confirm("The contest has ended. Do you want to reload the page?")) {
+                    index.reload();
+                }
+            }
+        }
+        let cur_time = new Date();
+        if (cur_time < contest_start) {
+            setInterval(timer1, 1);
+        } else if (cur_time > contest_start && cur_time < contest_end) {
+            setInterval(timer2, 1);
+        }
+    {% end %}
+
     });
   </script>
 </head>
