@@ -61,7 +61,7 @@
                 <select id="compilerList" class="form-select">
                     <!-- TODO:  -->
                     {% for compiler in allow_compilers %}
-                        <option value="{{ compiler }}">{{ ChalConst.COMPILER_NAME[compiler] }}</option>
+                        <option value="{{ compiler }}" {% if user.last_compiler == compiler %} selected {% end %}>{{ ChalConst.COMPILER_NAME[compiler] }}</option>
                     {% end %}
                 </select>
             </div>

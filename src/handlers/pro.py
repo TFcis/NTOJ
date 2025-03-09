@@ -215,8 +215,7 @@ class ProsetHandler(RequestHandler):
 
             self.acct.proclass_collection.append(proclass_id)
             self.acct.proclass_collection.sort()
-            await UserService.inst.update_acct(self.acct.acct_id, self.acct.acct_type, self.acct.name,
-                                         self.acct.photo, self.acct.cover, self.acct.motto, self.acct.proclass_collection)
+            await UserService.inst.update_acct(self.acct)
             self.error(('S', ''))
 
         elif reqtype == "decollect":
@@ -232,8 +231,7 @@ class ProsetHandler(RequestHandler):
 
             self.acct.proclass_collection.remove(proclass_id)
             self.acct.proclass_collection.sort()
-            await UserService.inst.update_acct(self.acct.acct_id, self.acct.acct_type, self.acct.name,
-                                         self.acct.photo, self.acct.cover, self.acct.motto, self.acct.proclass_collection)
+            await UserService.inst.update_acct(self.acct)
             self.error(('S', ''))
 
 

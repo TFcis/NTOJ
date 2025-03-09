@@ -96,9 +96,11 @@ class AcctConfigHandler(RequestHandler):
                 self.error(('Eacces', 'Permission denied'))
                 return
 
-            err, _ = await UserService.inst.update_acct(
-                self.acct.acct_id, self.acct.acct_type, name, photo, cover, motto, self.acct.proclass_collection,
-            )
+            self.acct.name = name
+            self.acct.photo = photo
+            self.acct.cover = cover
+            self.acct.motto = motto
+            err, _ = await UserService.inst.update_acct(self.acct)
             if err:
                 self.error(err)
                 return

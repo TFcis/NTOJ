@@ -38,6 +38,7 @@ class Account:
     cover: str
     motto: str
     lastip: str
+    last_compiler: str
     proclass_collection: list[int]
 
     def is_kernel(self):
@@ -48,7 +49,7 @@ class Account:
 
 
 GUEST_ACCOUNT = Account(
-    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', motto='', proclass_collection=[]
+    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', last_compiler='', motto='', proclass_collection=[]
 )
 
 
@@ -206,7 +207,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "motto", "proclass_collection"
+                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "last_compiler", "motto", "proclass_collection"
                         FROM "account" WHERE "acct_id" = $1;
                     ''',
                     acct_id,
@@ -224,6 +225,7 @@ class UserService:
                 photo=result['photo'],
                 cover=result['cover'],
                 motto=result['motto'],
+                last_compiler=result['last_compiler'],
                 lastip=result['lastip'],
                 proclass_collection=result['proclass_collection'],
             )
@@ -234,42 +236,52 @@ class UserService:
 
         return None, acct
 
-    async def update_acct(self, acct_id, acct_type, name, photo, cover, motto, proclass_collection):
-        if acct_type not in [UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER]:
+    async def update_acct(self, acct: Account):
+        from services.chal import ChalConst
+        if acct.acct_type not in [UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER]:
             return ('Eparam', 'Invalid account type'), None
-        name_len = len(name)
+        name_len = len(acct.name)
         if name_len < UserConst.NAME_MIN:
             return ('Enamemin', 'Username too short'), None
         if name_len > UserConst.NAME_MAX:
             return ('Enamemax', 'Username too long'), None
-        motto_len = len(motto)
+        motto_len = len(acct.motto)
         if motto_len < UserConst.MOTTO_MIN:
             return ('Emottomin', 'Motto too short'), None
         if motto_len > UserConst.MOTTO_MAX:
             return ('Emottomax', 'Motto too long'), None
 
-        acct_id = int(acct_id)
+        if acct.last_compiler not in ChalConst.ALLOW_COMPILERS:
+            return ('Eparam', 'Invalid last compiler option'), None
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    UPDATE "account"
-                    SET "acct_type" = $1, "name" = $2, "photo" = $3, "cover" = $4, "motto" = $5, "proclass_collection" = $6 WHERE "acct_id" = $7 RETURNING "acct_id";
+                    UPDATE
+                        "account"
+                    SET
+                        "acct_type" = $1, "name" = $2,
+                        "photo" = $3, "cover" = $4,
+                        "last_compiler" = $5,
+                        "motto" = $6, "proclass_collection" = $7
+                    WHERE
+                        "acct_id" = $8 RETURNING "acct_id";
                 ''',
-                acct_type,
-                name,
-                photo,
-                cover,
-                motto,
-                proclass_collection,
-                acct_id,
+                acct.acct_type,
+                acct.name,
+                acct.photo,
+                acct.cover,
+                acct.last_compiler,
+                acct.motto,
+                acct.proclass_collection,
+                acct.acct_id,
             )
             if len(result) != 1:
                 return ('Enoext', 'Account not found'), None
 
             await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
 
-        await self.rs.delete(f'account@{acct_id}')
+        await self.rs.delete(f'account@{acct.acct_id}')
         await self.rs.delete('acctlist')
 
         return None, None
@@ -331,6 +343,7 @@ class UserService:
                     photo='',
                     cover='',
                     motto='',
+                    last_compiler='',
                     lastip=lastip,
                     proclass_collection=[],
                 )

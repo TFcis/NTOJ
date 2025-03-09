@@ -355,7 +355,7 @@ class ChalService:
             '''INSERT INTO "test"
                 ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp")
                 VALUES ($1, $2, $3, $4, $5, $6);''',
-
+                insert_values
             )
 
         await self.update_challenge_state(chal_id)

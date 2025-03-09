@@ -54,7 +54,8 @@ class ManageAcctHandler(RequestHandler):
                 'manage.acct.update',
             )
 
-            err, _ = await UserService.inst.update_acct(acct_id, acct_type, acct.name, acct.photo, acct.cover, acct.motto, acct.proclass_collection)
+            acct.acct_type = acct_type
+            err, _ = await UserService.inst.update_acct(acct)
             if err:
                 self.error(err)
                 return
