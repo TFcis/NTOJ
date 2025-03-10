@@ -6,6 +6,7 @@ import os
 import tornado.web
 import tornado.escape
 from msgpack import packb, unpackb
+from natsort import natsorted
 
 import config
 from handlers.base import RequestHandler, reqenv, require_permission
@@ -66,20 +67,20 @@ class ManageProHandler(RequestHandler):
             testm_conf = pro['testm_conf']
             dirs = []
             if testm_conf['is_makefile']:
-                files = list(sorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/res/make/{name}'), os.listdir(f'problem/{pro_id}/res/make'))))
+                files = list(natsorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/res/make/{name}'), os.listdir(f'problem/{pro_id}/res/make'))))
                 dirs.append({
                     'path': 'res/make',
                     'files': files,
                 })
 
             if testm_conf['check_type'] in [ProConst.CHECKER_IOREDIR, ProConst.CHECKER_CMS]:
-                files = list(sorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/res/check/{name}'), os.listdir(f'problem/{pro_id}/res/check'))))
+                files = list(natsorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/res/check/{name}'), os.listdir(f'problem/{pro_id}/res/check'))))
                 dirs.append({
                     'path': 'res/check',
                     'files': files,
                 })
 
-            files = list(sorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/http/{name}'), os.listdir(f'problem/{pro_id}/http'))))
+            files = list(natsorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/http/{name}'), os.listdir(f'problem/{pro_id}/http'))))
             dirs.append({
                 'path': 'http',
                 'files': files,
@@ -132,7 +133,7 @@ class ManageProHandler(RequestHandler):
                 self.error(err)
                 return
 
-            files = sorted(set(map(lambda file: file.replace('.in', '').replace('.out', ''),
+            files = natsorted(set(map(lambda file: file.replace('.in', '').replace('.out', ''),
                         filter(lambda file: file.endswith('.in') or file.endswith('.out'), os.listdir(f'problem/{pro_id}/res/testdata')))))
 
             await self.render(
