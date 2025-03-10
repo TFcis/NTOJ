@@ -5,7 +5,7 @@ from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService
 from services.contests import ContestService, ProblemScoreType
 from services.judge import JudgeServerClusterService
-from services.pro import ProService
+from services.pro import ProService, ProConst
 from utils.numeric import parse_list_str
 
 
@@ -18,8 +18,8 @@ class ContestManageProHandler(RequestHandler):
             _, pro = await ProService.inst.get_pro(pro_id, is_contest=True)
             pro_list.append(pro)
 
-        await self.render('contests/manage/pro', page='pro',
-                          contest_id=self.contest.contest_id, pro_list=pro_list)
+        await self.render('contests/manage/pro', page='pro', contest_id=self.contest.contest_id,
+                          contest=self.contest, pro_list=pro_list)
 
     @reqenv
     @contest_require_permission('admin')
@@ -124,6 +124,29 @@ class ContestManageProHandler(RequestHandler):
 
             await asyncio.create_task(_rechal(rechals=result))
             self.error(('S', f'Problem(#{pro_id}) is rechallenging.'))
+
+        # TODO: public e2e test
+        elif reqtype == "public":
+            pro_id = int(pro_id)
+            if not self.contest.is_pro(pro_id):
+                self.error(('Enoext', f'Problem(#{pro_id}) not in contest'))
+                return
+
+            if not self.contest.is_end():
+                self.error(('Etime', 'Contest is not over yet'))
+                return
+
+            err, pro = await ProService.inst.get_pro(pro_id, is_contest=True)
+            if err:
+                self.error(err)
+                return
+
+            err, _ = await ProService.inst.update_pro(pro_id, pro['name'], ProConst.STATUS_ONLINE, None, None, pro['tags'])
+            if err:
+                self.error(err)
+                return
+
+            self.error(('S', ''))
 
         else:
             self.error(('Eunk', 'Unknown error'))
