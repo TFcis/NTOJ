@@ -152,8 +152,14 @@ class ChalListTest(AsyncTest):
             chal_states_result = self.get_chal_state(chal_id=9, session=admin_session)
             self.assertEqual(chal_states_result, [ChalConst.STATE_AC] * len(chal_states_result))
 
-            html = self.get_html('chal', admin_session)
+            html = self.get_html('chal/4', admin_session)
+            self.assertIsNotNone(html.select_one("#challengeResponseInfo"))
 
+            with AccountContext('test1@test', 'test') as user_session:
+                html = self.get_html('chal/4', user_session)
+                self.assertIsNone(html.select_one("#challengeResponseInfo"))
+
+            html = self.get_html('chal', admin_session)
             all_states = []
             all_expected_states = [
                 ChalConst.STATE_AC, ChalConst.STATE_RESIG, ChalConst.STATE_RE, ChalConst.STATE_MLE, ChalConst.STATE_TLE,
