@@ -18,7 +18,7 @@ import url as ur
 from services.judge import JudgeServerClusterService
 from services.service import services_init
 
-MAX_WAIT_SECONDS_BEFORE_SHUTDOWN = 3
+MAX_WAIT_SECONDS_BEFORE_SHUTDOWN = 0
 
 
 def sig_handler(server, db, rs, pool, sig, frame):
