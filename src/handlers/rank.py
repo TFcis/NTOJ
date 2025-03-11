@@ -50,7 +50,7 @@ class ProRankHandler(RequestHandler):
                     INNER JOIN "challenge_state"
                     ON "challenge"."chal_id"="challenge_state"."chal_id"
 
-                    WHERE "challenge_state"."state"={ChalConst.STATE_AC}
+                    WHERE "challenge_state"."state"={ChalConst.STATE_AC} AND "challenge"."contest_id" = 0
 
                     ORDER BY "challenge"."acct_id" ASC, "challenge_state"."rate" DESC,
                     "challenge_state"."runtime" ASC, "challenge_state"."memory" ASC,
