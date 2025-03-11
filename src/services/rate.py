@@ -163,7 +163,7 @@ class RateService:
 
         problem_status_sql = ''
         if contest_id != 0:
-            problem_status_sql = f'AND "problem"."status" = {ProConst.STATUS_CONTEST}'
+            problem_status_sql = f'AND "problem"."status" = {ProConst.STATUS_CONTEST} OR "problem"."status" = {ProConst.STATUS_ONLINE}'
         elif acct.is_kernel():
             problem_status_sql = f'AND "problem"."status" <= {ProConst.STATUS_HIDDEN} AND "problem"."status" != {ProConst.STATUS_CONTEST}'
         else:
