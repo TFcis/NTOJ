@@ -20,7 +20,7 @@ class UserConst:
     NAME_MAX = 27  # 3227
     NAME_MIN = 1
     MOTTO_MIN = 0
-    MOTTO_MAX = 100
+    MOTTO_MAX = 50
 
     ACCTTYPE_KERNEL = 0
     ACCTTYPE_USER = 3
