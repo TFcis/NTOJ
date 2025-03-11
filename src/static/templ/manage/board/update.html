@@ -1,6 +1,7 @@
 {% extends '../manage.html' %}
 {% block head %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/css/tempus-dominus.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="/oj/third/tempus-dominus.min.css"> <!-- 6.9.4 -->
+<script src="/oj/third/tempus-dominus.min.js"></script> <!-- 6.9.4 -->
 
 <style>
     .svg-inline--fa {
@@ -13,20 +14,18 @@
     var start_date_picker = null;
     var end_date_picker = null;
     function init() {
-        $.getScript('https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js', () => {
-            const options = {
-                display: {
-                    calendarWeeks: true,
-                },
+        const options = {
+            display: {
+                calendarWeeks: true,
+            },
 
-                localization: {
-                    locale: 'zh-tw',
-                    format: 'yyyy/MM/dd HH:mm',
-                },
-            };
-            start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerStart'), options);
-            end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerEnd'), options);
-        });
+            localization: {
+                locale: 'zh-tw',
+                format: 'yyyy/MM/dd HH:mm',
+            },
+        };
+        start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerStart'), options);
+        end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerEnd'), options);
 
         let j_form = $("#form");
         let re = /[^0-9,\ ]/;

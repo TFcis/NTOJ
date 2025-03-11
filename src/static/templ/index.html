@@ -7,20 +7,19 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
   <meta name="language" content="tw">
   <link rel="stylesheet" href="/oj/index.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"
-    integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="/oj/third/bootstrap.min.css" /> <!-- 5.3.3 -->
+  <!--
   <link
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
     rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  -->
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
-    integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script src="/oj/third/jquery.min.js"></script> <!-- 3.7.1 -->
   <script src="/oj/index.js"></script>
   <script src="/oj/pack.js"></script>
-  <script type="module"> import pdfjsDist from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/+esm' </script>
+  <script type="module" src="/oj/third/pdf.min.js"></script> <!-- 4.7.76 -->
   <script src="/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML" async></script>
   <script type="text/x-mathjax-config">
     MathJax.Hub.Config({
@@ -31,9 +30,9 @@
         }
     });
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" async></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.7/purify.min.js" integrity="sha512-BdRNuI8/lsyxkKQVxK1lVtfZshggfXPAwEP+JAOJEKx6Y8SLfcBSRdaWyXQmMxo+wG180uFqXYGjGRL0mh4/Jw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js" integrity="sha512-iWbxiCA4l1WTD0rRctt/BfDEmDC5PiVqFc6c1Rhj/GKjuj6tqrjrikTw3Sypm/eEgMa7jSOS9ydmDlOtxJKlSQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="/oj/third/marked.min.js" async></script>
+  <script src="/oj/third/purify.min.js" async></script> <!-- 3.1.7 -->
+  <script src="/oj/third/crypto-js.min.js" async></script> <!-- 4.2.0 -->
 
   <script id="indexjs" type="text/javascript" acct_id="{{ user.acct_id }}" contest_id="{{ contest_id }}">
     $(document).ready(function () {
@@ -175,12 +174,8 @@
     <small>New TNFSH Online Judge - Go-Judge</small>
   </footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.8/umd/popper.min.js"
-    integrity="sha512-TPh2Oxlg1zp+kz3nFA0C5vVC6leG/6mm1z9+mA81MI5eaUVqasPLO8Cuk4gMF4gUfP5etR73rgU/8PNMsSesoQ=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.min.js"
-    integrity="sha512-WW8/jxkELe2CAiE4LvQfwm1rajOS8PHasCCx+knHG0gBHt8EXxS6T6tJRTGuDQVnluuAvMxWF4j8SNFDKceLFg=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="/oj/third/popper.min.js"></script> <!-- 2.11.8 -->
+  <script src="/oj/third/bootstrap.min.js"></script> <!-- 5.3.3 -->
 </body>
 
 </html>

@@ -52,6 +52,7 @@ shutil.copy(f'{working_path}/NTOJ/src/static/challist.css', f'{web_dir}/challist
 shutil.copy(f'{working_path}/NTOJ/src/static/manage-pro.css', f'{web_dir}/manage-pro.css')
 shutil.copy(f'{working_path}/NTOJ/src/static/pro.css', f'{web_dir}/pro.css')
 shutil.copy(f'{working_path}/NTOJ/src/static/submit.css', f'{web_dir}/submit.css')
+shutil.copytree(f'{working_directory}/NTOJ/src/static/third', f'{web_dir}/third', dirs_exist_ok=True)
 
 shutil.copy(f'{working_path}/NTOJ/src/fixnoeol.sh', 'fixnoeol.sh')
 shutil.copy(f'{working_path}/NTOJ/src/newline.sh', 'newline.sh')

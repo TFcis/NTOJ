@@ -91,11 +91,15 @@ var index = new function() {
             j_cont.html(res).ready(function() {
                 var defer;
 
-                if (typeof(init) == 'function') {
-                    init();
-                }
-
                 defer = Array();
+                j_cont.find('script').each(function(i, e) {
+                    defer[i] = $.Deferred();
+
+                    $(e).on('load', function() {
+                        defer[i].resolve();
+                    });
+                });
+
                 j_cont.find('link').each(function(i, e) {
                     defer[i] = $.Deferred();
 
@@ -103,6 +107,10 @@ var index = new function() {
                         defer[i].resolve();
                     });
                 });
+
+                if (typeof(init) == 'function') {
+                    init();
+                }
 
                 $.when.apply($, defer).done(function() {
                     j_cont.stop().fadeIn(100);

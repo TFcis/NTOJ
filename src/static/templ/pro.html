@@ -1,5 +1,5 @@
 <link rel="stylesheet" type="text/css" href="/oj/pro.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf_viewer.min.css" integrity="sha512-8LkkqbXJPviYJENC5Z8qC2uKz27x0tNgrZbzsAzt7zkw0/2lXtSdrslVhfrkcR+6LRmxjZxlqniSyWXimoaH5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="/oj/third/pdf_viewer.min.css"/>
 <script type="text/x-mathjax-config">
     MathJax.Hub.Config({
         tex2jax:{
@@ -20,7 +20,7 @@
 
     function init() {
         let PDFJS = pdfjsLib;
-        PDFJS.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.mjs';
+        PDFJS.GlobalWorkerOptions.workerSrc = '/oj/third/pdf.worker.min.mjs';
 
         $('#tags').keydown(function(event) {
             if (event.which == 13) // return
@@ -70,7 +70,7 @@
 
         function _load_html() {
             scriptTag = document.createElement('script');
-            scriptTag.src = 'https://toj.tfcis.org/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
+            scriptTag.src = '/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
             document.head.appendChild(scriptTag);
 
             j_cont.load(html_url, function(res, status, xhr) {
