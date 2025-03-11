@@ -2,7 +2,7 @@ import datetime
 
 
 class BulletinService:
-    BULLETIN_NOT_FOUND = BulletinService.BULLETIN_NOT_FOUND
+    BULLETIN_NOT_FOUND = 'Bulletin not found'
     def __init__(self, db, rs) -> None:
         self.db = db
         self.rs = rs
