@@ -10,7 +10,7 @@ import config
 
 working_directory = tempfile.TemporaryDirectory()
 working_path = working_directory.name
-subprocess.run(['git', 'clone', 'https://github.com/TFcis/NTOJ', f'{working_path}/NTOJ'])
+subprocess.run(['git', 'clone', '--branch', 'tfcis', 'https://github.com/TFcis/NTOJ', f'{working_path}/NTOJ'])
 
 cur_dir = os.getcwd()
 
