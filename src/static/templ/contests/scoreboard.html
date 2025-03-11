@@ -252,7 +252,7 @@ font-weight: bolder;
      * @argument scores_data { Array }
      */
     function render_ioi_style_scoreboard(scores_data) {
-        let pro_list = {{ contest.pro_list }};
+        let pro_list = {{ [pro_id for pro_id in contest.pro_list.keys()] }};
         let each_ranks_html = '';
         let cur_rank = 0;
         let cur_total_score = 0;
