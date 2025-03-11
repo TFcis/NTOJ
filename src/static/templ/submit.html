@@ -1,4 +1,58 @@
 {% from services.chal import ChalConst %}
+<script type="module">
+    import * as TreeSitter from '/oj/third/web-tree-sitter.js';
+    window.TreeSitter = TreeSitter;
+    window.initializePlayground = async () => {
+        const { Parser, Language } = window.TreeSitter;
+        await Parser.init({
+            locateFile(scriptName, scriptDirectory) {
+                return "/oj/third/web-tree-sitter.wasm";
+            },
+        });
+    };
+    window.checkCode = async (lang, code) => {
+        const { Parser, Language } = window.TreeSitter;
+        const parser = new Parser();
+        parser.setLanguage(await Language.load(`/oj/third/tree-sitter-${lang}.wasm`));
+
+        let tree = parser.parse(code);
+        let cursor = tree.walk();
+        let error_found = false;
+        let visitedChildren = false;
+        let indentLevel = 0;
+
+        for (let i = 0; ; i++) {
+            if (cursor.nodeIsMissing || (cursor.nodeIsNamed && cursor.nodeType === 'ERROR')) {
+                error_found = true;
+            }
+
+            if (visitedChildren) {
+                if (cursor.gotoNextSibling()) {
+                    visitedChildren = false;
+                } else if (cursor.gotoParent()) {
+                    visitedChildren = true;
+                    indentLevel--;
+                } else {
+                    break;
+                }
+            } else {
+                if (cursor.gotoFirstChild()) {
+                    visitedChildren = false;
+                    indentLevel++;
+                } else {
+                    visitedChildren = true;
+                }
+            }
+        }
+        cursor.delete();
+
+        return error_found;
+    };
+    if (typeof WebAssembly === "object") {
+        setTimeout(() => window.initializePlayground(), 1);
+    }
+</script>
+
 <link rel="stylesheet" type="text/css" href="/oj/submit.css">
 
 <script type="text/javascript">
@@ -17,7 +71,7 @@
 	        reader.readAsText(this.files[0]);
 	    });
 
-        j_submit.find('button.submit').on('click', function(e) {
+        j_submit.find('button.submit').on('click', async function(e) {
             let code = j_submit.find('textarea.code').val();
             let comp_type = j_submit.find('#compilerList').val();
 
@@ -26,6 +80,26 @@
                 url = `/oj/be/contests/${contest_id}/submit`;
             } else {
                 url = '/oj/be/submit';
+            }
+
+            if (typeof WebAssembly === "object") {
+                let lang = "";
+                if (comp_type == 'g++' || comp_type == 'clang++') {
+                    lang = "cpp";
+                } else if (comp_type == 'gcc' || comp_type == 'clang') {
+                    lang = "c";
+                } else if (comp_type == 'python3') {
+                    lang = "python";
+                } else if (comp_type == 'java') {
+                    lang = "java";
+                } else if (comp_type == 'rust') {
+                    lang = "rust";
+                }
+                if (await window.checkCode(lang, code)) {
+                    index.show_notify_dialog("給我回去編譯一次😡", index.DIALOG_TYPE.warning);
+                    $.get(`/oj/be/ce?acct_id={{ user.acct_id }}`, {});
+                    return;
+                }
             }
 
             $.post(url, {
