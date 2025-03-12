@@ -83,7 +83,7 @@ font-weight: bolder;
                     {% end %}
 
                     {% set pro_name = pro['name'] %}
-                    {% if f"{chr(65+idx)." not in pro_name and f"p{chr(65+idx)}" not in pro_name %}
+                    {% if f"{chr(65+idx)}." not in pro_name and f"p{chr(65+idx)}" not in pro_name %}
                         {% set pro_name = f"p{chr(65+idx)}. {pro_name}" %}
                     {% end %}
 
