@@ -14,7 +14,7 @@ class ManagePackTest(AsyncTest):
             pack_token = self.get_upload_token(admin_session)
 
             file = open("tests/static_file/code/toj3.ac.py", "rb")
-            sha1 = hashlib.sha1()
+            md5 = hashlib.md5()
             filesize = os.path.getsize("tests/static_file/code/toj3.ac.py")
 
             remain = filesize
@@ -23,7 +23,7 @@ class ManagePackTest(AsyncTest):
                 if not data:
                     break
 
-                sha1.update(data)
+                md5.update(data)
             file.seek(0, 0)
 
             ws = await websocket_connect("ws://localhost:5501/pack")
@@ -32,7 +32,7 @@ class ManagePackTest(AsyncTest):
                     {
                         "pack_token": pack_token,
                         "pack_size": filesize,
-                        "sha-1": sha1.hexdigest(),
+                        "md5": md5.hexdigest(),
                     }
                 )
             )
@@ -60,11 +60,11 @@ class ManagePackTest(AsyncTest):
             pack_token = self.get_upload_token(admin_session)
 
             file = open("tests/static_file/code/toj3.ac.py", "rb")
-            sha1 = hashlib.sha1()
+            md5 = hashlib.md5()
             filesize = os.path.getsize("tests/static_file/code/toj3.ac.py")
 
             remain = filesize
-            sha1.update(b'123')
+            md5.update(b'123')
 
             ws = await websocket_connect("ws://localhost:5501/pack")
             await ws.write_message(
@@ -72,7 +72,7 @@ class ManagePackTest(AsyncTest):
                     {
                         "pack_token": pack_token,
                         "pack_size": filesize,
-                        "sha-1": sha1.hexdigest(),
+                        "md5": md5.hexdigest(),
                     }
                 )
             )
@@ -99,7 +99,7 @@ class ManagePackTest(AsyncTest):
             pack_token = self.get_upload_token(admin_session)
 
             file = open("tests/static_file/code/toj3.ac.py", "rb")
-            sha1 = hashlib.sha1()
+            md5 = hashlib.md5()
             filesize = os.path.getsize("tests/static_file/code/toj3.ac.py")
 
             remain = filesize
@@ -108,7 +108,7 @@ class ManagePackTest(AsyncTest):
                 if not data:
                     break
 
-                sha1.update(data)
+                md5.update(data)
             file.seek(0, 0)
 
             ws = await websocket_connect("ws://localhost:5501/pack")
@@ -117,7 +117,7 @@ class ManagePackTest(AsyncTest):
                     {
                         "pack_token": pack_token,
                         "pack_size": filesize,
-                        "sha-1": sha1.hexdigest(),
+                        "md5": md5.hexdigest(),
                     }
                 )
             )

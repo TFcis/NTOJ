@@ -62,14 +62,14 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         return all_states
 
     async def upload_file(self, file, file_size: int, pack_token: str):
-        sha1 = hashlib.sha1()
+        md5 = hashlib.md5()
         remain = file_size
         while True:
             data = file.read(65536)
             if not data:
                 break
 
-            sha1.update(data)
+            md5.update(data)
 
         ws = await websocket_connect("ws://localhost:5501/pack")
         await ws.write_message(
@@ -77,7 +77,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
                 {
                     "pack_token": pack_token,
                     "pack_size": file_size,
-                    "sha-1": sha1.hexdigest(),
+                    "md5": md5.hexdigest(),
                 }
             )
         )
