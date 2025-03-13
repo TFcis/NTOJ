@@ -34,9 +34,13 @@ class SubmitTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': 'cc',
-                'comp_type': 'g++',
+                'comp_type': 'python3',
             })
             self.assertAPIReturnValue(res.text, ('S', 10))
+            html = self.get_html('submit/1', user_session)
+            compiler_option = html.select_one('option:checked')
+            self.assertIsNotNone(compiler_option)
+            self.assertEqual(compiler_option.attrs['value'], 'python3')
 
             res = user_session.post('submit', data={
                 'reqtype': 'submit',

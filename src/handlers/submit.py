@@ -7,7 +7,7 @@ from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService
 from services.judge import JudgeServerClusterService
 from services.pro import ProService
-from services.user import UserConst
+from services.user import UserService, UserConst
 from services.contests import UserStatus
 
 PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
@@ -119,6 +119,13 @@ class SubmitHandler(RequestHandler):
             if err:
                 self.error(err)
                 return
+
+            if self.acct.last_compiler != comp_type:
+                self.acct.last_compiler = comp_type
+                err, _ = await UserService.inst.update_acct(self.acct)
+                if err:
+                    self.error(err)
+                    return
 
         elif reqtype == 'rechal':
             if ((self.contest is None and self.acct.is_kernel())  # not in contest

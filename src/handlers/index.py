@@ -4,12 +4,12 @@ from handlers.base import RequestHandler, reqenv
 from services.contests import ContestService
 from services.ques import QuestionService
 
-
 class IndexHandler(RequestHandler):
     @reqenv
     async def get(self, page: str):
         is_in_contest = False
         contest_manage = False
+        contest = None
         contest_id = 0
 
         reply = False
@@ -34,8 +34,7 @@ class IndexHandler(RequestHandler):
             reply = await QuestionService.inst.have_reply(self.acct.acct_id)
 
         await self.render('index', ask_cnt=ask_cnt, reply=reply,
-                          is_in_contest=is_in_contest, contest_manage=contest_manage, contest_id=contest_id)
-
+                          is_in_contest=is_in_contest, contest_manage=contest_manage, contest_id=contest_id, contest=contest)
 
 
 class AbouotHandler(RequestHandler):

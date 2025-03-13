@@ -3,15 +3,15 @@
 {% block head %}
 <script type="text/javascript" id="contjs">
 	function init() {
-        let contest_id = "{{ contest_id }}";
+        let contest_id = "{{ contest.contest_id }}";
 
-		const post_func = (reqtype, pro_id) => {
+		const post_func = (reqtype, pro_id, fail_action=null) => {
 			if (pro_id.length == 0) {
 				index.show_notify_dialog('Input cannot empty.', index.DIALOG_TYPE.warning);
 				return;
 			}
 
-			$.post('/oj/be/contests/{{ contest_id }}/manage/pro', {
+			$.post('/oj/be/contests/{{ contest.contest_id }}/manage/pro', {
 				reqtype: reqtype,
 				pro_id: pro_id,
 			}, res => {
@@ -20,8 +20,7 @@
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
 					setTimeout(() => index.reload(), 1000);
                 } else {
-                    $("#proID").val('');
-                    $("#proList").val('');
+                    if (fail_action != null) fail_action();
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
 			});
@@ -35,10 +34,24 @@
 			el.addEventListener('click', () => post_func('rechal', $(el).attr('pro_id')));
 		});
 
-		$("#addPro").on('click', () => post_func('add', $("#proId").val()));
-		$("#removePro").on('click', () => post_func('remove', $("#proId").val()));
-		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val()));
-		$("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val()));
+        document.querySelectorAll('button.public').forEach(el => {
+            el.addEventListener('click', () => post_func('public', $(el).attr('pro_id')));
+        });
+
+        $("#button.publicall").on('click', function(e) {
+            document.querySelectorAll('button.public').forEach(el => {
+                let pro_id = $(el).attr('pro_id');
+                $.post('/oj/be/contests/{{ contest.contest_id }}/manage/pro', {
+                    reqtype: "public",
+                    pro_id: pro_id
+                });
+            });
+        });
+
+		$("#addPro").on('click', () => post_func('add', $("#proId").val(), () => $("#proID").val('')));
+		$("#removePro").on('click', () => post_func('remove', $("#proId").val(), () => $("#proID").val('')));
+		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), () => $("#proList").val('')));
+		$("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val(), () => $("#proList").val('')));
     }
 </script>
 {% end %}
@@ -73,6 +86,11 @@
 						</div>
 					</form>
 
+                    <button
+                        class="btn btn-danger me-2 publicall"
+                        {% if not contest.is_end() %} disabled {% end %}
+                    >Public All Problem</button>
+
 					<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
 					<thead>
 						<tr>
@@ -84,11 +102,16 @@
 					<tbody>
 					{% for pro in pro_list %}
 						<tr>
-							<th scope="row"><a href="/oj/contests/{{ contest_id }}/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }}</a></th>
+							<th scope="row"><a href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }}</a></th>
 							<td>{{ pro['name'] }}</td>
 							<td>
 								<button class="btn btn-warning me-2 remove" pro_id="{{ pro['pro_id'] }}">Remove</button>
 								<button class="btn btn-danger me-2 rechal" pro_id="{{ pro['pro_id'] }}">Rechallenge</button>
+                                <button
+                                    class="btn btn-danger me-2 public"
+                                    pro_id="{{ pro['pro_id'] }}"
+                                    {% if not contest.is_end() %} disabled {% end %}
+                                >Public Problem</button>
 							</td>
 						</tr>
 					{% end %}

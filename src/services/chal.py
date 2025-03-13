@@ -263,7 +263,7 @@ class ChalService:
             result['contest_id'],
             result['acct_name'],
         )
-        final_response = ""
+        final_response = []
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -282,8 +282,8 @@ class ChalService:
 
         testl = []
         for test_idx, state, runtime, memory, response, rate in result:
-            if final_response == "":
-                final_response = response
+            if response:
+                final_response.append(f"Task {test_idx + 1}: {response}")
 
             r = 0
             if state in [ChalConst.STATE_AC, ChalConst.STATE_PC]:
@@ -310,7 +310,7 @@ class ChalService:
                 'acct_name': acct_name,
                 'timestamp': timestamp.astimezone(TZ),
                 'testl': testl,
-                'response': final_response,
+                'response': '\n'.join(final_response),
                 'comp_type': comp_type,
             },
         )
@@ -355,7 +355,7 @@ class ChalService:
             '''INSERT INTO "test"
                 ("chal_id", "acct_id", "pro_id", "test_idx", "state", "timestamp")
                 VALUES ($1, $2, $3, $4, $5, $6);''',
-
+                insert_values
             )
 
         await self.update_challenge_state(chal_id)

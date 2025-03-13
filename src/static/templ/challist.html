@@ -173,7 +173,7 @@
             <label class="form-label">過濾器</label>
 
             <div class="mb-1">
-                <label class="form-label">Your ID: {{ user.acct_id }}</label>
+                <label class="form-label">Your ID: <a href="?acctid={{ user.acct_id }}">{{ user.acct_id }}</a></label>
                 <input id="proid" class="form-control mb-1" type="text" value="{% if flt.pro != None %}{{ ppro_id }}{% end %}" placeholder="Problem ID">
                 <input id="acctid" class="form-control mb-1" type="text" value="{% if flt.acct != None %}{{ pacct_id }}{% end %}" placeholder="Account ID">
             </div>

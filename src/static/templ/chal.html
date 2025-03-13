@@ -173,16 +173,16 @@
 </div>
 
 
-{% if chal['response'] != '' %}
+{% if chal['response'] != '' and (user.is_kernel() or chal['acct_id'] == user.acct_id) %}
     <div class="panel panel-default mt-3" id="response">
         <div class="panel-heading">
             <span>Compilation Error Message</span>
-            <span class="material-symbols-outlined ms-auto" data-bs-toggle="collapse" data-bs-target="#compileInfo" aria-expanded="false" aria-controls="compileInfo">
+            <span class="material-symbols-outlined ms-auto" data-bs-toggle="collapse" data-bs-target="#challengeResponseInfo" aria-expanded="false" aria-controls="challengeResponseInfo">
                 expand_more
             </span>
         </div>
         <div class="panel-body">
-            <pre class="collapse show" id="compileInfo" style="margin-top: 32px;">
+            <pre class="collapse show" id="challengeResponseInfo" style="margin-top: 32px;">
                 {{ chal['response'] }}
             </pre>
         </div>
