@@ -186,7 +186,7 @@
                         {% if state == ChalConst.STATE_JUDGE %}
                             {% set desc = "Challenging" %}
                         {% end %}
-                        {% raw f'<option value="{ state }" {{ "selected" if flt.state == state else "" }}>{ desc }</option>' %}
+                        {% raw f'<option value="{ state }" { "selected" if flt.state == state else "" }>{ desc }</option>' %}
                     {% end %}
                     <option value="{{ ChalConst.STATE_NOTSTARTED }}" {% if flt.state == ChalConst.STATE_NOTSTARTED %} selected {% end %}">Not Started</option>
                 </select>

@@ -120,9 +120,10 @@ class RateService:
         """
 
         key = "pro_rate"
+        key2 = f"pro_id_{pro_id}_contest_id_{contest_id}"
         pro_id = int(pro_id)
 
-        if (rate_data := await self.rs.hget(key, str(pro_id))) is None:
+        if (rate_data := await self.rs.hget(key, key2)) is None:
             async with self.db.acquire() as con:
                 all_chal_cnt = await con.fetchrow(ALL_CHAL_SQL, pro_id, contest_id)
                 all_chal_cnt = all_chal_cnt['count']
@@ -142,7 +143,7 @@ class RateService:
                 'user_all_chal_cnt': user_all_chal_cnt,
                 'user_ac_chal_cnt': user_ac_chal_cnt,
             }
-            await self.rs.hset(key, pro_id, packb(rate_data))
+            await self.rs.hset(key, key2, packb(rate_data))
 
         else:
             rate_data = unpackb(rate_data)
@@ -162,7 +163,7 @@ class RateService:
 
         problem_status_sql = ''
         if contest_id != 0:
-            problem_status_sql = f'AND "problem"."status" = {ProConst.STATUS_CONTEST}'
+            problem_status_sql = f'AND "problem"."status" = {ProConst.STATUS_CONTEST} OR "problem"."status" = {ProConst.STATUS_ONLINE}'
         elif acct.is_kernel():
             problem_status_sql = f'AND "problem"."status" <= {ProConst.STATUS_HIDDEN} AND "problem"."status" != {ProConst.STATUS_CONTEST}'
         else:

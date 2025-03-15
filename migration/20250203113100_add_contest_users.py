@@ -44,7 +44,7 @@ async def dochange(db, rs):
         for acct_id in admin_list:
             await db.execute('INSERT INTO contest_users (contest_id, acct_id, status) VALUES ($1, $2, $3)', contest_id, acct_id, 3) # UserStatus.ADMIN.value)
             res = await db.fetch('SELECT acct_type FROM account WHERE acct_id = $1', acct_id)
-            if int(res[0]) == 0: # UserConst.ACCTTYPE_KERNEL:
+            if int(res[0]['acct_type']) == 0: # UserConst.ACCTTYPE_KERNEL:
                 creator = min(acct_id, creator)
 
         await db.execute('UPDATE contest SET contest_creator = $1 WHERE contest_id = $2', creator, contest_id)

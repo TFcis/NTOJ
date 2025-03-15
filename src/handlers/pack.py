@@ -19,8 +19,8 @@ class PackHandler(WebSocketHandler):
         self.state = PackHandler.STATE_HDR
         self.output = None
         self.remain = 0
-        self.sha1 = hashlib.sha1()
-        self.received_sha1 = ''
+        self.md5 = hashlib.md5()
+        self.received_md5 = ''
 
     async def on_message(self, msg):
         if self.state == PackHandler.STATE_DTAT:
@@ -34,13 +34,13 @@ class PackHandler(WebSocketHandler):
 
             self.output.write(msg)
             self.remain -= size
-            self.sha1.update(msg)
+            self.md5.update(msg)
 
             if self.remain == 0:
                 self.output.close()
                 self.output = None
 
-                if self.sha1.hexdigest().lower() != self.received_sha1.lower():
+                if self.md5.hexdigest().lower() != self.received_md5.lower():
                     self.write_message('Ehash')
                     os.remove(f'tmp/{self.pack_token}')
                     return
@@ -52,7 +52,7 @@ class PackHandler(WebSocketHandler):
 
             self.pack_token = str(uuid.UUID(hdr['pack_token']))
             self.remain = hdr['pack_size']
-            self.received_sha1 = hdr['sha-1']
+            self.received_md5 = hdr['md5']
             self.output = open(f'tmp/{self.pack_token}', 'wb')
             self.state = PackHandler.STATE_DTAT
 

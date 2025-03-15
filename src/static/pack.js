@@ -33,17 +33,40 @@ var pack = new function() {
         var lt = 0;
 
         ws.onopen = function(e) {
-            file.arrayBuffer()
-                .then(file_buffer => {
-                    const word_array = CryptoJS.lib.WordArray.create(new Uint8Array(file_buffer));
-                    const hash_hex = CryptoJS.SHA1(word_array).toString(CryptoJS.enc.Hex);
+            var blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice,
+                chunkSize = 2097152,                             // Read in chunks of 2MB
+                chunks = Math.ceil(file.size / chunkSize),
+                currentChunk = 0,
+                spark = new SparkMD5.ArrayBuffer(),
+                fileReader = new FileReader();
 
+            fileReader.onload = function (e) {
+                spark.append(e.target.result);                   // Append array buffer
+                currentChunk++;
+
+                if (currentChunk < chunks) {
+                    loadNext();
+                } else {
                     ws.send(JSON.stringify({
                         'pack_token' : pack_token,
                         'pack_size' : file.size,
-                        'sha-1': hash_hex,
+                        'md5': spark.end(),
                     }));
-                });
+                }
+            };
+
+            fileReader.onerror = function () {
+                ws.close();
+            }
+
+            function loadNext() {
+                var start = currentChunk * chunkSize,
+                    end = ((start + chunkSize) >= file.size) ? file.size : start + chunkSize;
+
+                fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
+            }
+
+            loadNext();
         };
         ws.onmessage = function(e) {
             var size;
