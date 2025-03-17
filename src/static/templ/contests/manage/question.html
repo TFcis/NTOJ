@@ -1,0 +1,121 @@
+{% extends 'manage.html' %}
+{% block head %}
+<script type="text/javascript">
+    function init() {
+        $("td.reply").each((_, element) => {
+            let td = $(element);
+            let question_id = td.attr('question_id');
+            td.find(".edit").on('click', function(e) {
+                td.find(".update").show();
+                td.find(".view").hide();
+            });
+
+            td.find(".cancel").on('click', function(e) {
+                td.find(".update").hide();
+                td.find(".view").show();
+            });
+
+            td.find(".answer-type").on('change', function(e) {
+                let t = $(this).val();
+                if (t === 'Other') {
+                    td.find("textarea").show();
+                } else {
+                    td.find("textarea").hide();
+                }
+            });
+
+            td.find("button.reply").on('click', function(e) {
+                let answer = td.find(".answer-type").val();
+                if (answer === 'Other') {
+                    answer = td.find("textarea").val();
+                    if (answer.length == 0) {
+                        index.show_notify_dialog('Reply answer should not be empty.', index.DIALOG_TYPE.warning);
+                        return;
+                    }
+                }
+
+                $.post('/oj/be/contests/{{ contest_id }}/manage/question', {
+                    reqtype: 'reply',
+                    content: answer,
+                    question_id: question_id,
+                }, function(res) {
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        location.href = location.href;
+                    } else {
+                        index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                    }
+                });
+            });
+        });
+    }
+</script>
+{% end %}
+
+{% block content%}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <div id="form">
+        <table class="table">
+            <thead>
+                <tr>
+                    <td>Question</td>
+                    <td colspan=2>Reply</td>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for question in questions %}
+                <tr>
+                    <td style="width: 50%">
+                        <div class="card mt-2">
+                            <div class="card-body">
+                                <h4 class="card-title">
+                                    <span>{{ question['ask_subject'] }}</span>
+                                    <span class="float-end"><a href="/oj/acct/{{ question['ask_acct'].acct_id }}/">{{ question['ask_acct'].name }}</a></span>
+                                </h4>
+                                <p class="card-text">{{ question['ask_content'] }}</p>
+                                <h6>Ask Time: {{ question['ask_timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td style="width: 50%" class="reply" question_id="{{ question['question_id'] }}">
+                        {% set replied = question['reply_timestamp'] is not None %}
+                        <div class="update" {% if replied %} style="display: none;" {% end %}>
+                            <label for="" class="form-label">Precompiled Answer</label>
+                            <select class="form-select answer-type">
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                                <option value="No comment">No comment</option>
+                                <option value="Answered in problem description">Answered in problem description</option>
+                                <option value="Invalid question">Invalid question</option>
+                                <option value="Other" selected>Other</option>
+                            </select>
+
+                            {% if replied %}
+                                <textarea class="form-control" cols="8" rows="4" style="white-space: pre-line;">{{ question['reply_content'] }}</textarea>
+                            {% else %}
+                                <textarea class="form-control" cols="8" rows="4" style="white-space: pre-line;"></textarea>
+                            {% end %}
+                            <button class="btn btn-primary reply">Reply</button>
+
+                            {% if replied %}
+                                <button class="btn btn-secondary cancel">Cancel</button>
+                            {% end %}
+                        </div>
+
+                        {% if replied %}
+                        <div class="view">
+                            <p><strong>Reply: {{ question['reply_content'] }}</strong></p>
+                            <h6>Reply Time: {{ question['reply_timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+                            <button class="btn btn-primary edit">Edit Reply</button>
+                        </div>
+                        {% end %}
+                    </td>
+                </tr>
+            {% end %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% end %}

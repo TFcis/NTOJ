@@ -125,7 +125,6 @@ class ContestManageProHandler(RequestHandler):
             await asyncio.create_task(_rechal(rechals=result))
             self.error(('S', f'Problem(#{pro_id}) is rechallenging.'))
 
-        # TODO: public e2e test
         elif reqtype == "public":
             pro_id = int(pro_id)
             if not self.contest.is_pro(pro_id):
