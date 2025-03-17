@@ -6,13 +6,14 @@ from .util import AsyncTest, AccountContext
 
 class BoardTest(AsyncTest):
     async def main(self):
+        now = datetime.datetime.now()
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('manage/board/add', data={
                 'reqtype': 'add',
                 'name': 'board1',
                 'status': BoardConst.STATUS_ONLINE,
-                'start': self.get_isoformat(datetime.datetime.now() - datetime.timedelta(days=7)),
-                'end': self.get_isoformat(datetime.datetime.now() + datetime.timedelta(days=7)),
+                'start': self.get_isoformat(now - datetime.timedelta(days=7)),
+                'end': self.get_isoformat(now + datetime.timedelta(days=7)),
                 'pro_list': '1, 2',
                 'acct_list': '1',
             })
@@ -28,9 +29,9 @@ class BoardTest(AsyncTest):
             self.assertEqual(html.select_one('input#name').attrs.get('value').strip(), 'board1')
             self.assertIsNotNone(html.select('option')[0].attrs.get('selected'))
             self.assertEqual(html.select_one('input#datepickerStartInput').attrs.get('value'),
-                             (datetime.datetime.now() - datetime.timedelta(days=7)).strftime('%Y/%m/%d %H:%M'))
+                             (now - datetime.timedelta(days=7)).strftime('%Y/%m/%d %H:%M'))
             self.assertEqual(html.select_one('input#datepickerEndInput').attrs.get('value'),
-                             (datetime.datetime.now() + datetime.timedelta(days=7)).strftime('%Y/%m/%d %H:%M'))
+                             (now + datetime.timedelta(days=7)).strftime('%Y/%m/%d %H:%M'))
             self.assertEqual(html.select_one('input#pro_list').attrs.get('value').strip(), '1,2')
             self.assertEqual(html.select_one('input#acct_list').attrs.get('value').strip(), '1')
 
@@ -61,8 +62,8 @@ class BoardTest(AsyncTest):
                 'board_id': 1,
                 'name': 'board1',
                 'status': BoardConst.STATUS_HIDDEN,
-                'start': self.get_isoformat(datetime.datetime.now() - datetime.timedelta(days=14)),
-                'end': self.get_isoformat(datetime.datetime.now() - datetime.timedelta(days=7)),
+                'start': self.get_isoformat(now - datetime.timedelta(days=14)),
+                'end': self.get_isoformat(now - datetime.timedelta(days=7)),
                 'pro_list': '1, 2',
                 'acct_list': '1',
             })
@@ -100,8 +101,8 @@ class BoardTest(AsyncTest):
                 'board_id': 1,
                 'name': 'board1',
                 'status': BoardConst.STATUS_OFFLINE,
-                'start': self.get_isoformat(datetime.datetime.now() - datetime.timedelta(days=14)),
-                'end': self.get_isoformat(datetime.datetime.now() - datetime.timedelta(days=7)),
+                'start': self.get_isoformat(now - datetime.timedelta(days=14)),
+                'end': self.get_isoformat(now - datetime.timedelta(days=7)),
                 'pro_list': '1, 2',
                 'acct_list': '1',
             })
