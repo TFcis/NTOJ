@@ -1,0 +1,114 @@
+<script>
+    function init() {
+        // TODO: markdown feature
+
+        $("#ask").on('click', function(e) {
+            let subject = $("#subject").val();
+            let content = $("#content").val();
+
+            if (subject.length == 0) {
+                index.show_notify_dialog('Subject should not be empty', index.DIALOG_TYPE.warning);
+                return;
+            }
+
+            if (content.length == 0) {
+                index.show_notify_dialog('Content should not be empty', index.DIALOG_TYPE.warning);
+                return;
+            }
+
+            $.post('/oj/be/contests/{{ contest.contest_id }}/qa', {
+                'reqtype': 'ask',
+                'subject': subject,
+                'content': content,
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Ask successfully', index.DIALOG_TYPE.success);
+                    index.reload();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        });
+    }
+</script>
+
+<div class="row">
+    <div class="col-lg-5 col-12">
+        <h1>Announcement</h1>
+
+        <!-- TODO: add a button to close collapse when col-12 -->
+        <div class="announce" style="overflow-y:scroll; max-height: 80vh;">
+            {% for announce in announces %}
+                <div class="card mt-2">
+                    <div class="card-body">
+                        <h4 class="card-title">{{ announce['subject'] }}</h4>
+                        <p class="card-text">{{ announce['content'] }}</p>
+                        <h6>{{ announce['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+                    </div>
+                </div>
+            {% end %}
+        </div>
+    </div>
+
+    <div class="col-lg-7 col-12">
+        <div class="row">
+            <h1>Question</h1>
+            <form>
+                <div class="mb-1">
+                    <label for="title" class="form-label">Subject</label>
+                    <input class="form-control" id="subject" type="text">
+                </div>
+
+                <div class="mb-1">
+                    <label for="content">Content</label>
+                    <textarea class="form-control" name="content" id="content"></textarea>
+                </div>
+
+                <div class="mt-2">
+                    <button type="button" class="btn btn-primary" id="ask">Ask</button>
+                </div>
+            </form>
+        </div>
+        <div class="row">
+            <h1>Reply</h1>
+            <div style="overflow-y:scroll; max-height: 50vh;">
+                <table border=1 class="table">
+                    <thead>
+                        <tr>
+                            <td>Question</td>
+                            <td colspan=2>Reply</td>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                    {% for question in questions %}
+                        <tr>
+                            <td style="width: 50%">
+                                <div class="card mt-2">
+                                    <div class="card-body">
+                                        <h4 class="card-title">{{ question['ask_subject'] }}</h4>
+                                        <p class="card-text">{{ question['ask_content'] }}</p>
+                                        <h6>{{ question['ask_timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td style="width: 50%">
+                                <div class="card mt-2">
+                                    <div class="card-body">
+                                        {% if question['reply_timestamp'] %}
+                                        <p class="card-text">{{ question['reply_content'] }}</p>
+                                        <h6>{{ question['reply_timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+                                        {% end %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% end %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

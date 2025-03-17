@@ -293,7 +293,7 @@ var index = new function() {
         info: 'info',
     });
 
-    that.show_notify_dialog = function(msg, dialog_type) {
+    that.show_notify_dialog = function(msg, dialog_type, custom_title=null) {
         let title = '';
         switch (dialog_type) {
             case this.DIALOG_TYPE.error:
@@ -308,6 +308,10 @@ var index = new function() {
             case this.DIALOG_TYPE.info:
                 title = 'Info';
                 break;
+        }
+
+        if (custom_title) {
+            title = custom_title;
         }
 
         // inject html to <body>
