@@ -61,34 +61,65 @@
         index.go('/oj/info/');
       });
 
-      {% if is_in_contest and not contest.is_end() %}
-        var contest_start = new Date("{{ contest.contest_start }}");
-        var contest_end = new Date("{{ contest.contest_end }}");
-        var started = false, ended = false;
-        function timer1() {
-            let cur_time = new Date();
-            if (cur_time >= contest_start && !started) {
-                started = true;
-                if (confirm("The contest has started. Do you want to reload the page?")) {
-                    index.reload();
+    {% if is_in_contest %}
+        {% if not contest.is_end() %}
+            var contest_start = new Date("{{ contest.contest_start }}");
+            var contest_end = new Date("{{ contest.contest_end }}");
+            var started = false, ended = false;
+            function timer1() {
+                let cur_time = new Date();
+                if (cur_time >= contest_start && !started) {
+                    started = true;
+                    if (confirm("The contest has started. Do you want to reload the page?")) {
+                        index.reload();
+                    }
                 }
             }
-        }
-        function timer2() {
-            let cur_time = new Date();
-            if (cur_time >= contest_end && !ended) {
-                ended = true;
-                if (confirm("The contest has ended. Do you want to reload the page?")) {
-                    index.reload();
+            function timer2() {
+                let cur_time = new Date();
+                if (cur_time >= contest_end && !ended) {
+                    ended = true;
+                    if (confirm("The contest has ended. Do you want to reload the page?")) {
+                        index.reload();
+                    }
                 }
             }
-        }
-        let cur_time = new Date();
-        if (cur_time < contest_start) {
-            setInterval(timer1, 1);
-        } else if (cur_time > contest_start && cur_time < contest_end) {
-            setInterval(timer2, 1);
-        }
+            let cur_time = new Date();
+            if (cur_time < contest_start) {
+                setInterval(timer1, 1);
+            } else if (cur_time > contest_start && cur_time < contest_end) {
+                setInterval(timer2, 1);
+            }
+        {% end %}
+
+        {% if contest.is_admin(user) %}
+            let ws = index.get_ws("contests/{{ contest.contest_id }}/manage/qasub");
+            let contest_ask_cnt = parseInt("{{ contest_ask_cnt }}");
+            ws.onopen = (e) => {
+                ws.send("{{ contest.contest_id }}");
+            };
+            ws.onmessage = (e) => {
+                contest_ask_cnt += 1;
+                $("#notifyRedDot").text(contest_ask_cnt);
+                $("#notifyRedDot").show();
+            };
+        {% elif contest.is_start() %}
+            let ws = index.get_ws("contests/{{ contest.contest_id }}/qasub");
+            let contest_notification_cnt = parseInt("{{ contest_notification_cnt }}");
+            ws.onopen = (e) => {
+                ws.send("{{ contest.contest_id }}");
+            };
+            ws.onmessage = (e) => {
+                e = JSON.parse(e.data);
+                if (e.type == 'popup-announce') {
+                    index.show_notify_dialog(e.content, index.DIALOG_TYPE.info, e.subject);
+                } else {
+                    contest_notification_cnt += 1;
+                    $("#notifyRedDot").text(contest_notification_cnt);
+                    $("#notifyRedDot").show();
+                }
+            };
+        {% end %}
     {% end %}
 
     });
@@ -119,10 +150,35 @@
           <li class="nav-item proset"><a class="nav-link" href="/oj/contests/{{ contest_id }}/proset/">ProblemSet</a></li>
           <li class="nav-item chal"><a class="nav-link" href="/oj/contests/{{ contest_id }}/chal/">Challenges</a></li>
           <li class="nav-item scoreboard"><a class="nav-link" href="/oj/contests/{{ contest_id }}/scoreboard/">Scoreboard</a></li>
-          <li class="nav-item question"></li><a class="nav-link" href="/oj/contests/{{ contest_id }}/question/">Q & A</a></li>
+
+          {% if not contest_manage %}
+            <li class="nav-item qa"></li>
+                <a class="nav-link position-relative" href="/oj/contests/{{ contest_id }}/qa/">
+                    Q & A
+                    <span
+                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                        {% if not contest_notification_cnt %} style="display: none;" {% end %}
+                        id="notifyRedDot"
+                    >
+                        {{ contest_notification_cnt }}
+                    </span>
+                </a>
+            </li>
+          {% end %}
 
           {% if contest_manage %}
-            <li class="nav-item manage"><a class="nav-link" href="/oj/contests/{{ contest_id }}/manage/">Manage</a></li>
+            <li class="nav-item manage">
+                <a class="nav-link position-relative" href="/oj/contests/{{ contest_id }}/manage/">
+                    Manage
+                    <span
+                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                        {% if not contest_ask_cnt %} style="display: none;" {% end %}
+                        id="notifyRedDot"
+                    >
+                        {{ contest_ask_cnt }}
+                    </span>
+                </a>
+            </li>
           {% end %}
         </ul>
         {% else %}

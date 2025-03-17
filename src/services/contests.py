@@ -319,6 +319,65 @@ class ContestService:
 
         return None, None
 
+    async def add_announce(self, contest_id: int, acct_id: int, subject: str, content: str):
+        res = await self.db.fetch('INSERT INTO contest_announcement ("contest_id", "acct_id", "subject", "content", "timestamp") VALUES ($1, $2, $3, $4, NOW()) RETURNING announce_id',
+                                  contest_id, acct_id, subject, content)
+
+        if len(res) != 1:
+            return ('Eunk', 'Unknown error'), None
+
+        return None, res[0]['announce_id']
+
+    async def edit_announce(self, contest_id: int, announce_id: int, subject: str, content: str):
+        await self.db.execute('UPDATE contest_announcement SET subject = $1, content = $2, timestamp = NOW() WHERE contest_id = $3 AND announce_id = $4',
+                              subject, content, contest_id, announce_id)
+
+        res = await self.db.fetch('SELECT acct_id FROM contest_users WHERE contest_id = $1 AND status = $2', contest_id, UserStatus.APPROVED)
+        for acct_id in res:
+            await self.db.execute('UPDATE contest_users SET notification_read_count = GREATEST(notification_read_count - 1, 0) WHERE contest_id = $1 AND acct_id = $2',
+                                  contest_id, int(acct_id[0]))
+
+        return None, None
+
+    async def get_all_announce(self, contest_id: int):
+        res = await self.db.fetch('SELECT * FROM contest_announcement WHERE contest_id = $1 ORDER BY "timestamp" DESC', contest_id)
+        return None, res
+
+    async def get_announce(self, contest_id: int, announce_id: int):
+        res = await self.db.fetch('SELECT * FROM contest_announcement WHERE contest_id = $1 AND announce_id = $2',
+                                  contest_id, announce_id)
+        if len(res) != 1:
+            return ('Eunk', 'Unknown error'), None
+
+        return None, res[0]
+
+    async def ask_question(self, contest_id: int, ask_acct_id: int, ask_subject: str, ask_content: str):
+        res = await self.db.fetch('INSERT INTO contest_question (contest_id, ask_subject, ask_content, ask_acct_id, ask_timestamp) VALUES ($1, $2, $3, $4, NOW()) RETURNING question_id',
+                                  contest_id, ask_subject, ask_content, ask_acct_id)
+        if len(res) != 1:
+            return ('Eunk', 'Unknown error'), None
+
+        return None, res[0]['question_id']
+
+    async def reply_question(self, contest_id: int, question_id: int, reply_acct_id: int, reply_content: str):
+        await self.db.execute('UPDATE contest_question SET reply_content = $1, reply_acct_id = $2, reply_timestamp = NOW() WHERE contest_id = $3 AND question_id = $4;',
+                              reply_content, reply_acct_id, contest_id, question_id)
+
+        return None, None
+
+    async def get_all_question(self, contest_id: int, ask_acct_id: int = 0):
+        if ask_acct_id:
+            res = await self.db.fetch('SELECT * FROM contest_question WHERE contest_id = $1 AND ask_acct_id = $2', contest_id, ask_acct_id)
+        else:
+            res = await self.db.fetch('SELECT * FROM contest_question WHERE contest_id = $1', contest_id)
+
+        return None, res
+
+    async def get_need_reply_question_cnt(self, contest_id: int):
+        res = await self.db.fetch('SELECT COUNT(*) FROM contest_question WHERE contest_id = $1 AND reply_acct_id IS NULL;', contest_id)
+        return None, res[0]['count']
+
+
     async def get_ioi2013_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
         _, contest = await self.get_contest(contest_id)
         res = await self.db.fetch(

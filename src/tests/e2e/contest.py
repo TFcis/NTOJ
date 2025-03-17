@@ -498,8 +498,175 @@ class ContestTest(AsyncTest):
             res = user_session.get('pro/8')
             self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not found'))
 
+        def _message(msg):
+            if msg is None:
+                return
 
-        # is_public_scoreboard: bool = False
+            self.assertEqual(int(msg), 1)
+
+        ws = await websocket_connect('ws://localhost:5501/contests/1/manage/qasub', on_message_callback=_message)
+        await ws.write_message("1")
+        with AccountContext('contest1@test', 'test') as user_session:
+            res = user_session.post('contests/1/qa', data={
+                'reqtype': 'ask',
+                'subject': 'subject',
+                'content': 'content',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            html = self.get_html('contests/1/qa', user_session)
+            trs = html.select('table > tbody > tr')
+            td0 = trs[0].select('td')[0]
+            td1 = trs[0].select('td')[1]
+            self.assertEqual(td0.select_one('h4').text, 'subject')
+            self.assertEqual(td0.select_one('p').text, 'content')
+            self.assertIsNone(td1.select_one('p'))
+            self.assertIsNone(td1.select_one('h6'))
+            ws.close()
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            html = self.get_html('index/contests/1', admin_session)
+            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "1")
+
+            html = self.get_html('contests/1/manage/question', admin_session)
+            trs = html.select('table > tbody > tr')
+            td0 = trs[0].select('td')[0]
+            td1 = trs[0].select('td')[1]
+            self.assertEqual(td0.select('h4 > span')[0].text, 'subject')
+            self.assertEqual(td0.select('h4 > span')[1].text, 'contest1')
+            self.assertEqual(td0.select_one('h4 > span > a').attrs['href'], '/oj/acct/4/')
+            self.assertEqual(td0.select_one('p').text, 'content')
+            self.assertIsNone(td1.select_one('div.view'))
+            self.assertIsNotNone(td1.select_one('div.update'))
+            self.assertEqual(td1.select_one('textarea').text, '')
+            question_id = int(html.select_one('td.reply').attrs['question_id'])
+            self.assertEqual(question_id, 1)
+
+            def _message(msg):
+                if msg is None:
+                    return
+
+                j = json.loads(msg)
+                self.assertEqual(j['contest_id'], 1)
+                self.assertEqual(j['type'], 'reply')
+            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            await ws.write_message('1')
+            res = admin_session.post('contests/1/manage/question', data={
+                'reqtype': 'reply',
+                'content': 'answer',
+                'question_id': question_id
+            })
+            self.assertAPIReturnSuccess(res.text)
+            ws.close()
+
+            html = self.get_html('index/contests/1', admin_session)
+            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "0")
+            html = self.get_html('contests/1/manage/question', admin_session)
+            trs = html.select('table > tbody > tr')
+            td1 = trs[0].select('td')[1]
+            self.assertIsNotNone(td1.select_one('div.view'))
+            self.assertEqual(td1.select_one('p').text, 'Reply: answer')
+            self.assertIsNotNone(td1.select_one('div.view').select_one('h6'))
+            self.assertEqual(td1.select_one('textarea').text, 'answer')
+
+        with AccountContext('contest1@test', 'test') as user_session:
+            html = self.get_html('index/contests/1', user_session)
+            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "1")
+
+            html = self.get_html('contests/1/qa', user_session)
+            trs = html.select('table > tbody > tr')
+            td0 = trs[0].select('td')[0]
+            td1 = trs[0].select('td')[1]
+            self.assertEqual(td1.select_one('p').text, 'answer')
+            self.assertIsNotNone(td1.select_one('h6'))
+
+            html = self.get_html('index/contests/1', user_session)
+            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "0")
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            def _message(msg):
+                if msg is None:
+                    return
+
+                j = json.loads(msg)
+                self.assertEqual(j['contest_id'], 1)
+                self.assertEqual(j['type'], 'add-announce')
+
+            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            await ws.write_message("1")
+            res = admin_session.post('contests/1/manage/announce', data={
+                'reqtype': 'add-announce',
+                'subject': 'subject',
+                'content': 'content',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            ws.close()
+
+        with AccountContext('contest1@test', 'test') as user_session:
+            html = self.get_html('index/contests/1', user_session)
+            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "1")
+
+            html = self.get_html('contests/1/qa', user_session)
+            announces = html.select_one('div.announce')
+            self.assertEqual(announces.select(".card-body")[0].select_one('h4').text, 'subject')
+            self.assertEqual(announces.select(".card-body")[0].select_one('p').text, 'content')
+
+            html = self.get_html('index/contests/1', user_session)
+            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "0")
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            def _message(msg):
+                if msg is None:
+                    return
+
+                j = json.loads(msg)
+                self.assertEqual(j['contest_id'], 1)
+                self.assertEqual(j['type'], 'edit-announce')
+
+            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            await ws.write_message("1")
+            res = admin_session.post('contests/1/manage/announce', data={
+                'reqtype': 'edit-announce',
+                'subject': 'subject2',
+                'content': 'content2',
+                'announce_id': 1,
+            })
+            self.assertAPIReturnSuccess(res.text)
+            ws.close()
+
+        with AccountContext('contest1@test', 'test') as user_session:
+            html = self.get_html('index/contests/1', user_session)
+            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "1")
+
+            html = self.get_html('contests/1/qa', user_session)
+            announces = html.select_one('div.announce')
+            self.assertEqual(announces.select(".card-body")[0].select_one('h4').text, 'subject2')
+            self.assertEqual(announces.select(".card-body")[0].select_one('p').text, 'content2')
+
+            html = self.get_html('index/contests/1', user_session)
+            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "0")
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            def _message(msg):
+                if msg is None:
+                    return
+
+                j = json.loads(msg)
+                self.assertEqual(j['contest_id'], 1)
+                self.assertEqual(j['type'], 'popup-announce')
+
+            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            await ws.write_message("1")
+            res = admin_session.post('contests/1/manage/announce', data={
+                'reqtype': 'popup-announce',
+                'announce_id': 1,
+            })
+            self.assertAPIReturnSuccess(res.text)
+            ws.close()
+
+            res = admin_session.get('contests/1/qa')
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
         # freeze_scoreboard_period: int = 0
 
         # test scoreboard, challist

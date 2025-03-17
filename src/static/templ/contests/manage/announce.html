@@ -1,0 +1,151 @@
+{% extends 'manage.html' %}
+{% block head %}
+<script type="text/javascript">
+    function init() {
+        $("#add").on('click', function(e) {
+            let subject = $("#form").find("#subject").val();
+            if (subject.length == 0) {
+                index.show_notify_dialog('Subject should not be empty.', index.DIALOG_TYPE.warning);
+                return;
+            }
+
+            let content = $("#form").find("#content").val();
+            if (content.length == 0) {
+                index.show_notify_dialog('Content should not be empty.', index.DIALOG_TYPE.warning);
+                return;
+            }
+
+            $.post('/oj/be/contests/{{ contest_id }}/manage/announce', {
+                reqtype: 'add-announce',
+                subject: subject,
+                content: content,
+            }, function (res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Add announcement successfully', index.DIALOG_TYPE.success);
+                    index.reload();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        });
+
+        $("td.announce").each((_, element) => {
+            let td = $(element);
+            let announce_id = td.attr('announce_id');
+            td.find(".edit").on('click', function(e) {
+                td.find("form").show();
+                td.find(".view").hide();
+            });
+
+            td.find(".popup").on('click', function(e) {
+                $.post('/oj/be/contests/{{ contest_id }}/manage/announce', {
+                    reqtype: 'popup-announce',
+                    announce_id: announce_id,
+                }, function (res) {
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        index.show_notify_dialog('Popup announcement successfully', index.DIALOG_TYPE.success);
+                        index.reload();
+                    } else {
+                        index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                    }
+                });
+            });
+
+            td.find("#cancel").on('click', function (e) {
+                td.find("form").hide();
+                td.find(".view").show();
+            })
+
+            td.find("#update").on('click', function (e) {
+                let subject = td.find("#subject").val();
+                if (subject.length == 0) {
+                    index.show_notify_dialog('Subject should not be empty.', index.DIALOG_TYPE.warning);
+                    return;
+                }
+
+                let content = td.find("#content").val();
+                if (content.length == 0) {
+                    index.show_notify_dialog('Content should not be empty.', index.DIALOG_TYPE.warning);
+                    return;
+                }
+
+                $.post('/oj/be/contests/{{ contest_id }}/manage/announce', {
+                    reqtype: 'edit-announce',
+                    announce_id: announce_id,
+                    subject: subject,
+                    content: content,
+                }, function (res) {
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        index.show_notify_dialog('Edit announcement successfully', index.DIALOG_TYPE.success);
+                        index.reload();
+                    } else {
+                        index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                    }
+                });
+            });
+        });
+    }
+</script>
+{% end %}
+
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <form id="form">
+        <label for="" class="form-label">Add Announcement</label>
+		<div class="mb-1">
+            <label for="title" class="form-label">Subject</label>
+			<input class="form-control" id="subject" type="text">
+		</div>
+
+		<div class="mb-1">
+            <label for="content">Content</label>
+			<textarea class="form-control" name="content" id="content"></textarea>
+		</div>
+
+        <div class="mb-1">
+            <button class="btn btn-primary" id="add" type="button">Add</button>
+        </div>
+    </form>
+
+    <table class="table">
+        <tbody>
+            {% for announce in announces %}
+            <tr>
+                <td class="announce" announce_id={{ announce['announce_id'] }}>
+                    <form style="display: none;">
+                        <div class="mb-1">
+                            <label for="title" class="form-label">Subject</label>
+                            <input class="form-control" id="subject" type="text" value="{{ announce['subject'] }}">
+                        </div>
+
+                        <div class="mb-1">
+                            <label for="content">Content</label>
+                            <textarea class="form-control" name="content" id="content">{{ announce['content'] }}</textarea>
+                        </div>
+
+                        <div class="mb-1">
+                            <button class="btn btn-primary" id="update" type="button">Update</button>
+                            <button class="btn btn-secondary" id="cancel" type="button">Cancel</button>
+                        </div>
+                    </form>
+                    <div class="view">
+                        <div class="card mt-2">
+                            <div class="card-body">
+                                <h4 class="card-title">{{ announce['subject'] }}</h4>
+                                <p class="card-text">{{ announce['content'] }}</p>
+                                <h6>{{ announce['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary edit">Edit</button>
+                        <button class="btn btn-warning popup">Popup</button>
+                    </div>
+                </td>
+            </tr>
+            {% end %}
+        </tbody>
+    </table>
+</div>
+{% end %}
