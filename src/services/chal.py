@@ -71,13 +71,13 @@ class ChalConst:
     ALLOW_COMPILERS = FILE_EXTENSION.keys()
 
     COMPILER_NAME = {
-        'gcc': 'GCC 12.2.0 GNU11',
-        'g++': 'G++ 12.2.0 GNU++17',
-        'clang': 'Clang++ 15.0.6 C11',
-        'clang++': 'Clang++ 15.0.6 C++17',
-        'rustc': 'Rustc 1.63',
-        'python3': 'CPython 3.11.2',
-        'java': 'OpenJDK 17.0.8',
+        'gcc': 'GCC 14.2.0 GNU11',
+        'g++': 'G++ 14.2.0 GNU++17',
+        'clang': 'Clang++ 19.1.1 C11',
+        'clang++': 'Clang++ 19.1.1 C++17',
+        'rustc': 'Rustc 1.80',
+        'python3': 'CPython 3.12.3',
+        'java': 'OpenJDK 17.0.14',
     }
 
     NORMAL_PRI = 0
