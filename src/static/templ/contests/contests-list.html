@@ -7,7 +7,7 @@
     {% import datetime %}
     {% set now = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) %}
 
-    <h3>Undergoing Contests</h3>
+    <h3>Active Contests</h3>
     <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
         <thead>
             <tr>
@@ -33,7 +33,7 @@
         </tbody>
     </table>
 
-    <h3>Previous Contests</h3>
+    <h3>Permanent Contest</h3>
     <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
         <thead>
             <tr>
@@ -46,7 +46,7 @@
         </thead>
         <tbody>
             {% for contest in contests %}
-                {% if now >= contest['contest_end'] %}
+                {% if contest['contest_id'] == 1 %}
                 <tr>
                     <th scope="row"><a href="/oj/contests/{{ contest['contest_id'] }}/info/">{{ contest['name'] }}</a></th>
                     <td>{{ contest['contest_start'].strftime("%Y-%m-%d %H:%M") }}</td>
@@ -87,6 +87,32 @@
                     {% if user.is_kernel() %}
                     <td></td>
                     {% end %}
+                </tr>
+                {% end %}
+            {% end %}
+        </tbody>
+    </table>
+
+    <h3>Recent Contests</h3>
+    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+        <thead>
+            <tr>
+                <th scope="col">Title</th>
+                <th scope="col">Start Time</th>
+                <th scope="col">Length</th>
+                <th scope="col">Contest Type</th>
+                <th scope="col">Scoreboard</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contest in contests %}
+                {% if now >= contest['contest_end'] %}
+                <tr>
+                    <th scope="row"><a href="/oj/contests/{{ contest['contest_id'] }}/info/">{{ contest['name'] }}</a></th>
+                    <td>{{ contest['contest_start'].strftime("%Y-%m-%d %H:%M") }}</td>
+                    <td>{{ contest['contest_end'] - contest['contest_start'] }}</td>
+                    <td>{{ ContestMode(int(contest['contest_mode'])).name }}</td>
+                    <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
                 </tr>
                 {% end %}
             {% end %}
