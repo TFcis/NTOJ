@@ -20,7 +20,7 @@
         </thead>
         <tbody>
             {% for contest in contests %}
-                {% if contest['contest_start'] <= now < contest['contest_end'] %}
+                {% if contest['contest_id'] != 1 and contest['contest_start'] <= now < contest['contest_end'] %}
                 <tr>
                     <th scope="row"><a href="/oj/contests/{{ contest['contest_id'] }}/info/">{{ contest['name'] }}</a></th>
                     <td>{{ contest['contest_start'].strftime("%Y-%m-%d %H:%M") }}</td>
@@ -77,7 +77,7 @@
         </thead>
         <tbody>
             {% for contest in contests %}
-                {% if contest['contest_start'] > now %}
+                {% if contest['contest_id'] != 1 and contest['contest_start'] > now %}
                 <tr>
                     <th scope="row"><a href="/oj/contests/{{ contest['contest_id'] }}/info/">{{ contest['name'] }}</a></th>
                     <td>{{ contest['contest_start'].strftime("%Y-%m-%d %H:%M") }}</td>
@@ -106,7 +106,7 @@
         </thead>
         <tbody>
             {% for contest in contests %}
-                {% if now >= contest['contest_end'] %}
+                {% if contest['contest_id'] != 1 and now >= contest['contest_end'] %}
                 <tr>
                     <th scope="row"><a href="/oj/contests/{{ contest['contest_id'] }}/info/">{{ contest['name'] }}</a></th>
                     <td>{{ contest['contest_start'].strftime("%Y-%m-%d %H:%M") }}</td>
