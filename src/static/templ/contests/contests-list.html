@@ -28,7 +28,7 @@
                     <td>{{ ContestMode(int(contest['contest_mode'])).name }}</td>
                     <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
                 </tr>
-                {% endif %}
+                {% end %}
             {% end %}
         </tbody>
     </table>
@@ -54,7 +54,7 @@
                     <td>{{ ContestMode(int(contest['contest_mode'])).name }}</td>
                     <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
                 </tr>
-                {% endif %}
+                {% end %}
             {% end %}
         </tbody>
     </table>
@@ -86,9 +86,9 @@
                     <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
                     {% if user.is_kernel() %}
                     <td></td>
-                    {% endif %}
+                    {% end %}
                 </tr>
-                {% endif %}
+                {% end %}
             {% end %}
         </tbody>
     </table>
