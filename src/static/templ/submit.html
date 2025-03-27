@@ -96,9 +96,8 @@
                     lang = "rust";
                 }
                 if (await window.checkCode(lang, code)) {
-                    index.show_notify_dialog("給我回去編譯一次😡", index.DIALOG_TYPE.warning);
+                    if (!confirm("建議重新編譯一次檢查錯誤，如果沒有錯誤請確認")) return;
                     $.get(`/oj/be/ce?acct_id={{ user.acct_id }}`, {});
-                    return;
                 }
             }
 
