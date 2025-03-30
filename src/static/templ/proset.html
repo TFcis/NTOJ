@@ -140,6 +140,10 @@
                 tr.append(goto);
 
                 proclass_table.append(tr);
+                // NOTE: close proclass list dialog before navigating to another page.
+                list_dialog.querySelectorAll('a').forEach(el => {
+                    el.addEventListener('click', _ => list_dialog_modal.dispose());
+                })
             }
         }
 
