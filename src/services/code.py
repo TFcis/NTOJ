@@ -2,6 +2,7 @@ import config
 from services.chal import ChalConst
 from services.contests import ContestService
 from services.user import Account
+from services.log import LogService
 
 
 class CodeService:
@@ -34,6 +35,7 @@ class CodeService:
               and (owner is None or query_acct.acct_id in config.lock_user_list)
               and query_acct.acct_id in config.can_see_code_user):
 
+            await LogService.inst.add_log(f"{query_acct.name} view the challenge {chal_id}", "manage.chal.view")
             can_see = True
 
         elif contest_id != 0:
