@@ -71,7 +71,10 @@
 	        reader.readAsText(this.files[0]);
 	    });
 
+        let submitted = false;
         j_submit.find('button.submit').on('click', async function(e) {
+            if (submitted) return;
+            submitted = true;
             let code = j_submit.find('textarea.code').val();
             let comp_type = j_submit.find('#compilerList').val();
 
