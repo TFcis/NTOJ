@@ -99,7 +99,10 @@
                     lang = "rust";
                 }
                 if (await window.checkCode(lang, code)) {
-                    if (!confirm("建議重新編譯一次檢查錯誤，如果沒有錯誤請確認")) return;
+                    if (!confirm("建議重新編譯一次檢查錯誤，如果沒有錯誤請確認")) {
+                        submitted = false;
+                        return;
+                    }
                     $.get(`/oj/be/ce?acct_id={{ user.acct_id }}`, {});
                 }
             }
