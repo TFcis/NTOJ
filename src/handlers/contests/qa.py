@@ -109,15 +109,22 @@ class ContestNewQAHandler(WebSocketSubHandler):
             if msg['type'] != 'message':
                 continue
 
-            if json.loads(msg['data'])['contest_id'] == self.contest_id:
-                await self.write_message(msg['data'])
+            data = json.loads(msg['data'])
+            if data['contest_id'] == self.contest_id:
+                if data['type'] != 'reply':
+                    await self.write_message(msg['data'])
+                elif data['ask_acct_id'] == self.acct_id:
+                    await self.write_message(msg['data'])
 
     async def open(self):
         self.contest_id = -1
+        self.acct_id = -1
         await self.p.subscribe('contestnewqasub')
 
         self.task = asyncio.tasks.Task(self.listen_newqa())
 
     async def on_message(self, msg):
-        if self.contest_id == -1 and msg.isdigit():
-            self.contest_id = int(msg)
+        j = json.loads(msg)
+        if self.contest_id == -1 or self.acct_id == -1:
+            self.contest_id = int(j['contest_id'])
+            self.acct_id = int(j['acct_id'])

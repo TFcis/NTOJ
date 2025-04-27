@@ -69,9 +69,15 @@ class ContestManageQuestionHandler(RequestHandler):
                 self.error(('Eparam', 'Content too long'))
                 return
 
+            err, question = await ContestService.inst.get_question(self.contest.contest_id, question_id)
+            if err:
+                self.error(err)
+                return
+
             await ContestService.inst.reply_question(self.contest.contest_id, question_id, self.acct.acct_id, content)
             await self.rs.publish('contestnewqasub', json.dumps({
                 'contest_id': self.contest.contest_id,
+                'ask_acct_id': question['ask_acct_id'],
                 'type': 'reply'
             }))
             self.error(('S', ''))

@@ -347,6 +347,13 @@ class ContestService:
 
         return None, None
 
+    async def get_question(self, contest_id: int, question_id: int):
+        res = await self.db.fetch('SELECT * FROM contest_question WHERE contest_id = $1 AND question_id = $2', contest_id, question_id)
+        if len(res) != 1:
+            return ('Eunk', 'Unknown error'), None
+
+        return None, res[0]
+
     async def get_all_question(self, contest_id: int, ask_acct_id: int = 0):
         if ask_acct_id:
             res = await self.db.fetch('SELECT * FROM contest_question WHERE contest_id = $1 AND ask_acct_id = $2', contest_id, ask_acct_id)

@@ -33,7 +33,7 @@ class ContestTest(AsyncTest):
             # update general
             now = datetime.datetime.now()
             contest_start = now + datetime.timedelta(days=1)
-            contest_end = now + datetime.timedelta(days=2)
+            contest_end = now + datetime.timedelta(days=4)
             reg_end = now + datetime.timedelta(days=1) - datetime.timedelta(hours=8)
             default_config = {
                 'reqtype': 'update',
@@ -507,15 +507,18 @@ class ContestTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
-        def _message(msg):
-            if msg is None:
-                return
-
-            self.assertEqual(int(msg), 1)
-        ws = await websocket_connect('ws://localhost:5501/contests/1/manage/qasub', on_message_callback=_message)
-        await ws.write_message("1")
-
         with AccountContext('contest1@test', 'test') as user_session:
+            def _message(msg):
+                if msg is None:
+                    return
+
+                self.assertEqual(int(msg), 1)
+            ws = await websocket_connect('ws://localhost:5501/contests/1/manage/qasub', on_message_callback=_message)
+            await ws.write_message(json.dumps({
+                "contest_id": 1,
+                "acct_id": 4,
+            }))
+
             res = user_session.post('contests/1/qa', data={
                 'reqtype': 'ask',
                 'subject': '',
@@ -594,8 +597,13 @@ class ContestTest(AsyncTest):
                 j = json.loads(msg)
                 self.assertEqual(j['contest_id'], 1)
                 self.assertEqual(j['type'], 'reply')
+                self.assertEqual(j['ask_acct_id'], 4)
             ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
-            await ws.write_message('1')
+            await ws.write_message(json.dumps({
+                "contest_id": 1,
+                "acct_id": 4,
+            }))
+
             res = admin_session.post('contests/1/manage/question', data={
                 'reqtype': 'reply',
                 'content': 'answer',
@@ -650,7 +658,10 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['type'], 'add-announce')
 
             ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
-            await ws.write_message("1")
+            await ws.write_message(json.dumps({
+                "contest_id": 1,
+                "acct_id": 4,
+            }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'add-announce',
                 'subject': 'subject',
@@ -710,7 +721,10 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['type'], 'edit-announce')
 
             ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
-            await ws.write_message("1")
+            await ws.write_message(json.dumps({
+                "contest_id": 1,
+                "acct_id": 4,
+            }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'edit-announce',
                 'subject': 'subject2',
@@ -742,7 +756,10 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['type'], 'popup-announce')
 
             ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
-            await ws.write_message("1")
+            await ws.write_message(json.dumps({
+                "contest_id": 1,
+                "acct_id": 4
+            }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'popup-announce',
                 'announce_id': 1,
