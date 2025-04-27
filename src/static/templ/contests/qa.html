@@ -38,17 +38,21 @@
         <h1>Announcement</h1>
 
         <!-- TODO: add a button to close collapse when col-12 -->
-        <div class="announce" style="overflow-y:scroll; max-height: 80vh;">
-            {% for announce in announces %}
-                <div class="card mt-2">
-                    <div class="card-body">
-                        <h4 class="card-title">{{ announce['subject'] }}</h4>
-                        <p class="card-text">{{ announce['content'] }}</p>
-                        <h6>{{ announce['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+        {% if contest.is_start() %}
+            <div class="announce" style="overflow-y:scroll; max-height: 80vh;">
+                {% for announce in announces %}
+                    <div class="card mt-2">
+                        <div class="card-body">
+                            <h4 class="card-title">{{ announce['subject'] }}</h4>
+                            <p class="card-text">{{ announce['content'] }}</p>
+                            <h6>{{ announce['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+                        </div>
                     </div>
-                </div>
-            {% end %}
-        </div>
+                {% end %}
+            </div>
+        {% else %}
+            <h2>Contest not start</h2>
+        {% end %}
     </div>
 
     <div class="col-lg-7 col-12">
