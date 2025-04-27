@@ -3,91 +3,6 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <link href='https://fonts.googleapis.com/css?family=Orbitron:400,500,700,900' rel='stylesheet' type='text/css'>
-  <link rel="stylesheet" type="text/css" href="/oj/blk.css">
-  <!-- <script src="https://code.jquery.com/jquery-3.7.1.js"></script> -->
-  <!-- <script src="http://localhost/src/three.min.js"></script> -->
-  <script type="text/javascript">
-    /*
-    var j_canvas;
-    var scene;
-    var camera;
-    var renderer;  
-    function init(){
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(75,j_canvas.width() / j_canvas.height(),0.1,10000000);
-      renderer = new THREE.WebGLRenderer();  
-      renderer.setSize(j_canvas.width(),j_canvas.height());
-      j_canvas.append(renderer.domElement);  
-      window.AudioContext = window.AudioContext || window.webkitAudioContext;
-      context = new AudioContext();  
-      var a_master;
-      function load_master(){
-          var request = new XMLHttpRequest();  
-          request.open('GET','/oj/img/master.ogg',true);
-          request.responseType = 'arraybuffer';  
-        request.onload = function(){
-          context.decodeAudioData(request.response,function(buffer){
-            var source = context.createBufferSource();  
-            source.buffer = buffer;
-            source.loop = true;
-            source.connect(context.destination);
-            source.start(0);
-          });
-        }
-        request.send();
-      }
-      load_master();
-    }
-    function render(){
-      requestAnimationFrame(render);
-      renderer.render(scene,camera);  
-      camera.rotation.y += 0.01;
-    }
-    function test(){
-      var cubeMap = new THREE.Texture([]);
-      cubeMap.format = THREE.RGBFormat;
-      cubeMap.flipY = false;  
-      var loader = new THREE.ImageLoader();
-      loader.load( '/oj/img/skybox.png',function(image){
-        var getSide = function(x,y){
-        var size = 720;
-        var canvas = document.createElement('canvas');  
-        canvas.width = size;
-        canvas.height = size;  
-        var context = canvas.getContext('2d');
-        context.drawImage(image,-x * size,-y * size);  
-        return canvas;
-      };
-      cubeMap.image[0] = getSide(2,1); // px
-      cubeMap.image[1] = getSide(0,1); // nx
-      cubeMap.image[2] = getSide(1,0); // nx
-      cubeMap.image[3] = getSide(1,2); // nx
-      cubeMap.image[4] = getSide(1,1); // nx
-      cubeMap.image[5] = getSide(3,1); // nx
-      cubeMap.needsUpdate = true;
-    });
-    var shader = THREE.ShaderLib["cube"];
-    shader.uniforms['tCube'].value = cubeMap;  
-    var material = new THREE.ShaderMaterial({
-      'fragmentShader':shader.fragmentShader,
-      'vertexShader':shader.vertexShader,
-      'uniforms':shader.uniforms,
-      'depthWrite':false,
-      'side':THREE.BackSide
-    });
-    var skybox = new THREE.Mesh(
-      new THREE.BoxGeometry(10000,100000,100000),
-      material);  
-    scene.add(skybox);
-    }
-    $(document).ready(function(){
-      j_canvas = $('#canvas');  
-      init();
-      render();
-      test();
-    });
-  */
-  </script>
   <style>
     .clearfix {
       margin-bottom: 16px;
@@ -113,9 +28,9 @@
       <div
         style="width: 62%; margin: 64px auto; padding: 16px 16px; background-color: rgba(255,255,255,0.8); font-family: Orbitron, sans-serif; color: #0B1013;">
         <div>
-          <!-- <a 
-            data-bs-toggle="collapse" 
-            href="#NTOJ" 
+          <!-- <a
+            data-bs-toggle="collapse"
+            href="#NTOJ"
             role="button"
             style="color: var(--bs-link-color);"
           > -->
