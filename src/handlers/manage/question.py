@@ -2,7 +2,7 @@ from msgpack import unpackb
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
-from services.ques import QuestionService
+from services.ques import QuestionConst, QuestionService
 from services.user import UserConst, UserService
 
 
@@ -32,8 +32,17 @@ class ManageQuestionHandler(RequestHandler):
     async def post(self, page=None):
         if page == "reply":
             reqtype = self.get_argument('reqtype')
+            rtext = self.get_argument('rtext').strip()
+            rtext_len = len(rtext)
+            if rtext_len < QuestionConst.QUESTION_MIN:
+                self.error(('Erplmin', 'Reply too short'))
+                return
+
+            elif rtext_len > QuestionConst.QUESTION_MAX:
+                self.error(('Erplmax', 'Reply too long'))
+                return
+
             if reqtype == 'rpl':
-                rtext = self.get_argument('rtext')
                 await LogService.inst.add_log(
                     f"{self.acct.name} replyed a question from user #{self.get_argument('qacct_id')}.",
                     'manage.question.reply',
@@ -48,7 +57,6 @@ class ManageQuestionHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'rrpl':
-                rtext = self.get_argument('rtext')
                 await LogService.inst.add_log(
                     f"{self.acct.name} re-replyed a question from user #{self.get_argument('qacct_id')}.",
                     'manage.question.re-reply',

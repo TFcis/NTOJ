@@ -2,6 +2,9 @@ from msgpack import packb, unpackb
 
 from services.user import UserConst, UserService
 
+class QuestionConst:
+    QUESTION_MAX = 1024
+    QUESTION_MIN = 1
 
 class QuestionService:
     def __init__(self, db, rs) -> None:
