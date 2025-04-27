@@ -86,6 +86,7 @@ font-weight: bolder;
                         {% set pro_name = f"p{chr(65+idx)}. {pro_name}" %}
                     {% end %}
 
+                    <!-- TODO: test this feature -->
                     {% if is_end and pro['status'] == ProConst.STATUS_ONLINE %}
                         <td class="name">
                             <a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro_name }}</a>

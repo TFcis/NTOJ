@@ -6,6 +6,11 @@ from services.user import UserService
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
 from handlers.contests.base import contest_require_permission
 
+SUBJECT_MIN = 1
+SUBJECT_MAX = 50
+CONTENT_MIN = 1
+CONTENT_MAX = 256
+
 class ContestManageQuestionHandler(RequestHandler):
     @reqenv
     @contest_require_permission('admin')
@@ -54,9 +59,14 @@ class ContestManageQuestionHandler(RequestHandler):
         if reqtype == 'reply':
             question_id = int(self.get_argument('question_id'))
             content = self.get_argument('content').strip()
+            content_len = len(content)
 
-            if len(content) == 0:
-                self.error(('Eparam', 'Content should not be empty'))
+            if content_len < CONTENT_MIN:
+                self.error(('Eparam', 'Content too short'))
+                return
+
+            elif content_len > CONTENT_MAX:
+                self.error(('Eparam', 'Content too long'))
                 return
 
             await ContestService.inst.reply_question(self.contest.contest_id, question_id, self.acct.acct_id, content)
@@ -83,44 +93,45 @@ class ContestManageAnnounceHandler(RequestHandler):
     async def post(self):
         reqtype = self.get_argument('reqtype')
 
-        if reqtype == 'add-announce':
+        if reqtype in ['add-announce', 'edit-announce']:
             subject = self.get_argument('subject').strip()
             content = self.get_argument('content').strip()
+            subject_len = len(subject)
+            content_len = len(content)
 
-            if len(subject) == 0:
-                self.error(('Eparam', 'Subject should not be empty'))
+            if subject_len < SUBJECT_MIN:
+                self.error(('Eparam', 'Subject too short'))
                 return
 
-            if len(content) == 0:
-                self.error(('Eparam', 'Content should not be empty'))
+            elif subject_len > SUBJECT_MAX:
+                self.error(('Eparam', 'Subject too long'))
                 return
 
-            await ContestService.inst.add_announce(self.contest.contest_id, self.acct.acct_id, subject, content)
-            await self.rs.publish('contestnewqasub', json.dumps({
-                'contest_id': self.contest.contest_id,
-                'type': 'add-announce'
-            }))
-            self.error(('S', ''))
-
-        elif reqtype == 'edit-announce':
-            announce_id = int(self.get_argument('announce_id'))
-            subject = self.get_argument('subject')
-            content = self.get_argument('content')
-
-            if len(subject) == 0:
-                self.error(('Eparam', 'Subject should not be empty'))
+            if content_len < CONTENT_MIN:
+                self.error(('Eparam', 'Content too short'))
                 return
 
-            if len(content) == 0:
-                self.error(('Eparam', 'Content should not be empty'))
+            elif content_len > CONTENT_MAX:
+                self.error(('Eparam', 'Content too long'))
                 return
 
-            await ContestService.inst.edit_announce(self.contest.contest_id, announce_id, subject, content)
-            await self.rs.publish('contestnewqasub', json.dumps({
-                'contest_id': self.contest.contest_id,
-                'type': 'edit-announce'
-            }))
-            self.error(('S', ''))
+            if reqtype == 'add-announce':
+                await ContestService.inst.add_announce(self.contest.contest_id, self.acct.acct_id, subject, content)
+                await self.rs.publish('contestnewqasub', json.dumps({
+                    'contest_id': self.contest.contest_id,
+                    'type': 'add-announce'
+                }))
+                self.error(('S', ''))
+
+            elif reqtype == 'edit-announce':
+                announce_id = int(self.get_argument('announce_id'))
+
+                await ContestService.inst.edit_announce(self.contest.contest_id, announce_id, subject, content)
+                await self.rs.publish('contestnewqasub', json.dumps({
+                    'contest_id': self.contest.contest_id,
+                    'type': 'edit-announce'
+                }))
+                self.error(('S', ''))
 
         elif reqtype == 'popup-announce':
             announce_id = int(self.get_argument('announce_id'))
