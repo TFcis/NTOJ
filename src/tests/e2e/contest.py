@@ -361,7 +361,17 @@ class ContestTest(AsyncTest):
             res = user_session.get('contests/1/pro/7/cont.pdf')
             self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
+            html = self.get_html('index/contests/1', user_session)
+            self.assertIsNone(html.select_one('li.nav-item.proset'))
+            self.assertIsNone(html.select_one('li.nav-item.chal'))
+            self.assertIsNone(html.select_one('li.nav-item.scoreboard'))
+
         with AccountContext('admin@test', 'testtest') as admin_session:
+            html = self.get_html('index/contests/1', admin_session)
+            self.assertIsNotNone(html.select_one('li.nav-item.proset'))
+            self.assertIsNotNone(html.select_one('li.nav-item.chal'))
+            self.assertIsNotNone(html.select_one('li.nav-item.scoreboard'))
+
             contest_start = now - datetime.timedelta(days=2)
             config = copy.deepcopy(default_config)
             config['contest_start'] = self.get_isoformat(contest_start)
@@ -373,6 +383,11 @@ class ContestTest(AsyncTest):
             # html = self.get_html('contests', user_session)
             # contest0 = html.select('tr')[1]
             # self.assertEqual(contest0.select('td')[0].text, 'Started')
+
+            html = self.get_html('index/contests/1', user_session)
+            self.assertIsNotNone(html.select_one('li.nav-item.proset'))
+            self.assertIsNotNone(html.select_one('li.nav-item.chal'))
+            self.assertIsNotNone(html.select_one('li.nav-item.scoreboard'))
 
             res = user_session.get('contests/1')
             self.assertEqual(re.findall(r'let desc_tex = `(.*)`', res.text, re.I)[0], 'desc during contest')
