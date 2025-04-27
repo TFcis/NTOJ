@@ -496,14 +496,25 @@ class ContestTest(AsyncTest):
             self.assertEqual(chal_tr.select('td > a')[1].attrs.get('href'), '/oj/contests/1/pro/7/')
             self.assertEqual(chal_tr.select('td')[3].attrs.get('class')[0], 'state-1')
 
+        with AccountContext('test1@test', 'test') as user_session:
+            html = self.get_html('contests/1/qa', user_session)
+            self.assertEqual(html.select('div.row > div')[1].select_one('h2').text.strip(), 'Only contestants can ask questions.')
+
+            res = user_session.post('contests/1/qa', data={
+                'reqtype': 'ask',
+                'subject': 'subject',
+                'content': 'content',
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
         def _message(msg):
             if msg is None:
                 return
 
             self.assertEqual(int(msg), 1)
-
         ws = await websocket_connect('ws://localhost:5501/contests/1/manage/qasub', on_message_callback=_message)
         await ws.write_message("1")
+
         with AccountContext('contest1@test', 'test') as user_session:
             res = user_session.post('contests/1/qa', data={
                 'reqtype': 'ask',

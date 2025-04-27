@@ -1,3 +1,4 @@
+{% from services.contests import UserStatus %}
 <script>
     function init() {
         // TODO: markdown feature
@@ -56,6 +57,7 @@
     </div>
 
     <div class="col-lg-7 col-12">
+        {% if contest.is_member(user, UserStatus.APPROVED) %}
         <div class="row">
             <h1>Question</h1>
             <form>
@@ -114,5 +116,9 @@
                 </table>
             </div>
         </div>
+        {% else %}
+            <h1>Question</h1>
+            <h2>Only contestants can ask questions.</h2>
+        {% end %}
     </div>
 </div>
