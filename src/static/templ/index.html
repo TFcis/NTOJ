@@ -146,9 +146,12 @@
         {% if is_in_contest %}
         <ul class="navbar-nav me-auto">
           <li class="nav-item info"><a class="nav-link" href="/oj/contests/{{ contest_id  }}/info/">Info</a></li>
-          <li class="nav-item proset"><a class="nav-link" href="/oj/contests/{{ contest_id }}/proset/">ProblemSet</a></li>
-          <li class="nav-item chal"><a class="nav-link" href="/oj/contests/{{ contest_id }}/chal/">Challenges</a></li>
-          <li class="nav-item scoreboard"><a class="nav-link" href="/oj/contests/{{ contest_id }}/scoreboard/">Scoreboard</a></li>
+
+          {% if contest_manage or contest.is_start() %}
+            <li class="nav-item proset"><a class="nav-link" href="/oj/contests/{{ contest_id }}/proset/">ProblemSet</a></li>
+            <li class="nav-item chal"><a class="nav-link" href="/oj/contests/{{ contest_id }}/chal/">Challenges</a></li>
+            <li class="nav-item scoreboard"><a class="nav-link" href="/oj/contests/{{ contest_id }}/scoreboard/">Scoreboard</a></li>
+          {% end %}
 
           {% if not contest_manage %}
             <li class="nav-item qa"></li>
