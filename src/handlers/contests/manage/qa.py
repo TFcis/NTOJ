@@ -46,7 +46,7 @@ class ContestManageQuestionHandler(RequestHandler):
         def _cmp(question):
             return (question['reply_acct_id'] is None, question['ask_timestamp'], question['reply_timestamp'])
 
-        questions2.sort(key=_cmp)
+        questions2.sort(key=_cmp, reverse=True)
 
 
         await self.render('contests/manage/question', page='question', contest_id=self.contest.contest_id,
