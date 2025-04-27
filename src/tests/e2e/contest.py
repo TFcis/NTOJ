@@ -496,25 +496,6 @@ class ContestTest(AsyncTest):
             self.assertEqual(chal_tr.select('td > a')[1].attrs.get('href'), '/oj/contests/1/pro/7/')
             self.assertEqual(chal_tr.select('td')[3].attrs.get('class')[0], 'state-1')
 
-        with AccountContext('admin@test', 'testtest') as admin_session:
-            contest_end = now - datetime.timedelta(days=1)
-            config = copy.deepcopy(default_config)
-            config['contest_end'] = self.get_isoformat(contest_end)
-            res = admin_session.post('contests/1/manage/general', data=config)
-            self.assertAPIReturnSuccess(res.text)
-
-            res = admin_session.post('contests/1/manage/pro', data={
-                'reqtype': 'public',
-                'pro_id': '7'
-            })
-            self.assertAPIReturnSuccess(res.text)
-
-        with AccountContext('test1@test', 'test') as user_session:
-            res = user_session.get('pro/7')
-            self.assertNotIn('Eacces', res.text)
-            res = user_session.get('pro/8')
-            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not found'))
-
         def _message(msg):
             if msg is None:
                 return
@@ -760,6 +741,26 @@ class ContestTest(AsyncTest):
 
             res = admin_session.get('contests/1/qa')
             self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+        # NOTE: contest end
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            contest_end = now - datetime.timedelta(days=1)
+            config = copy.deepcopy(default_config)
+            config['contest_end'] = self.get_isoformat(contest_end)
+            res = admin_session.post('contests/1/manage/general', data=config)
+            self.assertAPIReturnSuccess(res.text)
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'public',
+                'pro_id': '7'
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+        with AccountContext('test1@test', 'test') as user_session:
+            res = user_session.get('pro/7')
+            self.assertNotIn('Eacces', res.text)
+            res = user_session.get('pro/8')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not found'))
 
         # freeze_scoreboard_period: int = 0
 

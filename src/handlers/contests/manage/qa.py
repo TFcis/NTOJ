@@ -117,20 +117,22 @@ class ContestManageAnnounceHandler(RequestHandler):
 
             if reqtype == 'add-announce':
                 await ContestService.inst.add_announce(self.contest.contest_id, self.acct.acct_id, subject, content)
-                await self.rs.publish('contestnewqasub', json.dumps({
-                    'contest_id': self.contest.contest_id,
-                    'type': 'add-announce'
-                }))
+                if self.contest.is_start():
+                    await self.rs.publish('contestnewqasub', json.dumps({
+                        'contest_id': self.contest.contest_id,
+                        'type': 'add-announce'
+                    }))
                 self.error(('S', ''))
 
             elif reqtype == 'edit-announce':
                 announce_id = int(self.get_argument('announce_id'))
 
                 await ContestService.inst.edit_announce(self.contest.contest_id, announce_id, subject, content)
-                await self.rs.publish('contestnewqasub', json.dumps({
-                    'contest_id': self.contest.contest_id,
-                    'type': 'edit-announce'
-                }))
+                if self.contest.is_start():
+                    await self.rs.publish('contestnewqasub', json.dumps({
+                        'contest_id': self.contest.contest_id,
+                        'type': 'edit-announce'
+                    }))
                 self.error(('S', ''))
 
         elif reqtype == 'popup-announce':

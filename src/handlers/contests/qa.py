@@ -20,10 +20,13 @@ class ContestQAHandler(RequestHandler):
             self.error(('Eacces', 'Permission denied'))
             return
 
-        err, announces = await ContestService.inst.get_all_announce(self.contest.contest_id)
-        if err:
-            self.error(err)
-            return
+        if self.contest.is_start():
+            err, announces = await ContestService.inst.get_all_announce(self.contest.contest_id)
+            if err:
+                self.error(err)
+                return
+        else:
+            announces = []
 
         err, questions = await ContestService.inst.get_all_question(self.contest.contest_id, self.acct.acct_id)
         if err:
