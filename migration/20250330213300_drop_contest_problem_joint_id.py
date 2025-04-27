@@ -16,5 +16,4 @@ async def dochange(db, _):
     ''')
 
     await db.execute('ALTER TABLE contest_problem_joints DROP COLUMN id;')
-    await db.execute('DROP SEQUENCE contest_problem_joints_id_seq;')
     await db.execute('ALTER TABLE contest_problem_joints ALTER COLUMN "order" SET NOT NULL;')
