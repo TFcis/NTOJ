@@ -1,3 +1,4 @@
+import time
 import asyncio
 import json
 
@@ -5,6 +6,12 @@ from services.contests import ContestService
 
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
 from handlers.contests.base import contest_require_permission
+
+SUBJECT_MIN = 1
+SUBJECT_MAX = 50
+CONTENT_MIN = 1
+CONTENT_MAX = 256
+ASK_CD_TIME = 60 * 3
 
 class ContestQAHandler(RequestHandler):
     @reqenv
@@ -51,16 +58,43 @@ class ContestQAHandler(RequestHandler):
     async def post(self):
         reqtype = self.get_argument('reqtype')
         if reqtype == 'ask':
+            last_ask_name = f"last_ask_time_{self.acct.acct_id}_{self.contest.contest_id}"
+            last_ask_time = await self.rs.get(last_ask_name)
+            if last_ask_time is not None:
+                last_ask_time = int(str(last_ask_time)[2:-1])
+                elapsed_time = int(time.time()) - last_ask_time
+                if elapsed_time < ASK_CD_TIME:
+                    remaining_time = ASK_CD_TIME - elapsed_time
+                    remaining_time = max(remaining_time, 0)
+                    self.error(('Einternal', f'Ask CD Time: {ASK_CD_TIME} Secs, Remaining: {remaining_time} Secs'))
+                    return
+
             subject = self.get_argument('subject').strip()
             content = self.get_argument('content').strip()
+            subject_len = len(subject)
+            content_len = len(content)
 
-            if len(subject) == 0:
-                self.error(('Eparam', 'Subject should not be empty'))
+            if subject_len < SUBJECT_MIN:
+                self.error(('Eparam', 'Subject too short'))
                 return
 
-            if len(content) == 0:
-                self.error(('Eparam', 'Content should not be empty'))
+            elif subject_len > SUBJECT_MAX:
+                self.error(('Eparam', 'Subject too long'))
                 return
+
+            if content_len < CONTENT_MIN:
+                self.error(('Eparam', 'Content too short'))
+                return
+
+            elif content_len > CONTENT_MAX:
+                self.error(('Eparam', 'Content too long'))
+                return
+
+
+            if not last_ask_time:
+                await self.rs.set(last_ask_name, int(time.time()), ex=ASK_CD_TIME)  # ex means expire
+            else:
+                await self.rs.set(last_ask_name, int(time.time()))
 
             await ContestService.inst.ask_question(self.contest.contest_id, self.acct.acct_id, subject, content)
             await self.rs.publish('contestnewquessub', str(self.contest.contest_id))
