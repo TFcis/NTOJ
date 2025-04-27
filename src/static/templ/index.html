@@ -106,7 +106,10 @@
             let ws = index.get_ws("contests/{{ contest.contest_id }}/qasub");
             let contest_notification_cnt = parseInt("{{ contest_notification_cnt }}");
             ws.onopen = (e) => {
-                ws.send("{{ contest.contest_id }}");
+                ws.send(JSON.stringify({
+                    contest_id: "{{ contest.contest_id }}",
+                    acct_id: "{{ user.acct_id }}",
+                }));
             };
             ws.onmessage = (e) => {
                 e = JSON.parse(e.data);
