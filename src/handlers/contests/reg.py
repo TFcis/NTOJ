@@ -10,12 +10,10 @@ class ContestRegHandler(RequestHandler):
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def get(self):
         if not self.contest:
-            self.error(('Enoext', 'Contest not found'))
-            return
+            return self.error(('Enoext', 'Contest not found'))
 
         if self.contest.is_admin(self.acct):
-            self.error(('Eacces', 'Contest admin do not need to register'))
-            return
+            return self.error(('Eacces', 'Contest admin do not need to register'))
 
         await self.render('contests/reg', contest=self.contest)
 
@@ -27,8 +25,7 @@ class ContestRegHandler(RequestHandler):
 
         if reqtype == 'reg':
             if self.contest.is_admin(self.acct):
-                self.error(('Eacces', 'Contest admin do not need to register'))
-                return
+                return self.error(('Eacces', 'Contest admin do not need to register'))
 
             else:
                 status = None
@@ -39,16 +36,13 @@ class ContestRegHandler(RequestHandler):
                     status = UserStatus.REQUESTED
 
                 if acct_id in self.contest.user_list and self.contest.user_list[acct_id]['status'] == status:
-                    self.error(('Eexist', 'Already registered'))
-                    return
+                    return self.error(('Eexist', 'Already registered'))
 
             if datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) > self.contest.reg_end:
-                self.error(('Etime', 'Registration time has passed. Please remember to register earlier next time'))
-                return
+                return self.error(('Etime', 'Registration time has passed. Please remember to register earlier next time'))
 
             if self.contest.reg_mode is RegMode.INVITED:
-                self.error(('Eacces', 'Invited mode do not allow register'))
-                return
+                return self.error(('Eacces', 'Invited mode do not allow register'))
 
             elif self.contest.reg_mode is RegMode.FREE_REG:
                 self.contest.user_list[acct_id] = {
@@ -65,16 +59,13 @@ class ContestRegHandler(RequestHandler):
 
         elif reqtype == 'unreg':
             if self.contest.is_admin(self.acct):
-                self.error(('Eacces', 'Contest admin do not need to register'))
-                return
+                return self.error(('Eacces', 'Contest admin do not need to register'))
 
             if self.contest.reg_mode is RegMode.INVITED:
-                self.error(('Eacces', 'Invited mode do not allow register'))
-                return
+                return self.error(('Eacces', 'Invited mode do not allow register'))
 
             if acct_id not in self.contest.user_list:
-                self.error(('Enoext', 'You have not registered yet' ))
-                return
+                return self.error(('Enoext', 'You have not registered yet' ))
 
             self.contest.user_list.pop(acct_id)
 

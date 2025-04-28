@@ -47,16 +47,13 @@ class ManageGroupHandler(RequestHandler):
             gtype = int(self.get_argument('gtype'))
             gclas = int(self.get_argument('gclas'))
             if gname == GroupConst.KERNEL_GROUP:
-                self.error(('Ekernel', 'Cannot edit kernel group'))
-                return
+                return self.error(('Ekernel', 'Cannot edit kernel group'))
 
             await LogService.inst.add_log(
                 f"{self.acct.name} updated group={gname} group_type={gtype} group_class={gclas}.", 'manage.group.update'
             )
-            err = await GroupService.inst.update_group(gname, gtype, gclas)
-            if err:
-                self.error(err)
-                return
+            if err := await GroupService.inst.update_group(gname, gtype, gclas):
+                return self.error(err)
 
             self.error(('S', ''))
 
@@ -68,24 +65,18 @@ class ManageGroupHandler(RequestHandler):
             await LogService.inst.add_log(
                 f"{self.acct.name} added group={gname} group_type={gtype} group_class={gclas}.", 'manage.group.add'
             )
-            err = await GroupService.inst.add_group(gname, gtype, gclas)
-            if err:
-                self.error(err)
-                return
+            if err := await GroupService.inst.add_group(gname, gtype, gclas):
+                return self.error(err)
 
             self.error(('S', ''))
 
         elif reqtype == 'del_group':
             gname = str(self.get_argument('gname'))
             if gname in [GroupConst.KERNEL_GROUP, GroupConst.DEFAULT_GROUP]:
-                self.error(('Ekernel', 'Cannot remove kernel and default group'))
-                return
+                return self.error(('Ekernel', 'Cannot remove kernel and default group'))
 
             await LogService.inst.add_log(f"{self.acct.name} deleted group={gname}", 'manage.group.delete')
-            err = await GroupService.inst.del_group(gname)
-            if err:
-                self.error(err)
-                return
+            if err := await GroupService.inst.del_group(gname):
+                return self.error(err)
 
             self.error(('S', ''))
-            return

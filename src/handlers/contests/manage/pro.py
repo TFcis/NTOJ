@@ -34,8 +34,7 @@ class ContestManageProHandler(RequestHandler):
             pro_id = int(pro_id)
 
             if self.contest.is_pro(pro_id):
-                self.error(('Eexist', f'Problem(#{pro_id}) is already in contest'))
-                return
+                return self.error(('Eexist', f'Problem(#{pro_id}) is already in contest'))
 
             self.contest.pro_list[pro_id] = {
                 "score_type": ProblemScoreType.IOI2017.value
@@ -49,8 +48,7 @@ class ContestManageProHandler(RequestHandler):
             pro_id = int(pro_id)
 
             if not self.contest.is_pro(pro_id):
-                self.error(('Enoext', f'Problem(#{pro_id}) not in contest'))
-                return
+                return self.error(('Enoext', f'Problem(#{pro_id}) not in contest'))
 
             self.contest.pro_list.pop(pro_id)
 
@@ -86,13 +84,11 @@ class ContestManageProHandler(RequestHandler):
             pro_id = int(pro_id)
             can_submit = JudgeServerClusterService.inst.is_server_online()
             if not can_submit:
-                self.error(('Ejudge', 'No judge available'))
-                return
+                return self.error(('Ejudge', 'No judge available'))
 
             err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=True)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             async with self.db.acquire() as con:
                 result = await con.fetch(
@@ -128,22 +124,18 @@ class ContestManageProHandler(RequestHandler):
         elif reqtype == "public":
             pro_id = int(pro_id)
             if not self.contest.is_pro(pro_id):
-                self.error(('Enoext', f'Problem(#{pro_id}) not in contest'))
-                return
+                return self.error(('Enoext', f'Problem(#{pro_id}) not in contest'))
 
             if not self.contest.is_end():
-                self.error(('Etime', 'Contest is not over yet'))
-                return
+                return self.error(('Etime', 'Contest is not over yet'))
 
             err, pro = await ProService.inst.get_pro(pro_id, is_contest=True)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             err, _ = await ProService.inst.update_pro(pro_id, pro['name'], ProConst.STATUS_ONLINE, None, None, pro['tags'])
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             self.error(('S', ''))
 

@@ -17,21 +17,18 @@ class ContestQAHandler(RequestHandler):
     @reqenv
     async def get(self):
         if self.contest.is_admin(self.acct):
-            self.error(('Eacces', 'Permission denied'))
-            return
+            return self.error(('Eacces', 'Permission denied'))
 
         if self.contest.is_start():
             err, announces = await ContestService.inst.get_all_announce(self.contest.contest_id)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
         else:
             announces = []
 
         err, questions = await ContestService.inst.get_all_question(self.contest.contest_id, self.acct.acct_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         def _cmp(question):
             return (question['reply_acct_id'] is not None, question['reply_timestamp'], question['ask_timestamp'])
@@ -69,8 +66,7 @@ class ContestQAHandler(RequestHandler):
                 if elapsed_time < ASK_CD_TIME:
                     remaining_time = ASK_CD_TIME - elapsed_time
                     remaining_time = max(remaining_time, 0)
-                    self.error(('Einternal', f'Ask CD Time: {ASK_CD_TIME} Secs, Remaining: {remaining_time} Secs'))
-                    return
+                    return self.error(('Einternal', f'Ask CD Time: {ASK_CD_TIME} Secs, Remaining: {remaining_time} Secs'))
 
             subject = self.get_argument('subject').strip()
             content = self.get_argument('content').strip()

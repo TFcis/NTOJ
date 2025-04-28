@@ -38,18 +38,15 @@ class ManageBulletinHandler(RequestHandler):
                 pinned = False
             color = self.get_argument('color')
             if err := self.len_check(title, BulletinConst.TITLE_MIN, BulletinConst.TITLE_MAX, 'Title'):
-                self.error(err)
-                return
+                return self.error(err)
 
             if err := self.len_check(content, BulletinConst.CONTENT_MIN, BulletinConst.CONTENT_MAX, 'Content'):
-                self.error(err)
-                return
+                return self.error(err)
 
             if reqtype == 'add':
                 err, bulletin_id = await BulletinService.inst.add_bulletin(title, content, self.acct.acct_id, color, pinned)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 await LogService.inst.add_log(
                     f"{self.acct.name} added a line on bulletin: \"{title}\".", 'manage.inform.add',
@@ -75,8 +72,8 @@ class ManageBulletinHandler(RequestHandler):
                 )
                 err, _ = await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct.acct_id, color, pinned)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
+
                 self.error(('S', ''))
 
             await self.rs.publish('bulletinsub', 1)
@@ -88,8 +85,7 @@ class ManageBulletinHandler(RequestHandler):
             )
             err, _ = await BulletinService.inst.del_bulletin(bulletin_id)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             await self.rs.publish('bulletinsub', 1)
             self.error(('S', ''))

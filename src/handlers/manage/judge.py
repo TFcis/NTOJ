@@ -34,13 +34,11 @@ class ManageJudgeHandler(RequestHandler):
             if (server_name := server_inform['name']) == '':
                 server_name = f"server-{index}"
 
-            err = await JudgeServerClusterService.inst.connect_server(index)
-            if err:
+            if err := await JudgeServerClusterService.inst.connect_server(index):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried connected {server_name} but failed.", 'manage.judge.connect.failure'
                 )
-                self.error(err)
-                return
+                return self.error(err)
 
             await LogService.inst.add_log(
                 f"{self.acct.name} had been connected {server_name} succesfully.", 'manage.judge.connect'
@@ -60,16 +58,13 @@ class ManageJudgeHandler(RequestHandler):
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to disconnect {server_name} but failed.", 'manage.judge.disconnect.failure'
                 )
-                self.error(('Eacces', 'Wrong password'))
-                return
+                return self.error(('Eacces', 'Wrong password'))
 
-            err = await JudgeServerClusterService.inst.disconnect_server(index)
+            if err := await JudgeServerClusterService.inst.disconnect_server(index):
+                return self.error(err)
             await LogService.inst.add_log(
                 f"{self.acct.name} had been disconnected {server_name} succesfully.", 'manage.judge.disconnect'
             )
-            if err:
-                self.error(err)
-                return
 
             self.error(('S', ''))
 

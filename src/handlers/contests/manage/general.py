@@ -61,16 +61,13 @@ class ContestManageGeneralHandler(RequestHandler):
 
             err, contest_start = trantime(contest_start)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
             err, contest_end = trantime(contest_end)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
             err, reg_end = trantime(reg_end)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             self.contest.name = name
 
@@ -128,7 +125,7 @@ class ContestManageDescEditHandler(RequestHandler):
                 self.contest.desc_after_contest = desc
 
             else:
-                self.error(('Eunk', 'Unknown error'))
+                return self.error(('Eunk', 'Unknown error'))
 
             await ContestService.inst.update_contest(self.acct, self.contest)
 

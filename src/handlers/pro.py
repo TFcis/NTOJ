@@ -86,16 +86,13 @@ class ProsetHandler(RequestHandler):
         if proclass_id:
             err, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
             proclass = dict(proclass)
 
             if proclass['type'] == ProClassConst.OFFICIAL_HIDDEN and not self.acct.is_kernel():
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
             elif proclass['type'] == ProClassConst.USER_HIDDEN and proclass['acct_id'] != self.acct.acct_id:
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             p_list = proclass['list']
             prolist = list(filter(lambda pro: pro['pro_id'] in p_list, prolist))
@@ -205,14 +202,12 @@ class ProsetHandler(RequestHandler):
 
         elif reqtype == "collect":
             if self.acct.is_guest():
-                self.error(('Eacces', 'Please login'))
-                return
+                return self.error(('Eacces', 'Please login'))
 
             proclass_id = int(self.get_argument('proclass_id'))
 
             if proclass_id in self.acct.proclass_collection:
-                self.error(('Eexist', 'Problem class is already collected'))
-                return
+                return self.error(('Eexist', 'Problem class is already collected'))
 
             self.acct.proclass_collection.append(proclass_id)
             self.acct.proclass_collection.sort()
@@ -221,14 +216,12 @@ class ProsetHandler(RequestHandler):
 
         elif reqtype == "decollect":
             if self.acct.is_guest():
-                self.error(('Eacces', 'Please login'))
-                return
+                return self.error(('Eacces', 'Please login'))
 
             proclass_id = int(self.get_argument('proclass_id'))
 
             if proclass_id not in self.acct.proclass_collection:
-                self.error(('Enoext', 'Problem class is not in your collection'))
-                return
+                return self.error(('Enoext', 'Problem class is not in your collection'))
 
             self.acct.proclass_collection.remove(proclass_id)
             self.acct.proclass_collection.sort()
@@ -242,26 +235,21 @@ class ProStaticHandler(RequestHandler):
         pro_id = int(pro_id)
         if self.contest:
             if not self.contest.is_pro(pro_id):
-                self.error(('Enoext', 'Problem not in contest'))
-                return
+                return self.error(('Enoext', 'Problem not in contest'))
 
         err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         if pro['status'] == ProConst.STATUS_OFFLINE:
-            self.error(PERMISSION_DENIED_ERROR)
-            return
+            return self.error(PERMISSION_DENIED_ERROR)
 
         elif pro['status'] == ProConst.STATUS_CONTEST:
             if not self.contest:
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             elif not (self.contest.is_running() or self.contest.is_admin(self.acct)):
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
         if path.endswith('pdf'):
             self.set_header('Pragma', 'public')
@@ -289,29 +277,23 @@ class ProHandler(RequestHandler):
 
         if self.contest:
             if not self.contest.is_pro(pro_id):
-                self.error(('Enoext', 'Problem not in contest'))
-                return
+                return self.error(('Enoext', 'Problem not in contest'))
 
             if not self.contest.is_start() and not self.contest.is_admin(self.acct):
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             elif not self.contest.is_running() and not self.contest.is_member(self.acct):
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
         err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         if pro['status'] == ProConst.STATUS_OFFLINE:
-            self.error(PERMISSION_DENIED_ERROR)
-            return
+            return self.error(PERMISSION_DENIED_ERROR)
 
         elif pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
-            self.error(PERMISSION_DENIED_ERROR)
-            return
+            return self.error(PERMISSION_DENIED_ERROR)
 
         # NOTE: Guest cannot see tags
         # NOTE: Admin can see tags
@@ -360,8 +342,7 @@ class ProTagsHandler(RequestHandler):
 
         err, pro = await ProService.inst.get_pro(pro_id, self.acct)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         await LogService.inst.add_log(
             (self.acct.name + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."),
@@ -373,7 +354,6 @@ class ProTagsHandler(RequestHandler):
         )
 
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         self.error(('S', ''))
