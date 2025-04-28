@@ -205,8 +205,7 @@ class JudgeServerClusterService:
         if idx < 0 or idx >= len(self.servers):
             return ('Eparam', 'Invalid judge index')
 
-        err = await self.servers[idx].disconnect_server()
-        if err:
+        if err := await self.servers[idx].disconnect_server():
             return err
 
         return ('S', '')

@@ -15,12 +15,10 @@ class ContestProsetHandler(RequestHandler):
 
         show_ac_ratio = False
         if not self.contest.is_start() and not self.contest.is_admin(self.acct):
-            self.error(('Eacces', 'Permission denied'))
-            return
+            return self.error(('Eacces', 'Permission denied'))
 
         elif self.contest.is_running() and not self.contest.is_member(self.acct):
-            self.error(('Eacces', 'Permission denied'))
-            return
+            return self.error(('Eacces', 'Permission denied'))
 
         else:
             _, acct_rates = await RateService.inst.map_rate_acct(self.acct, contest_id=self.contest.contest_id)

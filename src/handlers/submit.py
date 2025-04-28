@@ -18,20 +18,17 @@ class SubmitHandler(RequestHandler):
     @contest_require_permission('all')
     async def get(self, pro_id=None):
         if pro_id is None:
-            self.error(('Enoext', 'Missing parameter pro_id'))
-            return
+            return self.error(('Enoext', 'Missing parameter pro_id'))
 
         pro_id = int(pro_id)
 
         allow_compilers = ChalConst.ALLOW_COMPILERS
         if self.contest:
             if not self.contest.is_running() and not self.contest.is_admin(self.acct):
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             if not self.contest.is_pro(pro_id):
-                self.error(('Enoext', 'Problem not in contest'))
-                return
+                return self.error(('Enoext', 'Problem not in contest'))
 
             allow_compilers = self.contest.allow_compilers
 
@@ -44,16 +41,13 @@ class SubmitHandler(RequestHandler):
         pro_id = int(pro_id)
         err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         if pro['status'] == ProService.STATUS_OFFLINE:
-            self.error(PERMISSION_DENIED_ERROR)
-            return
+            return self.error(PERMISSION_DENIED_ERROR)
 
         if not pro['allow_submit']:
-            self.error(('Eacces', 'Problem did not allow submit'))
-            return
+            return self.error(('Eacces', 'Problem did not allow submit'))
 
         if pro['testm_conf']['is_makefile']:
             allow_compilers = list(filter(lambda compiler: compiler in ['gcc', 'g++', 'clang', 'clang++'], allow_compilers))
@@ -68,8 +62,7 @@ class SubmitHandler(RequestHandler):
         can_submit = JudgeServerClusterService.inst.is_server_online()
 
         if not can_submit:
-            self.error(('Ejudge', 'No available judge'))
-            return
+            return self.error(('Ejudge', 'No available judge'))
 
         contest_id = 0
         if self.contest:
@@ -84,48 +77,38 @@ class SubmitHandler(RequestHandler):
             if self.contest:
                 pri = ChalConst.CONTEST_PRI
                 if not self.contest.is_running() and not self.contest.is_admin(self.acct):
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 if not self.contest.is_pro(pro_id):
-                    self.error(('Enoext', 'Problem not in contest'))
-                    return
+                    return self.error(('Enoext', 'Problem not in contest'))
             else:
                 pri = ChalConst.NORMAL_PRI
 
-            err = await self.is_allow_submit(code, comp_type, pro_id)
-            if err:
-                self.error(err)
-                return
+            if err := await self.is_allow_submit(code, comp_type, pro_id):
+                return self.error(err)
 
             err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             if pro['status'] == ProService.STATUS_OFFLINE:
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             elif pro['status'] == ProService.STATUS_CONTEST and not self.contest:
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             if not pro['allow_submit']:
-                self.error(('Eacces', 'Problem did not allow submit'))
-                return
+                return self.error(('Eacces', 'Problem did not allow submit'))
 
             err, chal_id = await ChalService.inst.add_chal(pro_id, self.acct.acct_id, contest_id, comp_type, code)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             if self.acct.last_compiler != comp_type:
                 self.acct.last_compiler = comp_type
                 err, _ = await UserService.inst.update_acct(self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
         elif reqtype == 'rechal':
             if ((self.contest is None and self.acct.is_kernel())  # not in contest
@@ -144,12 +127,10 @@ class SubmitHandler(RequestHandler):
                 comp_type = chal['comp_type']
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
         else:
-            self.error(('Eunk', 'Unknown error'))
-            return
+            return self.error(('Eunk', 'Unknown error'))
 
         err, _ = await ChalService.inst.emit_chal(
             chal_id,
@@ -159,8 +140,7 @@ class SubmitHandler(RequestHandler):
             pri=pri
         )
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         if reqtype == 'submit' and pro['status'] == ProService.STATUS_ONLINE:
             await self.rs.publish('challist_sub', str(1))

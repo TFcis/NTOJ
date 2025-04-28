@@ -25,8 +25,7 @@ class LogHandler(RequestHandler):
 
             err, log = await LogService.inst.list_log(pageoff, 50, logtype)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             await self.render(
                 'loglist',
@@ -40,8 +39,7 @@ class LogHandler(RequestHandler):
 
         err, log = await LogService.inst.view_log(log_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         await self.render('log', log=log)
 

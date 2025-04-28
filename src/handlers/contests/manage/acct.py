@@ -34,8 +34,7 @@ class ContestManageAcctHandler(RequestHandler):
         elif list_type == "admin":
             status = UserStatus.ADMIN
         else:
-            self.error(('Eparam', 'Invalid list type'))
-            return
+            return self.error(('Eparam', 'Invalid list type'))
 
         if reqtype == "add":
             acct_id = int(acct_id)
@@ -49,8 +48,7 @@ class ContestManageAcctHandler(RequestHandler):
         elif reqtype == "remove":
             acct_id = int(acct_id)
             if acct_id not in self.contest.user_list:
-                self.error(('Enoext', 'User is not in contest'))
-                return
+                return self.error(('Enoext', 'User is not in contest'))
 
             self.contest.user_list.pop(acct_id)
             await ContestService.inst.update_contest(self.acct, self.contest, userlist_updated=True)
@@ -80,8 +78,7 @@ class ContestManageAcctHandler(RequestHandler):
             self.error(('S', f'Accounts(#{acct_list} successfully removed from user list.'))
 
         else:
-            self.error(('Eunk', 'Unknown error'))
-            return
+            return self.error(('Eunk', 'Unknown error'))
 
         if list_type == "normal" or (list_type == "admin" and not self.contest.hide_admin):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")

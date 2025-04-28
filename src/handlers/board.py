@@ -18,16 +18,13 @@ class BoardHandler(RequestHandler):
         board_id = int(board_id)
         err, meta = await BoardService.inst.get_board(board_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         if meta['status'] == BoardConst.STATUS_OFFLINE:
-            self.error(('Eacces', 'Permission denied'))
-            return
+            return self.error(('Eacces', 'Permission denied'))
 
         if meta['status'] == BoardConst.STATUS_HIDDEN and not self.acct.is_kernel():
-            self.error(('Eacces', 'Permission denied'))
-            return
+            return self.error(('Eacces', 'Permission denied'))
 
         min_type = UserConst.ACCTTYPE_USER
         if self.acct.is_kernel():

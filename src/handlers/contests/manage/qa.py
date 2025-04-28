@@ -17,8 +17,7 @@ class ContestManageQuestionHandler(RequestHandler):
     async def get(self):
         err, questions = await ContestService.inst.get_all_question(self.contest.contest_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
 
         cache = {}
@@ -64,8 +63,6 @@ class ContestManageQuestionHandler(RequestHandler):
 
             err, question = await ContestService.inst.get_question(self.contest.contest_id, question_id)
             if err:
-                self.error(err)
-                return
                 return self.error(err)
 
             await ContestService.inst.reply_question(self.contest.contest_id, question_id, self.acct.acct_id, content)
@@ -82,8 +79,7 @@ class ContestManageAnnounceHandler(RequestHandler):
     async def get(self):
         err, announces = await ContestService.inst.get_all_announce(self.contest.contest_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         await self.render('contests/manage/announce', page='announce', contest_id=self.contest.contest_id,
                           contest=self.contest, announces=announces)
@@ -125,8 +121,7 @@ class ContestManageAnnounceHandler(RequestHandler):
             announce_id = int(self.get_argument('announce_id'))
             err, announce = await ContestService.inst.get_announce(self.contest.contest_id, announce_id)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             await self.rs.publish('contestnewqasub', json.dumps({
                 'contest_id': self.contest.contest_id,

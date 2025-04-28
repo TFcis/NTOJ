@@ -137,8 +137,7 @@ class GroupService:
         if gname not in glist:
             return ('Enoext', GroupService.GROUP_NOT_FOUND)
 
-        err = await self._update_group(gname, int(gtype), int(gclas))
-        if err:
+        if err := await self._update_group(gname, int(gtype), int(gclas)):
             return err
 
         gacct = await self.list_acct_in_group(gname)

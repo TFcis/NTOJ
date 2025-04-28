@@ -53,13 +53,11 @@ class ManageBoardHandler(RequestHandler):
 
             err, start = trantime(start)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             err, end = trantime(end)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             acct_list = await self._get_acct_list(acct_list_str)
             pro_list = self._get_pro_list(pro_list_str)
@@ -77,7 +75,7 @@ class ManageBoardHandler(RequestHandler):
 
             err, board_id = await BoardService.inst.add_board(name, status, start, end, pro_list, acct_list)
             if err:
-                self.error(err)
+                return self.error(err)
 
             self.error(('S', board_id))
 
@@ -89,13 +87,11 @@ class ManageBoardHandler(RequestHandler):
             end = self.get_argument('end')
             err, start = trantime(start)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             err, end = trantime(end)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             pro_list_str = str(self.get_argument('pro_list'))
             acct_list_str = str(self.get_argument('acct_list'))

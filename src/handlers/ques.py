@@ -11,8 +11,7 @@ class QuestionHandler(RequestHandler):
     async def get(self):
         err, ques_list = await QuestionService.inst.get_queslist(self.acct.acct_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         await self.rs.set(f"{self.acct.acct_id}_have_reply", packb(False))
         await self.render('question', ques_list=ques_list)
@@ -27,18 +26,14 @@ class QuestionHandler(RequestHandler):
             if err := self.len_check(qtext, QuestionConst.QUESTION_MIN, QuestionConst.QUESTION_MAX, 'Question'):
                 return self.error(err)
 
-            err = await QuestionService.inst.set_ques(self.acct.acct_id, qtext)
-            if err:
-                self.error(err)
-                return
+            if err := await QuestionService.inst.set_ques(self.acct.acct_id, qtext):
+                return self.error(err)
 
             self.error(('S', ''))
 
         elif reqtype == 'rm_ques':
             index = int(self.get_argument('index'))
-            err = await QuestionService.inst.rm_ques(self.acct.acct_id, index)
-            if err:
-                self.error(err)
-                return
+            if err := await QuestionService.inst.rm_ques(self.acct.acct_id, index):
+                return self.error(err)
 
             self.error(('S', ''))
