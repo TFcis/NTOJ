@@ -74,25 +74,10 @@ class ContestQAHandler(RequestHandler):
 
             subject = self.get_argument('subject').strip()
             content = self.get_argument('content').strip()
-            subject_len = len(subject)
-            content_len = len(content)
-
-            if subject_len < SUBJECT_MIN:
-                self.error(('Eparam', 'Subject too short'))
-                return
-
-            elif subject_len > SUBJECT_MAX:
-                self.error(('Eparam', 'Subject too long'))
-                return
-
-            if content_len < CONTENT_MIN:
-                self.error(('Eparam', 'Content too short'))
-                return
-
-            elif content_len > CONTENT_MAX:
-                self.error(('Eparam', 'Content too long'))
-                return
-
+            if err := self.len_check(subject, SUBJECT_MIN, SUBJECT_MAX, 'Subject'):
+                return self.error(err)
+            if err := self.len_check(content, CONTENT_MIN, CONTENT_MAX, 'Content'):
+                return self.error(err)
 
             if not last_ask_time:
                 await self.rs.set(last_ask_name, int(time.time()), ex=ASK_CD_TIME)  # ex means expire

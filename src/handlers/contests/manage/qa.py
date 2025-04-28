@@ -59,20 +59,14 @@ class ContestManageQuestionHandler(RequestHandler):
         if reqtype == 'reply':
             question_id = int(self.get_argument('question_id'))
             content = self.get_argument('content').strip()
-            content_len = len(content)
-
-            if content_len < CONTENT_MIN:
-                self.error(('Eparam', 'Content too short'))
-                return
-
-            elif content_len > CONTENT_MAX:
-                self.error(('Eparam', 'Content too long'))
-                return
+            if err := self.len_check(content, CONTENT_MIN, CONTENT_MAX, 'Content'):
+                return self.error(err)
 
             err, question = await ContestService.inst.get_question(self.contest.contest_id, question_id)
             if err:
                 self.error(err)
                 return
+                return self.error(err)
 
             await ContestService.inst.reply_question(self.contest.contest_id, question_id, self.acct.acct_id, content)
             await self.rs.publish('contestnewqasub', json.dumps({
@@ -102,24 +96,10 @@ class ContestManageAnnounceHandler(RequestHandler):
         if reqtype in ['add-announce', 'edit-announce']:
             subject = self.get_argument('subject').strip()
             content = self.get_argument('content').strip()
-            subject_len = len(subject)
-            content_len = len(content)
-
-            if subject_len < SUBJECT_MIN:
-                self.error(('Eparam', 'Subject too short'))
-                return
-
-            elif subject_len > SUBJECT_MAX:
-                self.error(('Eparam', 'Subject too long'))
-                return
-
-            if content_len < CONTENT_MIN:
-                self.error(('Eparam', 'Content too short'))
-                return
-
-            elif content_len > CONTENT_MAX:
-                self.error(('Eparam', 'Content too long'))
-                return
+            if err := self.len_check(subject, SUBJECT_MIN, SUBJECT_MAX, 'Subject'):
+                return self.error(err)
+            if err := self.len_check(content, CONTENT_MIN, CONTENT_MAX, 'Content'):
+                return self.error(err)
 
             if reqtype == 'add-announce':
                 await ContestService.inst.add_announce(self.contest.contest_id, self.acct.acct_id, subject, content)

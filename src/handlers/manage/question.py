@@ -33,14 +33,8 @@ class ManageQuestionHandler(RequestHandler):
         if page == "reply":
             reqtype = self.get_argument('reqtype')
             rtext = self.get_argument('rtext').strip()
-            rtext_len = len(rtext)
-            if rtext_len < QuestionConst.QUESTION_MIN:
-                self.error(('Erplmin', 'Reply too short'))
-                return
-
-            elif rtext_len > QuestionConst.QUESTION_MAX:
-                self.error(('Erplmax', 'Reply too long'))
-                return
+            if err := self.len_check(rtext, QuestionConst.QUESTION_MIN, QuestionConst.QUESTION_MAX, 'Reply'):
+                return self.error(err)
 
             if reqtype == 'rpl':
                 await LogService.inst.add_log(

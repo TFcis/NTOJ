@@ -51,22 +51,12 @@ class ManageProClassHandler(RequestHandler):
             p_list_str = self.get_argument('list')
             p_list = parse_list_str(p_list_str)
 
-            name_len = len(name)
-            desc_len = len(desc)
-            if name_len < ProClassConst.NAME_MIN:
-                self.error(('Eparam', 'Name too short'))
+            if err := self.len_check(name, ProClassConst.NAME_MIN, ProClassConst.NAME_MAX, 'Name'):
+                self.error(err)
                 return
 
-            elif name_len > ProClassConst.NAME_MAX:
-                self.error(('Eparam', 'Name too long'))
-                return
-
-            if desc_len < ProClassConst.DESC_MIN:
-                self.error(('Eparam', 'Desc too short'))
-                return
-
-            elif desc_len > ProClassConst.DESC_MAX:
-                self.error(('Eparam', 'Desc too long'))
+            if err := self.len_check(desc, ProClassConst.DESC_MIN, ProClassConst.DESC_MAX, 'Desc'):
+                self.error(err)
                 return
 
             if proclass_type not in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN]:

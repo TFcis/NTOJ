@@ -24,14 +24,8 @@ class QuestionHandler(RequestHandler):
 
         if reqtype == 'ask':
             qtext = str(self.get_argument('qtext')).strip()
-            qtext_len = len(qtext)
-            if qtext_len < QuestionConst.QUESTION_MIN:
-                self.error(('Equesmin', 'Question too short'))
-                return
-
-            elif qtext_len > QuestionConst.QUESTION_MAX:
-                self.error(('Equesmax', 'Question too long'))
-                return
+            if err := self.len_check(qtext, QuestionConst.QUESTION_MIN, QuestionConst.QUESTION_MAX, 'Question'):
+                return self.error(err)
 
             err = await QuestionService.inst.set_ques(self.acct.acct_id, qtext)
             if err:
