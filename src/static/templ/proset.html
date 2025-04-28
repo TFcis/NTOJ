@@ -274,7 +274,10 @@
                 {% if cur_proclass %}
                     <button type="button" class="btn btn-success" id="infoProClass">Info</button>
                 {% end %}
-                <a class="btn btn-warning" href="/oj/acct/proclass/{{ user.acct_id }}/">Manage</a>
+
+                {% if not user.is_guest() %}
+                    <a class="btn btn-warning" href="/oj/acct/proclass/{{ user.acct_id }}/">Manage</a>
+                {% end %}
             </div>
         </form>
 
