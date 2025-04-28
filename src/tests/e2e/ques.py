@@ -14,13 +14,13 @@ class QuesTest(AsyncTest):
                 'reqtype': 'ask',
                 'qtext': ''
             })
-            self.assertAPIReturnValue(res.text, ('Equesmin', 'Question too short'))
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Question too short'))
 
             res = user_session.post('question', data={
                 'reqtype': 'ask',
                 'qtext': 'a' * 5000
             })
-            self.assertAPIReturnValue(res.text, ('Equesmax', 'Question too long'))
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Question too long'))
 
             html = self.get_html('question', user_session)
             self.assertEqual(html.select_one('p').text, 'Wait for Reply')
@@ -50,7 +50,7 @@ class QuesTest(AsyncTest):
                 'index': 0,
                 'rtext': ''
             })
-            self.assertAPIReturnValue(res.text, ('Erplmin', 'Reply too short'))
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Reply too short'))
 
             res = admin_session.post('manage/question/reply', data={
                 'reqtype': 'rpl',
@@ -58,7 +58,7 @@ class QuesTest(AsyncTest):
                 'index': 0,
                 'rtext': 'a' * 5000
             })
-            self.assertAPIReturnValue(res.text, ('Erplmax', 'Reply too long'))
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Reply too long'))
 
             html = self.get_html('manage/question/reply?qacct=2', admin_session)
             self.assertEqual(html.select('tr')[1:][0].select_one('td > textarea').text.strip(), 'reply question 1')

@@ -59,7 +59,7 @@ class BulletinTest(AsyncTest):
                 'color': 'red',
                 'pinned': 'true',
             })
-            self.assertAPIReturnValue(res.text, ('Eparam', 'Desc too long'))
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Content too long'))
 
             # view info
             html = self.get_html('info', admin_session)
