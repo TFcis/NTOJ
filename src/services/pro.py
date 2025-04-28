@@ -420,6 +420,10 @@ class ProClassConst:
     OFFICIAL_HIDDEN = 1
     USER_PUBLIC = 2
     USER_HIDDEN = 3
+    NAME_MIN = 1
+    NAME_MAX = 50
+    DESC_MIN = 0
+    DESC_MAX = 2048
 
 class ProClassService:
     def __init__(self, db, rs):
