@@ -36,6 +36,31 @@ class BulletinTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
 
+            res = admin_session.post('manage/bulletin/add', data={
+                'reqtype': 'add',
+                'title': '',
+                'content': 'bulletin 2',
+                'color': 'red',
+                'pinned': 'true',
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Title too short'))
+            res = admin_session.post('manage/bulletin/add', data={
+                'reqtype': 'add',
+                'title': 'bulletin 2 (pinned)' * 500,
+                'content': 'bulletin 2',
+                'color': 'red',
+                'pinned': 'true',
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Title too long'))
+            res = admin_session.post('manage/bulletin/add', data={
+                'reqtype': 'add',
+                'title': 'bulletin 2 (pinned)',
+                'content': 'bulletin 2' * 5000,
+                'color': 'red',
+                'pinned': 'true',
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Desc too long'))
+
             # view info
             html = self.get_html('info', admin_session)
             trs = html.select_one('table > tbody').select('tr')

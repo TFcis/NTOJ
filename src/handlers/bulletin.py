@@ -34,8 +34,6 @@ class BulletinSub(WebSocketSubHandler):
             await self.on_message(str(int(msg['data'])))
 
     async def open(self):
-        await self.rs.incr('online_counter', 1)
-        await self.rs.sadd('online_counter_set', self.request.remote_ip)
         await self.p.subscribe('bulletinsub')
 
         self.task = asyncio.tasks.Task(self.listen_newbulletin())
@@ -45,5 +43,3 @@ class BulletinSub(WebSocketSubHandler):
 
     def on_close(self) -> None:
         super().on_close()
-        asyncio.create_task(self.rs.decr('online_counter', 1))
-        asyncio.create_task(self.rs.srem('online_counter_set', self.request.remote_ip))
