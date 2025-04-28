@@ -1,5 +1,5 @@
 from handlers.base import RequestHandler, reqenv, require_permission
-from services.bulletin import BulletinService
+from services.bulletin import BulletinConst, BulletinService
 from services.log import LogService
 from services.user import UserConst
 
@@ -26,37 +26,7 @@ class ManageBulletinHandler(RequestHandler):
     async def post(self, page=None):
         reqtype = self.get_argument('reqtype')
 
-        if page == 'add' and reqtype == 'add':
-            title = self.get_argument('title')
-            content = self.get_argument('content')
-            pinned = self.get_argument('pinned')
-            if pinned == "false":
-                pinned = False
-            elif pinned == "true":
-                pinned = True
-            else:
-                pinned = False
-
-            color = self.get_argument('color')
-            err, bulletin_id = await BulletinService.inst.add_bulletin(title, content, self.acct.acct_id, color, pinned)
-            if err:
-                self.error(err)
-                return
-
-            await LogService.inst.add_log(
-                f"{self.acct.name} added a line on bulletin: \"{title}\".", 'manage.inform.add',
-                {
-                    "content": content,
-                    "is_pinned": pinned,
-                    "color": color,
-                }
-            )
-
-            await self.rs.publish('bulletinsub', 1)
-            self.error(('S', bulletin_id))
-
-        elif page == 'update' and reqtype == 'update':
-            bulletin_id = int(self.get_argument('bulletin_id'))
+        if (page == 'add' and reqtype == 'add') or (page == 'update' and reqtype == 'update'):
             title = self.get_argument('title')
             content = self.get_argument('content')
             pinned = self.get_argument('pinned')
@@ -67,23 +37,49 @@ class ManageBulletinHandler(RequestHandler):
             else:
                 pinned = False
             color = self.get_argument('color')
-
-            await LogService.inst.add_log(
-                f"{self.acct.name} updated a line on bulletin: \"{title}\" which id is #{bulletin_id}.",
-                'manage.inform.update',
-                {
-                    "content": content,
-                    "is_pinned": pinned,
-                    "color": color,
-                }
-            )
-            err, _ = await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct.acct_id, color, pinned)
-            if err:
+            if err := self.len_check(title, BulletinConst.TITLE_MIN, BulletinConst.TITLE_MAX, 'Title'):
                 self.error(err)
                 return
 
+            if err := self.len_check(content, BulletinConst.CONTENT_MIN, BulletinConst.CONTENT_MAX, 'Content'):
+                self.error(err)
+                return
+
+            if reqtype == 'add':
+                err, bulletin_id = await BulletinService.inst.add_bulletin(title, content, self.acct.acct_id, color, pinned)
+                if err:
+                    self.error(err)
+                    return
+
+                await LogService.inst.add_log(
+                    f"{self.acct.name} added a line on bulletin: \"{title}\".", 'manage.inform.add',
+                    {
+                        "content": content,
+                        "is_pinned": pinned,
+                        "color": color,
+                    }
+                )
+                self.error(('S', bulletin_id))
+
+            elif reqtype == 'update':
+                bulletin_id = int(self.get_argument('bulletin_id'))
+
+                await LogService.inst.add_log(
+                    f"{self.acct.name} updated a line on bulletin: \"{title}\" which id is #{bulletin_id}.",
+                    'manage.inform.update',
+                    {
+                        "content": content,
+                        "is_pinned": pinned,
+                        "color": color,
+                    }
+                )
+                err, _ = await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct.acct_id, color, pinned)
+                if err:
+                    self.error(err)
+                    return
+                self.error(('S', ''))
+
             await self.rs.publish('bulletinsub', 1)
-            self.error(('S', ''))
 
         elif page == 'update' and reqtype == 'remove':
             bulletin_id = int(self.get_argument('bulletin_id'))

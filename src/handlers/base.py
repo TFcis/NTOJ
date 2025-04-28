@@ -60,6 +60,15 @@ class RequestHandler(tornado.web.RequestHandler):
             data = self.tpldr.load(templ + '.html').generate(**kwargs)
             self.finish(data)
 
+    def len_check(self, obj, min_len: int, max_len: int, field_name: str) -> tuple[str, str] | None:
+        obj_len = len(obj)
+        if obj_len < min_len:
+            return ('Eparam', f'{field_name} too short')
+        elif obj_len > max_len:
+            return ('Eparam', f'{field_name} too long')
+        else:
+            return None
+
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def __init__(self, *args, **kwargs):
