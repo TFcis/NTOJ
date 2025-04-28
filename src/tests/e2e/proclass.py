@@ -61,6 +61,31 @@ class ProClassTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid problem class type'))
 
+            res = admin_session.post('manage/proclass/add', data={
+                'reqtype': 'add',
+                'name': '',
+                'list': '1',
+                'type': ProClassConst.OFFICIAL_PUBLIC,
+                'desc': 'desc'
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Name too short'))
+            res = admin_session.post('manage/proclass/add', data={
+                'reqtype': 'add',
+                'name': 'a' * 1000,
+                'list': '1',
+                'type': ProClassConst.OFFICIAL_PUBLIC,
+                'desc': 'desc'
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Name too long'))
+            res = admin_session.post('manage/proclass/add', data={
+                'reqtype': 'add',
+                'name': 'name',
+                'list': '1',
+                'type': ProClassConst.OFFICIAL_PUBLIC,
+                'desc': 'desc' * 5000
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Desc too long'))
+
             html = self.get_html('proset?proclass_id=1', admin_session)
             trs = html.select('#prolist > tbody > tr')
             self.assertEqual(len(trs), 1)
@@ -198,6 +223,32 @@ class ProClassTest(AsyncTest):
                 'desc': 'desc desc'
             })
             self.assertAPIReturnSuccess(res.text)
+
+            res = admin_session.post('manage/proclass/add', data={
+                'reqtype': 'add',
+                'name': '',
+                'list': '1',
+                'type': ProClassConst.USER_PUBLIC,
+                'desc': 'desc'
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Name too short'))
+            res = admin_session.post('manage/proclass/add', data={
+                'reqtype': 'add',
+                'name': 'a' * 1000,
+                'list': '1',
+                'type': ProClassConst.USER_PUBLIC,
+                'desc': 'desc'
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Name too long'))
+            res = admin_session.post('manage/proclass/add', data={
+                'reqtype': 'add',
+                'name': 'name',
+                'list': '1',
+                'type': ProClassConst.USER_PUBLIC,
+                'desc': 'desc' * 5000
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Desc too long'))
+
             res = admin_session.post('proset', data={
                 'reqtype': 'listproclass'
             })

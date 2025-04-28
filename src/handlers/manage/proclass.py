@@ -44,12 +44,30 @@ class ManageProClassHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self, page=None):
         reqtype = self.get_argument('reqtype')
-        if page == "add" and reqtype == 'add':
-            name = self.get_argument('name')
-            desc = self.get_argument('desc')
+        if (page == "add" and reqtype == 'add') or (page == "update" and reqtype == "update"):
+            name = self.get_argument('name').strip()
+            desc = self.get_argument('desc').strip()
             proclass_type = int(self.get_argument('type'))
             p_list_str = self.get_argument('list')
             p_list = parse_list_str(p_list_str)
+
+            name_len = len(name)
+            desc_len = len(desc)
+            if name_len < ProClassConst.NAME_MIN:
+                self.error(('Eparam', 'Name too short'))
+                return
+
+            elif name_len > ProClassConst.NAME_MAX:
+                self.error(('Eparam', 'Name too long'))
+                return
+
+            if desc_len < ProClassConst.DESC_MIN:
+                self.error(('Eparam', 'Desc too short'))
+                return
+
+            elif desc_len > ProClassConst.DESC_MAX:
+                self.error(('Eparam', 'Desc too long'))
+                return
 
             if proclass_type not in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN]:
                 self.error(('Eparam', 'Invalid problem class type'))
@@ -59,64 +77,54 @@ class ManageProClassHandler(RequestHandler):
                 self.error(('Eparam', 'Problem list should not be empty'))
                 return
 
-            await LogService.inst.add_log(
-                f"{self.acct.name} add proclass name={name}", 'manage.proclass.add',
-                {
-                    "list": p_list,
-                    "desc": desc,
-                    "proclass_type": proclass_type,
-                }
-            )
-            err, proclass_id = await ProClassService.inst.add_proclass(name, p_list, desc, None, proclass_type)
-            if err:
-                self.error(err)
-                return
-
-            self.error(('S', proclass_id))
-
-        elif page == "update" and reqtype == "update":
-            proclass_id = int(self.get_argument('proclass_id'))
-            name = self.get_argument('name')
-            desc = self.get_argument('desc')
-            proclass_type = int(self.get_argument('type'))
-            p_list_str = self.get_argument('list')
-            p_list = parse_list_str(p_list_str)
-
-            _, proclass = await ProClassService.inst.get_proclass(proclass_id)
-            if proclass['type'] not in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN]:
+            if reqtype == 'add':
                 await LogService.inst.add_log(
-                    f"{self.acct.name} tried to update proclass name={proclass['name']}, but an admin cannot modify a user's own proclass", 'manage.proclass.update.failed'
+                    f"{self.acct.name} add proclass name={name}", 'manage.proclass.add',
+                    {
+                        "list": p_list,
+                        "desc": desc,
+                        "proclass_type": proclass_type,
+                    }
                 )
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                err, proclass_id = await ProClassService.inst.add_proclass(name, p_list, desc, None, proclass_type)
+                if err:
+                    self.error(err)
+                    return
 
-            if proclass_type not in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN]:
-                self.error(('Eparam', 'Invalid problem class type'))
-                return
+                self.error(('S', proclass_id))
 
-            if len(p_list) == 0:
-                self.error(('Eparam', 'Problem list should not be empty'))
-                return
+            elif reqtype == 'update':
+                proclass_id = int(self.get_argument('proclass_id'))
+                err, proclass = await ProClassService.inst.get_proclass(proclass_id)
+                if err:
+                    self.error(err)
+                    return
 
-            await LogService.inst.add_log(
-                f"{self.acct.name} update proclass name={name}", 'manage.proclass.update',
-                {
-                    "list": p_list,
-                    "desc": desc,
-                    "proclass_type": proclass_type,
-                }
-            )
-            err = await ProClassService.inst.update_proclass(proclass_id, name, p_list, desc, proclass_type)
-            if err:
-                self.error(err)
-                return
+                if proclass['type'] not in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN]:
+                    await LogService.inst.add_log(
+                        f"{self.acct.name} tried to update proclass name={proclass['name']}, but an admin cannot modify a user's own proclass", 'manage.proclass.update.failed'
+                    )
+                    self.error(PERMISSION_DENIED_ERROR)
+                    return
 
-            self.error(('S', ''))
+                await LogService.inst.add_log(
+                    f"{self.acct.name} update proclass name={name}", 'manage.proclass.update',
+                    {
+                        "list": p_list,
+                        "desc": desc,
+                        "proclass_type": proclass_type,
+                    }
+                )
+                err = await ProClassService.inst.update_proclass(proclass_id, name, p_list, desc, proclass_type)
+                if err:
+                    self.error(err)
+                    return
+
+                self.error(('S', ''))
 
         elif page == "update" and reqtype == "remove":
             proclass_id = int(self.get_argument('proclass_id'))
             err, proclass = await ProClassService.inst.get_proclass(proclass_id)
-
             if err:
                 self.error(err)
                 return
