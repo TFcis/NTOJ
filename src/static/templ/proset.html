@@ -1,6 +1,6 @@
 {% import math %}
 {% from services.chal import ChalConst %}
-{% from services.pro import ProClassConst %}
+{% from services.pro import ProConst, ProClassConst %}
 
 <link rel="stylesheet" type="text/css" href="/oj/proset.css">
 
@@ -74,7 +74,7 @@
 
                 // NOTE: close info dialog before navigating to another page.
                 info_dialog.querySelectorAll('a').forEach(el => {
-                    el.addEventListener('click', _ => info_dialog_modal.dispose());
+                    el.addEventListener('click', _ => info_dialog_modal.hide() && index.reload());
                 })
 
                 MathJax.Hub.Queue(["Typeset", MathJax.Hub, body]);
@@ -140,6 +140,10 @@
                 tr.append(goto);
 
                 proclass_table.append(tr);
+                // NOTE: close proclass list dialog before navigating to another page.
+                tr[0].querySelectorAll('a').forEach(el => {
+                    el.addEventListener('click', _ => list_dialog_modal.hide() && index.reload());
+                })
             }
         }
 
@@ -272,7 +276,10 @@
                 {% if cur_proclass %}
                     <button type="button" class="btn btn-success" id="infoProClass">Info</button>
                 {% end %}
-                <a class="btn btn-warning" href="/oj/acct/proclass/{{ user.acct_id }}/">Manage</a>
+
+                {% if not user.is_guest() %}
+                    <a class="btn btn-warning" href="/oj/acct/proclass/{{ user.acct_id }}/">Manage</a>
+                {% end %}
             </div>
         </form>
 

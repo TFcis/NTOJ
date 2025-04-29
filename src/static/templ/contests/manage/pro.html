@@ -38,7 +38,7 @@
             el.addEventListener('click', () => post_func('public', $(el).attr('pro_id')));
         });
 
-        $("#button.publicall").on('click', function(e) {
+        $("button.publicall").on('click', function(e) {
             document.querySelectorAll('button.public').forEach(el => {
                 let pro_id = $(el).attr('pro_id');
                 $.post('/oj/be/contests/{{ contest.contest_id }}/manage/pro', {
