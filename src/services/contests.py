@@ -1,4 +1,3 @@
-import re
 import datetime
 import enum
 from dataclasses import dataclass, field
@@ -157,7 +156,7 @@ class ContestService:
                 contest.contest_end = contest.contest_end.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
                 contest.reg_end = contest.reg_end.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
 
-                result = await con.fetch('SELECT pro_id, score_type FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "id";', contest_id)
+                result = await con.fetch('SELECT pro_id, score_type FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
                 for pro_id, score_type in result:
                     contest.pro_list[pro_id] = {
                         "score_type": ProblemScoreType(int(score_type))
@@ -268,48 +267,31 @@ class ContestService:
             )
 
             if prolist_updated:
-                await con.execute('DELETE FROM contest_problem_joints WHERE contest_id = $1', contest.contest_id)
-                insert_values = {}
-                for pro_id, v in contest.pro_list.items():
-                    insert_values[pro_id] = (contest.contest_id, pro_id, int(v['score_type']))
-
-                while True:
-                    if not insert_values:
-                        break
-
+                order = 0
+                for order, (pro_id, v) in enumerate(contest.pro_list.items()):
                     try:
-                        await con.executemany(
-                            '''INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type")
-                            VALUES ($1, $2, $3)''',
-                            insert_values.values()
-                        )
-                        break
-                    except asyncpg.ForeignKeyViolationError as e:
-                        illegal_pro_id = int(re.search(r'Key \(pro_id\)=\((\d+)\)', e.detail).group(1))
-                        insert_values.pop(illegal_pro_id)
+                        await con.execute('''
+                            INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
+                            VALUES ($1, $2, $3, $4) ON CONFLICT (contest_id, pro_id) DO UPDATE
+                            SET score_type = EXCLUDED.score_type, "order" = EXCLUDED."order"
+                            WHERE
+                                contest_problem_joints.score_type != EXCLUDED.score_type OR
+                                contest_problem_joints.order != EXCLUDED.order;
+                        ''', contest.contest_id, pro_id, int(v['score_type']), order)
+                    except asyncpg.ForeignKeyViolationError:
                         continue
+                await con.execute('DELETE FROM contest_problem_joints WHERE contest_id = $1 AND "order" > $2', contest.contest_id, order)
 
-            # TODO: improve update method
             if userlist_updated:
-                await con.execute('DELETE FROM contest_users WHERE contest_id = $1', contest.contest_id)
-                insert_values = {}
                 for acct_id, v in contest.user_list.items():
-                    insert_values[acct_id] = (contest.contest_id, acct_id, int(v['status']))
-
-                while True:
-                    if not insert_values:
-                        break
-
                     try:
-                        await con.executemany(
-                            '''INSERT INTO contest_users ("contest_id", "acct_id", "status")
-                            VALUES ($1, $2, $3)''',
-                            insert_values.values()
-                        )
-                        break
-                    except asyncpg.ForeignKeyViolationError as e:
-                        illegal_acct_id = int(re.search(r'Key \(acct_id\)=\((\d+)\)', e.detail).group(1))
-                        insert_values.pop(illegal_acct_id)
+                        await con.execute('''
+                            INSERT INTO contest_users ("contest_id", "acct_id", "status")
+                            VALUES ($1, $2, $3) ON CONFLICT (contest_id, acct_id) DO UPDATE
+                            SET status = EXCLUDED.status
+                            WHERE contest_users.status != EXCLUDED.status;
+                        ''', contest.contest_id, acct_id, int(v['status']))
+                    except asyncpg.ForeignKeyViolationError:
                         continue
 
         b_contest = pickle.dumps(contest)
