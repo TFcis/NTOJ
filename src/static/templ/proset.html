@@ -86,80 +86,92 @@
         let j_list_dialog = $(list_dialog);
 
         function render_proclass_list(proclass_type) {
-            let proclass_table = j_list_dialog.find("tbody");
-            let collected = new Set(proclass_cata.collection.map(proclass => proclass.proclass_id));
+            function _internal() {
+                let proclass_table = j_list_dialog.find("tbody");
+                let collected = new Set(proclass_cata.collection.map(proclass => proclass.proclass_id));
 
-            proclass_table.html("");
-            for (let proclass of proclass_cata[proclass_type]) {
-                let tr = $("<tr></tr>")
-                tr.append($("<td></td>").text(proclass.proclass_id));
-                tr.append($("<td></td>").text(proclass.name));
-                if (proclass.acct_id != null) {
-                    tr.append($("<td></td>").append($(`<a href="/oj/acct/${proclass.acct_id}/"></a>`).text(proclass.creator_name)));
-                } else {
-                    tr.append($("<td></td>").text("Official"));
-                }
+                proclass_table.html("");
+                for (let proclass of proclass_cata[proclass_type]) {
+                    let tr = $("<tr></tr>")
+                    tr.append($("<td></td>").text(proclass.proclass_id));
+                    tr.append($("<td></td>").text(proclass.name));
+                    tr.append($("<td></td>").text(`<a href="/oj/proset/?proclass_id=${proclass.proclass_id}&show=onlyac">${proclass.ac_cnt}</a> / ${proclass.total_cnt}`));
+                    if (proclass.acct_id != null) {
+                        tr.append($("<td></td>").append($(`<a href="/oj/acct/${proclass.acct_id}/"></a>`).text(proclass.creator_name)));
+                    } else {
+                        tr.append($("<td></td>").text("Official"));
+                    }
 
-                let collect_td = null;
-                if (collected.has(proclass.proclass_id)) {
-                    collect_td = $(`<td><button class="btn btn-success" actionType="decollect">Decollect</button></td>`);
-                } else {
-                    collect_td = $(`<td><button class="btn btn-success" actionType="collect">Collect</button></td>`);
-                }
-                collect_td.find("button").on('click', function (e) {
-                    let action = $(this).attr("actionType");
-                    let j_this = $(this);
-                    $.post("/oj/be/proset", data={
-                        'reqtype': action,
-                        'proclass_id': proclass.proclass_id,
-                    }, function(res) {
-                        res = JSON.parse(res);
-                        if (res.status == 'S') {
-                            if (action == "decollect") {
-                                j_this.attr("actionType", "collect");
-                                j_this.text("Collect");
+                    let collect_td = null;
+                    if (collected.has(proclass.proclass_id)) {
+                        collect_td = $(`<td><button class="btn btn-success" actionType="decollect">Decollect</button></td>`);
+                    } else {
+                        collect_td = $(`<td><button class="btn btn-success" actionType="collect">Collect</button></td>`);
+                    }
+                    collect_td.find("button").on('click', function (e) {
+                        let action = $(this).attr("actionType");
+                        let j_this = $(this);
+                        $.post("/oj/be/proset", data={
+                            'reqtype': action,
+                            'proclass_id': proclass.proclass_id,
+                        }, function(res) {
+                            res = JSON.parse(res);
+                            if (res.status == 'S') {
+                                if (action == "decollect") {
+                                    j_this.attr("actionType", "collect");
+                                    j_this.text("Collect");
+                                } else {
+                                    j_this.attr("actionType", 'decollect');
+                                    j_this.text("Decollect");
+                                }
+                                proclass_cata = null;
                             } else {
-                                j_this.attr("actionType", 'decollect');
-                                j_this.text("Decollect");
+                                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                             }
-                            proclass_cata = null;
-                        } else {
-                            index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
-                        }
+                        });
                     });
-                });
-                tr.append(collect_td);
+                    tr.append(collect_td);
 
-                let goto = $(`<td><button class="btn btn-primary">Goto!</button></td>`)
-                goto.find("button").on('click', function(e) {
-                    list_dialog_modal.hide();
-                    index.go(get_goto_url(proclass.proclass_id));
-                });
-                tr.append(goto);
+                    let goto = $(`<td><button class="btn btn-primary">Goto!</button></td>`)
+                    goto.find("button").on('click', function(e) {
+                        list_dialog_modal.hide();
+                        index.go(get_goto_url(proclass.proclass_id));
+                    });
+                    tr.append(goto);
 
-                proclass_table.append(tr);
-                // NOTE: close proclass list dialog before navigating to another page.
-                tr[0].querySelectorAll('a').forEach(el => {
-                    el.addEventListener('click', _ => list_dialog_modal.hide() && index.reload());
-                })
+                    proclass_table.append(tr);
+                    // NOTE: close proclass list dialog before navigating to another page.
+                    tr[0].querySelectorAll('a').forEach(el => {
+                        el.addEventListener('click', _ => list_dialog_modal.hide() && index.reload());
+                    })
+                }
+            }
+
+            if (proclass_cata[proclass_type] === undefined) {
+                $.post("/oj/be/proset", {
+                    "reqtype": "listproclass"
+                    "proclass_type": proclass_type,
+                }, function (e) {
+                    proclass_cata[proclass_type] = JSON.parse(e).data;
+                    _internal();
+                });
+            } else {
+                _internal();
             }
         }
 
         $("#switchProClass").on('click', function(e) {
             document.querySelectorAll('.proclass-tab').forEach(el => el.classList.remove('active'));
             document.querySelector('.proclass-tab[proclassType="official"]').classList.add('active');
-            if (proclass_cata == null) {
-                $.post("/oj/be/proset", {
-                    "reqtype": "listproclass"
-                }, function (e) {
-                    proclass_cata = JSON.parse(e).data;
-                    render_proclass_list("official");
-                });
-            } else {
+            proclass_cata = {};
+            $.post("/oj/be/proset", {
+                "reqtype": "listproclass"
+                "proclass_type": "collection",
+            }, function (e) {
+                proclass_cata["collection"] = JSON.parse(e).data;
                 render_proclass_list("official");
-            }
-
-            list_dialog_modal.show();
+                list_dialog_modal.show();
+            });
         });
 
         document.querySelectorAll('.proclass-tab').forEach(el => {
@@ -170,7 +182,7 @@
 
                 if (proclass_cata == null) {
                     $.post("/oj/be/proset", {
-                        "reqtype": "listproclass"
+                        "reqtype": "listproclass",
                     }, function (e) {
                         proclass_cata = JSON.parse(e).data;
                         render_proclass_list(proclass_type);
@@ -237,6 +249,7 @@
                 <thead>
                     <tr>
                         <th scope="col">#</th>
+                        <th>Progress</th>
                         <th>Name</th>
                         <th>Creator</th>
                         <th>Collect</th>
