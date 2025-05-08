@@ -177,28 +177,49 @@ class ProsetHandler(RequestHandler):
     async def post(self):
         reqtype = self.get_argument('reqtype')
         if reqtype == "listproclass":
+            proclass_type = self.get_argument('proclass_type')
+            _, proclass_list = await ProClassService.inst.get_proclass_list()
+
             _, accts = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL)
             accts = {acct.acct_id: acct.name for acct in accts}
 
-            _, proclass_list = await ProClassService.inst.get_proclass_list()
-            def _set_creator_name(proclass):
-                proclass = dict(proclass)
+            if proclass_type == 'official':
+                if self.acct.is_kernel():
+                    proclass_list = list(filter(
+                        lambda proclass: proclass['type'] in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN], proclass_list))
+                else:
+                    proclass_list = list(filter(lambda proclass: proclass['type'] == ProClassConst.OFFICIAL_PUBLIC, proclass_list))
+
+            elif proclass_type == 'shared':
+                proclass_list = list(filter(lambda proclass: proclass['type'] == ProClassConst.USER_PUBLIC, proclass_list))
+
+            elif proclass_type == 'collection':
+                proclass_list = list(filter(lambda proclass: proclass['proclass_id'] in self.acct.proclass_collection, proclass_list))
+
+            elif proclass_type == 'own':
+                proclass_list = list(filter(lambda proclass: proclass['acct_id'] == self.acct.acct_id, proclass_list))
+
+            else:
+                self.error(('Eparam', 'Wrong proclass_type'))
+                return
+
+            _, acct_states = await RateService.inst.map_rate_acct(self.acct)
+            for i in range(len(proclass_list)):
+                proclass_list[i] = dict(proclass_list[i])
+                proclass = proclass_list[i]
+                ac_cnt = 0
+                err, p = await ProClassService.inst.get_proclass(proclass['proclass_id'])
                 if proclass['acct_id']:
                     proclass['creator_name'] = accts[proclass['acct_id']]
 
-                return proclass
-            proclass_list = list(map(_set_creator_name, proclass_list))
+                for pro_id in p['list']:
+                    if pro_id in acct_states:
+                        ac_cnt += acct_states[pro_id]['state'] == ChalConst.STATE_AC
 
-            proclass_cata = {
-                "official": list(filter(lambda proclass: proclass['type'] == ProClassConst.OFFICIAL_PUBLIC, proclass_list)),
-                "shared": list(filter(lambda proclass: proclass['type'] == ProClassConst.USER_PUBLIC, proclass_list)),
-                "collection": list(filter(lambda proclass: proclass['proclass_id'] in self.acct.proclass_collection, proclass_list)),
-                "own": list(filter(lambda proclass: proclass['acct_id'] == self.acct.acct_id, proclass_list)),
-            }
-            if self.acct.is_kernel():
-                proclass_cata['official'].extend(filter(lambda proclass: proclass['type'] == ProClassConst.OFFICIAL_HIDDEN, proclass_list))
+                proclass['ac_cnt'] = ac_cnt
+                proclass['total_cnt'] = len(p['list'])
 
-            self.error(('S', proclass_cata))
+            self.error(('S', proclass_list))
 
         elif reqtype == "collect":
             if self.acct.is_guest():

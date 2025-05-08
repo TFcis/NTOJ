@@ -29,25 +29,22 @@ class ProClassTest(AsyncTest):
             self.assertEqual(len(trs), 1)
 
             res = admin_session.post('proset', data={
-                'reqtype': 'listproclass'
+                'reqtype': 'listproclass',
+                'proclass_type': 'official'
             })
             res = json.loads(res.text)
-            proclass_cata = res['data']
-            self.assertNotEqual(proclass_cata['official'], [])
-            self.assertEqual(proclass_cata['shared'], [])
-            self.assertEqual(proclass_cata['own'], [])
-            self.assertEqual(proclass_cata['collection'], [])
+            proclass_list = res['data']
+            self.assertNotEqual(proclass_list, [])
 
             with AccountContext('test1@test', 'test') as user_session:
-                res = user_session.post('proset', data={
-                    'reqtype': 'listproclass'
-                })
-                res = json.loads(res.text)
-                proclass_cata = res['data']
-                self.assertEqual(proclass_cata['official'], [])
-                self.assertEqual(proclass_cata['shared'], [])
-                self.assertEqual(proclass_cata['own'], [])
-                self.assertEqual(proclass_cata['collection'], [])
+                for proclass_type in ['official', 'shared', 'own', 'collection']:
+                    res = user_session.post('proset', data={
+                        'reqtype': 'listproclass',
+                        'proclass_type': proclass_type
+                    })
+                    res = json.loads(res.text)
+                    proclass_list = res['data']
+                    self.assertEqual(proclass_list, [])
 
                 res = self.get_html('proset?proclass_id=1', user_session)
                 self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
@@ -135,13 +132,16 @@ class ProClassTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('Eexist', 'Problem class is already collected'))
             res = admin_session.post('proset', data={
-                'reqtype': 'listproclass'
+                'reqtype': 'listproclass',
+                'proclass_type': 'collection',
             })
             res = json.loads(res.text)
-            proclass_cata = res['data']
-            self.assertNotEqual(proclass_cata['collection'], [])
-            self.assertEqual(len(proclass_cata['collection']), 1)
-            self.assertEqual(proclass_cata['collection'][0]['proclass_id'], 1)
+            proclass_list = res['data']
+            self.assertNotEqual(proclass_list, [])
+            self.assertEqual(len(proclass_list), 1)
+            self.assertEqual(proclass_list[0]['total_cnt'], 2)
+            self.assertEqual(proclass_list[0]['ac_cnt'], 2)
+            self.assertEqual(proclass_list[0]['proclass_id'], 1)
 
             res = admin_session.post('proset', data={
                 'reqtype': 'decollect',
@@ -154,12 +154,12 @@ class ProClassTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('Enoext', 'Problem class is not in your collection'))
             res = admin_session.post('proset', data={
-                'reqtype': 'listproclass'
+                'reqtype': 'listproclass',
+                'proclass_type': 'collection'
             })
             res = json.loads(res.text)
-            proclass_cata = res['data']
-            self.assertEqual(proclass_cata['collection'], [])
-            self.assertEqual(len(proclass_cata['collection']), 0)
+            proclass_list = res['data']
+            self.assertEqual(proclass_list, [])
 
             res = admin_session.post('acct/proclass/1', data={
                 'reqtype': 'add',
@@ -179,25 +179,27 @@ class ProClassTest(AsyncTest):
             self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid problem class type'))
 
             res = admin_session.post('proset', data={
-                'reqtype': 'listproclass'
+                'reqtype': 'listproclass',
+                'proclass_type': 'own',
             })
             res = json.loads(res.text)
-            proclass_cata = res['data']
-            self.assertNotEqual(proclass_cata['own'], [])
-            self.assertEqual(len(proclass_cata['own']), 1)
-            self.assertEqual(proclass_cata['own'][0]['proclass_id'], 2)
+            proclass_list = res['data']
+            self.assertNotEqual(proclass_list, [])
+            self.assertEqual(len(proclass_list), 1)
+            self.assertEqual(proclass_list[0]['proclass_id'], 2)
+            self.assertEqual(proclass_list[0]['total_cnt'], 1)
 
             with AccountContext('test1@test', 'test') as user_session:
                 res = user_session.get('proset?proclass_id=2')
                 self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
                 res = user_session.post('proset', data={
-                    'reqtype': 'listproclass'
+                    'reqtype': 'listproclass',
+                    'proclass_type': 'shared',
                 })
                 res = json.loads(res.text)
-                proclass_cata = res['data']
-                self.assertEqual(proclass_cata['shared'], [])
-                self.assertEqual(len(proclass_cata['shared']), 0)
+                proclass_list = res['data']
+                self.assertEqual(proclass_list, [])
 
 
             res = admin_session.post('proset', data={
@@ -206,13 +208,15 @@ class ProClassTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('proset', data={
-                'reqtype': 'listproclass'
+                'reqtype': 'listproclass',
+                'proclass_type': 'collection',
             })
             res = json.loads(res.text)
-            proclass_cata = res['data']
-            self.assertNotEqual(proclass_cata['collection'], [])
-            self.assertEqual(len(proclass_cata['collection']), 1)
-            self.assertEqual(proclass_cata['collection'][0]['proclass_id'], 2)
+            proclass_list = res['data']
+            self.assertNotEqual(proclass_list, [])
+            self.assertEqual(len(proclass_list), 1)
+            self.assertEqual(proclass_list[0]['proclass_id'], 2)
+            self.assertEqual(proclass_list[0]['total_cnt'], 1)
 
             res = admin_session.post('acct/proclass/1', data={
                 'reqtype': 'update',
@@ -250,13 +254,15 @@ class ProClassTest(AsyncTest):
             self.assertAPIReturnValue(res.text, ('Eparam', 'Desc too long'))
 
             res = admin_session.post('proset', data={
-                'reqtype': 'listproclass'
+                'reqtype': 'listproclass',
+                'proclass_type': 'shared',
             })
             res = json.loads(res.text)
-            proclass_cata = res['data']
-            self.assertNotEqual(proclass_cata['shared'], [])
-            self.assertEqual(len(proclass_cata['shared']), 1)
-            self.assertEqual(proclass_cata['shared'][0]['proclass_id'], 2)
+            proclass_list = res['data']
+            self.assertNotEqual(proclass_list, [])
+            self.assertEqual(len(proclass_list), 1)
+            self.assertEqual(proclass_list[0]['proclass_id'], 2)
+            self.assertEqual(proclass_list[0]['total_cnt'], 1)
 
             html = self.get_html('acct/proclass/1?page=update&proclassid=2', admin_session)
             self.assertEqual(html.select_one('input#name').attrs.get('value'), 'user shared')
@@ -270,13 +276,14 @@ class ProClassTest(AsyncTest):
                 self.assertNotIn('Eacces', res.text)
 
                 res = user_session.post('proset', data={
-                    'reqtype': 'listproclass'
+                    'reqtype': 'listproclass',
+                    'proclass_type': 'shared'
                 })
                 res = json.loads(res.text)
-                proclass_cata = res['data']
-                self.assertNotEqual(proclass_cata['shared'], [])
-                self.assertEqual(len(proclass_cata['shared']), 1)
-                self.assertEqual(proclass_cata['shared'][0]['proclass_id'], 2)
+                proclass_list = res['data']
+                self.assertNotEqual(proclass_list, [])
+                self.assertEqual(len(proclass_list), 1)
+                self.assertEqual(proclass_list[0]['proclass_id'], 2)
 
             html = self.get_html('manage/proclass', admin_session)
             trs = html.select('tbody > tr')
