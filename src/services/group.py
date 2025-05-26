@@ -98,12 +98,11 @@ class GroupService:
 
             await con.execute(
                 '''
-                    UPDATE "account" SET "group" = $1, "acct_type" = $2, "class" = $3
-                    WHERE "account"."acct_id" = $4;
+                    UPDATE "account" SET "group" = $1, "acct_type" = $2
+                    WHERE "account"."acct_id" = $3;
                 ''',
                 gname,
                 result['group_type'],
-                [result['group_class']],
                 acct_id,
             )
 
