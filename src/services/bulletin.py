@@ -4,7 +4,7 @@ class BulletinConst:
     TITLE_MIN = 1
     TITLE_MAX = 50
     CONTENT_MIN = 0
-    CONTENT_MAX = 2048
+    CONTENT_MAX = 4096
 
 class BulletinService:
     BULLETIN_NOT_FOUND = 'Bulletin not found'
