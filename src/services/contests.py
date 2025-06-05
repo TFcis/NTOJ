@@ -224,7 +224,7 @@ class ContestService:
 
         b_contest = pickle.dumps(contest)
 
-        await self.rs.hset('contests', f'{contest_id}', b_contest)
+        await self.rs.hset('contest', f'{contest_id}', b_contest)
 
         return None, contest_id
 
