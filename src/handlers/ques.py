@@ -1,7 +1,7 @@
 from msgpack import packb
 
 from handlers.base import RequestHandler, reqenv, require_permission
-from services.ques import QuestionService
+from services.ques import QuestionService, QuestionConst
 from services.user import UserConst
 
 
@@ -23,9 +23,14 @@ class QuestionHandler(RequestHandler):
         reqtype = str(self.get_argument('reqtype'))
 
         if reqtype == 'ask':
-            qtext = str(self.get_argument('qtext'))
-            if len(qtext.strip()) == 0:
-                self.error(('Equesempty', 'Question should not be empty'))
+            qtext = str(self.get_argument('qtext')).strip()
+            qtext_len = len(qtext)
+            if qtext_len < QuestionConst.QUESTION_MIN:
+                self.error(('Equesmin', 'Question too short'))
+                return
+
+            elif qtext_len > QuestionConst.QUESTION_MAX:
+                self.error(('Equesmax', 'Question too long'))
                 return
 
             err = await QuestionService.inst.set_ques(self.acct.acct_id, qtext)

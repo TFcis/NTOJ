@@ -6,7 +6,7 @@ class GroupConst:
 class GroupService:
     DEFAULT_GROUP = 'normal_user'
     KERNEL_GROUP = 'kernel'
-    GROUP_NOT_FOUND = GroupService.GROUP__NOT_FOUND
+    GROUP_NOT_FOUND = 'Group not found'
 
     def __init__(self, db, rs):
         self.db = db
