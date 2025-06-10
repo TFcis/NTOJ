@@ -224,7 +224,7 @@ class ContestService:
 
         b_contest = pickle.dumps(contest)
 
-        await self.rs.hset('contests', f'{contest_id}', b_contest)
+        await self.rs.hset('contest', f'{contest_id}', b_contest)
 
         return None, contest_id
 
@@ -268,7 +268,8 @@ class ContestService:
 
             if prolist_updated:
                 order = 0
-                for order, (pro_id, v) in enumerate(contest.pro_list.items()):
+                failed = []
+                for pro_id, v in contest.pro_list.items():
                     try:
                         await con.execute('''
                             INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
@@ -278,11 +279,17 @@ class ContestService:
                                 contest_problem_joints.score_type != EXCLUDED.score_type OR
                                 contest_problem_joints.order != EXCLUDED.order;
                         ''', contest.contest_id, pro_id, int(v['score_type']), order)
+                        order += 1
                     except asyncpg.ForeignKeyViolationError:
+                        failed.append(pro_id)
                         continue
+
                 await con.execute('DELETE FROM contest_problem_joints WHERE contest_id = $1 AND "order" > $2', contest.contest_id, order)
+                for failed_pro_id in failed:
+                    contest.pro_list.pop(failed_pro_id)
 
             if userlist_updated:
+                failed = []
                 for acct_id, v in contest.user_list.items():
                     try:
                         await con.execute('''
@@ -292,7 +299,11 @@ class ContestService:
                             WHERE contest_users.status != EXCLUDED.status;
                         ''', contest.contest_id, acct_id, int(v['status']))
                     except asyncpg.ForeignKeyViolationError:
+                        failed.append(acct_id)
                         continue
+
+                for failed_acct_id in failed:
+                    contest.user_list.pop(failed_acct_id)
 
         b_contest = pickle.dumps(contest)
         await self.rs.hset('contest', str(contest.contest_id), b_contest)
@@ -346,6 +357,13 @@ class ContestService:
                               reply_content, reply_acct_id, contest_id, question_id)
 
         return None, None
+
+    async def get_question(self, contest_id: int, question_id: int):
+        res = await self.db.fetch('SELECT * FROM contest_question WHERE contest_id = $1 AND question_id = $2', contest_id, question_id)
+        if len(res) != 1:
+            return ('Eunk', 'Unknown error'), None
+
+        return None, res[0]
 
     async def get_all_question(self, contest_id: int, ask_acct_id: int = 0):
         if ask_acct_id:

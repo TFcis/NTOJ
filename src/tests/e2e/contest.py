@@ -33,7 +33,7 @@ class ContestTest(AsyncTest):
             # update general
             now = datetime.datetime.now()
             contest_start = now + datetime.timedelta(days=1)
-            contest_end = now + datetime.timedelta(days=2)
+            contest_end = now + datetime.timedelta(days=4)
             reg_end = now + datetime.timedelta(days=1) - datetime.timedelta(hours=8)
             default_config = {
                 'reqtype': 'update',
@@ -361,7 +361,17 @@ class ContestTest(AsyncTest):
             res = user_session.get('contests/1/pro/7/cont.pdf')
             self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
+            html = self.get_html('index/contests/1', user_session)
+            self.assertIsNone(html.select_one('li.nav-item.proset'))
+            self.assertIsNone(html.select_one('li.nav-item.chal'))
+            self.assertIsNone(html.select_one('li.nav-item.scoreboard'))
+
         with AccountContext('admin@test', 'testtest') as admin_session:
+            html = self.get_html('index/contests/1', admin_session)
+            self.assertIsNotNone(html.select_one('li.nav-item.proset'))
+            self.assertIsNotNone(html.select_one('li.nav-item.chal'))
+            self.assertIsNotNone(html.select_one('li.nav-item.scoreboard'))
+
             contest_start = now - datetime.timedelta(days=2)
             config = copy.deepcopy(default_config)
             config['contest_start'] = self.get_isoformat(contest_start)
@@ -373,6 +383,11 @@ class ContestTest(AsyncTest):
             # html = self.get_html('contests', user_session)
             # contest0 = html.select('tr')[1]
             # self.assertEqual(contest0.select('td')[0].text, 'Started')
+
+            html = self.get_html('index/contests/1', user_session)
+            self.assertIsNotNone(html.select_one('li.nav-item.proset'))
+            self.assertIsNotNone(html.select_one('li.nav-item.chal'))
+            self.assertIsNotNone(html.select_one('li.nav-item.scoreboard'))
 
             res = user_session.get('contests/1')
             self.assertEqual(re.findall(r'let desc_tex = `(.*)`', res.text, re.I)[0], 'desc during contest')
@@ -481,34 +496,29 @@ class ContestTest(AsyncTest):
             self.assertEqual(chal_tr.select('td > a')[1].attrs.get('href'), '/oj/contests/1/pro/7/')
             self.assertEqual(chal_tr.select('td')[3].attrs.get('class')[0], 'state-1')
 
-        with AccountContext('admin@test', 'testtest') as admin_session:
-            contest_end = now - datetime.timedelta(days=1)
-            config = copy.deepcopy(default_config)
-            config['contest_end'] = self.get_isoformat(contest_end)
-            res = admin_session.post('contests/1/manage/general', data=config)
-            self.assertAPIReturnSuccess(res.text)
-
-            res = admin_session.post('contests/1/manage/pro', data={
-                'reqtype': 'public',
-                'pro_id': '7'
-            })
-            self.assertAPIReturnSuccess(res.text)
-
         with AccountContext('test1@test', 'test') as user_session:
-            res = user_session.get('pro/7')
-            self.assertNotIn('Eacces', res.text)
-            res = user_session.get('pro/8')
-            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not found'))
+            html = self.get_html('contests/1/qa', user_session)
+            self.assertEqual(html.select('div.row > div')[1].select_one('h2').text.strip(), 'Only contestants can ask questions.')
 
-        def _message(msg):
-            if msg is None:
-                return
+            res = user_session.post('contests/1/qa', data={
+                'reqtype': 'ask',
+                'subject': 'subject',
+                'content': 'content',
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
-            self.assertEqual(int(msg), 1)
-
-        ws = await websocket_connect('ws://localhost:5501/contests/1/manage/qasub', on_message_callback=_message)
-        await ws.write_message("1")
         with AccountContext('contest1@test', 'test') as user_session:
+            def _message(msg):
+                if msg is None:
+                    return
+
+                self.assertEqual(int(msg), 1)
+            ws = await websocket_connect('ws://localhost:5501/contests/1/manage/qasub', on_message_callback=_message)
+            await ws.write_message(json.dumps({
+                "contest_id": 1,
+                "acct_id": 4,
+            }))
+
             res = user_session.post('contests/1/qa', data={
                 'reqtype': 'ask',
                 'subject': '',
@@ -587,8 +597,13 @@ class ContestTest(AsyncTest):
                 j = json.loads(msg)
                 self.assertEqual(j['contest_id'], 1)
                 self.assertEqual(j['type'], 'reply')
+                self.assertEqual(j['ask_acct_id'], 4)
             ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
-            await ws.write_message('1')
+            await ws.write_message(json.dumps({
+                "contest_id": 1,
+                "acct_id": 4,
+            }))
+
             res = admin_session.post('contests/1/manage/question', data={
                 'reqtype': 'reply',
                 'content': 'answer',
@@ -643,7 +658,10 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['type'], 'add-announce')
 
             ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
-            await ws.write_message("1")
+            await ws.write_message(json.dumps({
+                "contest_id": 1,
+                "acct_id": 4,
+            }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'add-announce',
                 'subject': 'subject',
@@ -703,7 +721,10 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['type'], 'edit-announce')
 
             ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
-            await ws.write_message("1")
+            await ws.write_message(json.dumps({
+                "contest_id": 1,
+                "acct_id": 4,
+            }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'edit-announce',
                 'subject': 'subject2',
@@ -735,7 +756,10 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['type'], 'popup-announce')
 
             ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
-            await ws.write_message("1")
+            await ws.write_message(json.dumps({
+                "contest_id": 1,
+                "acct_id": 4
+            }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'popup-announce',
                 'announce_id': 1,
@@ -745,6 +769,26 @@ class ContestTest(AsyncTest):
 
             res = admin_session.get('contests/1/qa')
             self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+        # NOTE: contest end
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            contest_end = now - datetime.timedelta(days=1)
+            config = copy.deepcopy(default_config)
+            config['contest_end'] = self.get_isoformat(contest_end)
+            res = admin_session.post('contests/1/manage/general', data=config)
+            self.assertAPIReturnSuccess(res.text)
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'public',
+                'pro_id': '7'
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+        with AccountContext('test1@test', 'test') as user_session:
+            res = user_session.get('pro/7')
+            self.assertNotIn('Eacces', res.text)
+            res = user_session.get('pro/8')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not found'))
 
         # freeze_scoreboard_period: int = 0
 

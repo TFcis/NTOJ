@@ -28,8 +28,7 @@ class ContestManageRegHandler(RequestHandler):
             acct_id = int(self.get_argument('acct_id'))
 
             if not self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
-                self.error(('Enoext', f'Account(#{acct_id}) should be in the request status'))
-                return
+                return self.error(('Enoext', f'Account(#{acct_id}) should be in the request status'))
 
             self.contest.user_list[acct_id]['status'] = UserStatus.APPROVED
 
@@ -42,8 +41,7 @@ class ContestManageRegHandler(RequestHandler):
             acct_id = int(self.get_argument('acct_id'))
 
             if not self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
-                self.error(('Enoext', f'Account(#{acct_id}) should be in the request status'))
-                return
+                return self.error(('Enoext', f'Account(#{acct_id}) should be in the request status'))
 
             self.contest.user_list[acct_id]['status'] = UserStatus.REJECTED
 

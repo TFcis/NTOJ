@@ -19,13 +19,11 @@ class AcctHandler(RequestHandler):
         acct_id = int(acct_id)
         err, acct = await UserService.inst.info_acct(acct_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         err, rate_data = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         max_status = ProService.inst.get_acct_limit(self.acct)
         async with self.db.acquire() as con:
@@ -71,13 +69,11 @@ class AcctConfigHandler(RequestHandler):
     @reqenv
     async def get(self, acct_id=None):
         if acct_id is None:
-            self.error(('Enoext', 'Missing parameter acct_id'))
-            return
+            return self.error(('Enoext', 'Missing parameter acct_id'))
         acct_id = int(acct_id)
         err, acct = await UserService.inst.info_acct(acct_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         await self.render('acct/acct-config', acct=acct)
 
@@ -94,8 +90,7 @@ class AcctConfigHandler(RequestHandler):
             target_acct_id = self.get_argument('acct_id')
 
             if target_acct_id != str(self.acct.acct_id):
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             self.acct.name = name
             self.acct.photo = photo
@@ -103,11 +98,9 @@ class AcctConfigHandler(RequestHandler):
             self.acct.motto = motto
             err, _ = await UserService.inst.update_acct(self.acct)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
-            self.error(('S', ''))
-            return
+            return self.error(('S', ''))
 
         elif reqtype == 'reset':
             old = self.get_argument('old')
@@ -115,24 +108,20 @@ class AcctConfigHandler(RequestHandler):
             target_acct_id = int(self.get_argument('acct_id'))
 
             if not (self.acct.acct_id == target_acct_id or self.acct.is_kernel()):
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             err, _ = await UserService.inst.update_pw(target_acct_id, old, pw, self.acct.is_kernel())
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             if not err and target_acct_id != self.acct.acct_id:
                 await LogService.inst.add_log(
                     f"{self.acct.name} was changing the password of user #{target_acct_id}.", 'manage.acct.update.pwd'
                 )
 
-            self.error(('S', ''))
-            return
+            return self.error(('S', ''))
 
-        self.error(('Eunk', 'Unknown error'))
-
+        return self.error(('Eunk', 'Unknown error'))
 class AcctProClassHandler(RequestHandler):
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
@@ -155,8 +144,7 @@ class AcctProClassHandler(RequestHandler):
             proclass_id = int(self.get_argument('proclassid'))
             _, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if proclass['acct_id'] != self.acct.acct_id:
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             await self.render('acct/proclass-update', proclass_id=proclass_id, proclass=proclass)
 
@@ -173,31 +161,17 @@ class AcctProClassHandler(RequestHandler):
             p_list_str = self.get_argument('list')
             p_list = parse_list_str(p_list_str)
 
-            name_len = len(name)
-            desc_len = len(desc)
-            if name_len < ProClassConst.NAME_MIN:
-                self.error(('Eparam', 'Name too short'))
-                return
+            if err := self.len_check(name, ProClassConst.NAME_MIN, ProClassConst.NAME_MAX, 'Name'):
+                return self.error(err)
 
-            elif name_len > ProClassConst.NAME_MAX:
-                self.error(('Eparam', 'Name too long'))
-                return
-
-            if desc_len < ProClassConst.DESC_MIN:
-                self.error(('Eparam', 'Desc too short'))
-                return
-
-            elif desc_len > ProClassConst.DESC_MAX:
-                self.error(('Eparam', 'Desc too long'))
-                return
+            if err := self.len_check(desc, ProClassConst.DESC_MIN, ProClassConst.DESC_MAX, 'Desc'):
+                return self.error(err)
 
             if proclass_type not in [ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN]:
-                self.error(('Eparam', 'Invalid problem class type'))
-                return
+                return self.error(('Eparam', 'Invalid problem class type'))
 
             if len(p_list) == 0:
-                self.error(('Eparam', 'Problem list should not be empty'))
-                return
+                return self.error(('Eparam', 'Problem list should not be empty'))
 
             if reqtype == 'add':
                 await LogService.inst.add_log(
@@ -210,8 +184,7 @@ class AcctProClassHandler(RequestHandler):
                 )
                 err, proclass_id = await ProClassService.inst.add_proclass(name, p_list, desc, acct_id, proclass_type)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 self.error(('S', proclass_id))
 
@@ -223,8 +196,7 @@ class AcctProClassHandler(RequestHandler):
                     await LogService.inst.add_log(
                         f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them", 'user.proclass.update.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 await LogService.inst.add_log(
                     f"{self.acct.name} update proclass name={name}", 'user.proclass.update',
@@ -234,10 +206,8 @@ class AcctProClassHandler(RequestHandler):
                         "proclass_type": proclass_type,
                     }
                 )
-                err = await ProClassService.inst.update_proclass(proclass_id, name, p_list, desc, proclass_type)
-                if err:
-                    self.error(err)
-                    return
+                if err := await ProClassService.inst.update_proclass(proclass_id, name, p_list, desc, proclass_type):
+                    return self.error(err)
 
                 self.error(('S', ''))
 
@@ -246,15 +216,13 @@ class AcctProClassHandler(RequestHandler):
             err, proclass = await ProClassService.inst.get_proclass(proclass_id)
 
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             if proclass['acct_id'] != self.acct.acct_id:
                 await LogService.inst.add_log(
                     f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them", 'user.proclass.remove.failed'
                 )
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             await LogService.inst.add_log(
                 f"{self.acct.name} remove proclass name={proclass['name']}.", 'user.proclass.remove'
@@ -287,8 +255,7 @@ class SignHandler(RequestHandler):
                         'err': err,
                     },
                 )
-                self.error(err)
-                return
+                return self.error(err)
 
             await LogService.inst.add_log(
                 f'#{acct_id} sign in successfully', 'signin.success', {'type': 'signin.success', 'acct_id': acct_id}
@@ -304,8 +271,7 @@ class SignHandler(RequestHandler):
 
             err, acct_id = await UserService.inst.sign_up(mail, pw, name)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             self.set_secure_cookie('id', str(acct_id), path='/oj', httponly=True)
             self.error(('S', ''))

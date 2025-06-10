@@ -46,8 +46,7 @@ class ManageProHandler(RequestHandler):
 
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             lock = await self.rs.get(f"{pro['pro_id']}_owner")
 
@@ -62,8 +61,7 @@ class ManageProHandler(RequestHandler):
             pro_id = int(self.get_argument('proid'))
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             testm_conf = pro['testm_conf']
             dirs = []
@@ -131,8 +129,7 @@ class ManageProHandler(RequestHandler):
 
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             files = natsorted(set(map(lambda file: file.replace('.in', '').replace('.out', ''),
                         filter(lambda file: file.endswith('.in') or file.endswith('.out'), os.listdir(f'problem/{pro_id}/res/testdata')))))
@@ -164,8 +161,7 @@ class ManageProHandler(RequestHandler):
                 f"{self.acct.name} has sent a request to add the problem #{pro_id}", 'manage.pro.add.pro'
             )
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             self.error(('S', pro_id))
 
@@ -177,12 +173,10 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 if test_type not in ['out', 'in']:
-                    self.error(('Eparam', 'Invalid testcase file type'))
-                    return
+                    return self.error(('Eparam', 'Invalid testcase file type'))
 
                 filename += f".{test_type}"
                 basepath = f'problem/{pro_id}/res/testdata'
@@ -191,8 +185,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to preview file:{filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.preview.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 filepath = os.path.join(basepath, filename)
 
@@ -201,16 +194,14 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to preview file:{filename} for problem #{pro_id} but not found',
                         'manage.pro.update.tests.preview.failed'
                     )
-                    self.error(('Enoext', 'File not found'))
-                    return
+                    return self.error(('Enoext', 'File not found'))
 
                 await LogService.inst.add_log(f'{self.acct.name} preview file:{filename} for problem #{pro_id}',
                                             'manage.pro.update.tests.preview')
                 with open(filepath, 'r') as testcase_f:
                     content = testcase_f.readlines()
                     if len(content) > 25:
-                        self.error(('Efile', 'File too large'))
-                        return
+                        return self.error(('Efile', 'File too large'))
 
                     self.error(('S', ''.join(content)))
 
@@ -221,14 +212,12 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 test_group = pro['testm_conf']['test_group']
 
                 if group not in test_group:
-                    self.error(('Enoext', 'Group not found'))
-                    return
+                    return self.error(('Enoext', 'Group not found'))
 
                 test_group[group]['weight'] = weight
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
@@ -247,8 +236,7 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 test_group = pro['testm_conf']['test_group']
 
@@ -274,13 +262,11 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
-                    self.error(('Enoext', 'Group not found'))
-                    return
+                    return self.error(('Enoext', 'Group not found'))
 
                 test_group.pop(group)
                 remain_groups = list(test_group.values())
@@ -303,18 +289,15 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not os.path.exists(f'{basepath}/{testcase}.in') or not os.path.exists(f'{basepath}/{testcase}.out'):
-                    self.error(('Enoext', 'Testcase file not found'))
-                    return
+                    return self.error(('Enoext', 'Testcase file not found'))
 
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
-                    self.error(('Enoext', 'Group not found'))
-                    return
+                    return self.error(('Enoext', 'Group not found'))
 
                 for t in test_group[group]['metadata']['data']:
                     if testcase == str(t):
@@ -322,8 +305,7 @@ class ManageProHandler(RequestHandler):
                             f'{self.acct.name} tried to add testcase:{testcase} for problem #{pro_id} but already exists',
                             'manage.pro.update.tests.addsingletestcase',
                         )
-                        self.error(('Eexist', 'Testcase already exists'))
-                        return
+                        return self.error(('Eexist', 'Testcase already exists'))
 
                 test_group[group]['metadata']['data'].append(testcase)
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
@@ -340,19 +322,16 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
-                    self.error(('Enoext', 'Group not found'))
-                    return
+                    return self.error(('Enoext', 'Group not found'))
 
                 try:
                     test_group[group]['metadata']['data'].remove(testcase)
                 except ValueError:
-                    self.error(('Enoext', 'Testcase not found'))
-                    return
+                    return self.error(('Enoext', 'Testcase not found'))
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
@@ -368,8 +347,7 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 # check filename
                 basepath = f'problem/{pro_id}/res/testdata'
@@ -382,24 +360,21 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.renamesinglefile.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 if not os.path.exists(old_inputfile_path) or not os.path.exists(old_outputfile_path):
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id} but {old_filename} not found',
                         'manage.pro.update.tests.renamesinglefile.failed'
                     )
-                    self.error(('Enoext', 'Old filename not found'))
-                    return
+                    return self.error(('Enoext', 'Old filename not found'))
 
                 if os.path.exists(new_inputfile_path) or os.path.exists(new_outputfile_path):
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id} but {new_filename} already exists',
                         'manage.pro.update.tests.renamesinglefile.failed'
                     )
-                    self.error(('Eexist', 'New filename already exists'))
-                    return
+                    return self.error(('Eexist', 'New filename already exists'))
 
                 os.rename(old_inputfile_path, new_inputfile_path)
                 os.rename(old_outputfile_path, new_outputfile_path)
@@ -429,13 +404,11 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 if test_type not in ['output', 'input']:
                     PackService.inst.clear(pack_token)
-                    self.error(('Eparam', 'Invalid testcase file type'))
-                    return
+                    return self.error(('Eparam', 'Invalid testcase file type'))
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 filepath = f'{basepath}/{filename}.{test_type[0:-3]}'
@@ -446,8 +419,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to update {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.updatesinglefile.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 if not os.path.exists(filepath):
                     PackService.inst.clear(pack_token)
@@ -455,8 +427,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to update {filename}.{test_type[0:-3]} for problem #{pro_id} but not found',
                         'manage.pro.update.tests.updatesinglefile.failed'
                     )
-                    self.error(('Enoext', 'Testcase file not found'))
-                    return
+                    return self.error(('Enoext', 'Testcase file not found'))
 
                 _ = await PackService.inst.direct_copy(pack_token, filepath)
 
@@ -476,8 +447,7 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 inputfile_path = f'{basepath}/{filename}.in'
@@ -492,8 +462,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to add a single file:{filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.addsinglefile.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 if os.path.exists(inputfile_path) or os.path.exists(outputfile_path):
                     PackService.inst.clear(input_pack_token)
@@ -502,8 +471,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to add single file:{filename} for problem #{pro_id} but {filename} already exists',
                         'manage.pro.update.tests.addsinglefile.failed'
                     )
-                    self.error(('Eexist', 'File already exists'))
-                    return
+                    return self.error(('Eexist', 'File already exists'))
 
                 _ = await PackService.inst.direct_copy(input_pack_token, inputfile_path)
                 _ = await PackService.inst.direct_copy(output_pack_token, outputfile_path)
@@ -521,8 +489,7 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not self._is_file_access_safe(basepath, f'{filename}.in'):
@@ -530,16 +497,14 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to delete a single file:{filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.tests.deletesinglefile.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 if not os.path.exists(f'{basepath}/{filename}.in') or not os.path.exists(f'{basepath}/{filename}.out'):
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to delete a single file:{filename} for problem #{pro_id} but not found',
                         'manage.pro.update.tests.deletesinglefile.failed'
                     )
-                    self.error(('Enoext', 'Testcase file not found'))
-                    return
+                    return self.error(('Enoext', 'Testcase file not found'))
 
                 os.remove(f'{basepath}/{filename}.in')
                 os.remove(f'{basepath}/{filename}.out')
@@ -568,12 +533,10 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 if basepath not in ['http', 'res/check', 'res/make']:
-                    self.error(('Eparam', 'Invalid basepath'))
-                    return
+                    return self.error(('Eparam', 'Invalid basepath'))
 
                 basepath = f'problem/{pro_id}/{basepath}'
                 if not self._is_file_access_safe(basepath, filename):
@@ -581,8 +544,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to preview {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.preview.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 filepath = os.path.join(basepath, filename)
 
@@ -591,8 +553,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to preview {filename} for problem #{pro_id} but not found',
                         'manage.pro.update.filemanager.preview.failed'
                     )
-                    self.error(('Enoext', 'File not found'))
-                    return
+                    return self.error(('Enoext', 'File not found'))
 
                 await LogService.inst.add_log(f'{self.acct.name} preview {filename} for problem #{pro_id}',
                                               'manage.pro.update.filemanager.preview')
@@ -600,8 +561,7 @@ class ManageProHandler(RequestHandler):
                     try:
                         content = tornado.escape.xhtml_escape(f.read())
                     except UnicodeDecodeError:
-                        self.error(('Eunicode', 'That even use like unicode shit that make your programs not compile.'))
-                        return
+                        return self.error(('Eunicode', 'That even use like unicode shit that make your programs not compile.'))
 
                     self.error(('S', ''.join(content)))
 
@@ -617,8 +577,7 @@ class ManageProHandler(RequestHandler):
                     return
 
                 if basepath not in ['http', 'res/check', 'res/make']:
-                    self.error(('Eparam', 'Invalid basepath'))
-                    return
+                    return self.error(('Eparam', 'Invalid basepath'))
 
                 basepath = f'problem/{pro_id}/{basepath}'
                 old_filepath = f'{basepath}/{old_filename}'
@@ -628,24 +587,21 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.renamesinglefile.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 if not os.path.exists(old_filepath):
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id} but {old_filename} not found',
                         'manage.pro.update.filemanager.renamesinglefile.failed'
                     )
-                    self.error(('Enoext', 'Old filename not found'))
-                    return
+                    return self.error(('Enoext', 'Old filename not found'))
 
                 if os.path.exists(new_filepath):
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id} but {new_filename} already exists',
                         'manage.pro.update.filemanager.renamesinglefile.failed'
                     )
-                    self.error(('Eexist', 'New filename already exists'))
-                    return
+                    return self.error(('Eexist', 'New filename already exists'))
 
                 os.rename(old_filepath, new_filepath)
                 await LogService.inst.add_log(
@@ -662,12 +618,10 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 if basepath not in ['http', 'res/check', 'res/make']:
-                    self.error(('Eparam', 'Invalid basepath'))
-                    return
+                    return self.error(('Eparam', 'Invalid basepath'))
 
                 basepath = f'problem/{pro_id}/{basepath}'
                 filepath = f'{basepath}/{filename}'
@@ -678,8 +632,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to update {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.updatesinglefile.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 if not os.path.exists(filepath):
                     PackService.inst.clear(pack_token)
@@ -687,8 +640,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to update {filename} for problem #{pro_id} but not found',
                         'manage.pro.update.filemanager.updatesinglefile.failed'
                     )
-                    self.error(('Enoext', 'File not found'))
-                    return
+                    return self.error(('Enoext', 'File not found'))
 
                 _ = await PackService.inst.direct_copy(pack_token, filepath)
                 await LogService.inst.add_log(
@@ -706,12 +658,10 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 if basepath not in ['http', 'res/check', 'res/make']:
-                    self.error(('Eparam', 'Invalid basepath'))
-                    return
+                    return self.error(('Eparam', 'Invalid basepath'))
 
                 basepath = f'problem/{pro_id}/{basepath}'
                 filepath = f'{basepath}/{filename}'
@@ -722,8 +672,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to add {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.addsinglefile.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 if os.path.exists(filepath):
                     PackService.inst.clear(pack_token)
@@ -731,8 +680,7 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to add {filename} for problem #{pro_id} but {filename} already exists',
                         'manage.pro.update.filemanager.addsinglefile.failed'
                     )
-                    self.error(('Eexist', 'File already exists'))
-                    return
+                    return self.error(('Eexist', 'File already exists'))
 
                 _ = await PackService.inst.direct_copy(pack_token, filepath)
                 await LogService.inst.add_log(
@@ -749,12 +697,10 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 if basepath not in ['http', 'res/check', 'res/make']:
-                    self.error(('Eparam', 'Invalid basepath'))
-                    return
+                    return self.error(('Eparam', 'Invalid basepath'))
 
                 basepath = f'problem/{pro_id}/{basepath}'
                 filepath = f'{basepath}/{filename}'
@@ -763,16 +709,14 @@ class ManageProHandler(RequestHandler):
                         f'{self.acct.name} tried to delete {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.deletesinglefile.failed'
                     )
-                    self.error(PERMISSION_DENIED_ERROR)
-                    return
+                    return self.error(PERMISSION_DENIED_ERROR)
 
                 if not os.path.exists(filepath):
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to delete {filename} for problem #{pro_id} but not found',
                         'manage.pro.update.filemanager.deletesinglefile.failed'
                     )
-                    self.error(('Enoext', 'File not found'))
-                    return
+                    return self.error(('Enoext', 'File not found'))
 
                 os.remove(f'{basepath}/{filename}')
 
@@ -793,8 +737,7 @@ class ManageProHandler(RequestHandler):
                 # NOTE: test config
                 rate_precision = int(self.get_argument('rate_precision'))
                 if rate_precision > ProConst.RATE_PRECISION_MAX or rate_precision < ProConst.RATE_PRECISION_MIN:
-                    self.error(('Eparam', 'Invalid rate precision'))
-                    return
+                    return self.error(('Eparam', 'Invalid rate precision'))
 
                 is_makefile = self.get_argument('is_makefile') == "true"
                 check_type = int(self.get_argument('check_type'))
@@ -805,16 +748,14 @@ class ManageProHandler(RequestHandler):
                     try:
                         chalmeta = json.loads(chalmeta)
                     except json.JSONDecodeError:
-                        self.error(('Econf', 'Challenge metadata json syntax error'))
-                        return
+                        return self.error(('Econf', 'Challenge metadata json syntax error'))
 
                 err, _ = await ProService.inst.update_pro(
                     pro_id, name, status, None, None, tags, allow_submit
                 )
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 old_is_makefile = pro['testm_conf']['is_makefile']
                 old_check_type = pro['testm_conf']['check_type']
@@ -848,8 +789,7 @@ class ManageProHandler(RequestHandler):
                     }
                 )
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 self.error(('S', ''))
 
@@ -860,8 +800,7 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 err, _ = await ProService.inst.update_pro(
                     pro_id, pro['name'], pro['status'], ProService.PACKTYPE_FULL, pack_token, pro['tags'], pro['allow_submit']
@@ -876,8 +815,7 @@ class ManageProHandler(RequestHandler):
                             'err': err
                         }
                     )
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 suspicious_files = []
                 for file in os.listdir(f"problem/{pro_id}/res/testdata"):
@@ -903,8 +841,7 @@ class ManageProHandler(RequestHandler):
 
                 err, pro = await ProService.inst.get_pro(pro_id, self.acct)
                 if err:
-                    self.error(err)
-                    return
+                    return self.error(err)
 
                 ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
                 if pro['testm_conf']['is_makefile']:
@@ -923,8 +860,7 @@ class ManageProHandler(RequestHandler):
                     new_limits[comp_type] = limit
 
                 if 'default' not in new_limits:
-                    self.error(('Eparam', 'Missing default limit config'))
-                    return
+                    return self.error(('Eparam', 'Missing default limit config'))
 
                 pro['testm_conf']['limit'] = new_limits
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
@@ -959,8 +895,7 @@ class ManageProHandler(RequestHandler):
                 pwd = str(self.get_argument('pwd'))
 
                 if config.unlock_pwd != base64.b64encode(packb(pwd)):
-                    self.error(('Eacces', 'Wrong password'))
-                    return
+                    return self.error(('Eacces', 'Wrong password'))
 
                 lock_list = unpackb((await self.rs.get('lock_list')))
                 lock_list.remove(pro_id)
@@ -970,27 +905,23 @@ class ManageProHandler(RequestHandler):
 
         elif page is None:  # pro-list
             if reqtype not in ['rechal', 'rechalall']:
-                self.error(('Eunk', 'Unknown error'))
-                return
+                return self.error(('Eunk', 'Unknown error'))
 
             is_all_chal = False
             if reqtype == 'rechalall':
                 pwd = self.get_argument('pwd')
                 if config.unlock_pwd != base64.b64encode(packb(pwd)):
-                    self.error(('Eacces', 'Wrong password'))
-                    return
+                    return self.error(('Eacces', 'Wrong password'))
                 is_all_chal = True
 
             pro_id = int(self.get_argument('pro_id'))
             can_submit = JudgeServerClusterService.inst.is_server_online()
             if not can_submit:
-                self.error(('Ejudge', 'No available judge'))
-                return
+                return self.error(('Ejudge', 'No available judge'))
 
             err, pro = await ProService.inst.get_pro(pro_id, self.acct)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             log_type = ""
             async with self.db.acquire() as con:

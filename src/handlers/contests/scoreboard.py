@@ -48,11 +48,9 @@ class ContestScoreboardHandler(RequestHandler):
     @reqenv
     async def post(self):
         if not self.contest.is_start() and not self.contest.is_admin(self.acct):
-            self.error(('Eacces', 'Permission denied'))
-            return
+            return self.error(('Eacces', 'Permission denied'))
         elif not self.contest.is_public_scoreboard and not self.contest.is_member(self.acct):
-            self.error(('Eacces', 'Permission denied'))
-            return
+            return self.error(('Eacces', 'Permission denied'))
 
         has_end_time = True
         start_time = self.contest.contest_start

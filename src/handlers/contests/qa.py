@@ -17,18 +17,18 @@ class ContestQAHandler(RequestHandler):
     @reqenv
     async def get(self):
         if self.contest.is_admin(self.acct):
-            self.error(('Eacces', 'Permission denied'))
-            return
+            return self.error(('Eacces', 'Permission denied'))
 
-        err, announces = await ContestService.inst.get_all_announce(self.contest.contest_id)
-        if err:
-            self.error(err)
-            return
+        if self.contest.is_start():
+            err, announces = await ContestService.inst.get_all_announce(self.contest.contest_id)
+            if err:
+                return self.error(err)
+        else:
+            announces = []
 
         err, questions = await ContestService.inst.get_all_question(self.contest.contest_id, self.acct.acct_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         def _cmp(question):
             return (question['reply_acct_id'] is not None, question['reply_timestamp'], question['ask_timestamp'])
@@ -66,30 +66,14 @@ class ContestQAHandler(RequestHandler):
                 if elapsed_time < ASK_CD_TIME:
                     remaining_time = ASK_CD_TIME - elapsed_time
                     remaining_time = max(remaining_time, 0)
-                    self.error(('Einternal', f'Ask CD Time: {ASK_CD_TIME} Secs, Remaining: {remaining_time} Secs'))
-                    return
+                    return self.error(('Einternal', f'Ask CD Time: {ASK_CD_TIME} Secs, Remaining: {remaining_time} Secs'))
 
             subject = self.get_argument('subject').strip()
             content = self.get_argument('content').strip()
-            subject_len = len(subject)
-            content_len = len(content)
-
-            if subject_len < SUBJECT_MIN:
-                self.error(('Eparam', 'Subject too short'))
-                return
-
-            elif subject_len > SUBJECT_MAX:
-                self.error(('Eparam', 'Subject too long'))
-                return
-
-            if content_len < CONTENT_MIN:
-                self.error(('Eparam', 'Content too short'))
-                return
-
-            elif content_len > CONTENT_MAX:
-                self.error(('Eparam', 'Content too long'))
-                return
-
+            if err := self.len_check(subject, SUBJECT_MIN, SUBJECT_MAX, 'Subject'):
+                return self.error(err)
+            if err := self.len_check(content, CONTENT_MIN, CONTENT_MAX, 'Content'):
+                return self.error(err)
 
             if not last_ask_time:
                 await self.rs.set(last_ask_name, int(time.time()), ex=ASK_CD_TIME)  # ex means expire
@@ -106,15 +90,22 @@ class ContestNewQAHandler(WebSocketSubHandler):
             if msg['type'] != 'message':
                 continue
 
-            if json.loads(msg['data'])['contest_id'] == self.contest_id:
-                await self.write_message(msg['data'])
+            data = json.loads(msg['data'])
+            if data['contest_id'] == self.contest_id:
+                if data['type'] != 'reply':
+                    await self.write_message(msg['data'])
+                elif data['ask_acct_id'] == self.acct_id:
+                    await self.write_message(msg['data'])
 
     async def open(self):
         self.contest_id = -1
+        self.acct_id = -1
         await self.p.subscribe('contestnewqasub')
 
         self.task = asyncio.tasks.Task(self.listen_newqa())
 
     async def on_message(self, msg):
-        if self.contest_id == -1 and msg.isdigit():
-            self.contest_id = int(msg)
+        j = json.loads(msg)
+        if self.contest_id == -1 or self.acct_id == -1:
+            self.contest_id = int(j['contest_id'])
+            self.acct_id = int(j['acct_id'])

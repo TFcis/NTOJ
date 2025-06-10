@@ -86,16 +86,13 @@ class ProsetHandler(RequestHandler):
         if proclass_id:
             err, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
             proclass = dict(proclass)
 
             if proclass['type'] == ProClassConst.OFFICIAL_HIDDEN and not self.acct.is_kernel():
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
             elif proclass['type'] == ProClassConst.USER_HIDDEN and proclass['acct_id'] != self.acct.acct_id:
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             p_list = proclass['list']
             prolist = list(filter(lambda pro: pro['pro_id'] in p_list, prolist))
@@ -180,39 +177,58 @@ class ProsetHandler(RequestHandler):
     async def post(self):
         reqtype = self.get_argument('reqtype')
         if reqtype == "listproclass":
+            proclass_type = self.get_argument('proclass_type')
+            _, proclass_list = await ProClassService.inst.get_proclass_list()
+
             _, accts = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL)
             accts = {acct.acct_id: acct.name for acct in accts}
 
-            _, proclass_list = await ProClassService.inst.get_proclass_list()
-            def _set_creator_name(proclass):
-                proclass = dict(proclass)
+            if proclass_type == 'official':
+                if self.acct.is_kernel():
+                    proclass_list = list(filter(
+                        lambda proclass: proclass['type'] in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN], proclass_list))
+                else:
+                    proclass_list = list(filter(lambda proclass: proclass['type'] == ProClassConst.OFFICIAL_PUBLIC, proclass_list))
+
+            elif proclass_type == 'shared':
+                proclass_list = list(filter(lambda proclass: proclass['type'] == ProClassConst.USER_PUBLIC, proclass_list))
+
+            elif proclass_type == 'collection':
+                proclass_list = list(filter(lambda proclass: proclass['proclass_id'] in self.acct.proclass_collection, proclass_list))
+
+            elif proclass_type == 'own':
+                proclass_list = list(filter(lambda proclass: proclass['acct_id'] == self.acct.acct_id, proclass_list))
+
+            else:
+                self.error(('Eparam', 'Wrong proclass_type'))
+                return
+
+            _, acct_states = await RateService.inst.map_rate_acct(self.acct)
+            for i in range(len(proclass_list)):
+                proclass_list[i] = dict(proclass_list[i])
+                proclass = proclass_list[i]
+                ac_cnt = 0
+                err, p = await ProClassService.inst.get_proclass(proclass['proclass_id'])
                 if proclass['acct_id']:
                     proclass['creator_name'] = accts[proclass['acct_id']]
 
-                return proclass
-            proclass_list = list(map(_set_creator_name, proclass_list))
+                for pro_id in p['list']:
+                    if pro_id in acct_states:
+                        ac_cnt += acct_states[pro_id]['state'] == ChalConst.STATE_AC
 
-            proclass_cata = {
-                "official": list(filter(lambda proclass: proclass['type'] == ProClassConst.OFFICIAL_PUBLIC, proclass_list)),
-                "shared": list(filter(lambda proclass: proclass['type'] == ProClassConst.USER_PUBLIC, proclass_list)),
-                "collection": list(filter(lambda proclass: proclass['proclass_id'] in self.acct.proclass_collection, proclass_list)),
-                "own": list(filter(lambda proclass: proclass['acct_id'] == self.acct.acct_id, proclass_list)),
-            }
-            if self.acct.is_kernel():
-                proclass_cata['official'].extend(filter(lambda proclass: proclass['type'] == ProClassConst.OFFICIAL_HIDDEN, proclass_list))
+                proclass['ac_cnt'] = ac_cnt
+                proclass['total_cnt'] = len(p['list'])
 
-            self.error(('S', proclass_cata))
+            self.error(('S', proclass_list))
 
         elif reqtype == "collect":
             if self.acct.is_guest():
-                self.error(('Eacces', 'Please login'))
-                return
+                return self.error(('Eacces', 'Please login'))
 
             proclass_id = int(self.get_argument('proclass_id'))
 
             if proclass_id in self.acct.proclass_collection:
-                self.error(('Eexist', 'Problem class is already collected'))
-                return
+                return self.error(('Eexist', 'Problem class is already collected'))
 
             self.acct.proclass_collection.append(proclass_id)
             self.acct.proclass_collection.sort()
@@ -221,14 +237,12 @@ class ProsetHandler(RequestHandler):
 
         elif reqtype == "decollect":
             if self.acct.is_guest():
-                self.error(('Eacces', 'Please login'))
-                return
+                return self.error(('Eacces', 'Please login'))
 
             proclass_id = int(self.get_argument('proclass_id'))
 
             if proclass_id not in self.acct.proclass_collection:
-                self.error(('Enoext', 'Problem class is not in your collection'))
-                return
+                return self.error(('Enoext', 'Problem class is not in your collection'))
 
             self.acct.proclass_collection.remove(proclass_id)
             self.acct.proclass_collection.sort()
@@ -242,26 +256,21 @@ class ProStaticHandler(RequestHandler):
         pro_id = int(pro_id)
         if self.contest:
             if not self.contest.is_pro(pro_id):
-                self.error(('Enoext', 'Problem not in contest'))
-                return
+                return self.error(('Enoext', 'Problem not in contest'))
 
         err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         if pro['status'] == ProConst.STATUS_OFFLINE:
-            self.error(PERMISSION_DENIED_ERROR)
-            return
+            return self.error(PERMISSION_DENIED_ERROR)
 
         elif pro['status'] == ProConst.STATUS_CONTEST:
             if not self.contest:
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             elif not (self.contest.is_running() or self.contest.is_admin(self.acct)):
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
         if path.endswith('pdf'):
             self.set_header('Pragma', 'public')
@@ -289,29 +298,23 @@ class ProHandler(RequestHandler):
 
         if self.contest:
             if not self.contest.is_pro(pro_id):
-                self.error(('Enoext', 'Problem not in contest'))
-                return
+                return self.error(('Enoext', 'Problem not in contest'))
 
             if not self.contest.is_start() and not self.contest.is_admin(self.acct):
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
             elif not self.contest.is_running() and not self.contest.is_member(self.acct):
-                self.error(PERMISSION_DENIED_ERROR)
-                return
+                return self.error(PERMISSION_DENIED_ERROR)
 
         err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         if pro['status'] == ProConst.STATUS_OFFLINE:
-            self.error(PERMISSION_DENIED_ERROR)
-            return
+            return self.error(PERMISSION_DENIED_ERROR)
 
         elif pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
-            self.error(PERMISSION_DENIED_ERROR)
-            return
+            return self.error(PERMISSION_DENIED_ERROR)
 
         # NOTE: Guest cannot see tags
         # NOTE: Admin can see tags
@@ -360,8 +363,7 @@ class ProTagsHandler(RequestHandler):
 
         err, pro = await ProService.inst.get_pro(pro_id, self.acct)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         await LogService.inst.add_log(
             (self.acct.name + " updated the tag of problem #" + str(pro_id) + " to: \"" + str(tags) + "\"."),
@@ -373,7 +375,6 @@ class ProTagsHandler(RequestHandler):
         )
 
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         self.error(('S', ''))

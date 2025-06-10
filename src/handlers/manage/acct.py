@@ -46,8 +46,7 @@ class ManageAcctHandler(RequestHandler):
                     f"{self.acct.name}(#{self.acct.acct_id}) had been send a request to update the account #{acct_id} but not found",
                     'manage.acct.update.failure',
                 )
-                self.error(err)
-                return
+                return self.error(err)
 
             await LogService.inst.add_log(
                 f"{self.acct.name}(#{self.acct.acct_id}) had been send a request to update the account {acct.name}(#{acct.acct_id})",
@@ -57,8 +56,7 @@ class ManageAcctHandler(RequestHandler):
             acct.acct_type = acct_type
             err, _ = await UserService.inst.update_acct(acct)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             _ = await GroupService.inst.set_acct_group(acct_id, group)
             self.error(('S', ''))

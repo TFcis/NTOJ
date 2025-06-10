@@ -31,7 +31,7 @@ class QuestionService:
             await self.rs.set(f'{acct_id}_msg_list', packb([]))
 
         elif not active:
-            return 'Eacces'
+            return ('Eacces', 'What the heck is _msg_active')
 
         await self.rs.set(f'{acct_id}_msg_ask', packb(True))
         ques_list = unpackb((await self.rs.get(f'{acct_id}_msg_list')))

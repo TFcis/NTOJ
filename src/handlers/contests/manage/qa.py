@@ -17,8 +17,7 @@ class ContestManageQuestionHandler(RequestHandler):
     async def get(self):
         err, questions = await ContestService.inst.get_all_question(self.contest.contest_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
 
         cache = {}
@@ -46,7 +45,7 @@ class ContestManageQuestionHandler(RequestHandler):
         def _cmp(question):
             return (question['reply_acct_id'] is None, question['ask_timestamp'], question['reply_timestamp'])
 
-        questions2.sort(key=_cmp)
+        questions2.sort(key=_cmp, reverse=True)
 
 
         await self.render('contests/manage/question', page='question', contest_id=self.contest.contest_id,
@@ -59,19 +58,17 @@ class ContestManageQuestionHandler(RequestHandler):
         if reqtype == 'reply':
             question_id = int(self.get_argument('question_id'))
             content = self.get_argument('content').strip()
-            content_len = len(content)
+            if err := self.len_check(content, CONTENT_MIN, CONTENT_MAX, 'Content'):
+                return self.error(err)
 
-            if content_len < CONTENT_MIN:
-                self.error(('Eparam', 'Content too short'))
-                return
-
-            elif content_len > CONTENT_MAX:
-                self.error(('Eparam', 'Content too long'))
-                return
+            err, question = await ContestService.inst.get_question(self.contest.contest_id, question_id)
+            if err:
+                return self.error(err)
 
             await ContestService.inst.reply_question(self.contest.contest_id, question_id, self.acct.acct_id, content)
             await self.rs.publish('contestnewqasub', json.dumps({
                 'contest_id': self.contest.contest_id,
+                'ask_acct_id': question['ask_acct_id'],
                 'type': 'reply'
             }))
             self.error(('S', ''))
@@ -82,8 +79,7 @@ class ContestManageAnnounceHandler(RequestHandler):
     async def get(self):
         err, announces = await ContestService.inst.get_all_announce(self.contest.contest_id)
         if err:
-            self.error(err)
-            return
+            return self.error(err)
 
         await self.render('contests/manage/announce', page='announce', contest_id=self.contest.contest_id,
                           contest=self.contest, announces=announces)
@@ -96,49 +92,36 @@ class ContestManageAnnounceHandler(RequestHandler):
         if reqtype in ['add-announce', 'edit-announce']:
             subject = self.get_argument('subject').strip()
             content = self.get_argument('content').strip()
-            subject_len = len(subject)
-            content_len = len(content)
-
-            if subject_len < SUBJECT_MIN:
-                self.error(('Eparam', 'Subject too short'))
-                return
-
-            elif subject_len > SUBJECT_MAX:
-                self.error(('Eparam', 'Subject too long'))
-                return
-
-            if content_len < CONTENT_MIN:
-                self.error(('Eparam', 'Content too short'))
-                return
-
-            elif content_len > CONTENT_MAX:
-                self.error(('Eparam', 'Content too long'))
-                return
+            if err := self.len_check(subject, SUBJECT_MIN, SUBJECT_MAX, 'Subject'):
+                return self.error(err)
+            if err := self.len_check(content, CONTENT_MIN, CONTENT_MAX, 'Content'):
+                return self.error(err)
 
             if reqtype == 'add-announce':
                 await ContestService.inst.add_announce(self.contest.contest_id, self.acct.acct_id, subject, content)
-                await self.rs.publish('contestnewqasub', json.dumps({
-                    'contest_id': self.contest.contest_id,
-                    'type': 'add-announce'
-                }))
+                if self.contest.is_start():
+                    await self.rs.publish('contestnewqasub', json.dumps({
+                        'contest_id': self.contest.contest_id,
+                        'type': 'add-announce'
+                    }))
                 self.error(('S', ''))
 
             elif reqtype == 'edit-announce':
                 announce_id = int(self.get_argument('announce_id'))
 
                 await ContestService.inst.edit_announce(self.contest.contest_id, announce_id, subject, content)
-                await self.rs.publish('contestnewqasub', json.dumps({
-                    'contest_id': self.contest.contest_id,
-                    'type': 'edit-announce'
-                }))
+                if self.contest.is_start():
+                    await self.rs.publish('contestnewqasub', json.dumps({
+                        'contest_id': self.contest.contest_id,
+                        'type': 'edit-announce'
+                    }))
                 self.error(('S', ''))
 
         elif reqtype == 'popup-announce':
             announce_id = int(self.get_argument('announce_id'))
             err, announce = await ContestService.inst.get_announce(self.contest.contest_id, announce_id)
             if err:
-                self.error(err)
-                return
+                return self.error(err)
 
             await self.rs.publish('contestnewqasub', json.dumps({
                 'contest_id': self.contest.contest_id,
