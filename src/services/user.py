@@ -1,3 +1,4 @@
+import time
 import base64
 import pickle
 from dataclasses import dataclass
@@ -5,6 +6,7 @@ from typing import List, Literal, Tuple
 
 import asyncpg
 import bcrypt
+from msgpack import unpackb
 
 from services.group import GroupConst
 from services.log import LogService
@@ -145,16 +147,27 @@ class UserService:
     async def info_sign(self, req):
         # TODO: There is no check for the return error value of this function anywhere.
         acct_id = req.get_secure_cookie('id')
+        if acct_id is None:
+            return 'Esign', None, ''
+        acct_id = int(acct_id)
+
+        session_key = req.get_cookie('id')
+        session_data = await self.rs.hget(f'account_session@{acct_id}', session_key)
+        if session_data is None:
+            return 'Esign', None, ''
+
+        session_data = unpackb(session_data)
+
+        if time.time() - session_data['time'] > 30 * 24 * 60 * 60:
+            return 'Esign', None, ''
+
         try:
             ip = req.request.remote_ip
 
         except Exception:
             ip = ''
+        session_data['ip'] = ip
 
-        if acct_id is None:
-            return 'Esign', None, ip
-
-        acct_id = int(acct_id)
 
         if (await self.rs.exists(f'account@{acct_id}')) is None:
             async with self.db.acquire() as con:

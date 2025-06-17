@@ -1,7 +1,10 @@
-import math
 import re
+import time
+import math
+import hashlib
 
 import tornado.web
+from msgpack import packb, unpackb
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
@@ -75,7 +78,13 @@ class AcctConfigHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        await self.render('acct/acct-config', acct=acct)
+        session_keys = {}
+        current_session_key = hashlib.md5(self.get_cookie('id').encode()).hexdigest()
+        for session_key, v in (await self.rs.hgetall(f'account_session@{acct_id}')).items():
+            session_key = hashlib.md5(session_key).hexdigest()
+            session_keys[session_key] = unpackb(v)
+
+        await self.render('acct/acct-config', acct=acct, session_keys=session_keys, current_session_key=current_session_key)
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
@@ -120,6 +129,36 @@ class AcctConfigHandler(RequestHandler):
                 )
 
             return self.error(('S', ''))
+
+        elif reqtype == 'remote-logout':
+            target_acct_id = self.get_argument('acct_id')
+
+            if target_acct_id != str(self.acct.acct_id):
+                return self.error(PERMISSION_DENIED_ERROR)
+
+            hashed_session_key = self.get_argument('hashed_session_key')
+            found = False
+            for session_key in (await self.rs.hgetall(f'account_session@{target_acct_id}')):
+                if hashlib.md5(session_key).hexdigest() == hashed_session_key:
+                    found = True
+                    await self.rs.hdel(f'account_session@{target_acct_id}', session_key)
+                    break
+
+            if found:
+                return self.error(('S', ''))
+
+            return self.error(('Enoext', 'Session not found'))
+
+        elif reqtype == 'remote-logout-all':
+            target_acct_id = self.get_argument('acct_id')
+
+            if target_acct_id != str(self.acct.acct_id):
+                return self.error(PERMISSION_DENIED_ERROR)
+
+            await self.rs.delete(f'account_session@{target_acct_id}')
+            self.clear_cookie('id')
+            return self.error(('S', ''))
+
 
         return self.error(('Eunk', 'Unknown error'))
 class AcctProClassHandler(RequestHandler):
@@ -261,7 +300,14 @@ class SignHandler(RequestHandler):
                 f'#{acct_id} sign in successfully', 'signin.success', {'type': 'signin.success', 'acct_id': acct_id}
             )
 
-            self.set_secure_cookie('id', str(acct_id), path='/oj', httponly=True)
+            session_key = self.create_signed_value('id', str(acct_id))
+            await self.rs.hset(f'account_session@{acct_id}', session_key.decode(), packb({
+                "ip": self.request.remote_ip,
+                "time": time.time(),
+                "user-agent": self.request.headers.get('User-Agent', ''),
+            }))
+            await self.rs.expire(f'account_session@{acct_id}', 30 * 24 * 60 * 60)
+            self.set_cookie('id', session_key, path='/oj', httponly=True, expires_days=30)
             self.error(('S', ''))
 
         elif reqtype == 'signup':
@@ -273,7 +319,14 @@ class SignHandler(RequestHandler):
             if err:
                 return self.error(err)
 
-            self.set_secure_cookie('id', str(acct_id), path='/oj', httponly=True)
+            session_key = self.create_signed_value('id', str(acct_id))
+            await self.rs.hset(f'account_session@{acct_id}', session_key.decode(), packb({
+                "ip": self.request.remote_ip,
+                "time": time.time(),
+                "user-agent": self.request.headers.get('User-Agent', ''),
+            }))
+            await self.rs.expire(f'account_session@{acct_id}', 30 * 24 * 60 * 60)
+            self.set_cookie('id', session_key, path='/oj', httponly=True, expires_days=30)
             self.error(('S', ''))
 
         elif reqtype == 'signout':
@@ -287,5 +340,7 @@ class SignHandler(RequestHandler):
                 },
             )
 
+            if (session_key := self.get_cookie('id')) is not None:
+                await self.rs.hdel(f'account_session@{self.acct.acct_id}', session_key)
             self.clear_cookie('id', path='/oj')
             self.error(('S', ''))

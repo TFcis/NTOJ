@@ -1,3 +1,4 @@
+import hashlib
 import requests
 
 from .util import AsyncTest, AccountContext
@@ -124,3 +125,37 @@ class AcctPageTest(AsyncTest):
             html = self.get_html('index/', user_session)
             self.assertIsNone(html.select_one('li.manage'))
             self.assertEqual(html.select_one('script#indexjs').attrs.get('acct_id'), '2')
+
+        # test session
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            html = self.get_html('acctedit/2', admin_session)
+            self.assertIsNone(html.select_one('form#login-list'))
+
+            html = self.get_html('acctedit/1', admin_session)
+            self.assertIsNotNone('form#login-list')
+
+            trs = html.select('#loginlist > tbody > tr')
+            self.assertEqual(len(trs), 1)
+
+            self.assertIn('Current device', trs[0].select('td')[0].get_text().strip())
+            self.assertEqual(trs[0].select('td')[3].select_one('button').attrs['hashed_session_key'],
+                             hashlib.md5(admin_session.cookies['id'].strip('"').encode()).hexdigest())
+
+            with AccountContext('admin@test', 'testtest') as admin2_session:
+                html = self.get_html('acctedit/1', admin_session)
+                trs = html.select('#loginlist > tbody > tr')
+                self.assertEqual(len(trs), 2)
+
+                res = admin_session.post('acctedit', data={
+                    'reqtype': 'remote-logout',
+                    'acct_id': 1,
+                    'hashed_session_key': hashlib.md5(admin2_session.cookies['id'].strip('"').encode()).hexdigest()
+                })
+                self.assertAPIReturnSuccess(res.text)
+
+                res = admin2_session.get('acctedit/1')
+                self.assertIn("You don't have permission.", res.text.strip())
+
+                html = self.get_html('acctedit/1', admin_session)
+                trs = html.select('#loginlist > tbody > tr')
+                self.assertEqual(len(trs), 1)
