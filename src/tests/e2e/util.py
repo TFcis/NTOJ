@@ -1,4 +1,5 @@
 import hashlib
+import time
 import asyncio
 import datetime
 import json
@@ -201,12 +202,17 @@ class BaseUrlSession(requests.Session):
 
 
 class AccountContext:
+    LAST_TIME = time.time()
     def __init__(self, mail: str, pw: str):
         self.mail = mail
         self.pw = pw
         self.session = BaseUrlSession()
 
     def __enter__(self):
+        diff = time.time() - AccountContext.LAST_TIME
+        if diff < 1:
+            time.sleep(1) # NOTE: Make two session cookies different by introducing a time difference
+        AccountContext.LAST_TIME = time.time()
         res = self.session.post(
             "sign",
             data={
