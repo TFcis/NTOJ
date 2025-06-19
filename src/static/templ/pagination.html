@@ -1,6 +1,6 @@
 {% import math %}
 
-{% set _p_pageoff = min(_p_total_cnt-1,_p_pageoff) %}
+{% set _p_pageoff = min(_p_total_cnt - 1,_p_pageoff) %}
 {% set _p_pagenum = _p_pagenum %}
 {% set _p_total_cnt = _p_total_cnt %}
 {% set _p_postfix = _p_postfix %}
@@ -24,24 +24,24 @@
       {% end %}
 
       <!-- Page with smaller index -->
-      {% for i in range(l_num-1, -1, -1) %}
-          {% set off = (center_page - (1<<i)) * _p_pagenum %}
+      {% for i in range(l_num - 1, -1, -1) %}
+          {% set off = (center_page - (1 << i)) * _p_pagenum %}
           <li class="page-item">
-              <a class="page-link" href="?pageoff={{ str(off) + _p_postfix }}">{{center_page - (1<<i) + 1}}</a>
+              <a class="page-link" href="?pageoff={{ str(off) + _p_postfix }}">{{center_page - (1 << i) + 1}}</a>
           </li>
       {% end %}
       <!-- Current page -->
       <li class="page-item active">
-          <a class="page-link active" href="?pageoff={{ str(center_page * _p_pagenum) + _p_postfix }}">{{center_page+1}}</a>
+          <a class="page-link active" href="?pageoff={{ str(center_page * _p_pagenum) + _p_postfix }}">{{center_page + 1}}</a>
       </li>
       <!-- Page with larger index -->
       {% for i in range(0, r_num) %}
-          {% set off = (center_page + (1<<i)) * _p_pagenum %}
+          {% set off = (center_page + (1 << i)) * _p_pagenum %}
           <li class="page-item">
-              <a class="page-link" href="?pageoff={{ str(off) + _p_postfix }}">{{center_page + (1<<i) + 1}}</a>
+              <a class="page-link" href="?pageoff={{ str(off) + _p_postfix }}">{{center_page + (1 << i) + 1}}</a>
           </li>
       {% end %}
 
-      <li class="page-item"><a class="page-link" href="?pageoff={{ math.floor((_p_total_cnt-1) / _p_pagenum) * _p_pagenum }}{{ _p_postfix }}">&#x21e5;</a></li>
+      <li class="page-item"><a class="page-link" href="?pageoff={{ math.floor((_p_total_cnt - 1) / _p_pagenum) * _p_pagenum }}{{ _p_postfix }}">&#x21e5;</a></li>
   </ul>
 </nav>
