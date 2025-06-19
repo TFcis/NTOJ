@@ -1,6 +1,6 @@
 {% import math %}
 
-{% set _p_pageoff = _p_pageoff %}
+{% set _p_pageoff = min(_p_total_cnt - 1,_p_pageoff) %}
 {% set _p_pagenum = _p_pagenum %}
 {% set _p_total_cnt = _p_total_cnt %}
 {% set _p_postfix = _p_postfix %}
@@ -8,16 +8,40 @@
 
 <nav aria-label="Page navigation">
   <ul class="pagination">
-      {% set ct = math.floor(_p_pageoff / _p_pagenum) %}
-      {% set st = min(max(0, ct - 9), max(0, math.ceil(_p_total_cnt / _p_pagenum) - LI_ITEM_CNT)) %}
+      {% set center_page = math.floor(_p_pageoff / _p_pagenum) %}
 
       <li class="page-item"><a class="page-link" href="?pageoff=0{{ _p_postfix }}">&#x21e4;</a></li>
-      {% for i, off in enumerate(range(st * _p_pagenum, min(_p_total_cnt, st * _p_pagenum + LI_ITEM_CNT * _p_pagenum), _p_pagenum)) %}
-          <li class="page-item {% if ct == (i + st) %} active {% end %}">
-              <a class="page-link {% if ct == (i + st) %} active {% end %}" href="?pageoff={{ str(off) + _p_postfix }}">{{i + 1 + st}}</a>
+      <!-- Calculate the number of pages to show on each side of the current page -->
+      {% set l_num = center_page.bit_length() %}
+      {% set r_num = (math.ceil(_p_total_cnt / _p_pagenum) - center_page - 1).bit_length() %}
+      {% if l_num < LI_ITEM_CNT//2%}
+          {% set r_num = min(LI_ITEM_CNT - 1 - l_num, r_num) %}
+      {% elif r_num < LI_ITEM_CNT//2 %}
+          {% set l_num = min(LI_ITEM_CNT - 1 - r_num, l_num) %}
+      {% else %}
+          {% set l_num = min(LI_ITEM_CNT//2, l_num) %}
+          {% set r_num = min(LI_ITEM_CNT//2, r_num) %}
+      {% end %}
+
+      <!-- Page with smaller index -->
+      {% for i in range(l_num - 1, -1, -1) %}
+          {% set off = (center_page - (1 << i)) * _p_pagenum %}
+          <li class="page-item">
+              <a class="page-link" href="?pageoff={{ str(off) + _p_postfix }}">{{center_page - (1 << i) + 1}}</a>
+          </li>
+      {% end %}
+      <!-- Current page -->
+      <li class="page-item active">
+          <a class="page-link active" href="?pageoff={{ str(center_page * _p_pagenum) + _p_postfix }}">{{center_page + 1}}</a>
+      </li>
+      <!-- Page with larger index -->
+      {% for i in range(0, r_num) %}
+          {% set off = (center_page + (1 << i)) * _p_pagenum %}
+          <li class="page-item">
+              <a class="page-link" href="?pageoff={{ str(off) + _p_postfix }}">{{center_page + (1 << i) + 1}}</a>
           </li>
       {% end %}
 
-      <li class="page-item"><a class="page-link" href="?pageoff={{ math.floor(_p_total_cnt / _p_pagenum) * _p_pagenum }}{{ _p_postfix }}">&#x21e5;</a></li>
+      <li class="page-item"><a class="page-link" href="?pageoff={{ math.floor((_p_total_cnt - 1) / _p_pagenum) * _p_pagenum }}{{ _p_postfix }}">&#x21e5;</a></li>
   </ul>
 </nav>
