@@ -1,6 +1,6 @@
 {% import math %}
 
-{% set _p_pageoff = _p_pageoff %}
+{% set _p_pageoff = min(_p_total_cnt-1,_p_pageoff) %}
 {% set _p_pagenum = _p_pagenum %}
 {% set _p_total_cnt = _p_total_cnt %}
 {% set _p_postfix = _p_postfix %}
@@ -42,6 +42,6 @@
           </li>
       {% end %}
 
-      <li class="page-item"><a class="page-link" href="?pageoff={{ math.floor(_p_total_cnt / _p_pagenum) * _p_pagenum }}{{ _p_postfix }}">&#x21e5;</a></li>
+      <li class="page-item"><a class="page-link" href="?pageoff={{ math.floor((_p_total_cnt-1) / _p_pagenum) * _p_pagenum }}{{ _p_postfix }}">&#x21e5;</a></li>
   </ul>
 </nav>
