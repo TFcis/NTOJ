@@ -1,4 +1,3 @@
-from services.group import GroupConst
 from services.user import UserConst
 from tests.e2e.util import AsyncTest, AccountContext
 
@@ -11,7 +10,6 @@ class ManageAcctTest(AsyncTest):
                 'reqtype': 'update',
                 'acct_id': 3,
                 'acct_type': UserConst.ACCTTYPE_KERNEL,
-                'group': GroupConst.KERNEL_GROUP,
             })
             self.assertAPIReturnSuccess(res.text)
 

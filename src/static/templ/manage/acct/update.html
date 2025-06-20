@@ -7,13 +7,11 @@
 
 		j_form.find('button.submit').on('click', function(e) {
             var type = j_form.find('#type').val();
-            var group = j_form.find('#glist').val();
 
             $.post('/oj/be/manage/acct/update', {
                 'reqtype': 'update',
                 'acct_id': {{ acct.acct_id }},
                 'acct_type': type,
-                'group': group,
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
@@ -41,15 +39,6 @@
 			<select class="form-select" id="type">
 				<option value=0{% if acct.is_kernel() %} selected{% end %}>Kernel</option>
 				<option value=3{% if not acct.is_kernel() %} selected{% end %}>User</option>
-			</select>
-		</div>
-
-		<div class="mb-3">
-			<label>Group</label>
-			<select class="form-select" id="glist">
-				{% for g in glist %}
-					<option value="{{g}}" {% if g == group %}selected{% end %}>{{g}}</option>
-				{% end %}
 			</select>
 		</div>
 

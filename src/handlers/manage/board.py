@@ -2,7 +2,6 @@ import datetime
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.board import BoardService
-from services.group import GroupService
 from services.log import LogService
 from services.user import UserConst
 
@@ -129,12 +128,6 @@ class ManageBoardHandler(RequestHandler):
             if acct != '':
                 if acct.isnumeric():
                     res.append(int(acct))
-
-                elif acct.find("_group") != -1:
-                    gacct = await GroupService.inst.list_acct_in_group(acct[:-6])
-                    for ga in gacct:
-                        res.append(ga['acct_id'])
-
         return res
 
     def _get_pro_list(self, pro_list_str: str) -> list[int]:

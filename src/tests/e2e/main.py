@@ -102,7 +102,6 @@ class E2ETest(AsyncTest):
 
         manage test {
             acct
-            group
             problem
             judge
         }

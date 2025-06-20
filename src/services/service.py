@@ -5,7 +5,6 @@ from .bulletin import BulletinService
 from .chal import ChalService
 from .code import CodeService
 from .contests import ContestService
-from .group import GroupService
 from .judge import JudgeServerClusterService
 from .log import LogService
 from .pack import PackService
@@ -30,7 +29,6 @@ def services_init(db, rs):
     Service.Inform = BulletinService(db, rs)
     Service.Pack = PackService(db, rs)
     Service.Code = CodeService(db, rs)
-    Service.Group = GroupService(db, rs)
     Service.Log = LogService(db, rs)
     Service.Rate = RateService(db, rs)
     Service.Judge = JudgeServerClusterService(rs, config.JUDGE_SERVER_LIST)
