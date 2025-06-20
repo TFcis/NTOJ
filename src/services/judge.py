@@ -104,6 +104,7 @@ class JudgeServerService:
 
             # NOTE: Recalculate problem rate
             await self.rs.hdel('pro_rate', f"pro_id_{pro_id}_contest_id_{contest_id}")
+            await self.rs.hdel('pro_topcoder', str(pro_id))
             self.chal_map.pop(res['chal_id'])
 
     async def disconnect_server(self):

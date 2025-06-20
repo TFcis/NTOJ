@@ -43,3 +43,18 @@ class ProTest(AsyncTest):
 
             html = self.get_html('pro/1', admin_session)
             self.assertEqual(html.select_one('input#tags').attrs.get('value'), '')
+
+        with AccountContext('test1@test', 'test') as user_session:
+            # test topcoder
+            html = self.get_html('pro/1', user_session)
+            topcoder = html.select_one('#topcoder')
+            self.assertIsNotNone(topcoder)
+            self.assertEqual(topcoder.select_one('a').get_text().strip(), 'admin') # name
+            self.assertEqual(topcoder.select_one('p.card-text').get_text().strip(), '') # motto
+
+            html = self.get_html('pro/3', user_session)
+            topcoder = html.select_one('#topcoder')
+            self.assertIsNotNone(topcoder)
+            self.assertIsNone(topcoder.select_one('a')) # name
+            self.assertEqual(topcoder.select_one('h5.card-title').get_text().strip(), 'Waiting for you to become the first accepted.') # name
+
