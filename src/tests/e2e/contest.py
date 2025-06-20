@@ -402,6 +402,9 @@ class ContestTest(AsyncTest):
             self.assertEqual(side.select('a')[1].attrs['href'], '/oj/contests/1/chal/?proid=7&acctid=4')
             self.assertEqual(side.select('a')[2].attrs['href'], '/oj/contests/1/chal/?proid=7')
 
+            # contest should not have topcoder
+            self.assertIsNone(html.select_one('#topcoder'))
+
             res = user_session.get('contests/1/pro/7/cont.pdf')
             self.assertIn('X-Accel-Redirect', res.headers)
 

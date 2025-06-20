@@ -345,12 +345,18 @@ class ProHandler(RequestHandler):
                 pro['tags'] = ''
 
         can_submit = JudgeServerClusterService.inst.is_server_online()
+        topcoder = None
+        if not self.contest:
+            err, topcoder = await RateService.inst.get_pro_topcoder(pro_id)
+            if err:
+                return self.error(err)
 
         await self.render(
             'pro',
             pro=pro,
             can_submit=can_submit,
-            contest=self.contest
+            contest=self.contest,
+            topcoder=topcoder,
         )
 
 
