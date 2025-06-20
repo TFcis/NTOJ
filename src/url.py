@@ -1,6 +1,5 @@
 # from auto import AutoHandler
 from handlers.acct import AcctConfigHandler, AcctHandler, AcctProClassHandler, SignHandler
-from handlers.api import ApiHandler
 from handlers.board import BoardHandler
 from handlers.bulletin import BulletinHandler, BulletinSub
 from handlers.chal import (
@@ -70,7 +69,6 @@ def get_url(db, rs, pool):
         (r'/code', CodeHandler, args),
         (r'/informsub', BulletinSub, sub_args),
         (r'/online_count', OnlineCounterHandler, args),
-        (r'/api', ApiHandler, args),
         (r'/dev-info', DevInfoHandler, args),
         (r'/report', ReportHandler, args),
     ] + get_manage_url(db, rs, pool) + get_contests_url(db, rs, pool)
