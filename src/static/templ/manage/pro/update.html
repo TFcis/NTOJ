@@ -10,38 +10,6 @@
 		let j_form2 = $('#form2');
         let j_form3 = $('#form3');
 
-		j_form.find('button.unlock').on('click', function(e) {
-		    let pwd = prompt('unlock password');
-		    $.post('/oj/be/manage/pro/update', {
-				'reqtype': 'pro-unlock',
-				'pro_id': pro_id,
-				'pwd': pwd,
-		    }, function(res) {
-                res = JSON.parse(res);
-                if (res.status == 'S') {
-                    index.show_notify_dialog('Unlock Successfully', index.DIALOG_TYPE.success);
-                    index.reload();
-                } else {
-                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
-                }
-		    });
-		});
-
-		j_form.find('button.lock').on('click', function(e) {
-		    $.post('/oj/be/manage/pro', {
-				'reqtype': 'pro-lock',
-				'pro_id': pro_id,
-		    }, function(res) {
-                res = JSON.parse(res);
-                if (res.status == 'S') {
-                    index.show_notify_dialog('Lock Successfully', index.DIALOG_TYPE.success);
-                    index.reload();
-                } else {
-                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
-                }
-		    });
-		});
-
         j_form.find('select.check-type').on('change', function(e) {
             if ($(this).val() == "{{ ProConst.CHECKER_IOREDIR }}") {
                 j_form.find("label.chalmeta").show();
@@ -189,9 +157,6 @@
 {% block content %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <form id="form" class="blk-cont">
-		{% if lock != None %}
-			<label class="form-label" style="color:red;">Lock!!</label>
-		{% end %}
 		<label for="" class="form-label">Problem Name</label>
 		<input type="text" class="form-control name" placeholder="Problem Name" value="{{ pro['name'] }}">
 
@@ -234,8 +199,6 @@
 
 		<div class="mt-3">
 			<button type="button" class="btn btn-primary submit">Update</button>
-			<button type="button" class="btn btn-primary lock">Lock</button>
-			<button type="button" class="btn btn-secondary unlock">UnLock</button>
 			<button type="button" class="btn btn-secondary cancel">Cancel</button>
             <button type="button" class="btn btn-warning rechal">Rechallenge</button>
             <button type="button" class="btn btn-danger rechalall">All Challenges (Danger)</button>

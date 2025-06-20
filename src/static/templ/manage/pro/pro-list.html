@@ -61,9 +61,7 @@
 			{% for pro in prolist %}
 			<tr>
 				<th scope="row">{{ pro['pro_id'] }}</th>
-				<td><a {% if int(pro['pro_id']) in lock_list%}style="color:red;" {% end %}
-						href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['name'] }}</a></td>
-
+				<td><a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['name'] }}</a></td>
 
 				{% if pro['status'] == 0 %}
 				<td class="status-online">Online</td>
