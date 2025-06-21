@@ -33,12 +33,7 @@ class ManageProHandler(RequestHandler):
             pro_total_cnt = len(prolist)
             prolist = prolist[pageoff: pageoff + 40]
 
-            if (lock_list := (await self.rs.get('lock_list'))) is not None:
-                lock_list = unpackb(lock_list)
-            else:
-                lock_list = []
-
-            await self.render('manage/pro/pro-list', page='pro', prolist=prolist, lock_list=lock_list,
+            await self.render('manage/pro/pro-list', page='pro', prolist=prolist,
                             pageoff=pageoff, pro_total_cnt=pro_total_cnt)
 
         elif page == "update":
@@ -48,10 +43,8 @@ class ManageProHandler(RequestHandler):
             if err:
                 return self.error(err)
 
-            lock = await self.rs.get(f"{pro['pro_id']}_owner")
-
             await self.render(
-                'manage/pro/update', page='pro', pro=pro, lock=lock
+                'manage/pro/update', page='pro', pro=pro
             )
 
         elif page == "add":
@@ -873,34 +866,6 @@ class ManageProHandler(RequestHandler):
                     }
                 )
 
-                self.error(('S', ''))
-
-            elif reqtype == 'pro-lock':
-                pro_id = int(self.get_argument('pro_id'))
-                await self.rs.set(f'{pro_id}_owner', packb(1))
-
-                if (lock_list := (await self.rs.get('lock_list'))) is not None:
-                    lock_list = unpackb(lock_list)
-                else:
-                    lock_list = []
-
-                if pro_id not in lock_list:
-                    lock_list.append(pro_id)
-
-                await self.rs.set('lock_list', packb(lock_list))
-                self.error(('S', ''))
-
-            elif reqtype == 'pro-unlock':
-                pro_id = int(self.get_argument('pro_id'))
-                pwd = str(self.get_argument('pwd'))
-
-                if config.unlock_pwd != base64.b64encode(packb(pwd)):
-                    return self.error(('Eacces', 'Wrong password'))
-
-                lock_list = unpackb((await self.rs.get('lock_list')))
-                lock_list.remove(pro_id)
-                await self.rs.set('lock_list', packb(lock_list))
-                await self.rs.delete(f"{pro_id}_owner")
                 self.error(('S', ''))
 
         elif page is None:  # pro-list

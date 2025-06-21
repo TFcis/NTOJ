@@ -1,7 +1,6 @@
 import tornado
 
 from handlers.base import RequestHandler, reqenv, require_permission
-from services.group import GroupService
 from services.log import LogService
 from services.user import UserConst, UserService
 
@@ -26,9 +25,7 @@ class ManageAcctHandler(RequestHandler):
             acct_id = int(self.get_argument('acctid'))
 
             _, acct = await UserService.inst.info_acct(acct_id)
-            glist = await GroupService.inst.list_group()
-            group = await GroupService.inst.group_of_acct(acct_id)
-            await self.render('manage/acct/update', page='acct', acct=acct, glist=glist, group=group)
+            await self.render('manage/acct/update', page='acct', acct=acct)
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
@@ -38,7 +35,6 @@ class ManageAcctHandler(RequestHandler):
         if page == 'update' and reqtype == 'update':
             acct_id = int(self.get_argument('acct_id'))
             acct_type = int(self.get_argument('acct_type'))
-            group = str(self.get_argument('group'))
             err, acct = await UserService.inst.info_acct(acct_id)
 
             if err:
@@ -58,5 +54,4 @@ class ManageAcctHandler(RequestHandler):
             if err:
                 return self.error(err)
 
-            _ = await GroupService.inst.set_acct_group(acct_id, group)
             self.error(('S', ''))

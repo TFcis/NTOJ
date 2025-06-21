@@ -3,7 +3,6 @@ from handlers.manage.board import ManageBoardHandler
 from handlers.manage.bulletin import ManageBulletinHandler
 from handlers.manage.contest import ManageContestHandler
 from handlers.manage.dash import ManageDashHandler
-from handlers.manage.group import ManageGroupHandler
 from handlers.manage.judge import JudgeChalCntSub, ManageJudgeHandler
 from handlers.manage.pack import ManagePackHandler
 from handlers.manage.pro import ManageProHandler
@@ -34,7 +33,6 @@ def get_manage_url(db, rs, pool):
         ('/manage/proclass/(.+)', ManageProClassHandler, args),
         ('/manage/question', ManageQuestionHandler, args),
         ('/manage/question/(.+)', ManageQuestionHandler, args),
-        ('/manage/group', ManageGroupHandler, args),
         ('/manage/judge', ManageJudgeHandler, args),
         ('/manage/judgecntws', JudgeChalCntSub, sub_args),
         ('/manage/pack', ManagePackHandler, args),

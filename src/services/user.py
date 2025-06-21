@@ -8,7 +8,6 @@ import asyncpg
 import bcrypt
 from msgpack import unpackb
 
-from services.group import GroupConst
 from services.log import LogService
 from utils.dbg import dbg_print
 
@@ -120,14 +119,13 @@ class UserService:
                 result = await con.fetch(
                     '''
                         INSERT INTO "account"
-                        ("mail", "password", "name", "acct_type", "group")
-                        VALUES ($1, $2, $3, $4, $5) RETURNING "acct_id";
+                        ("mail", "password", "name", "acct_type")
+                        VALUES ($1, $2, $3, $4) RETURNING "acct_id";
                     ''',
                     mail,
                     base64.b64encode(hpw).decode('utf-8'),
                     name,
                     UserConst.ACCTTYPE_USER,
-                    GroupConst.DEFAULT_GROUP,
                 )
 
         except (asyncpg.IntegrityConstraintViolationError, asyncpg.UniqueViolationError):

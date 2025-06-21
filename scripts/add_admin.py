@@ -20,11 +20,6 @@ class UserConst:
 
     ACCTTYPE_KERNEL = 0
 
-
-class GroupConst:
-    KERNEL_GROUP = 'kernel'
-
-
 async def sign_up(mail, pw, name, db, rs):
     tmp_len = len(mail)
     if tmp_len < UserConst.MAIL_MIN:
@@ -59,14 +54,13 @@ async def sign_up(mail, pw, name, db, rs):
             result = await con.fetch(
                 '''
                     INSERT INTO "account"
-                    ("mail", "password", "name", "acct_type", "group")
+                    ("mail", "password", "name", "acct_type")
                     VALUES ($1, $2, $3, $4, $5) RETURNING "acct_id";
                 ''',
                 mail,
                 base64.b64encode(hpw).decode('utf-8'),
                 name,
                 UserConst.ACCTTYPE_KERNEL,
-                GroupConst.KERNEL_GROUP,
             )
 
     except asyncpg.IntegrityConstraintViolationError:
