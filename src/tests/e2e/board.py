@@ -97,20 +97,6 @@ class BoardTest(AsyncTest):
             self.assertEqual(tr0.select('td._pro')[1].text.strip(), '')
 
             res = admin_session.post('manage/board/update', data={
-                'reqtype': 'update',
-                'board_id': 1,
-                'name': 'board1',
-                'status': BoardConst.STATUS_OFFLINE,
-                'start': self.get_isoformat(now - datetime.timedelta(days=14)),
-                'end': self.get_isoformat(now - datetime.timedelta(days=7)),
-                'pro_list': '1, 2',
-                'acct_list': '1',
-            })
-            self.assertAPIReturnSuccess(res.text)
-            res = admin_session.get('board/1')
-            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
-
-            res = admin_session.post('manage/board/update', data={
                 'reqtype': 'remove',
                 'board_id': 1,
             })

@@ -125,7 +125,6 @@
 			<select class="form-select" id="status">
                 <option value="{{ BoardConst.STATUS_ONLINE }}" {% if board['status'] == BoardConst.STATUS_ONLINE %} selected {% end %} >Online</option>
 				<option value="{{ BoardConst.STATUS_HIDDEN }}" {% if board['status'] == BoardConst.STATUS_HIDDEN %} selected {% end %} >Hidden</option>
-                <option value="{{ BoardConst.STATUS_OFFLINE }}" {% if board['status'] == BoardConst.STATUS_OFFLINE %} selected {% end %} >Offline</option>
 			</select>
         </div>
 

@@ -262,10 +262,7 @@ class ProStaticHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        if pro['status'] == ProConst.STATUS_OFFLINE:
-            return self.error(PERMISSION_DENIED_ERROR)
-
-        elif pro['status'] == ProConst.STATUS_CONTEST:
+        if pro['status'] == ProConst.STATUS_CONTEST:
             if not self.contest:
                 return self.error(PERMISSION_DENIED_ERROR)
 
@@ -310,10 +307,7 @@ class ProHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        if pro['status'] == ProConst.STATUS_OFFLINE:
-            return self.error(PERMISSION_DENIED_ERROR)
-
-        elif pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
+        if pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
             return self.error(PERMISSION_DENIED_ERROR)
 
         # NOTE: Guest cannot see tags

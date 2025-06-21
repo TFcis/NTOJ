@@ -6,7 +6,7 @@ from handlers.base import RequestHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService
 from services.judge import JudgeServerClusterService
-from services.pro import ProService
+from services.pro import ProService, ProConst
 from services.user import UserService, UserConst
 from services.contests import UserStatus
 
@@ -42,9 +42,6 @@ class SubmitHandler(RequestHandler):
         err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
         if err:
             return self.error(err)
-
-        if pro['status'] == ProService.STATUS_OFFLINE:
-            return self.error(PERMISSION_DENIED_ERROR)
 
         if not pro['allow_submit']:
             return self.error(('Eacces', 'Problem did not allow submit'))
@@ -91,10 +88,7 @@ class SubmitHandler(RequestHandler):
             if err:
                 return self.error(err)
 
-            if pro['status'] == ProService.STATUS_OFFLINE:
-                return self.error(PERMISSION_DENIED_ERROR)
-
-            elif pro['status'] == ProService.STATUS_CONTEST and not self.contest:
+            if pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
                 return self.error(PERMISSION_DENIED_ERROR)
 
             if not pro['allow_submit']:
@@ -142,7 +136,7 @@ class SubmitHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        if reqtype == 'submit' and pro['status'] == ProService.STATUS_ONLINE:
+        if reqtype == 'submit' and pro['status'] == ProConst.STATUS_ONLINE:
             await self.rs.publish('challist_sub', str(1))
 
         self.error(('S', chal_id))
@@ -158,7 +152,7 @@ class SubmitHandler(RequestHandler):
         if len(code.strip()) == 0:
             return ('Eempty', 'Submitted code should not be empty')
 
-        if len(code) > ProService.CODE_MAX:
+        if len(code) > ProConst.CODE_MAX:
             return ('Ecodemax', 'Submitted code too long')
 
         # TODO: if problem is makefile type, we should restrict compiler type

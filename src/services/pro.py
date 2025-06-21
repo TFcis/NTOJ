@@ -20,7 +20,6 @@ class ProConst:
     STATUS_ONLINE = 0
     STATUS_CONTEST = 1
     STATUS_HIDDEN = 2
-    STATUS_OFFLINE = 3
 
     CHECKER_DIFF = 0
     CHECKER_DIFF_STRICT = 1
@@ -36,26 +35,12 @@ class ProConst:
         CHECKER_CMS: "cms",
     }
 
-
-class ProService:
-    NAME_MIN = 1
-    NAME_MAX = 64
-    CODE_MAX = 16384
-    STATUS_ONLINE = 0
-    STATUS_CONTEST = 1
-    STATUS_HIDDEN = 2
-    STATUS_OFFLINE = 3
-
     PACKTYPE_FULL = 1
     PACKTYPE_CONTHTML = 2
     PACKTYPE_CONTPDF = 3
 
-    CHECKER_DIFF = 0
-    CHECKER_DIFF_STRICT = 1
-    CHECKER_DIFF_FLOAT = 2
-    CHECKER_IOREDIR = 3
-    CHECKER_CMS = 4
 
+class ProService:
     def __init__(self, db, rs):
         self.db = db
         self.rs = rs
@@ -137,7 +122,7 @@ class ProService:
 
     async def list_pro(self, acct: Account | None = None, is_contest=False):
         if acct is None:
-            max_status = ProService.STATUS_ONLINE
+            max_status = ProConst.STATUS_ONLINE
 
         else:
             max_status = self.get_acct_limit(acct, contest=is_contest)
@@ -178,11 +163,11 @@ class ProService:
 
     async def add_pro(self, name, status, pack_token):
         name_len = len(name)
-        if name_len < ProService.NAME_MIN:
+        if name_len < ProConst.NAME_MIN:
             return ("Enamemin", "Problem name too short"), None
-        if name_len > ProService.NAME_MAX:
+        if name_len > ProConst.NAME_MAX:
             return ("Enamemax", "Problem name too long"), None
-        if status < ProService.STATUS_ONLINE or status > ProService.STATUS_OFFLINE:
+        if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
 
         async with self.db.acquire() as con:
@@ -201,7 +186,7 @@ class ProService:
             pro_id = int(result[0]["pro_id"])
 
             if pack_token:
-                err, _ = await self.unpack_pro(pro_id, ProService.PACKTYPE_FULL, pack_token)
+                err, _ = await self.unpack_pro(pro_id, ProConst.PACKTYPE_FULL, pack_token)
                 if err:
                     return err, None
 
@@ -225,12 +210,12 @@ class ProService:
     # TODO: Too many args
     async def update_pro(self, pro_id, name, status, pack_type, pack_token=None, tags="", allow_submit=True):
         name_len = len(name)
-        if name_len < ProService.NAME_MIN:
+        if name_len < ProConst.NAME_MIN:
             return ("Enamemin", "Problem name too short"), None
-        if name_len > ProService.NAME_MAX:
+        if name_len > ProConst.NAME_MAX:
             return ("Enamemax", "Problem name too long"), None
         del name_len
-        if status < ProService.STATUS_ONLINE or status > ProService.STATUS_OFFLINE:
+        if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
         if tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", tags):
             return ("Etags", "Invalid problem tag"), None
@@ -297,20 +282,20 @@ class ProService:
     # TODO: 把這破函數命名改一下
     def get_acct_limit(self, acct: Account | None = None, contest=False):
         if contest:
-            return ProService.STATUS_CONTEST
+            return ProConst.STATUS_CONTEST
 
         elif acct is None:
-            return ProService.STATUS_ONLINE
+            return ProConst.STATUS_ONLINE
 
         elif acct.is_kernel():
-            return ProService.STATUS_OFFLINE
+            return ProConst.STATUS_HIDDEN
 
         else:
-            return ProService.STATUS_ONLINE
+            return ProConst.STATUS_ONLINE
 
     async def unpack_pro(self, pro_id, pack_type, pack_token):
         from services.chal import ChalConst
-        if pack_type == ProService.PACKTYPE_FULL:
+        if pack_type == ProConst.PACKTYPE_FULL:
             err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
             if err:
                 return err, None
