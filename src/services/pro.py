@@ -20,7 +20,6 @@ class ProConst:
     STATUS_ONLINE = 0
     STATUS_CONTEST = 1
     STATUS_HIDDEN = 2
-    STATUS_OFFLINE = 3
 
     CHECKER_DIFF = 0
     CHECKER_DIFF_STRICT = 1
@@ -168,7 +167,7 @@ class ProService:
             return ("Enamemin", "Problem name too short"), None
         if name_len > ProConst.NAME_MAX:
             return ("Enamemax", "Problem name too long"), None
-        if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_OFFLINE:
+        if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
 
         async with self.db.acquire() as con:
@@ -216,7 +215,7 @@ class ProService:
         if name_len > ProConst.NAME_MAX:
             return ("Enamemax", "Problem name too long"), None
         del name_len
-        if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_OFFLINE:
+        if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
         if tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", tags):
             return ("Etags", "Invalid problem tag"), None
@@ -289,7 +288,7 @@ class ProService:
             return ProConst.STATUS_ONLINE
 
         elif acct.is_kernel():
-            return ProConst.STATUS_OFFLINE
+            return ProConst.STATUS_HIDDEN
 
         else:
             return ProConst.STATUS_ONLINE

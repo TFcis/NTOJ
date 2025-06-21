@@ -43,9 +43,6 @@ class SubmitHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        if pro['status'] == ProConst.STATUS_OFFLINE:
-            return self.error(PERMISSION_DENIED_ERROR)
-
         if not pro['allow_submit']:
             return self.error(('Eacces', 'Problem did not allow submit'))
 
@@ -91,10 +88,7 @@ class SubmitHandler(RequestHandler):
             if err:
                 return self.error(err)
 
-            if pro['status'] == ProConst.STATUS_OFFLINE:
-                return self.error(PERMISSION_DENIED_ERROR)
-
-            elif pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
+            if pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
                 return self.error(PERMISSION_DENIED_ERROR)
 
             if not pro['allow_submit']:

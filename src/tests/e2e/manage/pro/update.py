@@ -48,24 +48,6 @@ class ManageProUpdateTest(AsyncTest):
                 res = user_session.get('submit/1')
                 self.assertIn('Enoext', res.text)
 
-            res = admin_session.post('manage/pro/update', data={
-                'reqtype': 'updatepro',
-                'pro_id': 1,
-                'name': 'GCD',
-                'status': ProConst.STATUS_OFFLINE,
-                'tags': '',
-                'allow_submit': 'true',
-                'is_makefile': 'false',
-                'check_type': ProConst.CHECKER_DIFF,
-                "rate_precision": ProConst.RATE_PRECISION_MIN,
-            })
-            self.assertAPIReturnSuccess(res.text)
-            res = admin_session.get('submit/1')
-            self.assertIn('Eacces', res.text)
-
-            res = admin_session.get('pro/1')
-            self.assertIn('Eacces', res.text)
-
             # html = self.get_html('proset', admin_session)
             # trs = html.select('tr')[1:]
             # self.assertEqual(trs[0].select('td')[0].text, '2')
