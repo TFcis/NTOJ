@@ -796,7 +796,7 @@ class ManageProHandler(RequestHandler):
                     return self.error(err)
 
                 err, _ = await ProService.inst.update_pro(
-                    pro_id, pro['name'], pro['status'], ProService.PACKTYPE_FULL, pack_token, pro['tags'], pro['allow_submit']
+                    pro_id, pro['name'], pro['status'], ProConst.PACKTYPE_FULL, pack_token, pro['tags'], pro['allow_submit']
                 )
 
                 if err:
