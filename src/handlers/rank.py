@@ -5,14 +5,22 @@ import tornado.web
 from handlers.base import RequestHandler, reqenv
 from services.user import UserConst, UserService, Account
 from services.chal import ChalConst
+from services.pro import ProConst, ProService
 
+PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
 
 class ProRankHandler(RequestHandler):
     @reqenv
     async def get(self, pro_id):
         tz = datetime.timezone(datetime.timedelta(hours=+8))
         pro_id = int(pro_id)
+        err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
+        if err:
+            return self.error(err)
 
+        if pro['status'] in [ProConst.STATUS_OFFLINE,ProConst.STATUS_CONTEST]:
+            return self.error(PERMISSION_DENIED_ERROR)
+        
         try:
             pageoff = int(self.get_argument('pageoff'))
 
