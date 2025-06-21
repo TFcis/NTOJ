@@ -20,9 +20,6 @@ class BoardHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        if meta['status'] == BoardConst.STATUS_OFFLINE:
-            return self.error(('Eacces', 'Permission denied'))
-
         if meta['status'] == BoardConst.STATUS_HIDDEN and not self.acct.is_kernel():
             return self.error(('Eacces', 'Permission denied'))
 

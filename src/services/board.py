@@ -3,7 +3,6 @@ import datetime
 class BoardConst:
     STATUS_ONLINE = 0
     STATUS_HIDDEN = 1
-    STATUS_OFFLINE = 2
 
 
 class BoardService:
