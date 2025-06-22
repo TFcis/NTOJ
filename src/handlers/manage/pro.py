@@ -750,24 +750,30 @@ class ManageProHandler(RequestHandler):
                 if err:
                     return self.error(err)
 
-                old_is_makefile = pro['testm_conf']['is_makefile']
-                old_check_type = pro['testm_conf']['check_type']
-                custom_check_type = [ProConst.CHECKER_IOREDIR, ProConst.CHECKER_CMS]
-                if not old_is_makefile and is_makefile:
-                    if not os.path.exists(f'problem/{pro_id}/res/make'):
-                        os.mkdir(f'problem/{pro_id}/res/make')
-                pro['testm_conf']['is_makefile'] = is_makefile
+                conf = pro['testm_conf']
+                if (
+                    conf['is_makefile'] != is_makefile
+                    or conf['check_type'] != check_type
+                    or conf['rate_precision'] != rate_precision
+                ):
+                    old_is_makefile = conf['is_makefile']
+                    old_check_type = conf['check_type']
+                    custom_check_type = [ProConst.CHECKER_IOREDIR, ProConst.CHECKER_CMS]
+                    if not old_is_makefile and is_makefile:
+                        if not os.path.exists(f'problem/{pro_id}/res/make'):
+                            os.mkdir(f'problem/{pro_id}/res/make')
+                    conf['is_makefile'] = is_makefile
 
-                if old_check_type not in custom_check_type and check_type in custom_check_type:
-                    if not os.path.exists(f'problem/{pro_id}/res/check'):
-                        os.mkdir(f'problem/{pro_id}/res/check')
-                pro['testm_conf']['check_type'] = check_type
+                    if old_check_type not in custom_check_type and check_type in custom_check_type:
+                        if not os.path.exists(f'problem/{pro_id}/res/check'):
+                            os.mkdir(f'problem/{pro_id}/res/check')
+                    conf['check_type'] = check_type
 
-                if check_type == ProConst.CHECKER_IOREDIR:
-                    chalmeta = json.dumps(chalmeta)
+                    if check_type == ProConst.CHECKER_IOREDIR:
+                        chalmeta = json.dumps(chalmeta)
 
-                pro['testm_conf']['rate_precision'] = rate_precision
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                    conf['rate_precision'] = rate_precision
+                    await ProService.inst.update_test_config(pro_id, conf)
                 await LogService.inst.add_log(
                     f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.pro',
                     {
