@@ -1,12 +1,11 @@
 {% extends '../manage.html' %}
 {% block head %}
+<script src="/oj/third/prism.js"></script>
 <link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
 <link rel="stylesheet" href="/oj/third/prism.css">
 
 <script type="text/javascript" id="contjs">
 	function init() {
-		$.getScript('/oj/third/prism.js');
-
 		let pro_id = "{{ pro_id }}";
 		let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
         let add_single_file_modal = new bootstrap.Modal(document.getElementById('addSingleFileModal'));
@@ -29,6 +28,7 @@
 
 					$("#code").find("code").html(file_content);
                     $("#preview-title").text(filename);
+                    Prism.highlightAll();
 					preview_modal.show();
 				});
 			});
