@@ -70,6 +70,8 @@
 </script>
 {% end %}
 {% block content %}
+{% from services.pro import ProConst %}
+
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <form id="form">
         <div class="mb-1">
@@ -80,10 +82,9 @@
         <div class="mb-1">
             <label for="#status" class="form-label">Status</label>
             <select class="form-select" id="status">
-                <option value=0>Online</option>
-                <option value=1>Contest</option>
-                <option value=2>Hidden</option>
-                <option value=3>Offline</option>
+                <option value="{{ ProConst.STATUS_ONLINE }}">Online</option>
+                <option value="{{ ProConst.STATUS_CONTEST }}">Contest</option>
+                <option value="{{ ProConst.STATUS_HIDDEN }}">Hidden</option>
             </select>
             <label for="#mode" class="form-label">Add Problem Mode</label>
             <select class="form-select" id="mode">
@@ -101,16 +102,5 @@
             <button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
         </div>
     </form>
-
-    <br>
-    <div>
-        給各位TOJ管理員：
-        <br>
-        如果發生json檔案錯誤，現在可以不用上傳新的題目<br>
-        可以直接點選設定出錯的題目，會導向到重新初始化的頁面<br>
-        重新上傳即可<br>
-        <br>
-        By tobiichi3227 (T24)
-    </div>
 </div>
 {% end %}
