@@ -1,4 +1,5 @@
 {% from services.chal import ChalConst %}
+<script src="/oj/third/prism.js"></script>
 <link rel="stylesheet" href="/oj/third/prism.css">
 
 <script type="text/javascript">
@@ -72,8 +73,7 @@
             code.attr("data-language", res.data.comp_type);
             code.find("code").addClass(`language-${res.data.comp_type}`);
             code.find("code").html(res.data.code);
-
-            $.getScript('/oj/third/prism.js');
+            Prism.highlightAll();
 	    });
 
         {% if user.acct_id == chal['acct_id'] %}

@@ -1,6 +1,7 @@
 {% extends 'manage.html' %}
 
 {% block head %}
+<script src="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/css/tempus-dominus.min.css" crossorigin="anonymous">
 
 <style>
@@ -17,21 +18,20 @@
     function init() {
         let contest_id = "{{ contest_id }}";
 
-        $.getScript('https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js', () => {
-            const options = {
-                display: {
-                    calendarWeeks: true,
-                },
+        const options = {
+            display: {
+                calendarWeeks: true,
+            },
 
-                localization: {
-                    locale: 'zh-tw',
-                    format: 'yyyy/MM/dd HH:mm',
-                },
-            };
-            contest_start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestStart'), options);
-            contest_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestEnd'), options);
-            reg_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerRegEnd'), options);
-        });
+            localization: {
+                locale: 'zh-tw',
+                format: 'yyyy/MM/dd HH:mm',
+            },
+        };
+        contest_start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestStart'), options);
+        contest_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestEnd'), options);
+        reg_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerRegEnd'), options);
+
         $("button.submit").on('click', function(e) {
             let start_time = null, end_time = null, reg_end_time = null;
             let contest_name = $("#contestName").val();
