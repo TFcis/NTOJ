@@ -18,9 +18,9 @@ class ProRankHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        if pro['status'] in [ProConst.STATUS_OFFLINE,ProConst.STATUS_CONTEST]:
+        if pro['status'] == ProConst.STATUS_CONTEST:
             return self.error(PERMISSION_DENIED_ERROR)
-        
+
         try:
             pageoff = int(self.get_argument('pageoff'))
 
