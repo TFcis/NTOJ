@@ -272,7 +272,7 @@ class RateService:
 
         return None, statemap
 
-    async def map_rate(self, starttime='1970-01-01 00:00:00.000', endtime='2100-01-01 00:00:00.000'):
+    async def map_rate(self, contest_id: int = 0, starttime='1970-01-01 00:00:00.000', endtime='2100-01-01 00:00:00.000'):
         if isinstance(starttime, str):
             starttime = datetime.datetime.fromisoformat(starttime)
 
@@ -291,11 +291,12 @@ class RateService:
                     ON "challenge"."chal_id" = "challenge_state"."chal_id"
                     INNER JOIN "problem"
                     ON "challenge"."pro_id" = "problem"."pro_id"
-                    WHERE "challenge"."timestamp" >= $1 AND "challenge"."timestamp" <= $2
+                    WHERE "challenge"."timestamp" >= $1 AND "challenge"."timestamp" <= $2 AND "challenge"."contest_id" = $3
                     GROUP BY "challenge"."acct_id", "challenge"."pro_id";
                 ''',
                 starttime,
                 endtime,
+                contest_id,
             )
 
         statemap = defaultdict(dict)

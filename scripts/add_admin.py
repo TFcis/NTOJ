@@ -55,7 +55,7 @@ async def sign_up(mail, pw, name, db, rs):
                 '''
                     INSERT INTO "account"
                     ("mail", "password", "name", "acct_type")
-                    VALUES ($1, $2, $3, $4, $5) RETURNING "acct_id";
+                    VALUES ($1, $2, $3, $4) RETURNING "acct_id";
                 ''',
                 mail,
                 base64.b64encode(hpw).decode('utf-8'),

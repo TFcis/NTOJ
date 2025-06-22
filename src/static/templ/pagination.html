@@ -1,6 +1,6 @@
 {% import math %}
 
-{% set _p_pageoff = min(_p_total_cnt - 1,_p_pageoff) %}
+{% set _p_pageoff = max(0, min(_p_total_cnt - 1, _p_pageoff)) %}
 {% set _p_pagenum = _p_pagenum %}
 {% set _p_total_cnt = _p_total_cnt %}
 {% set _p_postfix = _p_postfix %}
@@ -13,7 +13,7 @@
       <li class="page-item"><a class="page-link" href="?pageoff=0{{ _p_postfix }}">&#x21e4;</a></li>
       <!-- Calculate the number of pages to show on each side of the current page -->
       {% set l_num = center_page.bit_length() %}
-      {% set r_num = (math.ceil(_p_total_cnt / _p_pagenum) - center_page - 1).bit_length() %}
+      {% set r_num = max(0, (math.ceil(_p_total_cnt / _p_pagenum) - center_page - 1)).bit_length() %}
       {% if l_num < LI_ITEM_CNT//2%}
           {% set r_num = min(LI_ITEM_CNT - 1 - l_num, r_num) %}
       {% elif r_num < LI_ITEM_CNT//2 %}
