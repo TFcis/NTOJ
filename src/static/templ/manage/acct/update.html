@@ -1,5 +1,6 @@
 {% extends '../manage.html' %}
 {% block head %}
+{% from services.user import UserConst %}
 
 <script type="text/javascript" id="contjs">
     function init() {
@@ -37,8 +38,8 @@
 		<div class="mb-3">
 			<label>Level</label>
 			<select class="form-select" id="type">
-				<option value=0{% if acct.is_kernel() %} selected{% end %}>Kernel</option>
-				<option value=3{% if not acct.is_kernel() %} selected{% end %}>User</option>
+                <option value="{{ UserConst.ACCTTYPE_KERNEL }}" {% if acct.is_kernel() %} selected {% end %}>Kernel</option>
+				<option value="{{ UserConst.ACCTTYPE_USER }}" {% if not acct.is_kernel() %} selected {% end %}>User</option>
 			</select>
 		</div>
 

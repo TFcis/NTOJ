@@ -1,8 +1,7 @@
 {% extends '../manage.html' %}
 {% block head %}
-{% from services.chal import ChalConst %}
 {% from services.pro import ProConst %}
-{% import json %}
+
 <script type="text/javascript" id="contjs" async>
     function init() {
 		let pro_id = "{{ pro['pro_id'] }}"
@@ -155,6 +154,10 @@
 </script>
 {% end %}
 {% block content %}
+{% from services.chal import ChalConst %}
+{% from services.pro import ProConst %}
+{% import json %}
+
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <form id="form" class="blk-cont">
 		<label for="" class="form-label">Problem Name</label>
@@ -165,10 +168,9 @@
 
 		<label for="" class="form-label">Problem Status</label>
 		<select class="form-select status">
-			<option value="0" {% if pro['status'] == 0 %} selected {% end %}>Online</option>
-			<option value="1" {% if pro['status'] == 1 %} selected {% end %}>Contest</option>
-			<option value="2" {% if pro['status'] == 2 %} selected {% end %}>Hidden</option>
-			<option value="3" {% if pro['status'] == 3 %} selected {% end %}>Offline</option>
+            <option value="{{ ProConst.STATUS_ONLINE }}" {% if pro['status'] == ProConst.STATUS_ONLINE %} selected {% end %}>Online</option>
+			<option value="{{ ProConst.STATUS_CONTEST }}" {% if pro['status'] == ProConst.STATUS_CONTEST %} selected {% end %}>Contest</option>
+			<option value="{{ ProConst.STATUS_HIDDEN }}" {% if pro['status'] == ProConst.STATUS_HIDDEN %} selected {% end %}>Hidden</option>
 		</select>
 
         <label>Score Precision (0 ~ 3)</label>
@@ -185,11 +187,11 @@
         {% set check_type = pro['testm_conf']['check_type'] %}
 		<label for="" class="form-label">Checker Type</label>
         <select class="form-select check-type">
-            <option value="0" {% if check_type == ProConst.CHECKER_DIFF %} selected {% end %}>Diff</option>
-            <option value="1" {% if check_type == ProConst.CHECKER_DIFF_STRICT %} selected {% end %}>Strict Diff</option>
-            <option value="2" {% if check_type == ProConst.CHECKER_DIFF_FLOAT %} selected {% end %}>Float Diff(WIP)</option>
-            <option value="3" {% if check_type == ProConst.CHECKER_IOREDIR %} selected {% end %}>IORedir</option>
-            <option value="4" {% if check_type == ProConst.CHECKER_CMS %} selected {% end %}>CMS</option>
+            <option value="{{ ProConst.CHECKER_DIFF }}" {% if check_type == ProConst.CHECKER_DIFF %} selected {% end %}>Diff</option>
+            <option value="{{ ProConst.CHECKER_DIFF_STRICT }}" {% if check_type == ProConst.CHECKER_DIFF_STRICT %} selected {% end %}>Strict Diff</option>
+            <option value="{{ ProConst.CHECKER_DIFF_FLOAT }}" {% if check_type == ProConst.CHECKER_DIFF_FLOAT %} selected {% end %}>Float Diff(WIP)</option>
+            <option value="{{ ProConst.CHECKER_IOREDIR }}" {% if check_type == ProConst.CHECKER_IOREDIR %} selected {% end %}>IORedir</option>
+            <option value="{{ ProConst.CHECKER_CMS }}" {% if check_type == ProConst.CHECKER_CMS %} selected {% end %}>CMS</option>
         </select>
 
         <label for="" class="form-label chalmeta" {% if check_type != ProConst.CHECKER_IOREDIR %} style="display: none;" {% end %}>IORedir Settings</label>

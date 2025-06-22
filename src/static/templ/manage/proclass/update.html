@@ -75,6 +75,7 @@
 </script>
 {% end %}
 {% block content %}
+{% from services.pro import ProClassConst %}
 
 <div class="modal fade" id="descPreviewDialog" tabindex="-1" aria-hidden="true">
 <div class="modal-dialog modal-dialog-scrollable modal-xl">
@@ -101,8 +102,8 @@
 		<div class="mb-1">
             <label for="name" class="form-label">ProClass Type</label>
             <select class="form-select" id="type">
-                <option value="0" {% if proclass['type'] == 0 %} selected {% end %}>Public</option>
-                <option value="1" {% if proclass['type'] == 1 %} selected {% end %}>Hidden</option>
+                <option value="{{ ProClassConst.OFFICIAL_PUBLIC }}" {% if proclass['type'] == ProClassConst.OFFICIAL_PUBLIC %} selected {% end %}>Public</option>
+                <option value="{{ ProClassConst.OFFICIAL_HIDDEN }}" {% if proclass['type'] == ProClassConst.OFFICIAL_HIDDEN %} selected {% end %}>Hidden</option>
             </select>
 		</div>
 

@@ -1,3 +1,5 @@
+{% from services.pro import ProClassConst %}
+
 <div class="col-10 ms-lg-2 mt-lg-2">
 	<table class="table">
 		<thead>
@@ -17,9 +19,9 @@
                 <th scope="row">{{ proclass['proclass_id'] }}</th>
 				<td>{{ proclass['name'] }}</td>
                 {% set t = "" %}
-                {% if proclass['type'] == 2 %}
+                {% if proclass['type'] == ProClassConst.USER_PUBLIC %}
                     {% set t = "Public" %}
-                {% elif proclass['type'] == 3 %}
+                {% elif proclass['type'] == ProClassConst.USER_HIDDEN %}
                     {% set t = "Hidden" %}
                 {% end %}
                 <td>{{ t }}</td>

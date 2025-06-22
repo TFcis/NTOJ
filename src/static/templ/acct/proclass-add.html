@@ -1,3 +1,5 @@
+{% from services.pro import ProClassConst %}
+
 <script type="text/javascript">
     function init() {
         let j_form = $("#form");
@@ -78,8 +80,8 @@
 		<div class="mb-1">
             <label for="name" class="form-label">ProClass Type</label>
             <select class="form-select" id="type">
-                <option value="2">Public</option>
-                <option value="3">Hidden</option>
+                <option value="{{ ProClassConst.USER_PUBLIC }}">Public</option>
+                <option value="{{ ProClassConst.USER_HIDDEN }}">Hidden</option>
             </select>
 		</div>
 
