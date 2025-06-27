@@ -95,7 +95,7 @@
                     let tr = $("<tr></tr>")
                     tr.append($("<td></td>").text(proclass.proclass_id));
                     tr.append($("<td></td>").text(proclass.name));
-                    tr.append($("<td></td>").text(`<a href="/oj/proset/?proclass_id=${proclass.proclass_id}&show=onlyac">${proclass.ac_cnt}</a> / ${proclass.total_cnt}`));
+                    tr.append($("<td></td>").html(`<a href="/oj/proset/?proclass_id=${proclass.proclass_id}&show=onlyac">${proclass.ac_cnt}</a> / ${proclass.total_cnt}`));
                     if (proclass.acct_id != null) {
                         tr.append($("<td></td>").append($(`<a href="/oj/acct/${proclass.acct_id}/"></a>`).text(proclass.creator_name)));
                     } else {
@@ -249,8 +249,8 @@
                 <thead>
                     <tr>
                         <th scope="col">#</th>
-                        <th>Progress</th>
                         <th>Name</th>
+                        <th>Progress</th>
                         <th>Creator</th>
                         <th>Collect</th>
                         <th>Goto!</th>
