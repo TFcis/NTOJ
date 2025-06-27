@@ -10,20 +10,20 @@ package-mode = false
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
-tornado = "^6.5.0"
-asyncpg = "^0.28.0"
-redis = "^5.0.1"
-msgpack = "^1.0.7"
-bcrypt = "^4.0.1"
+python = ">=3.11"
+tornado = ">=6.5.1"
+asyncpg = ">=0.30.0"
+redis = ">=6.2.0"
+msgpack = ">=1.1.1"
+bcrypt = ">=4.3.1"
 termcolor = "^2.3.0"
 mkdocs-material = "^9.5.13"
 natsort = "^8.4.0"
 
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.3.0"
-isort = "^5.13.2"
+black = ">=25.1.0"
+isort = ">=6.0.1"
 
 [build-system]
 requires = ["poetry-core"]
