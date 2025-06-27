@@ -80,7 +80,7 @@
             });
         {% end %}
 
-        let proclass_cata = null;
+        let proclass_cata = {};
         let list_dialog = document.getElementById('proclassListDialog');
         let list_dialog_modal = new bootstrap.Modal(list_dialog);
         let j_list_dialog = $(list_dialog);
@@ -124,7 +124,12 @@
                                     j_this.attr("actionType", 'decollect');
                                     j_this.text("Decollect");
                                 }
-                                proclass_cata = null;
+                                $.post("/oj/be/proset", {
+                                    "reqtype": "listproclass",
+                                    "proclass_type": "collection",
+                                }, function (e) {
+                                    proclass_cata["collection"] = JSON.parse(e).data;
+                                });
                             } else {
                                 index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                             }
@@ -149,7 +154,7 @@
 
             if (proclass_cata[proclass_type] === undefined) {
                 $.post("/oj/be/proset", {
-                    "reqtype": "listproclass"
+                    "reqtype": "listproclass",
                     "proclass_type": proclass_type,
                 }, function (e) {
                     proclass_cata[proclass_type] = JSON.parse(e).data;
@@ -165,7 +170,7 @@
             document.querySelector('.proclass-tab[proclassType="official"]').classList.add('active');
             proclass_cata = {};
             $.post("/oj/be/proset", {
-                "reqtype": "listproclass"
+                "reqtype": "listproclass",
                 "proclass_type": "collection",
             }, function (e) {
                 proclass_cata["collection"] = JSON.parse(e).data;
@@ -180,16 +185,7 @@
                 el.classList.add('active');
                 let proclass_type = el.getAttribute('proclassType');
 
-                if (proclass_cata == null) {
-                    $.post("/oj/be/proset", {
-                        "reqtype": "listproclass",
-                    }, function (e) {
-                        proclass_cata = JSON.parse(e).data;
-                        render_proclass_list(proclass_type);
-                    });
-                } else {
-                    render_proclass_list(proclass_type);
-                }
+                render_proclass_list(proclass_type);
             });
         });
     }
