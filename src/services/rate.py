@@ -26,7 +26,7 @@ class RateService:
                     f'''
                         SELECT
                             COUNT(*) AS all_chal_cnt,
-                            COUNT(CASE WHEN challenge_state.state = {ChalConst.STATE_AC} THEN 1 END) AS ac_chal_cnt
+                            COUNT(CASE WHEN cs.state = {ChalConst.STATE_AC} THEN 1 END) AS ac_chal_cnt
                         FROM
                             challenge c
                         INNER JOIN problem
