@@ -7,6 +7,7 @@ from msgpack import packb, unpackb
 from services.chal import ChalConst
 from services.user import Account
 from services.contests import UserStatus
+from services.pro import ProConst
 
 
 class RateService:
@@ -26,9 +27,16 @@ class RateService:
                         SELECT
                             COUNT(*) AS all_chal_cnt,
                             COUNT(CASE WHEN challenge_state.state = {ChalConst.STATE_AC} THEN 1 END) AS ac_chal_cnt
-                        FROM challenge
-                        INNER JOIN challenge_state
-                        ON challenge_state.chal_id = challenge.chal_id AND challenge.acct_id = $1
+                        FROM
+                            challenge c
+                        INNER JOIN problem
+                            ON c.pro_id = problem.pro_id
+                        INNER JOIN challenge_state cs
+                            ON c.chal_id = cs.chal_id
+                        WHERE
+                            c.acct_id = $1 AND
+                            problem.status = {ProConst.STATUS_ONLINE} AND
+                            c.contest_id = 0;
                     ''',
                     acct_id,
                 )
@@ -42,16 +50,26 @@ class RateService:
                 )
 
                 result = await con.fetch(
-                    '''
-                        SELECT SUM(max_rate) AS total_rate
-                        FROM (
-                            SELECT MAX(cs.rate) AS max_rate
-                            FROM public.account a
-                            JOIN public.challenge c ON a.acct_id = c.acct_id
-                            JOIN public.challenge_state cs ON c.chal_id = cs.chal_id
-                            WHERE a.acct_id = $1
-                            GROUP BY c.pro_id
-                        ) AS subquery;
+                    f'''
+                    WITH accepted_tests AS (
+                        SELECT DISTINCT
+                            t."acct_id", t."pro_id", t."test_idx", t."rate"
+                        FROM
+                            "test" t
+                        INNER JOIN "problem"
+                            ON t."pro_id" = "problem"."pro_id"
+                        WHERE
+                            "problem"."status" = {ProConst.STATUS_ONLINE}
+                            AND t."state" <= {ChalConst.STATE_PC}
+                            AND t.acct_id = $1
+                    )
+                    SELECT
+                        SUM(CASE WHEN at.rate IS NULL THEN test_valid_rate.rate ELSE at.rate END) AS total_rate
+                    FROM
+                        test_valid_rate
+                    INNER JOIN accepted_tests at
+                        ON "test_valid_rate"."pro_id" = at."pro_id"
+                        AND "test_valid_rate"."test_idx" = at."test_idx"
                     ''',
                     acct_id
                 )

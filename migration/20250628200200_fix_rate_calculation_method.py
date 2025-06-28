@@ -1,0 +1,2 @@
+async def dochange(_, rs):
+    await rs.delete('rate')
