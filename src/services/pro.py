@@ -12,7 +12,7 @@ from services.user import Account
 class ProConst:
     NAME_MIN = 1
     NAME_MAX = 64
-    CODE_MAX = 16384
+    CODE_MAX = 65536
 
     RATE_PRECISION_MIN = 0
     RATE_PRECISION_MAX = 3
