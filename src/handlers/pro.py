@@ -73,14 +73,10 @@ class ProsetHandler(RequestHandler):
                 proclass['creator_name'] = creator.name
 
         if search_name:
-            search_name = set(search_name.lower())
-            def _find(name: str):
-                for ch in name.lower():
-                    if ch in search_name:
-                        return True
-
-                return False
-            prolist = filter(lambda pro: _find(pro['name']), prolist)
+            search_name = search_name.lower()
+            def _find_name(name: str):
+                return name.lower().find(search_name) != -1
+            prolist = filter(lambda pro: _find_name(pro['name']), prolist)
 
         if show_only_online_pro:
             prolist = filter(lambda pro: pro['status'] == ProConst.STATUS_ONLINE, prolist)
