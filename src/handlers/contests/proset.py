@@ -8,10 +8,7 @@ from services.rate import RateService
 class ContestProsetHandler(RequestHandler):
     @reqenv
     async def get(self):
-        try:
-            pageoff = int(self.get_argument('pageoff'))
-        except tornado.web.HTTPError:
-            pageoff = 0
+        pageoff = int(self.get_argument('pageoff', default=0))
 
         show_ac_ratio = False
         if not self.contest.is_start() and not self.contest.is_admin(self.acct):

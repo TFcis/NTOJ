@@ -1,7 +1,5 @@
 import datetime
 
-import tornado.web
-
 from handlers.base import RequestHandler, reqenv
 from services.user import Account
 from services.chal import ChalConst
@@ -12,6 +10,9 @@ PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
 class ProRankHandler(RequestHandler):
     @reqenv
     async def get(self, pro_id):
+        pageoff = int(self.get_argument('pageoff', default=0))
+        pagenum = int(self.get_argument('pagenum', default=20))
+
         tz = datetime.timezone(datetime.timedelta(hours=+8))
         pro_id = int(pro_id)
         err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
@@ -20,18 +21,6 @@ class ProRankHandler(RequestHandler):
 
         if pro['status'] == ProConst.STATUS_CONTEST:
             return self.error(PERMISSION_DENIED_ERROR)
-
-        try:
-            pageoff = int(self.get_argument('pageoff'))
-
-        except tornado.web.HTTPError:
-            pageoff = 0
-
-        try:
-            pagenum = int(self.get_argument('pagenum'))
-
-        except tornado.web.HTTPError:
-            pagenum = 20
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -112,17 +101,8 @@ class ProRankHandler(RequestHandler):
 class UserRankHandler(RequestHandler):
     @reqenv
     async def get(self):
-        try:
-            pageoff = int(self.get_argument('pageoff'))
-
-        except tornado.web.HTTPError:
-            pageoff = 0
-
-        try:
-            pagenum = int(self.get_argument('pagenum'))
-
-        except tornado.web.HTTPError:
-            pagenum = 20
+        pageoff = int(self.get_argument('pageoff', default=0))
+        pagenum = int(self.get_argument('pagenum', default=20))
 
         res = await self.db.fetch(
             f'''

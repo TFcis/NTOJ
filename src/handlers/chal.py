@@ -2,8 +2,6 @@ import asyncio
 import decimal
 import json
 
-import tornado.web
-
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService, ChalSearchingParamBuilder
@@ -16,42 +14,20 @@ from utils.numeric import parse_list_str
 class ChalListHandler(RequestHandler):
     @reqenv
     async def get(self):
-        try:
-            pageoff = int(self.get_argument('pageoff'))
+        pageoff = int(self.get_argument('pageoff', default=0))
 
-        except tornado.web.HTTPError:
-            pageoff = 0
-
-        try:
-            ppro_id = str(self.get_argument('proid'))
-            query_pros = parse_list_str(ppro_id)
-            if len(query_pros) == 0:
-                query_pros = None
-
-        except tornado.web.HTTPError:
+        ppro_id = str(self.get_argument('proid', default=''))
+        query_pros = parse_list_str(ppro_id)
+        if len(query_pros) == 0:
             query_pros = None
-            ppro_id = ''
 
-        try:
-            pacct_id = str(self.get_argument('acctid'))
-            query_accts = parse_list_str(pacct_id)
-            if len(query_accts) == 0:
-                query_accts = None
-
-        except tornado.web.HTTPError:
+        pacct_id = str(self.get_argument('acctid', default=''))
+        query_accts = parse_list_str(pacct_id)
+        if len(query_accts) == 0:
             query_accts = None
-            pacct_id = ''
 
-        try:
-            state = int(self.get_argument('state'))
-
-        except (tornado.web.HTTPError, ValueError):
-            state = 0
-
-        try:
-            compiler_type = self.get_argument('compiler_type')
-        except tornado.web.HTTPError:
-            compiler_type = 'all'
+        state = int(self.get_argument('state', default=0))
+        compiler_type = self.get_argument('compiler_type', default='all')
 
         contest_id = 0
         if self.contest:

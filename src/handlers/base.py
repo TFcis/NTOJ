@@ -35,7 +35,7 @@ class RequestHandler(tornado.web.RequestHandler):
             self.get_argument('json')
             self.res_json = True
 
-        except tornado.web.HTTPError:
+        except tornado.web.MissingArgumentError:
             self.res_json = False
 
     def error(self, err: tuple[str, Any], encoder=None):

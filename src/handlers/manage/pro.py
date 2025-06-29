@@ -3,7 +3,6 @@ import base64
 import json
 import os
 
-import tornado.web
 import tornado.escape
 from msgpack import packb, unpackb
 from natsort import natsorted
@@ -24,10 +23,7 @@ class ManageProHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page=None):
         if page is None:
-            try:
-                pageoff = int(self.get_argument('pageoff'))
-            except tornado.web.HTTPError:
-                pageoff = 0
+            pageoff = int(self.get_argument('pageoff', default=0))
 
             err, prolist = await ProService.inst.list_pro(self.acct)
             pro_total_cnt = len(prolist)
@@ -83,10 +79,7 @@ class ManageProHandler(RequestHandler):
         elif page == "updatetests":
             pro_id = int(self.get_argument('proid'))
 
-            try:
-                download = self.get_argument('download')
-            except tornado.web.HTTPError:
-                download = None
+            download = self.get_argument('download', default=None)
 
             if download:
                 return NotImplemented
