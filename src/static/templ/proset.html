@@ -3,12 +3,11 @@
 {% from services.pro import ProConst, ProClassConst %}
 
 <script type="text/javascript">
-    var re = /[^0-9]/
     function init() {
         let j_proclass = $('#proclass');
         let j_filter = $('#filter');
 
-        function get_goto_url(proclass_id) {
+        function get_goto_filtered_proset_url(proclass_id) {
             let order = j_filter.find("#order").val();
             let show = j_filter.find("#show").val();
             let search_name = j_filter.find("#name").val();
@@ -46,21 +45,25 @@
         }
 
         j_filter.find("#filter_submit").on('click', function(e) {
-            index.go(get_goto_url(-1));
+            index.go(get_goto_filtered_proset_url(-1));
         });
 
-        let select_prob = j_filter.find('input.select_prob');
-        select_prob.on('keypress', function(e) {
-            if (e.keyCode == 13) {
-                if (re.test(select_prob.val())) {
-                    index.show_notify_dialog('請輸入數字', index.DIALOG_TYPE.info);
-                    select_prob.val('');
-                    return
-                }
-
-                index.go(`/oj/pro/${select_prob.val()}/`);
+        const goto_pro_id = () => {
+            let pro_id = select_prob.val();
+            // NOTE: When the input type is set to number, Bootstrap returns an emtpy string if the input value is not a valid number.
+            if (pro_id === "") {
+                index.show_notify_dialog('請輸入數字', index.DIALOG_TYPE.info);
+                select_prob.val('');
+                return;
             }
+            index.go(`/oj/pro/${pro_id}/`);
+        };
+
+        let select_prob = j_filter.find('input#select_prob');
+        select_prob.on('keypress', function(e) {
+            if (e.keyCode == 13) goto_pro_id();
         });
+        j_filter.find('button#select_prob_button').on('click', goto_pro_id);
 
         {% if cur_proclass %}
             let cur_proclass_desc = `{{ markdown_escape(cur_proclass['desc']) }}`;
@@ -140,7 +143,7 @@
                     let goto = $(`<td><button class="btn btn-primary">Goto!</button></td>`)
                     goto.find("button").on('click', function(e) {
                         list_dialog_modal.hide();
-                        index.go(get_goto_url(proclass.proclass_id));
+                        index.go(get_goto_filtered_proset_url(proclass.proclass_id));
                     });
                     tr.append(goto);
 
@@ -333,8 +336,12 @@
             </div>
 
             <div class="mb-1">
-                <label class="form-label">Go to Problem</label>
-                <input type="text" class="select_prob form-control" placeholder="problem number">
+                <label for="select_prob" class="form-label">Go to Problem</label>
+                <input type="text" id="select_prob" class="form-control" placeholder="problem number">
+            </div>
+
+            <div class="mb-1">
+                <button id="select_prob_button" class="btn btn-danger">Go~</button>
             </div>
         </form>
     </div>
