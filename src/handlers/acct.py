@@ -3,7 +3,6 @@ import time
 import math
 import hashlib
 
-import tornado.web
 from msgpack import packb, unpackb
 
 from handlers.base import RequestHandler, reqenv, require_permission
@@ -168,10 +167,7 @@ class AcctProClassHandler(RequestHandler):
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def get(self, acct_id):
         acct_id = int(acct_id)
-        try:
-            page = self.get_argument('page')
-        except tornado.web.HTTPError:
-            page = None
+        page = self.get_argument('page', default=None)
 
         if page is None:
             _, proclass_list = await ProClassService.inst.get_proclass_list()

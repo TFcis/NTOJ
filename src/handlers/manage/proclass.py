@@ -13,10 +13,7 @@ class ManageProClassHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page=None):
         if page is None:
-            try:
-                pageoff = int(self.get_argument('pageoff'))
-            except tornado.web.HTTPError:
-                pageoff = 0
+            pageoff = int(self.get_argument('pageoff', default=0))
 
             _, proclass_list = await ProClassService.inst.get_proclass_list()
             proclass_list = list(filter(lambda proclass: proclass['type'] in [ProClassConst.OFFICIAL_PUBLIC, ProClassConst.OFFICIAL_HIDDEN],

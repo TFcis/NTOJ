@@ -1,5 +1,3 @@
-import tornado.web
-
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
 
@@ -11,14 +9,10 @@ class LogHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, log_id=None):
         if log_id is None:
-            try:
-                pageoff = int(self.get_argument('pageoff'))
-            except tornado.web.HTTPError:
-                pageoff = 0
+            pageoff = int(self.get_argument('pageoff', default=0))
 
-            try:
-                logtype = str(self.get_argument('logtype'))
-            except tornado.web.HTTPError:
+            logtype = str(self.get_argument('logtype', default=''))
+            if not logtype:
                 logtype = None
 
             err, logtype_list = await LogService.inst.get_log_type()

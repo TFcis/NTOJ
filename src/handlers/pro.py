@@ -1,7 +1,3 @@
-import json
-
-import tornado.web
-
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.chal import ChalConst
 from services.judge import JudgeServerClusterService
@@ -37,35 +33,12 @@ def chal_ac_cmp(pro):
 class ProsetHandler(RequestHandler):
     @reqenv
     async def get(self):
-        try:
-            pageoff = int(self.get_argument('pageoff'))
-        except tornado.web.HTTPError:
-            pageoff = 0
-
-        try:
-            order = self.get_argument('order')
-        except tornado.web.HTTPError:
-            order = None
-
-        try:
-            problem_show = self.get_argument('show')
-        except tornado.web.HTTPError:
-            problem_show = 'all'
-
-        try:
-            show_only_online_pro = self.get_argument('online')
-        except tornado.web.HTTPError:
-            show_only_online_pro = False
-
-        try:
-            order_reverse = self.get_argument('reverse')
-        except tornado.web.HTTPError:
-            order_reverse = False
-
-        try:
-            search_name = self.get_argument('name')
-        except tornado.web.HTTPError:
-            search_name = None
+        pageoff = int(self.get_argument('pageoff', default=0))
+        order = self.get_argument('order', default=None)
+        problem_show = self.get_argument('show', default='all')
+        show_only_online_pro = self.get_argument('online', default=False)
+        order_reverse = self.get_argument('reverse', default=False)
+        search_name = self.get_argument('name', default=None)
 
         flt = {
             'order': order,
@@ -75,9 +48,8 @@ class ProsetHandler(RequestHandler):
             'name': search_name,
         }
 
-        try:
-            proclass_id = int(self.get_argument('proclass_id'))
-        except tornado.web.HTTPError:
+        proclass_id = int(self.get_argument('proclass_id', default=0))
+        if proclass_id == 0:
             proclass_id = None
 
         err, prolist = await ProService.inst.list_pro(self.acct)
@@ -126,6 +98,7 @@ class ProsetHandler(RequestHandler):
             return pro
 
         prolist = map(lambda pro: _set_pro_state_and_tags(pro), prolist)
+
 
         if problem_show == "onlyac":
             prolist = filter(lambda pro: pro['state'] == ChalConst.STATE_AC, prolist)
@@ -275,11 +248,7 @@ class ProStaticHandler(RequestHandler):
             self.set_header('Cache-Control', 'must-revalidate, post-check=0, pre-check=0')
             self.set_header('Content-Type', 'application/pdf')
 
-            try:
-                download = self.get_argument('download')
-            except tornado.web.HTTPError:
-                download = None
-
+            download = self.get_argument('download', default=None)
             if download:
                 self.set_header('Content-Disposition', f'attachment; filename="pro{pro_id}.pdf"')
             else:

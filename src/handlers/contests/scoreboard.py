@@ -56,7 +56,7 @@ class ContestScoreboardHandler(RequestHandler):
         start_time = self.contest.contest_start
         try:
             end_time = datetime.datetime.fromisoformat(self.get_argument('display_time'))
-        except (tornado.web.HTTPError, ValueError):
+        except (tornado.web.MissingArgumentError, ValueError):
             has_end_time = False
             end_time = self.contest.contest_end
 
