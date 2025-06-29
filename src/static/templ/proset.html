@@ -11,6 +11,7 @@
             let order = j_filter.find("#order").val();
             let show = j_filter.find("#show").val();
             let search_name = j_filter.find("#name").val();
+            let search_tags = j_filter.find("#tags").val();
             if (proclass_id == -1)
                 proclass_id = $("#curProclassId").attr("proclass");
             let is_online = j_filter.find("#online").is(":checked");
@@ -39,6 +40,10 @@
 
             if (search_name != '') {
                 url += `&name=${search_name}`;
+            }
+
+            if (search_tags != '') {
+                url += `&tags=${search_tags}`;
             }
 
             return url;
@@ -332,6 +337,11 @@
             </div>
 
             <div class="mb-1">
+                <label for="name" class="form-label">Search Tags</label>
+                <input type="text" id="tags" class="form-control" placeholder="problem tags" value="{{ flt['tags'] if flt['tags'] else '' }}">
+            </div>
+
+            <div class="mb-1">
                 <button id="filter_submit" class="btn btn-primary" type="button">Filter</button>
             </div>
 
@@ -403,13 +413,13 @@
         </div>
 
         {% set postfix = '' %}
-        {% if cur_proclass != None %}
+        {% if cur_proclass %}
         {% set postfix = postfix + '&proclass_id=%s' % cur_proclass['proclass_id'] %}
         {% end %}
         {% if flt['problem_show'] != 'all' %}
         {% set postfix = postfix + f"&show={flt['problem_show']}" %}
         {% end %}
-        {% if flt['order'] != None %}
+        {% if flt['order'] %}
         {% set postfix = postfix + f"&order={flt['order']}" %}
         {% end %}
         {% if user.is_kernel() and flt['online'] %}
@@ -418,8 +428,11 @@
         {% if flt['reverse'] != False %}
         {% set postfix = postfix + f"&reverse={flt['reverse']}" %}
         {% end %}
-        {% if flt['name'] != None %}
+        {% if flt['name'] %}
         {% set postfix = postfix + f"&name={flt['name']}" %}
+        {% end %}
+        {% if flt['tags'] %}
+        {% set postfix = postfix + f"&tags={flt['tags']}" %}
         {% end %}
 
         <div class="row">

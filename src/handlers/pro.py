@@ -39,6 +39,7 @@ class ProsetHandler(RequestHandler):
         show_only_online_pro = self.get_argument('online', default=False)
         order_reverse = self.get_argument('reverse', default=False)
         search_name = self.get_argument('name', default=None)
+        search_tags = self.get_argument('tags', default=None)
 
         flt = {
             'order': order,
@@ -46,6 +47,7 @@ class ProsetHandler(RequestHandler):
             'online': show_only_online_pro,
             'reverse': order_reverse,
             'name': search_name,
+            'tags': search_tags,
         }
 
         proclass_id = int(self.get_argument('proclass_id', default=0))
@@ -95,6 +97,11 @@ class ProsetHandler(RequestHandler):
 
         prolist = map(lambda pro: _set_pro_state_and_tags(pro), prolist)
 
+        if search_tags:
+            search_tags = search_tags.lower()
+            def _find_tags(tags: str):
+                return tags.lower().find(search_tags) != -1
+            prolist = filter(lambda pro: _find_tags(pro['tagss']), prolist)
 
         if problem_show == "onlyac":
             prolist = filter(lambda pro: pro['state'] == ChalConst.STATE_AC, prolist)
