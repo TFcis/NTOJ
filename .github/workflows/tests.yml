@@ -31,15 +31,12 @@ jobs:
           sudo service postgresql restart
           sudo service redis-server restart
 
-      - name: Install Coverage
-        run: |
-          $HOME/.local/bin/poetry add --dev coverage
-
-      - name: Install Project dependencies
+      - name: Install Project dependencies and test requirements
         run: |
           sed -i '/^mkdocs-material/d' pyproject.toml # test don't need mkdocs-material
-          rm poetry.lock # we need to remove it because we change the pyproject file
+          $HOME/.local/bin/poetry lock # we need to update lockfile because we change the pyproject file
           $HOME/.local/bin/poetry install
+          $HOME/.local/bin/poetry add --dev coverage
           $HOME/.local/bin/poetry add beautifulsoup4
           $HOME/.local/bin/poetry add requests
 

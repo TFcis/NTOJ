@@ -24,6 +24,7 @@ class AcctHandler(RequestHandler):
         if err:
             return self.error(err)
 
+        acct.acct_type = UserConst.ACCTTYPE_USER
         err, rate_data = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
         if err:
             return self.error(err)
@@ -40,6 +41,7 @@ class AcctHandler(RequestHandler):
             )
 
         err, ratemap = await RateService.inst.map_rate_acct(acct)
+        acct.acct_type = UserConst.ACCTTYPE_KERNEL
 
         prolist2 = []
 

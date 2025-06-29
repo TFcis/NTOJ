@@ -3,7 +3,7 @@ import datetime
 import tornado.web
 
 from handlers.base import RequestHandler, reqenv
-from services.user import UserConst, UserService, Account
+from services.user import Account
 from services.chal import ChalConst
 from services.pro import ProConst, ProService
 
@@ -126,62 +126,99 @@ class UserRankHandler(RequestHandler):
 
         res = await self.db.fetch(
             f'''
-                WITH user_stats AS (
-                    SELECT
-                        a.acct_id,
-                        a.name,
-                        a.photo,
-                        a.motto,
-                        COUNT(DISTINCT CASE WHEN cs.state = 1 THEN c.pro_id END) AS ac_problem_count,
-                        SUM(CASE WHEN cs.state = 1 THEN cs.rate ELSE 0 END) AS total_problem_rate,
-                        COUNT(CASE WHEN cs.state = 1 THEN 1 END) AS ac_challenge_count,
-                        COUNT(c.chal_id) AS all_challenge_count,
-                        COUNT(CASE WHEN cs.state = 1 THEN 1 END)::float / NULLIF(COUNT(c.chal_id), 0) AS ac_ratio
+            WITH accepted_tests_per_user AS (
+                SELECT DISTINCT
+                    t."acct_id", t."pro_id", t."test_idx", t."rate"
+                FROM
+                    "test" t
+                INNER JOIN "problem"
+                    ON t."pro_id" = "problem"."pro_id"
+                WHERE
+                    "problem"."status" = {ProConst.STATUS_ONLINE}
+                    AND t."state" <= {ChalConst.STATE_PC}
+            ), user_total_rate AS (
+                SELECT
+                    acct_id, SUM(CASE WHEN accepted_tests_per_user.rate IS NULL THEN test_valid_rate.rate ELSE accepted_tests_per_user.rate END) AS rate
+                FROM
+                    test_valid_rate
+                INNER JOIN accepted_tests_per_user
+                    ON "test_valid_rate"."pro_id" = accepted_tests_per_user."pro_id"
+                    AND "test_valid_rate"."test_idx" = accepted_tests_per_user."test_idx"
+                GROUP BY acct_id
+            ), user_stats AS (
+                SELECT
+                    user_total_rate.acct_id,
+                    user_total_rate.rate,
+                    COUNT(DISTINCT c.pro_id) FILTER (WHERE cs.state = {ChalConst.STATE_AC}) AS ac_problem_count,
+                    COUNT(*) FILTER (WHERE cs.state = {ChalConst.STATE_AC}) AS ac_challenge_count,
+                    COUNT(*) AS all_challenge_count,
+                    COUNT(*) FILTER (WHERE cs.state = 1)::float / NULLIF(COUNT(c.chal_id), 0) AS ac_ratio
 
-                    FROM
-                        public.challenge c
-                    INNER JOIN
-                        public.challenge_state cs ON c.chal_id = cs.chal_id AND c.contest_id = 0
-                    INNER JOIN
-                        public.account a ON a.acct_id = c.acct_id
-                    INNER JOIN
-                        public.problem ON c.pro_id = problem.pro_id AND problem.status = 0
-                    GROUP BY
-                        a.acct_id
-                )
+                FROM
+                    public.challenge c
+                INNER JOIN
+                    problem p ON p.pro_id = c.pro_id
+                INNER JOIN
+                    challenge_state cs ON c.chal_id = cs.chal_id
+                INNER JOIN
+                    user_total_rate ON user_total_rate.acct_id = c.acct_id
+                WHERE
+                    c.contest_id = 0 AND
+                    p.status = {ProConst.STATUS_ONLINE}
+                GROUP BY
+                    user_total_rate.acct_id, user_total_rate.rate
+            ), ranked_user_stats AS (
                 SELECT
                     acct_id,
-                    name,
-                    photo,
-                    motto,
+                    rate,
                     ac_problem_count,
-                    total_problem_rate,
                     ac_challenge_count,
                     all_challenge_count,
                     RANK() OVER (ORDER BY
+                        rate DESC,
                         ac_problem_count DESC,
-                        total_problem_rate DESC,
                         ac_ratio DESC
                     ) AS rank
                 FROM
                     user_stats
-                ORDER BY
-                    rank
-                OFFSET {pageoff} LIMIT {pagenum};
-                ''')
+            ), ranked_user_cnt AS (
+                SELECT COUNT(*) AS total_cnt FROM ranked_user_stats
+            )
+            SELECT
+                ranked_user_cnt.total_cnt,
+                a.acct_id,
+                a.name,
+                a.photo,
+                a.motto,
+                ac_problem_count,
+                rate,
+                ac_challenge_count,
+                all_challenge_count,
+                rank
+            FROM
+                account a
+            INNER JOIN ranked_user_stats
+                ON ranked_user_stats.acct_id = a.acct_id
+            JOIN ranked_user_cnt
+                ON 1 = 1
+            ORDER BY
+                rank
+            OFFSET $1 LIMIT $2;
+            ''',
+            pageoff, pagenum
+        )
 
         acctlist = []
-        for acct_id, name, photo, motto, ac_pro_cnt, total_rate, ac_cnt, all_cnt, rank in res:
+        total_cnt = 0
+        for total_cnt, acct_id, name, photo, motto, ac_pro_cnt, total_rate, ac_cnt, all_cnt, rank in res:
             acct = Account(acct_id, -1, '', name, photo, '', motto, '', '', [])
             acct.rank = rank
+
             acct.rate_data = {
                 'all_cnt': all_cnt,
                 'ac_cnt': ac_cnt,
                 'ac_pro_cnt': ac_pro_cnt,
             }
             acctlist.append(acct)
-
-        _, t_acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL)
-        total_cnt = len(t_acctlist)
 
         await self.render('user-rank', acctlist=acctlist, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt)
