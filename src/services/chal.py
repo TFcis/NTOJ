@@ -99,10 +99,14 @@ class ChalSearchingParam:
         if self.pro is not None:
             if len(self.pro):
                 query.append(f' AND "challenge"."pro_id" IN ({",".join(map(str, self.pro))}) ')
+            else:
+                query.append(' AND "challenge"."pro_id" IS NULL ')
 
         if self.acct is not None:
             if len(self.acct):
                 query.append(f' AND "challenge"."acct_id" IN ({",".join(map(str, self.acct))}) ')
+            else:
+                query.append(' AND "challenge"."acct_id" IS NULL ')
 
         if self.state != 0:
             if self.state == ChalConst.STATE_NOTSTARTED:

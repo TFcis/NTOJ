@@ -34,7 +34,7 @@ class ChalListHandler(RequestHandler):
             contest_id = self.contest.contest_id
 
             # NOTE: if user is admin, specifying contest_id will list all challenges for that contest; there's no need to specify an account separately.
-            EMPTY = [-1]
+            EMPTY = []
             if not self.contest.is_admin(self.acct):
                 if not self.contest.is_start():
                     query_accts = EMPTY
