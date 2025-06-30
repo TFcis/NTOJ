@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import datetime
 import os
+import decimal
 
 from services.judge import JudgeServerClusterService
 from services.pro import ProConst
@@ -258,6 +259,8 @@ class ChalService:
         ChalService.inst = self
 
     async def add_chal(self, pro_id: int, acct_id: int, contest_id: int, comp_type: str, code: str):
+        assert comp_type in ChalConst.ALLOW_COMPILERS
+
         pro_id = int(pro_id)
         acct_id = int(acct_id)
 
@@ -286,7 +289,7 @@ class ChalService:
 
         return None, chal_id
 
-    async def reset_chal(self, chal_id):
+    async def reset_chal(self, chal_id: int):
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             await con.execute('DELETE FROM "test" WHERE "chal_id" = $1;', chal_id)
@@ -375,8 +378,10 @@ class ChalService:
             },
         )
 
-    async def emit_chal(self, chal_id, pro_id, testm_conf, comp_type, pri: int):
-        from services.pro import ProConst
+    async def emit_chal(self, chal_id: int, pro_id: int, testm_conf: dict, comp_type: str, pri: int):
+        assert comp_type in ChalConst.ALLOW_COMPILERS
+        assert ChalConst.NORMAL_PRI <= pri <= ChalConst.NORMAL_REJUDGE_PRI
+
         chal_id = int(chal_id)
         pro_id = int(pro_id)
 
@@ -568,7 +573,11 @@ class ChalService:
         total_chal = result[0]['count']
         return None, {'total_chal': total_chal}
 
-    async def update_test(self, chal_id, test_idx, state, runtime, memory, rate, response, rate_is_cms_type=False, refresh_db=True):
+    async def update_test(self, chal_id: int, test_idx: int, state: int, runtime: int, memory: int,
+                          rate: decimal.Decimal, response: str, rate_is_cms_type=False, refresh_db=True):
+
+        assert ChalConst.STATE_AC <= state <= ChalConst.STATE_NOTSTARTED
+
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             await con.execute(
