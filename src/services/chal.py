@@ -259,6 +259,22 @@ class ChalService:
         ChalService.inst = self
 
     async def add_chal(self, pro_id: int, acct_id: int, contest_id: int, comp_type: str, code: str):
+        """
+        Add a new challenge entry and save the submitted source code.
+
+        Args:
+            pro_id (int): Problem ID.
+            acct_id (int): Account ID (user submitting the challenge).
+            contest_id (int): Contest ID.
+            comp_type (str): Compiler type (must be in ChalConst.ALLOW_COMPILERS).
+            code (str): Source code content as string.
+
+        Returns:
+            tuple[Optional[tuple[str, str]], Optional[int]]:
+                On success, (None, chal_id).
+                On failure, (error_code, None).
+        """
+
         assert comp_type in ChalConst.ALLOW_COMPILERS
 
         pro_id = int(pro_id)
@@ -290,6 +306,16 @@ class ChalService:
         return None, chal_id
 
     async def reset_chal(self, chal_id: int):
+        """
+        Reset a challenge by deleting all its associated tests and updating its state.
+
+        Args:
+            chal_id (int): Challenge ID to reset.
+
+        Returns:
+            tuple[None, None]: Always returns (None, None).
+        """
+
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             await con.execute('DELETE FROM "test" WHERE "chal_id" = $1;', chal_id)
@@ -298,6 +324,23 @@ class ChalService:
         return None, None
 
     async def get_chal_state(self, chal_id: int):
+        """
+        Retrieve detailed test results of a challenge.
+
+        Args:
+            chal_id (int): Challenge ID.
+
+        Returns:
+            tuple[Optional[tuple[str, str]], Optional[list[dict]]]:
+                On success, (None, list) where each dict represents a test with keys:
+                    - 'test_idx' (int): Test index.
+                    - 'state' (int): Challenge state, between ChalConst.STATE_AC and ChalConst.STATE_NOTSTARTED.
+                    - 'runtime' (int): Total runtime in milliseconds.
+                    - 'memory' (int): Memory usage in kilobytes.
+                    - 'response' (str): Compiler or checker message.
+                    - 'rate' (decimal.Decimal), rounded by problem.rate_precision
+                On failure, (error_code, None).
+        """
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -334,6 +377,27 @@ class ChalService:
         return None, tests
 
     async def get_chal(self, chal_id: int, with_test=False) -> ReturnType:
+        """
+        Retrieve challenge info with optional test details.
+
+        Args:
+            chal_id (int): Challenge ID.
+            with_test (bool): Whether to include detailed test results.
+
+        Returns:
+            tuple[Optional[tuple[str, str]], Optional[dict]]:
+                On success, (None, dict) where dict contains:
+                    - 'chal_id' (int): Challenge ID.
+                    - 'pro_id' (int): Problem ID.
+                    - 'acct_id' (int): Account ID.
+                    - 'contest_id' (int): Contest ID.
+                    - 'comp_type' (str): Compiler type, must be in ChalConst.ALLOW_COMPILER.
+                    - 'timestamp' (datetime.datetime): Timestamp of challenge submission.
+                    - 'acct_name' (str): Account name of submitter.
+                    - 'testl' (list[dict], optional): Please see `get_chal_state()`
+                On failure, (error_code, None).
+        """
+
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -379,6 +443,21 @@ class ChalService:
         )
 
     async def emit_chal(self, chal_id: int, pro_id: int, testm_conf: dict, comp_type: str, pri: int):
+        """
+        Create and submit tests for a challenge based on the test metadata configuration,
+        then send the challenge to the judging cluster.
+
+        Args:
+            chal_id (int): Challenge ID.
+            pro_id (int): Problem ID.
+            testm_conf (dict): Test metadata configuration.
+            comp_type (str): Compiler type (must be in ChalConst.ALLOW_COMPILERS).
+            pri (int): Priority level (within ChalConst.NORMAL_PRI and ChalConst.NORMAL_REJUDGE_PRI).
+
+        Returns:
+            tuple[None, None]: Always returns (None, None) on completion.
+        """
+
         assert comp_type in ChalConst.ALLOW_COMPILERS
         assert ChalConst.NORMAL_PRI <= pri <= ChalConst.NORMAL_REJUDGE_PRI
 
@@ -429,7 +508,7 @@ class ChalService:
 
         if not os.path.isfile(f"code/{chal_id}/main.{file_ext}"):
             for test in testl:
-                await self.update_test(chal_id, test['test_idx'], ChalConst.STATE_ERR, 0, 0, None, '', refresh_db=False)
+                await self.update_test(chal_id, test['test_idx'], ChalConst.STATE_ERR, 0, 0, None, '', rate_is_cms_type=False, refresh_db=False)
                 await self.update_challenge_state(chal_id)
             return None, None
 
@@ -458,6 +537,28 @@ class ChalService:
         return None, None
 
     async def list_chal(self, off: int, num: int, flt: ChalSearchingParam):
+        """
+        List challenges with filtering, pagination, and joined related info.
+
+        Args:
+            off (int): Offset for pagination.
+            num (int): Number of challenges to return.
+            flt (ChalSearchingParam): Filter parameters.
+
+        Returns:
+            tuple[None, list[dict]]: On success, returns (None, challist) where each item is a dict with keys:
+                - 'chal_id' (int): Challenge ID.
+                - 'pro_id' (int): Problem ID.
+                - 'acct_id' (int): Account ID.
+                - 'contest_id' (int): Contest ID.
+                - 'comp_type' (str): Compiler type, must be in ChalConst.ALLOW_COMPILER.
+                - 'timestamp' (datetime.datetime): Timestamp of challenge submission.
+                - 'acct_name' (str): Account name of submitter.
+                - 'state' (int): Challenge state, between ChalConst.STATE_AC and ChalConst.STATE_NOTSTARTED.
+                - 'runtime' (int): Total runtime in milliseconds.
+                - 'memory' (int): Memory usage in kilobytes.
+                - 'rate' (decimal.Decimal): Score or rate of the challenge, rounded by `problem.rate_precision`.
+        """
         fltquery = flt.get_sql_query_str()
 
         async with self.db.acquire() as con:
@@ -515,6 +616,28 @@ class ChalService:
         return None, challist
 
     async def get_calculated_chal_state(self, chal_id: int, allow_pro_statuses: list[int]):
+        """
+        Retrieve the aggregated state of a challenge filtered by allowed problem statuses.
+
+        This method queries the `challenge_state` table joined with `problem` to ensure
+        that only challenges related to problems with statuses in `allow_pro_statuses` are considered.
+
+        Args:
+            chal_id (int): The ID of the challenge to retrieve.
+            allow_pro_statuses (list[int]): List of allowed problem status codes to filter by.
+                Each status should be between `ProConst.STATUS_ONLINE` and `ProConst.STATUS_HIDDEN`.
+
+        Returns:
+            tuple[Optional[tuple[str, str]], Optional[dict]]:
+                On success, returns (None, dict) where dict contains:
+                    - 'chal_id' (int): Challenge ID.
+                    - 'state' (int): Aggregated state of the challenge.
+                    - 'runtime' (int): Total runtime in milliseconds.
+                    - 'memory' (int): Total memory usage in kilobytes.
+                    - 'rate' (Decimal): Aggregated rate/score.
+                On failure (e.g., challenge not found), returns (error_code, None).
+        """
+
         assert len(allow_pro_statuses)
         for status in allow_pro_statuses:
             assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
@@ -549,6 +672,18 @@ class ChalService:
         }
 
     async def get_chals_count(self, flt: ChalSearchingParam):
+        """
+        Get the total count of challenges matching a filter.
+
+        Args:
+            flt (ChalSearchingParam): Filter parameters.
+
+        Returns:
+            tuple[Optional[tuple[str, str]], Optional[dict]]:
+                On success, (None, {'total_chal': int}).
+                On failure, (error_code, None).
+        """
+
         fltquery = flt.get_sql_query_str()
 
         async with self.db.acquire() as con:
@@ -575,6 +710,23 @@ class ChalService:
 
     async def update_test(self, chal_id: int, test_idx: int, state: int, runtime: int, memory: int,
                           rate: decimal.Decimal, response: str, rate_is_cms_type=False, refresh_db=True):
+        """
+        Update a single test entry with state, runtime, memory, response, and rate information.
+
+        Args:
+            chal_id (int): Challenge ID.
+            test_idx (int): Test index.
+            state (int): Test state (must be within ChalConst.STATE_AC and ChalConst.STATE_NOTSTARTED).
+            runtime (int): Runtime in milliseconds.
+            memory (int): Memory usage in kilobytes.
+            rate (decimal.Decimal): Rate/score value.
+            response (str): Compiler or checker message.
+            rate_is_cms_type (bool): If True, apply weighted rate calculation.
+            refresh_db (bool): If True, refresh challenge state after updating.
+
+        Returns:
+            tuple[None, None]: Always returns (None, None).
+        """
 
         assert ChalConst.STATE_AC <= state <= ChalConst.STATE_NOTSTARTED
 
@@ -615,4 +767,24 @@ class ChalService:
         return None, None
 
     async def update_challenge_state(self, chal_id: int):
+        """
+        Trigger the database function to aggregate and update the overall state of a challenge.
+
+        This function calls the PostgreSQL stored procedure `update_challenge_state(p_chal_id INTEGER)`
+        which calculates the following aggregates from all tests belonging to the challenge:
+        - The maximum test state (indicating the overall challenge status).
+        - The sum of runtimes across tests.
+        - The sum of memory usage across tests.
+        - The sum of rates/scores, considering special scores or default rates.
+
+        The aggregated results are then upserted into the `challenge_state` table,
+        updating only when values have changed to avoid unnecessary writes.
+
+        Args:
+            chal_id (int): The challenge ID to update.
+
+        Returns:
+            None
+        """
+
         await self.db.execute(f'SELECT update_challenge_state({chal_id});')
