@@ -95,34 +95,30 @@ class ChalSearchingParam:
     contest: int = 0
 
     def get_sql_query_str(self):
-        query = ' '
-        if self.pro:
-            query += 'AND ( "challenge"."pro_id" = 0 '
-            for pro_id in self.pro:
-                query += f' OR "challenge"."pro_id" = {pro_id} '
-            query += ')'
+        query = [' ']
+        if self.pro is not None:
+            if len(self.pro):
+                query.append(f' AND "challenge"."pro_id" IN ({",".join(map(str, self.pro))}) ')
 
-        if self.acct:
-            query += 'AND ( "challenge"."acct_id" = 0 '
-            for acct_id in self.acct:
-                query += f' OR "challenge"."acct_id" = {acct_id} '
-            query += ')'
+        if self.acct is not None:
+            if len(self.acct):
+                query.append(f' AND "challenge"."acct_id" IN ({",".join(map(str, self.acct))}) ')
 
         if self.state != 0:
             if self.state == ChalConst.STATE_NOTSTARTED:
-                query += ' AND "challenge_state"."state" IS NULL '
+                query.append(' AND "challenge_state"."state" IS NULL ')
             else:
-                query += f' AND "challenge_state"."state" = {self.state} '
+                query.append(f' AND "challenge_state"."state" = {self.state} ')
 
         if self.compiler != 'all':
-            query += f' AND "challenge"."compiler_type"=\'{self.compiler}\' '
+            query.append(f' AND "challenge"."compiler_type"=\'{self.compiler}\' ')
 
         if self.contest != 0:
-            query += f' AND "challenge"."contest_id"={self.contest} '
+            query.append(f' AND "challenge"."contest_id"={self.contest} ')
         else:
-            query += ' AND "challenge"."contest_id"=0 '
+            query.append(' AND "challenge"."contest_id"=0 ')
 
-        return query
+        return ''.join(query)
 
 
 class ChalSearchingParamBuilder:
