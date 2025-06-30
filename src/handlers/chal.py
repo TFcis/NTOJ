@@ -168,10 +168,7 @@ class ChalListNewStateHandler(WebSocketSubHandler):
             self.first_chal_id = int(j["first_chal_id"])
             self.last_chal_id = int(j["last_chal_id"])
             err, acct = await UserService.inst.info_acct(acct_id=int(j["acct_id"]))
-            if err:
-                self.on_close()
-
-            if acct.is_kernel():
+            if not err and acct.is_kernel():
                 self.allow_pro_statuses.append(ProConst.STATUS_HIDDEN)
 
 
