@@ -2,7 +2,6 @@ from dataclasses import dataclass
 import datetime
 import os
 
-import config
 from services.judge import JudgeServerClusterService
 from services.pro import ProConst
 
@@ -295,7 +294,7 @@ class ChalService:
         await self.update_challenge_state(chal_id)
         return None, None
 
-    async def get_chal_state(self, chal_id):
+    async def get_chal_state(self, chal_id: int):
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -331,7 +330,7 @@ class ChalService:
 
         return None, tests
 
-    async def get_chal(self, chal_id) -> ReturnType:
+    async def get_chal(self, chal_id: int, with_test=False) -> ReturnType:
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -347,7 +346,6 @@ class ChalService:
             )
         if len(result) != 1:
             return ('Enoext', 'Challenge Not Found'), None
-
         result = result[0]
 
         pro_id, acct_id, timestamp, comp_type, contest_id, acct_name = (
@@ -358,42 +356,10 @@ class ChalService:
             result['contest_id'],
             result['acct_name'],
         )
-        final_response = []
-
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    SELECT "test"."test_idx", "state", "runtime", "memory", "response",
-                    ROUND(COALESCE(test.rate, tvr.rate), problem.rate_precision)
-                    FROM "test"
-                    INNER JOIN test_valid_rate AS tvr
-                    ON test.pro_id = tvr.pro_id AND test.test_idx = tvr.test_idx
-                    INNER JOIN problem
-                    ON test.pro_id = problem.pro_id
-                    WHERE "chal_id" = $1 ORDER BY "test_idx" ASC;
-                ''',
-                chal_id,
-            )
 
         testl = []
-        for test_idx, state, runtime, memory, response, rate in result:
-            if response:
-                final_response.append(f"Task {test_idx + 1}: {response}")
-
-            r = 0
-            if state in [ChalConst.STATE_AC, ChalConst.STATE_PC]:
-                r = rate
-
-            testl.append(
-                {
-                    'test_idx': test_idx,
-                    'state': state,
-                    'runtime': int(runtime),
-                    'memory': int(memory),
-                    'rate': r,
-                }
-            )
-
+        if with_test:
+            _, testl = await self.get_chal_state(chal_id)
 
         return (
             None,
@@ -405,7 +371,6 @@ class ChalService:
                 'acct_name': acct_name,
                 'timestamp': timestamp.astimezone(TZ),
                 'testl': testl,
-                'response': '\n'.join(final_response),
                 'comp_type': comp_type,
             },
         )

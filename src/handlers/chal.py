@@ -85,7 +85,7 @@ class ChalHandler(RequestHandler):
     async def get(self, chal_id):
         chal_id = int(chal_id)
 
-        err, chal = await ChalService.inst.get_chal(chal_id)
+        err, chal = await ChalService.inst.get_chal(chal_id, with_test=True)
         if err:
             return self.error(err)
 
@@ -110,7 +110,12 @@ class ChalHandler(RequestHandler):
         if self.contest:
             rechal = rechal and self.contest.is_admin(self.acct)
 
-        await self.render('chal', pro=pro, chal=chal, rechal=rechal)
+        final_response = []
+        for idx, test in enumerate(chal['testl'], start=1):
+            response = test['response']
+            final_response.append(f"Task {idx}: {response}")
+
+        await self.render('chal', pro=pro, chal=chal, rechal=rechal, response='\n'.join(final_response))
         return
 
 class _Encoder(json.JSONEncoder):
