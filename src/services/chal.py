@@ -37,7 +37,8 @@ class ChalConst:
         STATE_OLE: 'OLE',
         STATE_SJE: 'SJE',
         STATE_ERR: 'IE',
-        STATE_JUDGE: 'JDG',
+        STATE_JUDGE: 'Challenging',
+        STATE_NOTSTARTED: 'Not Started'
     }
 
     STATE_LONG_STR = {
@@ -78,6 +79,9 @@ class ChalConst:
         'python3': 'CPython 3.11.2',
         'java': 'OpenJDK 17.0.8',
     }
+
+    assert len(FILE_EXTENSION) == len(COMPILER_NAME)
+    assert sorted(FILE_EXTENSION.keys()) == sorted(COMPILER_NAME.keys())
 
     NORMAL_PRI = 0
     CONTEST_PRI = 1
