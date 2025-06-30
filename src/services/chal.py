@@ -88,6 +88,34 @@ class ChalConst:
 
 @dataclass
 class ChalSearchingParam:
+    """
+    A parameter container for building SQL WHERE clauses when filtering challenges.
+
+    Attributes:
+        pro (list[int] | None): A list of problem IDs to filter.
+            - If None: no filter is applied.
+            - If empty list: filters with `pro_id IS NULL`, which effectively excludes all challenges.
+
+        acct (list[int] | None): A list of account IDs to filter.
+            - If None: no filter is applied.
+            - If empty list: filters with `acct_id IS NULL`, which effectively excludes all challenges.
+
+        state (int | None): Challenge state to filter.
+            - If 0 or None: no filtering.
+            - If `ChalConst.STATE_NOTSTARTED`: adds `state IS NULL` to the filter.
+            - Other values: exact match (e.g., `ChalConst.STATE_AC`, `ChalConst.STATE_WA`, etc.).
+            - See `ChalConst.STATE_*` for available state constants.
+
+        compiler (str | None): Compiler type to filter.
+            - If "all": no filtering is applied.
+            - Otherwise, matches the exact compiler string.
+            - Valid values are defined in `ChalConst.COMPILER_NAME`.
+
+        contest (int): Contest ID to filter. Defaults to 0.
+            - If set to 0: matches only non-contest challenges.
+            - Otherwise: filters by contest ID.
+    """
+
     pro: list[int] | None
     acct: list[int] | None
     state: int | None
@@ -95,6 +123,13 @@ class ChalSearchingParam:
     contest: int = 0
 
     def get_sql_query_str(self):
+        """
+        Constructs the SQL query string fragment based on the parameter values.
+
+        Returns:
+            str: A SQL condition string suitable for use in a WHERE clause.
+        """
+
         query = [' ']
         if self.pro is not None:
             if len(self.pro):
@@ -126,31 +161,63 @@ class ChalSearchingParam:
 
 
 class ChalSearchingParamBuilder:
+    """
+    A builder class for incrementally constructing a `ChalSearchingParam` instance
+    using a fluent interface.
+
+    Example:
+        builder = ChalSearchingParamBuilder()
+        param = (
+            builder.pro([756, 1015, 1016, 1017])
+                   .acct([3227, 6057, 8199, 9787])
+                   .state(ChalConst.STATE_AC)
+                   .compiler("gcc")
+                   .contest(0)
+                   .build()
+        )
+
+    Notes:
+        - If `pro([])` or `acct([])` is passed an empty list,
+          the resulting SQL will include `IS NULL` filters,
+          which will **exclude all challenges**.
+        - `compiler` values must match one of `ChalConst.COMPILER_NAME`.
+        - `state` values should be selected from `ChalConst.STATE_*`.
+    """
+
     def __init__(self):
         self.param = ChalSearchingParam([], [], 0, "all", 0)
 
     def pro(self, pro: list[int] | None):
+        """Sets the list of problem IDs to filter."""
         self.param.pro = pro
         return self
 
     def acct(self, acct: list[int] | None):
+        """Sets the list of account IDs to filter."""
         self.param.acct = acct
         return self
 
     def state(self, state: int | None):
-        self.param.state = state
+        """Sets the challenge state to filter."""
+        if state is None:
+            self.param.state = 0
+        else:
+            self.param.state = state
         return self
 
     def compiler(self, compiler: str | None):
+        """Sets the compiler type to filter."""
         self.param.compiler = compiler
         return self
 
     def contest(self, contest: int | None):
+        """Sets the contest ID to filter."""
         if contest is not None:
             self.param.contest = contest
         return self
 
     def build(self) -> ChalSearchingParam:
+        """Returns the constructed `ChalSearchingParam` object."""
         return self.param
 
 from typing import Any
