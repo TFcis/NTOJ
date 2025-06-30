@@ -138,7 +138,11 @@
         })();
 
         {% if (flt.state == 100 or flt.state == 101) and isadmin %}
-            var chalids = {{ chalids }};
+            let chalids = [
+                {% for chal in challist %}
+                    {{ chal['chal_id'] }},
+                {% end %}
+            ];
             $('#rechalall').on('click', function(e) {
                 chalids.forEach(function(chalid) {
                     $.post('/oj/be/submit', {

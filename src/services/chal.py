@@ -4,8 +4,7 @@ import os
 
 import config
 from services.judge import JudgeServerClusterService
-from services.pro import ProService
-from services.user import Account
+from services.pro import ProConst
 
 TZ = datetime.timezone(datetime.timedelta(hours=+8))
 
@@ -111,6 +110,11 @@ class ChalSearchingParam:
             - Otherwise, matches the exact compiler string.
             - Valid values are defined in `ChalConst.COMPILER_NAME`.
 
+        allow_pro_statuses (list[int] | None): A list of allowed problem statuses to include.
+            - If None or empty: defaults to `[ProConst.STATUS_ONLINE]` only.
+            - Otherwise: filters by `problem.status IN (...)`.
+            - Valid values are defined in the range `ProConst.STATUS_ONLINE` to `ProConst.STATUS_HIDDEN`.
+
         contest (int): Contest ID to filter. Defaults to 0.
             - If set to 0: matches only non-contest challenges.
             - Otherwise: filters by contest ID.
@@ -120,6 +124,7 @@ class ChalSearchingParam:
     acct: list[int] | None
     state: int | None
     compiler: str | None
+    allow_pro_statuses: list[int] | None
     contest: int = 0
 
     def get_sql_query_str(self):
@@ -157,6 +162,11 @@ class ChalSearchingParam:
         else:
             query.append(' AND "challenge"."contest_id"=0 ')
 
+        if not self.allow_pro_statuses:
+            query.append(f' AND "problem"."status" IN ({",".join(map(str, [ProConst.STATUS_ONLINE]))}) ')
+        else:
+            query.append(f' AND "problem"."status" IN ({",".join(map(str, self.allow_pro_statuses))}) ')
+
         return ''.join(query)
 
 
@@ -172,6 +182,7 @@ class ChalSearchingParamBuilder:
                    .acct([3227, 6057, 8199, 9787])
                    .state(ChalConst.STATE_AC)
                    .compiler("gcc")
+                   .pro_statuses([ProConst.STATUS_ONLINE, ProConst.STATUS_HIDDEN])
                    .contest(0)
                    .build()
         )
@@ -182,10 +193,12 @@ class ChalSearchingParamBuilder:
           which will **exclude all challenges**.
         - `compiler` values must match one of `ChalConst.COMPILER_NAME`.
         - `state` values should be selected from `ChalConst.STATE_*`.
+        - If `pro_statuses()` is not called, only problems with `ProConst.STATUS_ONLINE` are included by default.
+          You can override this to include more statuses (e.g., `ProConst.STATUS_HIDDEN`).
     """
 
     def __init__(self):
-        self.param = ChalSearchingParam([], [], 0, "all", 0)
+        self.param = ChalSearchingParam([], [], 0, "all", [ProConst.STATUS_ONLINE], 0)
 
     def pro(self, pro: list[int] | None):
         """Sets the list of problem IDs to filter."""
@@ -215,6 +228,21 @@ class ChalSearchingParamBuilder:
         if contest is not None:
             self.param.contest = contest
         return self
+
+    def pro_statuses(self, pro_statuses: list[int]):
+        """
+        Sets the allowed problem statuses for filtering.
+
+        Args:
+            pro_statuses (list[int]): List of `ProConst.STATUS_*` values to include.
+
+        Raises:
+            AssertionError: If any status is outside the valid range
+                            `ProConst.STATUS_ONLINE` to `ProConst.STATUS_HIDDEN`.
+        """
+        for status in pro_statuses:
+            assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
+        self.param.allow_pro_statuses = pro_statuses
 
     def build(self) -> ChalSearchingParam:
         """Returns the constructed `ChalSearchingParam` object."""
@@ -459,11 +487,8 @@ class ChalService:
 
         return None, None
 
-    async def list_chal(self, off, num, acct: Account, flt: ChalSearchingParam):
-
+    async def list_chal(self, off: int, num: int, flt: ChalSearchingParam):
         fltquery = flt.get_sql_query_str()
-
-        max_status = ProService.inst.get_acct_limit(acct, contest=flt.contest != 0)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -476,13 +501,10 @@ class ChalService:
                     INNER JOIN "account"
                     ON "challenge"."acct_id" = "account"."acct_id"
                     INNER JOIN "problem"
-                    ON "challenge"."pro_id" = "problem"."pro_id" AND "problem"."status" <= {max_status}
+                    ON "challenge"."pro_id" = "problem"."pro_id"
                     LEFT JOIN "challenge_state"
                     ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                    WHERE 1=1
-                '''
-                + fltquery
-                + f'''
+                    WHERE 1=1 {fltquery}
                     ORDER BY "challenge"."chal_id" DESC OFFSET {off} LIMIT {num};
                 '''
             )
@@ -522,17 +544,16 @@ class ChalService:
 
         return None, challist
 
-    async def get_single_chal_state_in_list(
-            self,
-            chal_id: int,
-            acct: Account,
-    ):
+    async def get_calculated_chal_state(self, chal_id: int, allow_pro_statuses: list[int]):
+        assert len(allow_pro_statuses)
+        for status in allow_pro_statuses:
+            assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
+
         chal_id = int(chal_id)
-        max_status = ProService.inst.get_acct_limit(acct)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
-                '''
+                f'''
                     SELECT "challenge"."chal_id",
                     "challenge_state"."state", "challenge_state"."runtime", "challenge_state"."memory",
                     ROUND("challenge_state"."rate", problem.rate_precision) AS "rate"
@@ -540,9 +561,8 @@ class ChalService:
                     INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
                     INNER JOIN "problem" ON "challenge"."pro_id" = "problem"."pro_id"
                     INNER JOIN "challenge_state" ON "challenge"."chal_id" = "challenge_state"."chal_id"
-                    WHERE "problem"."status" <= $1 AND "challenge_state"."chal_id" = $2;
+                    WHERE "problem"."status" IN ({",".join(map(str, allow_pro_statuses))}) AND "challenge_state"."chal_id" = $1;
                 ''',
-                max_status,
                 chal_id,
             )
 
@@ -558,18 +578,22 @@ class ChalService:
             'rate': result['rate'],
         }
 
-    async def get_stat(self, acct: Account, flt: ChalSearchingParam):
+    async def get_chals_count(self, flt: ChalSearchingParam):
         fltquery = flt.get_sql_query_str()
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 (
-                        'SELECT COUNT(1) FROM "challenge" '
-                        'INNER JOIN "account" '
-                        'ON "challenge"."acct_id" = "account"."acct_id" '
-                        'LEFT JOIN "challenge_state" '
-                        'ON "challenge"."chal_id"="challenge_state"."chal_id" '
-                        'WHERE 1=1' + fltquery + ';'
+                    f'''
+                        SELECT COUNT(1) FROM "challenge"
+                        INNER JOIN "account"
+                        ON "challenge"."acct_id" = "account"."acct_id"
+                        INNER JOIN "problem"
+                        ON "challenge"."pro_id" = "problem"."pro_id"
+                        LEFT JOIN "challenge_state"
+                        ON "challenge"."chal_id"="challenge_state"."chal_id"
+                        WHERE 1=1 {fltquery};
+                    '''
                 )
             )
 
