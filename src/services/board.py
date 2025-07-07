@@ -50,8 +50,8 @@ class BoardService:
         return None, meta
 
     async def add_board(self, name, status, start, end, pro_list: list[int], acct_list: list[int]):
-        pro_list = list(set(pro_list))
-        acct_list = list(set(acct_list))
+        pro_list = list(sorted(set(pro_list)))
+        acct_list = list(sorted(set(acct_list)))
 
         async with self.db.acquire() as con:
             res = await con.fetch(
@@ -75,8 +75,8 @@ class BoardService:
     async def update_board(self, board_id, name, status, start, end, pro_list: list[int], acct_list: list[int]):
         board_id = int(board_id)
 
-        pro_list = list(set(pro_list))
-        acct_list = list(set(acct_list))
+        pro_list = list(sorted(set(pro_list)))
+        acct_list = list(sorted(set(acct_list)))
 
         async with self.db.acquire() as con:
             res = await con.fetch(
