@@ -58,7 +58,7 @@ class ManageBoardHandler(RequestHandler):
             if err:
                 return self.error(err)
 
-            acct_list = await self._get_acct_list(acct_list_str)
+            acct_list = self._get_acct_list(acct_list_str)
             pro_list = self._get_pro_list(pro_list_str)
             await LogService.inst.add_log(
                 f"{self.acct.name} was added to the contest \"{name}\".", 'manage.board.add',
@@ -94,7 +94,7 @@ class ManageBoardHandler(RequestHandler):
 
             pro_list_str = str(self.get_argument('pro_list'))
             acct_list_str = str(self.get_argument('acct_list'))
-            acct_list = await self._get_acct_list(acct_list_str)
+            acct_list = self._get_acct_list(acct_list_str)
             pro_list = self._get_pro_list(pro_list_str)
 
             await LogService.inst.add_log(
@@ -120,7 +120,7 @@ class ManageBoardHandler(RequestHandler):
             )
             self.error(('S', ''))
 
-    async def _get_acct_list(self, acct_list_str: str) -> list[int]:
+    def _get_acct_list(self, acct_list_str: str) -> list[int]:
         acct_list = acct_list_str.replace(' ', '').split(',')
 
         res = []
