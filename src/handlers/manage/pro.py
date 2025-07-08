@@ -17,6 +17,7 @@ from services.user import UserConst
 from services.pack import PackService
 
 PERMISSION_DENIED_ERROR = ('Eacces', 'Permission denied')
+ALLOW_STATUSES = [ProConst.STATUS_ONLINE, ProConst.STATUS_CONTEST, ProConst.STATUS_HIDDEN]
 
 class ManageProHandler(RequestHandler):
     @reqenv
@@ -25,7 +26,7 @@ class ManageProHandler(RequestHandler):
         if page is None:
             pageoff = int(self.get_argument('pageoff', default=0))
 
-            err, prolist = await ProService.inst.list_pro(self.acct)
+            err, prolist = await ProService.inst.list_pro(ALLOW_STATUSES)
             pro_total_cnt = len(prolist)
             prolist = prolist[pageoff: pageoff + 40]
 
@@ -35,7 +36,7 @@ class ManageProHandler(RequestHandler):
         elif page == "update":
             pro_id = int(self.get_argument('proid'))
 
-            err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
             if err:
                 return self.error(err)
 
@@ -48,7 +49,7 @@ class ManageProHandler(RequestHandler):
 
         elif page == "filemanager":
             pro_id = int(self.get_argument('proid'))
-            err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
             if err:
                 return self.error(err)
 
@@ -113,7 +114,7 @@ class ManageProHandler(RequestHandler):
                 return
 
 
-            err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
             if err:
                 return self.error(err)
 
@@ -152,14 +153,14 @@ class ManageProHandler(RequestHandler):
             self.error(('S', pro_id))
 
         elif page == "updatetests":
+            pro_id = int(self.get_argument('pro_id'))
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
+            if err:
+                return self.error(err)
+
             if reqtype == "preview":
-                pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
                 test_type = self.get_argument('type')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
 
                 if test_type not in ['out', 'in']:
                     return self.error(('Eparam', 'Invalid testcase file type'))
@@ -192,13 +193,8 @@ class ManageProHandler(RequestHandler):
                     self.error(('S', ''.join(content)))
 
             elif reqtype == "updateweight":
-                pro_id = int(self.get_argument('pro_id'))
                 group = int(self.get_argument('group'))
                 weight = int(self.get_argument('weight'))
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
 
                 test_group = pro['testm_conf']['test_group']
 
@@ -217,12 +213,7 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == "addtaskgroup":
-                pro_id = int(self.get_argument('pro_id'))
                 weight = int(self.get_argument('weight'))
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
 
                 test_group = pro['testm_conf']['test_group']
 
@@ -243,12 +234,7 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'deletetaskgroup':
-                pro_id = int(self.get_argument('pro_id'))
                 group = int(self.get_argument('group'))
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
 
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
@@ -269,13 +255,8 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'addsingletestcase':
-                pro_id = int(self.get_argument('pro_id'))
                 group = int(self.get_argument('group'))
                 testcase = self.get_argument('testcase')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not os.path.exists(f'{basepath}/{testcase}.in') or not os.path.exists(f'{basepath}/{testcase}.out'):
@@ -302,13 +283,8 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'deletesingletestcase':
-                pro_id = int(self.get_argument('pro_id'))
                 group = int(self.get_argument('group'))
                 testcase = self.get_argument('testcase')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
 
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
@@ -327,13 +303,8 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'renamesinglefile':
-                pro_id = int(self.get_argument('pro_id'))
                 old_filename = self.get_argument('old_filename')
                 new_filename = self.get_argument('new_filename')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
 
                 # check filename
                 basepath = f'problem/{pro_id}/res/testdata'
@@ -383,14 +354,9 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'updatesinglefile':
-                pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
                 test_type = self.get_argument('type')
                 pack_token = self.get_argument('pack_token')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
 
                 if test_type not in ['output', 'input']:
                     PackService.inst.clear(pack_token)
@@ -426,14 +392,9 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == "addsinglefile":
-                pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
                 input_pack_token = self.get_argument('input_pack_token')
                 output_pack_token = self.get_argument('output_pack_token')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 inputfile_path = f'{basepath}/{filename}.in'
@@ -470,12 +431,7 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'deletesinglefile':
-                pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not self._is_file_access_safe(basepath, f'{filename}.in'):
@@ -512,17 +468,17 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
         elif page == "filemanager":
+            ALLOW_PATH = ['http', 'res/check', 'res/make']
+            pro_id = int(self.get_argument('pro_id'))
+            basepath = self.get_argument('path')
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
+            if err:
+                return self.error(err)
+            if basepath not in ALLOW_PATH:
+                return self.error(('Eparam', 'Invalid basepath'))
+
             if reqtype == "preview":
-                pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
-                basepath = self.get_argument('path')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
-
-                if basepath not in ['http', 'res/check', 'res/make']:
-                    return self.error(('Eparam', 'Invalid basepath'))
 
                 basepath = f'problem/{pro_id}/{basepath}'
                 if not self._is_file_access_safe(basepath, filename):
@@ -552,18 +508,8 @@ class ManageProHandler(RequestHandler):
                     self.error(('S', ''.join(content)))
 
             elif reqtype == 'renamesinglefile':
-                pro_id = int(self.get_argument('pro_id'))
                 old_filename = self.get_argument('old_filename')
                 new_filename = self.get_argument('new_filename')
-                basepath = self.get_argument('path')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    self.error(err)
-                    return
-
-                if basepath not in ['http', 'res/check', 'res/make']:
-                    return self.error(('Eparam', 'Invalid basepath'))
 
                 basepath = f'problem/{pro_id}/{basepath}'
                 old_filepath = f'{basepath}/{old_filename}'
@@ -597,17 +543,8 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'updatesinglefile':
-                pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
                 pack_token = self.get_argument('pack_token')
-                basepath = self.get_argument('path')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
-
-                if basepath not in ['http', 'res/check', 'res/make']:
-                    return self.error(('Eparam', 'Invalid basepath'))
 
                 basepath = f'problem/{pro_id}/{basepath}'
                 filepath = f'{basepath}/{filename}'
@@ -637,17 +574,8 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'addsinglefile':
-                pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
                 pack_token = self.get_argument('pack_token')
-                basepath = self.get_argument('path')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
-
-                if basepath not in ['http', 'res/check', 'res/make']:
-                    return self.error(('Eparam', 'Invalid basepath'))
 
                 basepath = f'problem/{pro_id}/{basepath}'
                 filepath = f'{basepath}/{filename}'
@@ -677,16 +605,7 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'deletesinglefile':
-                pro_id = int(self.get_argument('pro_id'))
                 filename = self.get_argument('filename')
-                basepath = self.get_argument('path')
-
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
-                if err:
-                    return self.error(err)
-
-                if basepath not in ['http', 'res/check', 'res/make']:
-                    return self.error(('Eparam', 'Invalid basepath'))
 
                 basepath = f'problem/{pro_id}/{basepath}'
                 filepath = f'{basepath}/{filename}'
@@ -739,7 +658,7 @@ class ManageProHandler(RequestHandler):
                 err, _ = await ProService.inst.update_pro(
                     pro_id, name, status, None, None, tags, allow_submit
                 )
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
                 if err:
                     return self.error(err)
 
@@ -790,7 +709,7 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 pack_token = self.get_argument('pack_token')
 
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
                 if err:
                     return self.error(err)
 
@@ -831,7 +750,7 @@ class ManageProHandler(RequestHandler):
                 pro_id = int(self.get_argument('pro_id'))
                 limits = json.loads(self.get_argument('limits'))
 
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+                err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
                 if err:
                     return self.error(err)
 
@@ -883,7 +802,7 @@ class ManageProHandler(RequestHandler):
             if not can_submit:
                 return self.error(('Ejudge', 'No available judge'))
 
-            err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
             if err:
                 return self.error(err)
 

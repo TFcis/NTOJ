@@ -15,7 +15,7 @@ class ContestManageProHandler(RequestHandler):
     async def get(self):
         pro_list = []
         for pro_id in self.contest.pro_list.keys():
-            err, pro = await ProService.inst.get_pro(pro_id, is_contest=True)
+            err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_CONTEST_USER)
             if err:
                 continue
             pro_list.append(pro)

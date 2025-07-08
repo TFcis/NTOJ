@@ -36,12 +36,12 @@ class ChalListHandler(RequestHandler):
 
         isadmin = self.acct.is_kernel()
         if isadmin:
-            flt_builder.pro_statuses([ProConst.STATUS_ONLINE, ProConst.STATUS_HIDDEN])
+            flt_builder.pro_statuses(ProConst.PRO_STATUS_KERNEL_USER)
 
         if self.contest:
             isadmin = self.contest.is_admin(self.acct)
             flt_builder.contest(self.contest.contest_id)
-            flt_builder.pro_statuses([ProConst.STATUS_ONLINE, ProConst.STATUS_CONTEST])
+            flt_builder.pro_statuses(ProConst.PRO_STATUS_CONTEST_USER)
 
             EMPTY = []
             # NOTE: if user is admin, specifying contest_id will list all challenges for that contest; there's no need to specify an account separately.

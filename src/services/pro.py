@@ -6,7 +6,6 @@ from msgpack import packb, unpackb
 
 import config
 from services.pack import PackService
-from services.user import Account
 
 
 class ProConst:
@@ -39,6 +38,11 @@ class ProConst:
     PACKTYPE_CONTHTML = 2
     PACKTYPE_CONTPDF = 3
 
+    # NOTE: collection for problem status
+    PRO_STATUS_NORMAL_USER = [STATUS_ONLINE]
+    PRO_STATUS_KERNEL_USER = [STATUS_ONLINE, STATUS_HIDDEN]
+    PRO_STATUS_CONTEST_USER = [STATUS_ONLINE, STATUS_CONTEST]
+
 
 class ProService:
     def __init__(self, db, rs):
@@ -46,27 +50,25 @@ class ProService:
         self.rs = rs
         ProService.inst = self
 
-    async def get_pro(self, pro_id, acct: Account | None = None, is_contest: bool = False):
+    async def get_pro(self, pro_id: int, allow_statuses: list[int]):
         """
-        Parameter `is_contest` should be set to true if you want to get contest problems and your account type is not kernel.
-
         :param pro_id:
         :param acct:
         :param is_contest:
         :return:
         """
+        for status in allow_statuses:
+            assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
         pro_id = int(pro_id)
-        max_status = self.get_acct_limit(acct, is_contest)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 """
                     SELECT "name", "status", "tags", "allow_submit",
                     "check_type", "is_makefile", "chalmeta", "limit", "rate_precision"
-                    FROM "problem" WHERE "pro_id" = $1 AND "status" <= $2;
+                    FROM "problem" WHERE "pro_id" = $1;
                 """,
                 pro_id,
-                max_status,
             )
             if len(result) != 1:
                 return ("Enoext", "Problem not found"), None
@@ -83,6 +85,9 @@ class ProService:
                 json.loads(result["limit"]),
                 json.loads(result["chalmeta"]),
             )
+
+            if status not in allow_statuses:
+                return ("Eacces", "Permission denied"), None
 
             result = await con.fetch(
                 """
@@ -120,27 +125,23 @@ class ProService:
             },
         )
 
-    async def list_pro(self, acct: Account | None = None, is_contest=False):
-        if acct is None:
-            max_status = ProConst.STATUS_ONLINE
+    async def list_pro(self, allow_pro_statuses: list[int]):
+        for status in allow_pro_statuses:
+            assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
 
-        else:
-            max_status = self.get_acct_limit(acct, contest=is_contest)
-
-        field = f"{max_status}|{[1, 2]}"  # TODO: Remove class column on db
+        field = f"{allow_pro_statuses}"
         if (prolist := (await self.rs.hget("prolist", field))) is not None:
             prolist = unpackb(prolist)
 
         else:
             async with self.db.acquire() as con:
                 result = await con.fetch(
-                    """
+                    f"""
                         SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."tags"
                         FROM "problem"
-                        WHERE "problem"."status" <= $1
+                        WHERE "problem"."status" IN ({"".join(map(str, allow_pro_statuses))})
                         ORDER BY "pro_id" ASC;
-                    """,
-                    max_status,
+                    """
                 )
 
             prolist = []
@@ -278,20 +279,6 @@ class ProService:
         await self.rs.hdel('pro_rate', pro_id)
 
         return None, None
-
-    # TODO: 把這破函數命名改一下
-    def get_acct_limit(self, acct: Account | None = None, contest=False):
-        if contest:
-            return ProConst.STATUS_CONTEST
-
-        elif acct is None:
-            return ProConst.STATUS_ONLINE
-
-        elif acct.is_kernel():
-            return ProConst.STATUS_HIDDEN
-
-        else:
-            return ProConst.STATUS_ONLINE
 
     async def unpack_pro(self, pro_id, pack_type, pack_token):
         from services.chal import ChalConst

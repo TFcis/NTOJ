@@ -54,7 +54,10 @@ class ProsetHandler(RequestHandler):
         if proclass_id == 0:
             proclass_id = None
 
-        err, prolist = await ProService.inst.list_pro(self.acct)
+        allow_statuses = [ProConst.STATUS_ONLINE]
+        if self.acct.is_kernel():
+            allow_statuses.append(ProConst.STATUS_HIDDEN)
+        err, prolist = await ProService.inst.list_pro(allow_statuses)
 
         proclass = None
         if proclass_id:
@@ -228,21 +231,25 @@ class ProsetHandler(RequestHandler):
 
 class ProStaticHandler(RequestHandler):
     @reqenv
-    async def get(self, pro_id, path):
+    async def get(self, pro_id: int, path: str):
         pro_id = int(pro_id)
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.contest:
             if not self.contest.is_pro(pro_id):
                 return self.error(('Enoext', 'Problem not in contest'))
 
-        err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
+            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
+        else:
+            if self.acct.is_kernel():
+                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
+
+
+        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
             return self.error(err)
 
         if pro['status'] == ProConst.STATUS_CONTEST:
-            if not self.contest:
-                return self.error(PERMISSION_DENIED_ERROR)
-
-            elif not (self.contest.is_running() or self.contest.is_admin(self.acct)):
+            if not (self.contest.is_running() or self.contest.is_admin(self.acct)):
                 return self.error(PERMISSION_DENIED_ERROR)
 
         if path.endswith('pdf'):
@@ -264,6 +271,7 @@ class ProHandler(RequestHandler):
     @reqenv
     async def get(self, pro_id):
         pro_id = int(pro_id)
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
 
         if self.contest:
             if not self.contest.is_pro(pro_id):
@@ -275,12 +283,15 @@ class ProHandler(RequestHandler):
             elif not self.contest.is_running() and not self.contest.is_member(self.acct):
                 return self.error(PERMISSION_DENIED_ERROR)
 
-        err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
+            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
+
+        else:
+            if self.acct.is_kernel():
+                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
+
+        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
             return self.error(err)
-
-        if pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
-            return self.error(PERMISSION_DENIED_ERROR)
 
         # NOTE: Guest cannot see tags
         # NOTE: Admin can see tags
@@ -333,7 +344,14 @@ class ProTagsHandler(RequestHandler):
         tags = self.get_argument('tags')
         pro_id = int(self.get_argument('pro_id'))
 
-        err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
+        if self.contest:
+            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
+        else:
+            if self.acct.is_kernel():
+                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
+
+        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
             return self.error(err)
 
