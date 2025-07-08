@@ -5,7 +5,7 @@ import json
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService, ChalSearchingParamBuilder
-from services.pro import ProService
+from services.pro import ProService, ProConst
 from services.user import UserService
 from services.contests import UserStatus
 from utils.numeric import parse_list_str
@@ -14,6 +14,8 @@ from utils.numeric import parse_list_str
 class ChalListHandler(RequestHandler):
     @reqenv
     async def get(self):
+        flt_builder = ChalSearchingParamBuilder()
+
         pageoff = int(self.get_argument('pageoff', default=0))
 
         ppro_id = str(self.get_argument('proid', default=''))
@@ -27,15 +29,23 @@ class ChalListHandler(RequestHandler):
             query_accts = None
 
         state = int(self.get_argument('state', default=0))
+        flt_builder.state(state)
+
         compiler_type = self.get_argument('compiler_type', default='all')
+        flt_builder.compiler(compiler_type)
 
-        contest_id = 0
+        isadmin = self.acct.is_kernel()
+        if isadmin:
+            flt_builder.pro_statuses([ProConst.STATUS_ONLINE, ProConst.STATUS_HIDDEN])
+
         if self.contest:
-            contest_id = self.contest.contest_id
+            isadmin = self.contest.is_admin(self.acct)
+            flt_builder.contest(self.contest.contest_id)
+            flt_builder.pro_statuses([ProConst.STATUS_ONLINE, ProConst.STATUS_CONTEST])
 
+            EMPTY = []
             # NOTE: if user is admin, specifying contest_id will list all challenges for that contest; there's no need to specify an account separately.
-            EMPTY = [-1]
-            if not self.contest.is_admin(self.acct):
+            if not isadmin:
                 if not self.contest.is_start():
                     query_accts = EMPTY
                 elif self.contest.is_running():
@@ -51,18 +61,10 @@ class ChalListHandler(RequestHandler):
                     else:
                         query_accts = [self.acct.acct_id]
 
-        flt = ChalSearchingParamBuilder().pro(query_pros).acct(query_accts).state(state).compiler(
-            compiler_type).contest(contest_id).build()
+        flt = flt_builder.pro(query_pros).acct(query_accts).build()
 
-        _, chalstat = await ChalService.inst.get_stat(self.acct, flt)
-
-        _, challist = await ChalService.inst.list_chal(pageoff, 20, self.acct, flt)
-
-        isadmin = self.acct.is_kernel()
-        if self.contest:
-            isadmin = self.acct.is_kernel() and self.contest.is_admin(self.acct)
-
-        chalids = [chal['chal_id'] for chal in challist]
+        _, chalstat = await ChalService.inst.get_chals_count(flt)
+        _, challist = await ChalService.inst.list_chal(pageoff, 20, flt)
 
         await self.render(
             'challist',
@@ -72,7 +74,6 @@ class ChalListHandler(RequestHandler):
             pageoff=pageoff,
             ppro_id=ppro_id,
             pacct_id=pacct_id,
-            chalids=json.dumps(chalids),
             isadmin=isadmin,
             contest=self.contest,
         )
@@ -84,7 +85,7 @@ class ChalHandler(RequestHandler):
     async def get(self, chal_id):
         chal_id = int(chal_id)
 
-        err, chal = await ChalService.inst.get_chal(chal_id)
+        err, chal = await ChalService.inst.get_chal(chal_id, with_test=True)
         if err:
             return self.error(err)
 
@@ -109,7 +110,12 @@ class ChalHandler(RequestHandler):
         if self.contest:
             rechal = rechal and self.contest.is_admin(self.acct)
 
-        await self.render('chal', pro=pro, chal=chal, rechal=rechal)
+        final_response = []
+        for idx, test in enumerate(chal['testl'], start=1):
+            response = test['response']
+            final_response.append(f"Task {idx}: {response}")
+
+        await self.render('chal', pro=pro, chal=chal, rechal=rechal, response='\n'.join(final_response))
         return
 
 class _Encoder(json.JSONEncoder):
@@ -140,29 +146,30 @@ class ChalListNewStateHandler(WebSocketSubHandler):
 
             chal_id = int(msg['data'])
             if self.first_chal_id <= chal_id <= self.last_chal_id:
-                _, new_state = await ChalService.inst.get_single_chal_state_in_list(chal_id, self.acct)
+                _, new_state = await ChalService.inst.get_calculated_chal_state(chal_id, self.allow_pro_statuses)
                 await self.write_message(json.dumps(new_state, cls=_Encoder))
 
     async def open(self):
         self.first_chal_id = -1
         self.last_chal_id = -1
-        self.acct = None
+        self.allow_pro_statuses = [ProConst.STATUS_ONLINE]
 
         await self.p.subscribe('challiststatesub')
 
         self.task = asyncio.tasks.Task(self.listen_challiststate())
 
     async def on_message(self, msg):
-        if self.acct is None:
+        # TODO: contest challist
+        # TODO: user authentication
+
+        if self.first_chal_id == -1:
             j = json.loads(msg)
 
             self.first_chal_id = int(j["first_chal_id"])
             self.last_chal_id = int(j["last_chal_id"])
             err, acct = await UserService.inst.info_acct(acct_id=int(j["acct_id"]))
-            if err:
-                self.on_close()
-
-            self.acct = acct
+            if not err and acct.is_kernel():
+                self.allow_pro_statuses.append(ProConst.STATUS_HIDDEN)
 
 
 class ChalNewStateHandler(WebSocketSubHandler):
