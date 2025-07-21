@@ -465,6 +465,8 @@ class ProService:
             )
             await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
 
+        await self.rs.delete("prolist")
+
         return None, None
 
 class ProClassConst:
