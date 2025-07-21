@@ -361,7 +361,7 @@ class ProTagsHandler(RequestHandler):
         )
 
         err, _ = await ProService.inst.update_pro(
-            pro_id, pro['name'], pro['status'], '', None, tags, pro['allow_submit']
+            pro_id, pro['name'], pro['status'], tags, pro['allow_submit']
         )
 
         if err:

@@ -88,7 +88,7 @@ class ContestManageProHandler(RequestHandler):
             if not can_submit:
                 return self.error(('Ejudge', 'No judge available'))
 
-            err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=True)
+            err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_CONTEST_USER)
             if err:
                 return self.error(err)
 
@@ -131,11 +131,11 @@ class ContestManageProHandler(RequestHandler):
             if not self.contest.is_end():
                 return self.error(('Etime', 'Contest is not over yet'))
 
-            err, pro = await ProService.inst.get_pro(pro_id, is_contest=True)
+            err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_CONTEST_USER)
             if err:
                 return self.error(err)
 
-            err, _ = await ProService.inst.update_pro(pro_id, pro['name'], ProConst.STATUS_ONLINE, None, None, pro['tags'])
+            err, _ = await ProService.inst.update_pro(pro_id, pro['name'], ProConst.STATUS_ONLINE, pro['tags'])
             if err:
                 return self.error(err)
 

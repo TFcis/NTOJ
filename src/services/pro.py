@@ -34,6 +34,8 @@ class ProConst:
         CHECKER_CMS: "cms",
     }
 
+    STR_2_CHECKER_TYPE = {s: t for s, t in CHECKER_TYPE.items()}
+
     PACKTYPE_FULL = 1
     PACKTYPE_CONTHTML = 2
     PACKTYPE_CONTPDF = 3
@@ -162,7 +164,7 @@ class ProService:
 
         return None, prolist
 
-    async def add_pro(self, name, status, pack_token):
+    async def add_pro(self, name: str, status: int):
         name_len = len(name)
         if name_len < ProConst.NAME_MIN:
             return ("Enamemin", "Problem name too short"), None
@@ -186,36 +188,28 @@ class ProService:
 
             pro_id = int(result[0]["pro_id"])
 
-            if pack_token:
-                err, _ = await self.unpack_pro(pro_id, ProConst.PACKTYPE_FULL, pack_token)
-                if err:
-                    return err, None
-
-                await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
-
-            else:
-                os.mkdir(f"problem/{pro_id}")
-                os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-                os.mkdir(f"problem/{pro_id}/res")
-                os.mkdir(f"problem/{pro_id}/http")
-                os.mkdir(f"problem/{pro_id}/res/testdata")
-                os.symlink(
-                    os.path.abspath(f"problem/{pro_id}/http"),
-                    f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
-                )
+            os.mkdir(f"problem/{pro_id}")
+            os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
+            os.mkdir(f"problem/{pro_id}/res")
+            os.mkdir(f"problem/{pro_id}/http")
+            os.mkdir(f"problem/{pro_id}/res/testdata")
+            os.symlink(
+                os.path.abspath(f"problem/{pro_id}/http"),
+                f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
+            )
 
         await self.rs.delete("prolist")
 
         return None, pro_id
 
     # TODO: Too many args
-    async def update_pro(self, pro_id, name, status, pack_type, pack_token=None, tags="", allow_submit=True):
+    async def update_pro(self, pro_id: int, name: str, status: int, tags="", allow_submit=True):
+        assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
         name_len = len(name)
         if name_len < ProConst.NAME_MIN:
             return ("Enamemin", "Problem name too short"), None
         if name_len > ProConst.NAME_MAX:
             return ("Enamemax", "Problem name too long"), None
-        del name_len
         if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
         if tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", tags):
@@ -237,12 +231,6 @@ class ProService:
             if len(result) != 1:
                 return ("Enoext", "Problem not found"), None
 
-            if pack_token is not None:
-                err, _ = await self.unpack_pro(pro_id, pack_type, pack_token)
-                if err:
-                    return err, None
-
-                await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
 
         await self.rs.delete("prolist")
 
@@ -280,112 +268,101 @@ class ProService:
 
         return None, None
 
-    async def unpack_pro(self, pro_id, pack_type, pack_token):
+    async def unpack_pro(self, pro_id: int, pack_token: str):
         from services.chal import ChalConst
-        if pack_type == ProConst.PACKTYPE_FULL:
-            err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
-            if err:
-                return err, None
+        err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
+        if err:
+            return err, None
 
-            try:
-                os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-                os.symlink(
-                    os.path.abspath(f"problem/{pro_id}/http"),
-                    f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
-                )
+        try:
+            os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
+            os.symlink(
+                os.path.abspath(f"problem/{pro_id}/http"),
+                f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
+            )
 
-            except FileExistsError:
-                pass
+        except FileExistsError:
+            pass
 
-            try:
-                with open(f"problem/{pro_id}/conf.json") as conf_f:
-                    conf = json.load(conf_f)
-            except json.decoder.JSONDecodeError:
-                return ("Econf", "Problem config json syntax error"), None
+        try:
+            with open(f"problem/{pro_id}/conf.json") as conf_f:
+                conf = json.load(conf_f)
+        except json.decoder.JSONDecodeError:
+            return ("Econf", "Problem config json syntax error"), None
 
-            is_makefile = False
-            if 'compile' in conf:
-                is_makefile = conf["compile"] == 'makefile'
-            elif 'is_makefile' in conf:
-                is_makefile = conf["is_makefile"]
+        is_makefile = False
+        if 'compile' in conf:
+            is_makefile = conf["compile"] == 'makefile'
+        elif 'is_makefile' in conf:
+            is_makefile = conf["is_makefile"]
 
-            check_type = self._get_check_type(conf["check"])
+        check_type = ProConst.STR_2_CHECKER_TYPE[conf["check"]]
 
-            ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
-            if is_makefile:
-                ALLOW_COMPILERS = {'default', 'gcc', 'g++', 'clang', 'clang++'}
+        ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
+        if is_makefile:
+            ALLOW_COMPILERS = {'default', 'gcc', 'g++', 'clang', 'clang++'}
 
-            if "limit" in conf:
-                limits = {}
-                for comp_type, limit in conf["limit"].items():
-                    if comp_type not in ALLOW_COMPILERS:
-                        continue
+        if "limit" in conf:
+            limits = {}
+            for comp_type, limit in conf["limit"].items():
+                if comp_type not in ALLOW_COMPILERS:
+                    continue
 
-                    try:
-                        limit['timelimit'] = max(int(limit['timelimit']), 0)
-                        limit['memlimit'] = max(int(limit['memlimit']) * 1024, 0)
-                    except (ValueError, KeyError):
-                        continue
-
-                    limits[comp_type] = limit
-
-                if 'default' not in limits:
-                    return ("Econf", "Problem limit config require default value"), None
-
-            elif 'timelimit' in conf and 'memlimit' in conf:
                 try:
-                    limits = {
-                        'default': {
-                            'timelimit': int(conf["timelimit"]),
-                            'memlimit': int(conf["memlimit"]) * 1024
-                        }
-                    }
+                    limit['timelimit'] = max(int(limit['timelimit']), 0)
+                    limit['memlimit'] = max(int(limit['memlimit']) * 1024, 0)
+                except KeyError as e:
+                    limit[e.args[0]] = 0
                 except ValueError:
-                    return ("Econf", "Problem limit config have invalid value"), None
-            else:
-                 return ("Econf", "Problem config require limit or timelimit/memlimit"), None
+                    continue
 
-            chalmeta = {}
-            if 'metadata' in conf:
-                chalmeta = conf["metadata"]  # INFO: ioredir data
+                limits[comp_type] = limit
 
-            async with self.db.acquire() as con:
-                await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
-                await con.execute(
-                    'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4 WHERE pro_id = $5',
-                    is_makefile, check_type, json.dumps(chalmeta), json.dumps(limits), pro_id
-                )
+            if 'default' not in limits:
+                return ("Econf", "Problem limit config require default value"), None
 
-                insert_values = []
+        elif 'timelimit' in conf and 'memlimit' in conf:
+            try:
+                limits = {
+                    'default': {
+                        'timelimit': int(conf["timelimit"]),
+                        'memlimit': int(conf["memlimit"]) * 1024
+                    }
+                }
+            except ValueError:
+                return ("Econf", "Problem limit config have invalid value"), None
+        else:
+                return ("Econf", "Problem config require limit or timelimit/memlimit"), None
 
-                for test_idx, test_conf in enumerate(conf["test"]):
-                    for i in range(len(test_conf["data"])):
-                        test_conf["data"][i] = str(test_conf["data"][i])
+        chalmeta = {}
+        if 'metadata' in conf:
+            chalmeta = conf["metadata"]  # INFO: ioredir data
 
-                    metadata = {"data": test_conf["data"]}
-                    insert_values.append((pro_id, test_idx, test_conf['weight'], json.dumps(metadata)))
+        async with self.db.acquire() as con:
+            await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
+            await con.execute(
+                'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4 WHERE pro_id = $5',
+                is_makefile, check_type, json.dumps(chalmeta), json.dumps(limits), pro_id
+            )
 
-                await con.executemany(
-                    '''INSERT INTO "test_config"
-                        ("pro_id", "test_idx", "weight", "metadata")
-                        VALUES ($1, $2, $3, $4);''',
-                    insert_values
-                )
+            insert_values = []
 
+            for test_idx, test_conf in enumerate(conf["test"]):
+                for i in range(len(test_conf["data"])):
+                    test_conf["data"][i] = str(test_conf["data"][i])
 
+                metadata = {"data": test_conf["data"]}
+                insert_values.append((pro_id, test_idx, test_conf['weight'], json.dumps(metadata)))
+
+            await con.executemany(
+                '''INSERT INTO "test_config"
+                    ("pro_id", "test_idx", "weight", "metadata")
+                    VALUES ($1, $2, $3, $4);''',
+                insert_values
+            )
+
+        await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
         return None, None
-
-    def _get_check_type(self, s: str):
-        if s == "diff":
-            return ProConst.CHECKER_DIFF
-        elif s == "diff-strict":
-            return ProConst.CHECKER_DIFF_STRICT
-        elif s == "diff-float":
-            return ProConst.CHECKER_DIFF_FLOAT
-        elif s == "ioredir":
-            return ProConst.CHECKER_IOREDIR
-        elif s == "cms":
-            return ProConst.CHECKER_CMS
 
 class ProClassConst:
     OFFICIAL_PUBLIC = 0

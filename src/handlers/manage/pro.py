@@ -143,10 +143,17 @@ class ManageProHandler(RequestHandler):
             if mode == "upload":
                 pack_token = self.get_argument('pack_token')
 
-            err, pro_id = await ProService.inst.add_pro(name, status, pack_token)
+            err, pro_id = await ProService.inst.add_pro(name, status)
             await LogService.inst.add_log(
-                f"{self.acct.name} has sent a request to add the problem #{pro_id}", 'manage.pro.add.pro'
+                f"{self.acct.name} has sent a request to add the problem #{pro_id}", 'manage.pro.add.pro',
+                {
+                    'acct_id': self.acct.acct_id
+                }
             )
+            if err:
+                return self.error(err)
+
+            err, _ = await ProService.inst.unpack_pro(pro_id, pack_token)
             if err:
                 return self.error(err)
 
@@ -656,7 +663,7 @@ class ManageProHandler(RequestHandler):
                         return self.error(('Econf', 'Challenge metadata json syntax error'))
 
                 err, _ = await ProService.inst.update_pro(
-                    pro_id, name, status, None, None, tags, allow_submit
+                    pro_id, name, status, tags, allow_submit
                 )
                 err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
                 if err:
@@ -713,10 +720,7 @@ class ManageProHandler(RequestHandler):
                 if err:
                     return self.error(err)
 
-                err, _ = await ProService.inst.update_pro(
-                    pro_id, pro['name'], pro['status'], ProConst.PACKTYPE_FULL, pack_token, pro['tags'], pro['allow_submit']
-                )
-
+                err, _ = await ProService.inst.unpack_pro(pro_id, pack_token)
                 if err:
                     PackService.inst.clear(pack_token)
                     await LogService.inst.add_log(
