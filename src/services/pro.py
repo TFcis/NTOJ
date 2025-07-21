@@ -306,8 +306,8 @@ class ProService:
                     - Keys are compiler types (e.g., "gcc", "clang", "default").
                         Allowed compilers can be found in `ChalConst.ALLOW_COMPILERS`.
                     - Each value must contain:
-                        - "timelimit" (int): Time limit in seconds (≥ 0)
-                        - "memlimit" (int): Memory limit in kilobytes (≥ 0)
+                        - "timelimit" (int): Time limit in seconds (>= 0)
+                        - "memlimit" (int): Memory limit in kilobytes (>= 0)
                     - Must include a "default" configuration.
 
                 - rate_precision (int): Precision of the score (e.g., 0 for integers, 2 for 2 decimal places).

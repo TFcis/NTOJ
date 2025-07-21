@@ -7,7 +7,7 @@ from msgpack import packb, unpackb
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
-from services.pro import ProService, ProClassService, ProClassConst
+from services.pro import ProClassService, ProClassConst
 from services.rate import RateService
 from services.user import UserConst, UserService
 from services.chal import ChalConst
@@ -28,7 +28,6 @@ class AcctHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        max_status = ProService.inst.get_acct_limit(self.acct)
         async with self.db.acquire() as con:
             prolist = await con.fetch(
                 '''
@@ -36,7 +35,7 @@ class AcctHandler(RequestHandler):
                     WHERE "status" <= $1
                     ORDER BY "pro_id" ASC;
                 ''',
-                max_status,
+                UserConst.ACCTTYPE_USER,
             )
 
         err, ratemap = await RateService.inst.map_rate_acct(acct)

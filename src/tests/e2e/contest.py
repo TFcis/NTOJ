@@ -791,7 +791,7 @@ class ContestTest(AsyncTest):
             res = user_session.get('pro/7')
             self.assertNotIn('Eacces', res.text)
             res = user_session.get('pro/8')
-            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not found'))
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
         # freeze_scoreboard_period: int = 0
 
