@@ -463,8 +463,8 @@ class ProService:
                     VALUES ($1, $2, $3, $4);''',
                 insert_values
             )
+            await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
 
-        await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
         return None, None
 
 class ProClassConst:
