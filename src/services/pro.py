@@ -39,7 +39,7 @@ class ProConst:
         CHECKER_CMS: "cms",
     }
 
-    STR_2_CHECKER_TYPE = {s: t for s, t in CHECKER_TYPE.items()}
+    STR_2_CHECKER_TYPE = {t: s for s, t in CHECKER_TYPE.items()}
 
     PACKTYPE_FULL = 1
     PACKTYPE_CONTHTML = 2
