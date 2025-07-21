@@ -89,8 +89,10 @@ class ChalHandler(RequestHandler):
         if err:
             return self.error(err)
 
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if chal['contest_id'] and not self.contest:
             return self.error(('Enoext', 'Contest not found'))
+
         elif self.contest:
             if not self.contest.is_start():
                 if self.contest.is_admin(acct_id=chal['acct_id']) and not self.contest.is_admin(self.acct):
@@ -100,7 +102,12 @@ class ChalHandler(RequestHandler):
                 if self.contest.hide_admin and self.contest.is_admin(acct_id=chal['acct_id']) and not self.contest.is_admin(self.acct):
                     return self.error(('Eacces', 'Permission denied'))
 
-        err, pro = await ProService.inst.get_pro(chal['pro_id'], self.acct, is_contest=self.contest is not None)
+            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
+
+        elif self.acct.is_kernel():
+            allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
+
+        err, pro = await ProService.inst.get_pro(chal['pro_id'], allow_statuses)
         if err:
             return self.error(err)
 
