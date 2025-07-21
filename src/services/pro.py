@@ -9,6 +9,11 @@ from services.pack import PackService
 
 
 class ProConst:
+    """
+    Constants used in problem management for status codes, checker types,
+    name/code length constraints, and allowed user problem status sets.
+    """
+
     NAME_MIN = 1
     NAME_MAX = 64
     CODE_MAX = 16384
@@ -54,11 +59,18 @@ class ProService:
 
     async def get_pro(self, pro_id: int, allow_statuses: list[int]):
         """
-        :param pro_id:
-        :param acct:
-        :param is_contest:
-        :return:
+        Fetch problem configuration and metadata by ID, ensuring it's in the allowed status.
+
+        Args:
+            pro_id (int): The ID of the problem to fetch.
+            allow_statuses (list[int]): Allowed problem statuses for access.
+
+        Returns:
+            Tuple[Optional[Tuple[str, str]], Optional[dict]]:
+                - Error code and message if any error occurs.
+                - A dictionary containing problem metadata if successful.
         """
+
         for status in allow_statuses:
             assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
         pro_id = int(pro_id)
@@ -128,6 +140,18 @@ class ProService:
         )
 
     async def list_pro(self, allow_pro_statuses: list[int]):
+        """
+        List problems with statuses in `allow_pro_statuses`, with Redis caching.
+
+        Args:
+            allow_pro_statuses (list[int]): List of allowed statuses.
+
+        Returns:
+            Tuple[None, list[dict]]:
+                - None for error placeholder (always succeeds).
+                - List of problems matching the given statuses.
+        """
+
         for status in allow_pro_statuses:
             assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
 
@@ -165,6 +189,19 @@ class ProService:
         return None, prolist
 
     async def add_pro(self, name: str, status: int):
+        """
+        Add a new problem to the system with initial folders and symbolic links.
+
+        Args:
+            name (str): The name of the problem.
+            status (int): Initial status (online/contest/hidden).
+
+        Returns:
+            Tuple[Optional[Tuple[str, str]], Optional[int]]:
+                - Error code and message if invalid.
+                - The newly created problem ID if successful.
+        """
+
         name_len = len(name)
         if name_len < ProConst.NAME_MIN:
             return ("Enamemin", "Problem name too short"), None
@@ -202,8 +239,23 @@ class ProService:
 
         return None, pro_id
 
-    # TODO: Too many args
     async def update_pro(self, pro_id: int, name: str, status: int, tags="", allow_submit=True):
+        """
+        Update problem metadata such as name, status, tags, and submission permission.
+
+        Args:
+            pro_id (int): The ID of the problem to update.
+            name (str): New name.
+            status (int): New status (online/contest/hidden).
+            tags (str, optional): Tag string. Defaults to "".
+            allow_submit (bool, optional): Submission permission. Defaults to True.
+
+        Returns:
+            Tuple[Optional[Tuple[str, str]], None]:
+                - Error code and message if any error occurs.
+                - None if successful.
+        """
+
         assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
         name_len = len(name)
         if name_len < ProConst.NAME_MIN:
@@ -236,7 +288,45 @@ class ProService:
 
         return None, None
 
-    async def update_test_config(self, pro_id, testm_conf: dict):
+    async def update_test_config(self, pro_id: int, testm_conf: dict):
+        """
+        Update the test configuration (testm_conf) for a given problem.
+
+        Args:
+            pro_id (int): The ID of the problem to update.
+            testm_conf (dict): The test configuration, with the following structure:
+
+                - is_makefile (bool): Whether the problem uses a Makefile-based compilation.
+                See: https://wiki.tfcis.org/TOJ#Makefile%E9%A1%8C%E7%9B%AE_(%E7%B7%A8%E8%AD%AF%E4%BA%92%E5%8B%95%E9%A1%8C)
+
+                - check_type (int): One of the values defined in ProConst.CHECKER_TYPE, indicating
+                the type of checker (e.g., diff, float-diff, ioredir).
+
+                - limit (dict[str, dict[str, int]]): Per-language time and memory limits.
+                    - Keys are compiler types (e.g., "gcc", "clang", "default").
+                        Allowed compilers can be found in `ChalConst.ALLOW_COMPILERS`.
+                    - Each value must contain:
+                        - "timelimit" (int): Time limit in seconds (≥ 0)
+                        - "memlimit" (int): Memory limit in kilobytes (≥ 0)
+                    - Must include a "default" configuration.
+
+                - rate_precision (int): Precision of the score (e.g., 0 for integers, 2 for 2 decimal places).
+
+                - test_group (dict[int, dict]): Configuration for each test group (subtask). Each key is
+                a test group index, and each value is a dict:
+                    - "weight" (int): The score weight of this test group.
+                    - "metadata" (dict): Metadata describing the test cases, e.g., input/output file names.
+
+        Returns:
+            Tuple[None, None]: Always returns (None, None) on success.
+
+        Side Effects:
+            - All existing `Challenge` records associated with this problem will be reset to
+            the `NotStart` state, due to test configuration changes.
+            - `test_valid_rate` materialized view will be refreshed.
+            - Related Redis cache (`rate`, `pro_rate`) will be invalidated.
+        """
+
         insert_values = []
         is_makefile = testm_conf['is_makefile']
         check_type = testm_conf['check_type']
@@ -269,6 +359,19 @@ class ProService:
         return None, None
 
     async def unpack_pro(self, pro_id: int, pack_token: str):
+        """
+        Unpack and apply a packed problem archive.
+
+        Args:
+            pro_id (int): The ID of the problem to unpack into.
+            pack_token (str): Token for identifying the uploaded archive.
+
+        Returns:
+            Tuple[Optional[Tuple[str, str]], None]:
+                - Error code and message if unpacking or config fails.
+                - None if successful.
+        """
+
         from services.chal import ChalConst
         err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
         if err:
@@ -417,7 +520,7 @@ class ProClassService:
     async def remove_proclass(self, proclass_id: int):
         async with self.db.acquire() as con:
             result: str = await con.execute('DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id))
-            affected_row_cnt = int(result.split(" ")[1]) # DELETE \d+
+            affected_row_cnt = int(result.split(" ")[1]) # NOTE: DELETE \d+
             if affected_row_cnt == 0:
                 return ('Enoext', 'Bulletin not found'), None
 
