@@ -153,9 +153,10 @@ class ManageProHandler(RequestHandler):
             if err:
                 return self.error(err)
 
-            err, _ = await ProService.inst.unpack_pro(pro_id, pack_token)
-            if err:
-                return self.error(err)
+            if mode == "upload":
+                err, _ = await ProService.inst.unpack_pro(pro_id, pack_token)
+                if err:
+                    return self.error(err)
 
             self.error(('S', pro_id))
 

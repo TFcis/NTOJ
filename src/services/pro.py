@@ -165,7 +165,7 @@ class ProService:
                     f"""
                         SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."tags"
                         FROM "problem"
-                        WHERE "problem"."status" IN ({"".join(map(str, allow_pro_statuses))})
+                        WHERE "problem"."status" IN ({",".join(map(str, allow_pro_statuses))})
                         ORDER BY "pro_id" ASC;
                     """
                 )
