@@ -6,10 +6,14 @@ from msgpack import packb, unpackb
 
 import config
 from services.pack import PackService
-from services.user import Account
 
 
 class ProConst:
+    """
+    Constants used in problem management for status codes, checker types,
+    name/code length constraints, and allowed user problem status sets.
+    """
+
     NAME_MIN = 1
     NAME_MAX = 64
     CODE_MAX = 16384
@@ -35,9 +39,16 @@ class ProConst:
         CHECKER_CMS: "cms",
     }
 
+    STR_2_CHECKER_TYPE = {t: s for s, t in CHECKER_TYPE.items()}
+
     PACKTYPE_FULL = 1
     PACKTYPE_CONTHTML = 2
     PACKTYPE_CONTPDF = 3
+
+    # NOTE: collection for problem status
+    PRO_STATUS_NORMAL_USER = [STATUS_ONLINE]
+    PRO_STATUS_KERNEL_USER = [STATUS_ONLINE, STATUS_HIDDEN]
+    PRO_STATUS_CONTEST_USER = [STATUS_ONLINE, STATUS_CONTEST]
 
 
 class ProService:
@@ -46,27 +57,32 @@ class ProService:
         self.rs = rs
         ProService.inst = self
 
-    async def get_pro(self, pro_id, acct: Account | None = None, is_contest: bool = False):
+    async def get_pro(self, pro_id: int, allow_statuses: list[int]):
         """
-        Parameter `is_contest` should be set to true if you want to get contest problems and your account type is not kernel.
+        Fetch problem configuration and metadata by ID, ensuring it's in the allowed status.
 
-        :param pro_id:
-        :param acct:
-        :param is_contest:
-        :return:
+        Args:
+            pro_id (int): The ID of the problem to fetch.
+            allow_statuses (list[int]): Allowed problem statuses for access.
+
+        Returns:
+            Tuple[Optional[Tuple[str, str]], Optional[dict]]:
+                - Error code and message if any error occurs.
+                - A dictionary containing problem metadata if successful.
         """
+
+        for status in allow_statuses:
+            assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
         pro_id = int(pro_id)
-        max_status = self.get_acct_limit(acct, is_contest)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 """
                     SELECT "name", "status", "tags", "allow_submit",
                     "check_type", "is_makefile", "chalmeta", "limit", "rate_precision"
-                    FROM "problem" WHERE "pro_id" = $1 AND "status" <= $2;
+                    FROM "problem" WHERE "pro_id" = $1;
                 """,
                 pro_id,
-                max_status,
             )
             if len(result) != 1:
                 return ("Enoext", "Problem not found"), None
@@ -83,6 +99,9 @@ class ProService:
                 json.loads(result["limit"]),
                 json.loads(result["chalmeta"]),
             )
+
+            if status not in allow_statuses:
+                return ("Eacces", "Permission denied"), None
 
             result = await con.fetch(
                 """
@@ -120,27 +139,35 @@ class ProService:
             },
         )
 
-    async def list_pro(self, acct: Account | None = None, is_contest=False):
-        if acct is None:
-            max_status = ProConst.STATUS_ONLINE
+    async def list_pro(self, allow_pro_statuses: list[int]):
+        """
+        List problems with statuses in `allow_pro_statuses`, with Redis caching.
 
-        else:
-            max_status = self.get_acct_limit(acct, contest=is_contest)
+        Args:
+            allow_pro_statuses (list[int]): List of allowed statuses.
 
-        field = f"{max_status}|{[1, 2]}"  # TODO: Remove class column on db
+        Returns:
+            Tuple[None, list[dict]]:
+                - None for error placeholder (always succeeds).
+                - List of problems matching the given statuses.
+        """
+
+        for status in allow_pro_statuses:
+            assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
+
+        field = f"{allow_pro_statuses}"
         if (prolist := (await self.rs.hget("prolist", field))) is not None:
             prolist = unpackb(prolist)
 
         else:
             async with self.db.acquire() as con:
                 result = await con.fetch(
-                    """
+                    f"""
                         SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."tags"
                         FROM "problem"
-                        WHERE "problem"."status" <= $1
+                        WHERE "problem"."status" IN ({",".join(map(str, allow_pro_statuses))})
                         ORDER BY "pro_id" ASC;
-                    """,
-                    max_status,
+                    """
                 )
 
             prolist = []
@@ -161,7 +188,20 @@ class ProService:
 
         return None, prolist
 
-    async def add_pro(self, name, status, pack_token):
+    async def add_pro(self, name: str, status: int):
+        """
+        Add a new problem to the system with initial folders and symbolic links.
+
+        Args:
+            name (str): The name of the problem.
+            status (int): Initial status (online/contest/hidden).
+
+        Returns:
+            Tuple[Optional[Tuple[str, str]], Optional[int]]:
+                - Error code and message if invalid.
+                - The newly created problem ID if successful.
+        """
+
         name_len = len(name)
         if name_len < ProConst.NAME_MIN:
             return ("Enamemin", "Problem name too short"), None
@@ -185,36 +225,43 @@ class ProService:
 
             pro_id = int(result[0]["pro_id"])
 
-            if pack_token:
-                err, _ = await self.unpack_pro(pro_id, ProConst.PACKTYPE_FULL, pack_token)
-                if err:
-                    return err, None
-
-                await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
-
-            else:
-                os.mkdir(f"problem/{pro_id}")
-                os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-                os.mkdir(f"problem/{pro_id}/res")
-                os.mkdir(f"problem/{pro_id}/http")
-                os.mkdir(f"problem/{pro_id}/res/testdata")
-                os.symlink(
-                    os.path.abspath(f"problem/{pro_id}/http"),
-                    f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
-                )
+            os.mkdir(f"problem/{pro_id}")
+            os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
+            os.mkdir(f"problem/{pro_id}/res")
+            os.mkdir(f"problem/{pro_id}/http")
+            os.mkdir(f"problem/{pro_id}/res/testdata")
+            os.symlink(
+                os.path.abspath(f"problem/{pro_id}/http"),
+                f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
+            )
 
         await self.rs.delete("prolist")
 
         return None, pro_id
 
-    # TODO: Too many args
-    async def update_pro(self, pro_id, name, status, pack_type, pack_token=None, tags="", allow_submit=True):
+    async def update_pro(self, pro_id: int, name: str, status: int, tags="", allow_submit=True):
+        """
+        Update problem metadata such as name, status, tags, and submission permission.
+
+        Args:
+            pro_id (int): The ID of the problem to update.
+            name (str): New name.
+            status (int): New status (online/contest/hidden).
+            tags (str, optional): Tag string. Defaults to "".
+            allow_submit (bool, optional): Submission permission. Defaults to True.
+
+        Returns:
+            Tuple[Optional[Tuple[str, str]], None]:
+                - Error code and message if any error occurs.
+                - None if successful.
+        """
+
+        assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
         name_len = len(name)
         if name_len < ProConst.NAME_MIN:
             return ("Enamemin", "Problem name too short"), None
         if name_len > ProConst.NAME_MAX:
             return ("Enamemax", "Problem name too long"), None
-        del name_len
         if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
         if tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", tags):
@@ -236,18 +283,50 @@ class ProService:
             if len(result) != 1:
                 return ("Enoext", "Problem not found"), None
 
-            if pack_token is not None:
-                err, _ = await self.unpack_pro(pro_id, pack_type, pack_token)
-                if err:
-                    return err, None
-
-                await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
 
         await self.rs.delete("prolist")
 
         return None, None
 
-    async def update_test_config(self, pro_id, testm_conf: dict):
+    async def update_test_config(self, pro_id: int, testm_conf: dict):
+        """
+        Update the test configuration (testm_conf) for a given problem.
+
+        Args:
+            pro_id (int): The ID of the problem to update.
+            testm_conf (dict): The test configuration, with the following structure:
+
+                - is_makefile (bool): Whether the problem uses a Makefile-based compilation.
+                See: https://wiki.tfcis.org/TOJ#Makefile%E9%A1%8C%E7%9B%AE_(%E7%B7%A8%E8%AD%AF%E4%BA%92%E5%8B%95%E9%A1%8C)
+
+                - check_type (int): One of the values defined in ProConst.CHECKER_TYPE, indicating
+                the type of checker (e.g., diff, float-diff, ioredir).
+
+                - limit (dict[str, dict[str, int]]): Per-language time and memory limits.
+                    - Keys are compiler types (e.g., "gcc", "clang", "default").
+                        Allowed compilers can be found in `ChalConst.ALLOW_COMPILERS`.
+                    - Each value must contain:
+                        - "timelimit" (int): Time limit in seconds (>= 0)
+                        - "memlimit" (int): Memory limit in kilobytes (>= 0)
+                    - Must include a "default" configuration.
+
+                - rate_precision (int): Precision of the score (e.g., 0 for integers, 2 for 2 decimal places).
+
+                - test_group (dict[int, dict]): Configuration for each test group (subtask). Each key is
+                a test group index, and each value is a dict:
+                    - "weight" (int): The score weight of this test group.
+                    - "metadata" (dict): Metadata describing the test cases, e.g., input/output file names.
+
+        Returns:
+            Tuple[None, None]: Always returns (None, None) on success.
+
+        Side Effects:
+            - All existing `Challenge` records associated with this problem will be reset to
+            the `NotStart` state, due to test configuration changes.
+            - `test_valid_rate` materialized view will be refreshed.
+            - Related Redis cache (`rate`, `pro_rate`) will be invalidated.
+        """
+
         insert_values = []
         is_makefile = testm_conf['is_makefile']
         check_type = testm_conf['check_type']
@@ -279,126 +358,116 @@ class ProService:
 
         return None, None
 
-    # TODO: 把這破函數命名改一下
-    def get_acct_limit(self, acct: Account | None = None, contest=False):
-        if contest:
-            return ProConst.STATUS_CONTEST
+    async def unpack_pro(self, pro_id: int, pack_token: str):
+        """
+        Unpack and apply a packed problem archive.
 
-        elif acct is None:
-            return ProConst.STATUS_ONLINE
+        Args:
+            pro_id (int): The ID of the problem to unpack into.
+            pack_token (str): Token for identifying the uploaded archive.
 
-        elif acct.is_kernel():
-            return ProConst.STATUS_HIDDEN
+        Returns:
+            Tuple[Optional[Tuple[str, str]], None]:
+                - Error code and message if unpacking or config fails.
+                - None if successful.
+        """
 
-        else:
-            return ProConst.STATUS_ONLINE
-
-    async def unpack_pro(self, pro_id, pack_type, pack_token):
         from services.chal import ChalConst
-        if pack_type == ProConst.PACKTYPE_FULL:
-            err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
-            if err:
-                return err, None
+        err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
+        if err:
+            return err, None
 
-            try:
-                os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-                os.symlink(
-                    os.path.abspath(f"problem/{pro_id}/http"),
-                    f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
-                )
+        try:
+            os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
+            os.symlink(
+                os.path.abspath(f"problem/{pro_id}/http"),
+                f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
+            )
 
-            except FileExistsError:
-                pass
+        except FileExistsError:
+            pass
 
-            try:
-                with open(f"problem/{pro_id}/conf.json") as conf_f:
-                    conf = json.load(conf_f)
-            except json.decoder.JSONDecodeError:
-                return ("Econf", "Problem config json syntax error"), None
+        try:
+            with open(f"problem/{pro_id}/conf.json") as conf_f:
+                conf = json.load(conf_f)
+        except json.decoder.JSONDecodeError:
+            return ("Econf", "Problem config json syntax error"), None
 
-            is_makefile = False
-            if 'compile' in conf:
-                is_makefile = conf["compile"] == 'makefile'
-            elif 'is_makefile' in conf:
-                is_makefile = conf["is_makefile"]
+        is_makefile = False
+        if 'compile' in conf:
+            is_makefile = conf["compile"] == 'makefile'
+        elif 'is_makefile' in conf:
+            is_makefile = conf["is_makefile"]
 
-            check_type = self._get_check_type(conf["check"])
+        check_type = ProConst.STR_2_CHECKER_TYPE[conf["check"]]
 
-            ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
-            if is_makefile:
-                ALLOW_COMPILERS = {'default', 'gcc', 'g++', 'clang', 'clang++'}
+        ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
+        if is_makefile:
+            ALLOW_COMPILERS = {'default', 'gcc', 'g++', 'clang', 'clang++'}
 
-            if "limit" in conf:
-                limits = {}
-                for comp_type, limit in conf["limit"].items():
-                    if comp_type not in ALLOW_COMPILERS:
-                        continue
+        if "limit" in conf:
+            limits = {}
+            for comp_type, limit in conf["limit"].items():
+                if comp_type not in ALLOW_COMPILERS:
+                    continue
 
-                    try:
-                        limit['timelimit'] = max(int(limit['timelimit']), 0)
-                        limit['memlimit'] = max(int(limit['memlimit']) * 1024, 0)
-                    except (ValueError, KeyError):
-                        continue
-
-                    limits[comp_type] = limit
-
-                if 'default' not in limits:
-                    return ("Econf", "Problem limit config require default value"), None
-
-            elif 'timelimit' in conf and 'memlimit' in conf:
                 try:
-                    limits = {
-                        'default': {
-                            'timelimit': int(conf["timelimit"]),
-                            'memlimit': int(conf["memlimit"]) * 1024
-                        }
-                    }
+                    limit['timelimit'] = max(int(limit['timelimit']), 0)
+                    limit['memlimit'] = max(int(limit['memlimit']) * 1024, 0)
+                except KeyError as e:
+                    limit[e.args[0]] = 0
                 except ValueError:
-                    return ("Econf", "Problem limit config have invalid value"), None
-            else:
-                 return ("Econf", "Problem config require limit or timelimit/memlimit"), None
+                    continue
 
-            chalmeta = {}
-            if 'metadata' in conf:
-                chalmeta = conf["metadata"]  # INFO: ioredir data
+                limits[comp_type] = limit
 
-            async with self.db.acquire() as con:
-                await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
-                await con.execute(
-                    'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4 WHERE pro_id = $5',
-                    is_makefile, check_type, json.dumps(chalmeta), json.dumps(limits), pro_id
-                )
+            if 'default' not in limits:
+                return ("Econf", "Problem limit config require default value"), None
 
-                insert_values = []
+        elif 'timelimit' in conf and 'memlimit' in conf:
+            try:
+                limits = {
+                    'default': {
+                        'timelimit': int(conf["timelimit"]),
+                        'memlimit': int(conf["memlimit"]) * 1024
+                    }
+                }
+            except ValueError:
+                return ("Econf", "Problem limit config have invalid value"), None
+        else:
+                return ("Econf", "Problem config require limit or timelimit/memlimit"), None
 
-                for test_idx, test_conf in enumerate(conf["test"]):
-                    for i in range(len(test_conf["data"])):
-                        test_conf["data"][i] = str(test_conf["data"][i])
+        chalmeta = {}
+        if 'metadata' in conf:
+            chalmeta = conf["metadata"]  # INFO: ioredir data
 
-                    metadata = {"data": test_conf["data"]}
-                    insert_values.append((pro_id, test_idx, test_conf['weight'], json.dumps(metadata)))
+        async with self.db.acquire() as con:
+            await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
+            await con.execute(
+                'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4 WHERE pro_id = $5',
+                is_makefile, check_type, json.dumps(chalmeta), json.dumps(limits), pro_id
+            )
 
-                await con.executemany(
-                    '''INSERT INTO "test_config"
-                        ("pro_id", "test_idx", "weight", "metadata")
-                        VALUES ($1, $2, $3, $4);''',
-                    insert_values
-                )
+            insert_values = []
 
+            for test_idx, test_conf in enumerate(conf["test"]):
+                for i in range(len(test_conf["data"])):
+                    test_conf["data"][i] = str(test_conf["data"][i])
+
+                metadata = {"data": test_conf["data"]}
+                insert_values.append((pro_id, test_idx, test_conf['weight'], json.dumps(metadata)))
+
+            await con.executemany(
+                '''INSERT INTO "test_config"
+                    ("pro_id", "test_idx", "weight", "metadata")
+                    VALUES ($1, $2, $3, $4);''',
+                insert_values
+            )
+            await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
+
+        await self.rs.delete("prolist")
 
         return None, None
-
-    def _get_check_type(self, s: str):
-        if s == "diff":
-            return ProConst.CHECKER_DIFF
-        elif s == "diff-strict":
-            return ProConst.CHECKER_DIFF_STRICT
-        elif s == "diff-float":
-            return ProConst.CHECKER_DIFF_FLOAT
-        elif s == "ioredir":
-            return ProConst.CHECKER_IOREDIR
-        elif s == "cms":
-            return ProConst.CHECKER_CMS
 
 class ProClassConst:
     OFFICIAL_PUBLIC = 0
@@ -453,7 +522,7 @@ class ProClassService:
     async def remove_proclass(self, proclass_id: int):
         async with self.db.acquire() as con:
             result: str = await con.execute('DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id))
-            affected_row_cnt = int(result.split(" ")[1]) # DELETE \d+
+            affected_row_cnt = int(result.split(" ")[1]) # NOTE: DELETE \d+
             if affected_row_cnt == 0:
                 return ('Enoext', 'Bulletin not found'), None
 

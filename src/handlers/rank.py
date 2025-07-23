@@ -15,12 +15,13 @@ class ProRankHandler(RequestHandler):
 
         tz = datetime.timezone(datetime.timedelta(hours=+8))
         pro_id = int(pro_id)
-        err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
+        if self.acct.is_kernel():
+            allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
+
+        err, _ = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
             return self.error(err)
-
-        if pro['status'] == ProConst.STATUS_CONTEST:
-            return self.error(PERMISSION_DENIED_ERROR)
 
         async with self.db.acquire() as con:
             result = await con.fetch(

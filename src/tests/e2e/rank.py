@@ -36,7 +36,7 @@ class ProRankTest(AsyncTest):
 
             with AccountContext('test1@test', 'test') as user_session:
                 res = user_session.get('rank/1')
-                self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not found'))
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             admin_session.post('manage/pro/update', data={
                 'reqtype': 'updatepro',
