@@ -8,7 +8,7 @@ from services.chal import ChalConst, ChalService, ChalSearchingParamBuilder
 from services.pro import ProService, ProConst
 from services.user import UserService
 from services.contests import UserStatus
-from utils.numeric import parse_list_str
+from utils.numeric import parse_str_to_list
 
 
 class ChalListHandler(RequestHandler):
@@ -19,12 +19,12 @@ class ChalListHandler(RequestHandler):
         pageoff = int(self.get_argument('pageoff', default=0))
 
         ppro_id = str(self.get_argument('proid', default=''))
-        query_pros = parse_list_str(ppro_id)
+        query_pros = parse_str_to_list(ppro_id)
         if len(query_pros) == 0:
             query_pros = None
 
         pacct_id = str(self.get_argument('acctid', default=''))
-        query_accts = parse_list_str(pacct_id)
+        query_accts = parse_str_to_list(pacct_id)
         if len(query_accts) == 0:
             query_accts = None
 

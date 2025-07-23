@@ -6,7 +6,7 @@ from services.chal import ChalConst, ChalService
 from services.contests import ContestService, ProblemScoreType
 from services.judge import JudgeServerClusterService
 from services.pro import ProService, ProConst
-from utils.numeric import parse_list_str
+from utils.numeric import parse_str_to_list
 
 
 class ContestManageProHandler(RequestHandler):
@@ -59,7 +59,7 @@ class ContestManageProHandler(RequestHandler):
             prolist_updated = True
 
         elif reqtype == "multi_add":
-            pro_id = parse_list_str(pro_id)
+            pro_id = parse_str_to_list(pro_id)
             for p_id in pro_id:
                 self.contest.pro_list[p_id] = {
                     "score_type": ProblemScoreType.IOI2017.value
@@ -70,7 +70,7 @@ class ContestManageProHandler(RequestHandler):
             prolist_updated = True
 
         elif reqtype == "multi_remove":
-            pro_list = parse_list_str(pro_id)
+            pro_list = parse_str_to_list(pro_id)
 
             for pro_id in pro_list:
                 try:

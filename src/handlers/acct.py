@@ -11,7 +11,7 @@ from services.pro import ProClassService, ProClassConst
 from services.rate import RateService
 from services.user import UserConst, UserService
 from services.chal import ChalConst
-from utils.numeric import parse_list_str
+from utils.numeric import parse_str_to_list
 
 PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
 
@@ -195,7 +195,7 @@ class AcctProClassHandler(RequestHandler):
             desc = self.get_argument('desc').strip()
             proclass_type = int(self.get_argument('type'))
             p_list_str = self.get_argument('list')
-            p_list = parse_list_str(p_list_str)
+            p_list = parse_str_to_list(p_list_str)
 
             if err := self.len_check(name, ProClassConst.NAME_MIN, ProClassConst.NAME_MAX, 'Name'):
                 return self.error(err)
