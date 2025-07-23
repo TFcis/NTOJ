@@ -4,7 +4,7 @@ from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
 from services.pro import ProClassService, ProClassConst
 from services.user import UserConst
-from utils.numeric import parse_list_str
+from utils.numeric import parse_str_to_list
 
 PERMISSION_DENIED_ERROR = ('Eacces', 'Permission denied')
 
@@ -45,7 +45,7 @@ class ManageProClassHandler(RequestHandler):
             desc = self.get_argument('desc').strip()
             proclass_type = int(self.get_argument('type'))
             p_list_str = self.get_argument('list')
-            p_list = parse_list_str(p_list_str)
+            p_list = parse_str_to_list(p_list_str)
 
             if err := self.len_check(name, ProClassConst.NAME_MIN, ProClassConst.NAME_MAX, 'Name'):
                 return self.error(err)

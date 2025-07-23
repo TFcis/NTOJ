@@ -11,85 +11,63 @@
         {% end %}
     };
     var chalsub_count;
-    var re = /[^0-9,\ ]/
+    let re = /^(\d+(-\d+)?)(\s*,\s*\d+(-\d+)?)*$/;
+
+    function get_goto_filtered_challist_url() {
+        let proid = j_filter.find('#proid').val();
+        let acctid = j_filter.find('#acctid').val();
+        let state = j_filter.find('#state').val();
+        let compiler_type = j_filter.find("#compiler").val();
+        let url = location.pathname.split('?')[0] + '?';
+
+        if (!re.test(proid)) {
+            j_filter.find("#proid").val('');
+            index.show_notify_dialog("請輸入數字、逗號、減號與空白做查詢，範例：1, 2, 3, 5-7", index.DIALOG_TYPE.warning);
+            return;
+        }
+
+        if (!re.test(acctid)) {
+            j_filter.find('#acctid').val('');
+            index.show_notify_dialog("請輸入數字、逗號、減號與空白做查詢，範例：1, 2, 3, 5-7", index.DIALOG_TYPE.warning);
+            return;
+        }
+
+        if (proid != '') {
+            url += `&proid=${proid}`
+        }
+
+        if (acctid != '') {
+            url += `&acctid=${acctid}`;
+        }
+
+        if (state != '') {
+            url += `&state=${state}`;
+        }
+
+        if (compiler_type != '') {
+            url += `&compiler_type=${compiler_type}`;
+        }
+
+        return url;
+    }
 
     function init() {
         var j_filter = $('#filter');
         var j_chalsub = $('#chalsub');
 	    j_filter.find('input, select').keypress(function(e) {
-
+            // NOTE:  KeyCode 13 means Enter
 	        if (e.keyCode == 13) {
-                // KeyCode 13 means Enter
-		        let proid = j_filter.find('#proid').val();
-		        let acctid = j_filter.find('#acctid').val();
-		        let state = j_filter.find('#state').val();
-                let compiler_type = j_filter.find("#compiler").val();
-                let url = location.pathname.split('?')[0] + '?';
-
-                if (re.test(proid) || re.test(acctid)) {
-                    j_filter.find('#proid').val('');
-                    j_filter.find('#acctid').val('');
-                    index.show_notify_dialog("請輸入數字、逗號與空白做查詢，範例：1, 2, 3", index.DIALOG_TYPE.warning);
-                    return;
-                }
-
-                if (proid != '') {
-                    url += `&proid=${proid}`
-                }
-
-                if (acctid != '') {
-                    url += `&acctid=${acctid}`;
-                }
-
-                if (state != '') {
-                    url += `&state=${state}`;
-                }
-
-                if (compiler_type != '') {
-                    url += `&compiler_type=${compiler_type}`;
-                }
-
-                index.go(url);
+                index.go(get_goto_filtered_challist_url());
             }
 	    });
 
         j_filter.find('button.submit').on('click', function(e) {
-            let proid = j_filter.find('#proid').val();
-            let acctid = j_filter.find('#acctid').val();
-	        let state = j_filter.find('#state').val();
-            let compiler_type = j_filter.find("#compiler").val();
-            let url = location.pathname.split('?')[0] + '?';
-
-            if (re.test(proid) || re.test(acctid)) {
-                j_filter.find('#proid').val('');
-                j_filter.find('#acctid').val('');
-                index.show_notify_dialog("請輸入數字、逗號與空白做查詢，範例：1, 2, 3", index.DIALOG_TYPE.warning);
-                return;
-            }
-
-            if (proid != '') {
-                url += `&proid=${proid}`;
-            }
-
-            if (acctid != '') {
-                url += `&acctid=${acctid}`;
-            }
-
-            if (state != '') {
-                url += `&state=${state}`;
-            }
-
-            if (compiler_type != '') {
-                url += `&compiler_type=${compiler_type}`;
-            }
-
-            index.go(url);
+            index.go(get_goto_filtered_challist_url());
         });
 
         j_chalsub.on('click', function(e) {
             index.reload();
         });
-
 
         (() => {
             chalsub_count = 0;
