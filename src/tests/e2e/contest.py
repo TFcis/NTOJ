@@ -129,7 +129,7 @@ class ContestTest(AsyncTest):
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'multi_add',
-                'pro_id': '7..13'
+                'pro_id': '7-13'
             })
             self.assertAPIReturnSuccess(res.text)
             html = self.get_html('contests/1/manage/pro', admin_session)
@@ -137,7 +137,7 @@ class ContestTest(AsyncTest):
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'multi_remove',
-                'pro_id': '7..13'
+                'pro_id': '7-13'
             })
             self.assertAPIReturnSuccess(res.text)
             html = self.get_html('contests/1/manage/pro', admin_session)
@@ -145,7 +145,7 @@ class ContestTest(AsyncTest):
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'multi_add',
-                'pro_id': '7..13'
+                'pro_id': '7-13'
             })
             self.assertAPIReturnSuccess(res.text)
             html = self.get_html('contests/1/manage/pro', admin_session)
@@ -156,7 +156,7 @@ class ContestTest(AsyncTest):
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'multi_add',
-                'pro_id': '7..20'
+                'pro_id': '7-20'
             })
             self.assertAPIReturnSuccess(res.text)
 
@@ -791,7 +791,7 @@ class ContestTest(AsyncTest):
             res = user_session.get('pro/7')
             self.assertNotIn('Eacces', res.text)
             res = user_session.get('pro/8')
-            self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not found'))
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
         # freeze_scoreboard_period: int = 0
 

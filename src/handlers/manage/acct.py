@@ -10,10 +10,7 @@ class ManageAcctHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page=None):
         if page is None:
-            try:
-                pageoff = int(self.get_argument('pageoff'))
-            except tornado.web.HTTPError:
-                pageoff = 0
+            pageoff = int(self.get_argument('pageoff', default=0))
 
             _, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, True)
             acct_total_cnt = len(acctlist)

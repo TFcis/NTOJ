@@ -2,7 +2,7 @@ import time
 
 from handlers.base import RequestHandler, reqenv
 from services.board import BoardConst, BoardService
-from services.pro import ProService
+from services.pro import ProService, ProConst
 from services.rate import RateService
 from services.user import UserConst, UserService
 
@@ -27,7 +27,7 @@ class BoardHandler(RequestHandler):
         if self.acct.is_kernel():
             min_type = UserConst.ACCTTYPE_KERNEL
 
-        err, prolist = await ProService.inst.list_pro(acct=self.acct)
+        err, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_NORMAL_USER)
         err, acctlist = await UserService.inst.list_acct(min_type=min_type)
         err, ratemap = await RateService.inst.map_rate(starttime=meta['start'], endtime=meta['end'])
 

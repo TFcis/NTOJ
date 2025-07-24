@@ -6,7 +6,7 @@ from services.chal import ChalConst, ChalService
 from services.contests import ContestService, ProblemScoreType
 from services.judge import JudgeServerClusterService
 from services.pro import ProService, ProConst
-from utils.numeric import parse_list_str
+from utils.numeric import parse_str_to_list
 
 
 class ContestManageProHandler(RequestHandler):
@@ -15,7 +15,7 @@ class ContestManageProHandler(RequestHandler):
     async def get(self):
         pro_list = []
         for pro_id in self.contest.pro_list.keys():
-            err, pro = await ProService.inst.get_pro(pro_id, is_contest=True)
+            err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_CONTEST_USER)
             if err:
                 continue
             pro_list.append(pro)
@@ -59,7 +59,7 @@ class ContestManageProHandler(RequestHandler):
             prolist_updated = True
 
         elif reqtype == "multi_add":
-            pro_id = parse_list_str(pro_id)
+            pro_id = parse_str_to_list(pro_id)
             for p_id in pro_id:
                 self.contest.pro_list[p_id] = {
                     "score_type": ProblemScoreType.IOI2017.value
@@ -70,7 +70,7 @@ class ContestManageProHandler(RequestHandler):
             prolist_updated = True
 
         elif reqtype == "multi_remove":
-            pro_list = parse_list_str(pro_id)
+            pro_list = parse_str_to_list(pro_id)
 
             for pro_id in pro_list:
                 try:
@@ -88,7 +88,7 @@ class ContestManageProHandler(RequestHandler):
             if not can_submit:
                 return self.error(('Ejudge', 'No judge available'))
 
-            err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=True)
+            err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_CONTEST_USER)
             if err:
                 return self.error(err)
 
@@ -131,11 +131,11 @@ class ContestManageProHandler(RequestHandler):
             if not self.contest.is_end():
                 return self.error(('Etime', 'Contest is not over yet'))
 
-            err, pro = await ProService.inst.get_pro(pro_id, is_contest=True)
+            err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_CONTEST_USER)
             if err:
                 return self.error(err)
 
-            err, _ = await ProService.inst.update_pro(pro_id, pro['name'], ProConst.STATUS_ONLINE, None, None, pro['tags'])
+            err, _ = await ProService.inst.update_pro(pro_id, pro['name'], ProConst.STATUS_ONLINE, pro['tags'])
             if err:
                 return self.error(err)
 

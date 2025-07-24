@@ -11,85 +11,63 @@
         {% end %}
     };
     var chalsub_count;
-    var re = /[^0-9,\ ]/
+    let re = /^(\d+(-\d+)?)(\s*,\s*\d+(-\d+)?)*$/;
+
+    function get_goto_filtered_challist_url() {
+        let proid = j_filter.find('#proid').val();
+        let acctid = j_filter.find('#acctid').val();
+        let state = j_filter.find('#state').val();
+        let compiler_type = j_filter.find("#compiler").val();
+        let url = location.pathname.split('?')[0] + '?';
+
+        if (!re.test(proid)) {
+            j_filter.find("#proid").val('');
+            index.show_notify_dialog("請輸入數字、逗號、減號與空白做查詢，範例：1, 2, 3, 5-7", index.DIALOG_TYPE.warning);
+            return;
+        }
+
+        if (!re.test(acctid)) {
+            j_filter.find('#acctid').val('');
+            index.show_notify_dialog("請輸入數字、逗號、減號與空白做查詢，範例：1, 2, 3, 5-7", index.DIALOG_TYPE.warning);
+            return;
+        }
+
+        if (proid != '') {
+            url += `&proid=${proid}`
+        }
+
+        if (acctid != '') {
+            url += `&acctid=${acctid}`;
+        }
+
+        if (state != '') {
+            url += `&state=${state}`;
+        }
+
+        if (compiler_type != '') {
+            url += `&compiler_type=${compiler_type}`;
+        }
+
+        return url;
+    }
 
     function init() {
         var j_filter = $('#filter');
         var j_chalsub = $('#chalsub');
 	    j_filter.find('input, select').keypress(function(e) {
-
+            // NOTE:  KeyCode 13 means Enter
 	        if (e.keyCode == 13) {
-                // KeyCode 13 means Enter
-		        let proid = j_filter.find('#proid').val();
-		        let acctid = j_filter.find('#acctid').val();
-		        let state = j_filter.find('#state').val();
-                let compiler_type = j_filter.find("#compiler").val();
-                let url = location.pathname.split('?')[0] + '?';
-
-                if (re.test(proid) || re.test(acctid)) {
-                    j_filter.find('#proid').val('');
-                    j_filter.find('#acctid').val('');
-                    index.show_notify_dialog("請輸入數字、逗號與空白做查詢，範例：1, 2, 3", index.DIALOG_TYPE.warning);
-                    return;
-                }
-
-                if (proid != '') {
-                    url += `&proid=${proid}`
-                }
-
-                if (acctid != '') {
-                    url += `&acctid=${acctid}`;
-                }
-
-                if (state != '') {
-                    url += `&state=${state}`;
-                }
-
-                if (compiler_type != '') {
-                    url += `&compiler_type=${compiler_type}`;
-                }
-
-                index.go(url);
+                index.go(get_goto_filtered_challist_url());
             }
 	    });
 
         j_filter.find('button.submit').on('click', function(e) {
-            let proid = j_filter.find('#proid').val();
-            let acctid = j_filter.find('#acctid').val();
-	        let state = j_filter.find('#state').val();
-            let compiler_type = j_filter.find("#compiler").val();
-            let url = location.pathname.split('?')[0] + '?';
-
-            if (re.test(proid) || re.test(acctid)) {
-                j_filter.find('#proid').val('');
-                j_filter.find('#acctid').val('');
-                index.show_notify_dialog("請輸入數字、逗號與空白做查詢，範例：1, 2, 3", index.DIALOG_TYPE.warning);
-                return;
-            }
-
-            if (proid != '') {
-                url += `&proid=${proid}`;
-            }
-
-            if (acctid != '') {
-                url += `&acctid=${acctid}`;
-            }
-
-            if (state != '') {
-                url += `&state=${state}`;
-            }
-
-            if (compiler_type != '') {
-                url += `&compiler_type=${compiler_type}`;
-            }
-
-            index.go(url);
+            index.go(get_goto_filtered_challist_url());
         });
 
         j_chalsub.on('click', function(e) {
             index.reload();
         });
-
 
         (() => {
             chalsub_count = 0;
@@ -138,7 +116,11 @@
         })();
 
         {% if (flt.state == 100 or flt.state == 101) and isadmin %}
-            var chalids = {{ chalids }};
+            let chalids = [
+                {% for chal in challist %}
+                    {{ chal['chal_id'] }},
+                {% end %}
+            ];
             $('#rechalall').on('click', function(e) {
                 chalids.forEach(function(chalid) {
                     $.post('/oj/be/submit', {
@@ -183,27 +165,18 @@
                 <select id="state" class="form-select">
                     <option value=0 {% if flt.state == 0 %}selected{% end %}>All</option>
                     {% for state, desc in ChalConst.STATE_STR.items() %}
-                        {% if state == ChalConst.STATE_JUDGE %}
-                            {% set desc = "Challenging" %}
-                        {% end %}
                         {% raw f'<option value="{ state }" { "selected" if flt.state == state else "" }>{ desc }</option>' %}
                     {% end %}
-                    <option value="{{ ChalConst.STATE_NOTSTARTED }}" {% if flt.state == ChalConst.STATE_NOTSTARTED %} selected {% end %}">Not Started</option>
                 </select>
             </div>
 
             <div class="mb-1">
                 <label class="form-label">Compiler</label>
                 <select id="compiler" class="form-select">
-                    <!-- %2B means '+' -->
                     <option value="all" {% if flt.compiler == 'all' %}selected{% end %}>All</option>
-                    <option value="gcc" {% if flt.compiler == 'gcc' %}selected{% end %}>GCC 12.2.0 GNU11</option>
-                    <option value="g%2B%2B" {% if flt.compiler == 'g++' %}selected{% end %}>G++ 9.4.0 GNU++17</option>
-                    <option value="clang" {% if flt.compiler == 'clang' %}selected{% end %}>Clang 15.0.6 C11</option>
-                    <option value="clang%2B%2B" {% if flt.compiler == 'clang++' %}selected{% end %}>Clang++ 15.0.6 C++17</option>
-                    <option value="rustc" {% if flt.compiler == 'rustc' %}selected{% end %}>Rustc 1.63</option>
-                    <option value="python3" {% if flt.compiler == 'python3' %}selected{% end %}>CPython 3.11.2</option>
-                    <option value="java" {% if flt.compiler == 'java' %}selected{% end %}>OpenJDK 17.0.6</option>
+                    {% for compiler, version in ChalConst.COMPILER_NAME.items() %}
+                        {% raw f'<option value="{ compiler }" { "selected" if flt.compiler == compiler else "" }>{ version }</option>' %}
+                    {% end %}
                 </select>
             </div>
 

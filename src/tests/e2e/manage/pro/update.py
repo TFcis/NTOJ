@@ -35,7 +35,7 @@ class ManageProUpdateTest(AsyncTest):
 
             with AccountContext('test1@test', 'test') as user_session:
                 res = user_session.get('pro/1')
-                self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not found'))
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
                 html = self.get_html('proset', user_session)
                 trs = html.select('#prolist > tbody > tr')
@@ -46,7 +46,7 @@ class ManageProUpdateTest(AsyncTest):
                 self.assertEqual(trs[1].select('td')[2].text.strip().replace('\n', ''), 'Move')
 
                 res = user_session.get('submit/1')
-                self.assertIn('Enoext', res.text)
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             # html = self.get_html('proset', admin_session)
             # trs = html.select('tr')[1:]

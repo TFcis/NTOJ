@@ -1,17 +1,14 @@
 import tornado
 
 from handlers.base import reqenv, RequestHandler
-from services.pro import ProService
+from services.pro import ProConst, ProService
 from services.rate import RateService
 
 
 class ContestProsetHandler(RequestHandler):
     @reqenv
     async def get(self):
-        try:
-            pageoff = int(self.get_argument('pageoff'))
-        except tornado.web.HTTPError:
-            pageoff = 0
+        pageoff = int(self.get_argument('pageoff', default=0))
 
         show_ac_ratio = False
         if not self.contest.is_start() and not self.contest.is_admin(self.acct):
@@ -22,7 +19,7 @@ class ContestProsetHandler(RequestHandler):
 
         else:
             _, acct_rates = await RateService.inst.map_rate_acct(self.acct, contest_id=self.contest.contest_id)
-            _, prolist = await ProService.inst.list_pro(self.acct, is_contest=True)
+            _, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_CONTEST_USER)
 
             prolist_order = {pro_id: idx for idx, pro_id in enumerate(self.contest.pro_list.keys())}
             prolist = sorted(filter(lambda pro: self.contest.is_pro(pro['pro_id']), prolist),

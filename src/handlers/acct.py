@@ -3,16 +3,15 @@ import time
 import math
 import hashlib
 
-import tornado.web
 from msgpack import packb, unpackb
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
-from services.pro import ProService, ProClassService, ProClassConst
+from services.pro import ProClassService, ProClassConst
 from services.rate import RateService
 from services.user import UserConst, UserService
 from services.chal import ChalConst
-from utils.numeric import parse_list_str
+from utils.numeric import parse_str_to_list
 
 PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
 
@@ -24,11 +23,11 @@ class AcctHandler(RequestHandler):
         if err:
             return self.error(err)
 
+        acct.acct_type = UserConst.ACCTTYPE_USER
         err, rate_data = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
         if err:
             return self.error(err)
 
-        max_status = ProService.inst.get_acct_limit(self.acct)
         async with self.db.acquire() as con:
             prolist = await con.fetch(
                 '''
@@ -36,10 +35,11 @@ class AcctHandler(RequestHandler):
                     WHERE "status" <= $1
                     ORDER BY "pro_id" ASC;
                 ''',
-                max_status,
+                UserConst.ACCTTYPE_USER,
             )
 
         err, ratemap = await RateService.inst.map_rate_acct(acct)
+        acct.acct_type = UserConst.ACCTTYPE_KERNEL
 
         prolist2 = []
 
@@ -166,10 +166,7 @@ class AcctProClassHandler(RequestHandler):
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def get(self, acct_id):
         acct_id = int(acct_id)
-        try:
-            page = self.get_argument('page')
-        except tornado.web.HTTPError:
-            page = None
+        page = self.get_argument('page', default=None)
 
         if page is None:
             _, proclass_list = await ProClassService.inst.get_proclass_list()
@@ -198,7 +195,7 @@ class AcctProClassHandler(RequestHandler):
             desc = self.get_argument('desc').strip()
             proclass_type = int(self.get_argument('type'))
             p_list_str = self.get_argument('list')
-            p_list = parse_list_str(p_list_str)
+            p_list = parse_str_to_list(p_list_str)
 
             if err := self.len_check(name, ProClassConst.NAME_MIN, ProClassConst.NAME_MAX, 'Name'):
                 return self.error(err)

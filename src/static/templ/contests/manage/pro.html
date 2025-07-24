@@ -57,6 +57,7 @@
 {% end %}
 
 {% block content %}
+{% from services.pro import ProConst %}
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
 
@@ -110,7 +111,7 @@
                                 <button
                                     class="btn btn-danger me-2 public"
                                     pro_id="{{ pro['pro_id'] }}"
-                                    {% if not contest.is_end() %} disabled {% end %}
+                                    {% if not contest.is_end() or pro['status'] != ProConst.STATUS_CONTEST %} disabled {% end %}
                                 >Public Problem</button>
 							</td>
 						</tr>

@@ -22,6 +22,7 @@ class SubmitHandler(RequestHandler):
 
         pro_id = int(pro_id)
 
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         allow_compilers = ChalConst.ALLOW_COMPILERS
         if self.contest:
             if not self.contest.is_running() and not self.contest.is_admin(self.acct):
@@ -31,6 +32,10 @@ class SubmitHandler(RequestHandler):
                 return self.error(('Enoext', 'Problem not in contest'))
 
             allow_compilers = self.contest.allow_compilers
+            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
+        else:
+            if self.acct.is_kernel():
+                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
         can_submit = JudgeServerClusterService.inst.is_server_online()
 
@@ -39,7 +44,7 @@ class SubmitHandler(RequestHandler):
             return
 
         pro_id = int(pro_id)
-        err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
+        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
             return self.error(err)
 
@@ -61,9 +66,12 @@ class SubmitHandler(RequestHandler):
         if not can_submit:
             return self.error(('Ejudge', 'No available judge'))
 
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
+
         contest_id = 0
         if self.contest:
             contest_id = self.contest.contest_id
+            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
 
         reqtype = self.get_argument('reqtype')
         if reqtype == 'submit':
@@ -78,18 +86,18 @@ class SubmitHandler(RequestHandler):
 
                 if not self.contest.is_pro(pro_id):
                     return self.error(('Enoext', 'Problem not in contest'))
+
             else:
                 pri = ChalConst.NORMAL_PRI
+                if self.acct.is_kernel():
+                    allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
             if err := await self.is_allow_submit(code, comp_type, pro_id):
                 return self.error(err)
 
-            err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
+            err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
             if err:
                 return self.error(err)
-
-            if pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
-                return self.error(PERMISSION_DENIED_ERROR)
 
             if not pro['allow_submit']:
                 return self.error(('Eacces', 'Problem did not allow submit'))
@@ -105,21 +113,21 @@ class SubmitHandler(RequestHandler):
                     return self.error(err)
 
         elif reqtype == 'rechal':
+            chal_id = int(self.get_argument('chal_id'))
             if ((self.contest is None and self.acct.is_kernel())  # not in contest
                     or (self.contest and self.contest.is_admin(self.acct))):  # in contest
                 if self.contest:
                     pri = ChalConst.CONTEST_REJUDGE_PRI
                 else:
                     pri = ChalConst.NORMAL_REJUDGE_PRI
-
-                chal_id = int(self.get_argument('chal_id'))
+                    allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
                 err, _ = await ChalService.inst.reset_chal(chal_id)
                 err, chal = await ChalService.inst.get_chal(chal_id)
 
                 pro_id = chal['pro_id']
                 comp_type = chal['comp_type']
-                err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
+                err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
                 if err:
                     return self.error(err)
 

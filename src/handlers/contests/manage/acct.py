@@ -2,7 +2,7 @@ from handlers.base import reqenv, RequestHandler
 from handlers.contests.base import contest_require_permission
 from services.contests import ContestService, UserStatus
 from services.user import UserService
-from utils.numeric import parse_list_str
+from utils.numeric import parse_str_to_list
 
 
 class ContestManageAcctHandler(RequestHandler):
@@ -55,7 +55,7 @@ class ContestManageAcctHandler(RequestHandler):
             self.error(('S', f'Account(#{acct_id} successfully removed from user list.'))
 
         elif reqtype == "multi_add":
-            acct_list = parse_list_str(acct_id)
+            acct_list = parse_str_to_list(acct_id)
 
             for a_id in acct_list:
                 self.contest.user_list[a_id] = {
@@ -66,7 +66,7 @@ class ContestManageAcctHandler(RequestHandler):
             self.error(('S', f'Accounts({acct_list}) successfully added to user list with {status.name}.'))
 
         elif reqtype == "multi_remove":
-            acct_list = parse_list_str(acct_id)
+            acct_list = parse_str_to_list(acct_id)
 
             for a_id in acct_list:
                 try:

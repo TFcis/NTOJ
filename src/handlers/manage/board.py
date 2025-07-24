@@ -4,6 +4,7 @@ from handlers.base import RequestHandler, reqenv, require_permission
 from services.board import BoardService
 from services.log import LogService
 from services.user import UserConst
+from utils.numeric import parse_str_to_list
 
 
 def trantime(time):
@@ -58,8 +59,8 @@ class ManageBoardHandler(RequestHandler):
             if err:
                 return self.error(err)
 
-            acct_list = await self._get_acct_list(acct_list_str)
-            pro_list = self._get_pro_list(pro_list_str)
+            acct_list = parse_str_to_list(acct_list_str)
+            pro_list = parse_str_to_list(pro_list_str)
             await LogService.inst.add_log(
                 f"{self.acct.name} was added to the contest \"{name}\".", 'manage.board.add',
                 {
@@ -94,8 +95,8 @@ class ManageBoardHandler(RequestHandler):
 
             pro_list_str = str(self.get_argument('pro_list'))
             acct_list_str = str(self.get_argument('acct_list'))
-            acct_list = await self._get_acct_list(acct_list_str)
-            pro_list = self._get_pro_list(pro_list_str)
+            acct_list = parse_str_to_list(acct_list_str)
+            pro_list = parse_str_to_list(pro_list_str)
 
             await LogService.inst.add_log(
                 f"{self.acct.name} was updated in the contest \"{name}\".", 'manage.board.update',
@@ -119,17 +120,3 @@ class ManageBoardHandler(RequestHandler):
                 f"{self.acct.name} was removed the contest \"{board_id}\".", 'manage.board.remove'
             )
             self.error(('S', ''))
-
-    async def _get_acct_list(self, acct_list_str: str) -> list[int]:
-        acct_list = acct_list_str.replace(' ', '').split(',')
-
-        res = []
-        for acct in acct_list:
-            if acct != '':
-                if acct.isnumeric():
-                    res.append(int(acct))
-        return res
-
-    def _get_pro_list(self, pro_list_str: str) -> list[int]:
-        pro_list = pro_list_str.replace(' ', '').split(',')
-        return [int(pro) for pro in pro_list if pro.isnumeric()]

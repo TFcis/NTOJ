@@ -1,7 +1,3 @@
-import json
-
-import tornado.web
-
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.chal import ChalConst
 from services.judge import JudgeServerClusterService
@@ -37,35 +33,13 @@ def chal_ac_cmp(pro):
 class ProsetHandler(RequestHandler):
     @reqenv
     async def get(self):
-        try:
-            pageoff = int(self.get_argument('pageoff'))
-        except tornado.web.HTTPError:
-            pageoff = 0
-
-        try:
-            order = self.get_argument('order')
-        except tornado.web.HTTPError:
-            order = None
-
-        try:
-            problem_show = self.get_argument('show')
-        except tornado.web.HTTPError:
-            problem_show = 'all'
-
-        try:
-            show_only_online_pro = self.get_argument('online')
-        except tornado.web.HTTPError:
-            show_only_online_pro = False
-
-        try:
-            order_reverse = self.get_argument('reverse')
-        except tornado.web.HTTPError:
-            order_reverse = False
-
-        try:
-            search_name = self.get_argument('name')
-        except tornado.web.HTTPError:
-            search_name = None
+        pageoff = int(self.get_argument('pageoff', default=0))
+        order = self.get_argument('order', default=None)
+        problem_show = self.get_argument('show', default='all')
+        show_only_online_pro = self.get_argument('online', default=False)
+        order_reverse = self.get_argument('reverse', default=False)
+        search_name = self.get_argument('name', default=None)
+        search_tags = self.get_argument('tags', default=None)
 
         flt = {
             'order': order,
@@ -73,14 +47,17 @@ class ProsetHandler(RequestHandler):
             'online': show_only_online_pro,
             'reverse': order_reverse,
             'name': search_name,
+            'tags': search_tags,
         }
 
-        try:
-            proclass_id = int(self.get_argument('proclass_id'))
-        except tornado.web.HTTPError:
+        proclass_id = int(self.get_argument('proclass_id', default=0))
+        if proclass_id == 0:
             proclass_id = None
 
-        err, prolist = await ProService.inst.list_pro(self.acct)
+        allow_statuses = [ProConst.STATUS_ONLINE]
+        if self.acct.is_kernel():
+            allow_statuses.append(ProConst.STATUS_HIDDEN)
+        err, prolist = await ProService.inst.list_pro(allow_statuses)
 
         proclass = None
         if proclass_id:
@@ -101,14 +78,10 @@ class ProsetHandler(RequestHandler):
                 proclass['creator_name'] = creator.name
 
         if search_name:
-            search_name = set(search_name.lower())
-            def _find(name: str):
-                for ch in name.lower():
-                    if ch in search_name:
-                        return True
-
-                return False
-            prolist = filter(lambda pro: _find(pro['name']), prolist)
+            search_name = search_name.lower()
+            def _find_name(name: str):
+                return name.lower().find(search_name) != -1
+            prolist = filter(lambda pro: _find_name(pro['name']), prolist)
 
         if show_only_online_pro:
             prolist = filter(lambda pro: pro['status'] == ProConst.STATUS_ONLINE, prolist)
@@ -126,6 +99,12 @@ class ProsetHandler(RequestHandler):
             return pro
 
         prolist = map(lambda pro: _set_pro_state_and_tags(pro), prolist)
+
+        if search_tags:
+            search_tags = search_tags.lower()
+            def _find_tags(tags: str):
+                return tags.lower().find(search_tags) != -1
+            prolist = filter(lambda pro: _find_tags(pro['tagss']), prolist)
 
         if problem_show == "onlyac":
             prolist = filter(lambda pro: pro['state'] == ChalConst.STATE_AC, prolist)
@@ -252,21 +231,25 @@ class ProsetHandler(RequestHandler):
 
 class ProStaticHandler(RequestHandler):
     @reqenv
-    async def get(self, pro_id, path):
+    async def get(self, pro_id: int, path: str):
         pro_id = int(pro_id)
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.contest:
             if not self.contest.is_pro(pro_id):
                 return self.error(('Enoext', 'Problem not in contest'))
 
-        err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
+            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
+        else:
+            if self.acct.is_kernel():
+                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
+
+
+        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
             return self.error(err)
 
         if pro['status'] == ProConst.STATUS_CONTEST:
-            if not self.contest:
-                return self.error(PERMISSION_DENIED_ERROR)
-
-            elif not (self.contest.is_running() or self.contest.is_admin(self.acct)):
+            if not (self.contest.is_running() or self.contest.is_admin(self.acct)):
                 return self.error(PERMISSION_DENIED_ERROR)
 
         if path.endswith('pdf'):
@@ -275,11 +258,7 @@ class ProStaticHandler(RequestHandler):
             self.set_header('Cache-Control', 'must-revalidate, post-check=0, pre-check=0')
             self.set_header('Content-Type', 'application/pdf')
 
-            try:
-                download = self.get_argument('download')
-            except tornado.web.HTTPError:
-                download = None
-
+            download = self.get_argument('download', default=None)
             if download:
                 self.set_header('Content-Disposition', f'attachment; filename="pro{pro_id}.pdf"')
             else:
@@ -292,6 +271,7 @@ class ProHandler(RequestHandler):
     @reqenv
     async def get(self, pro_id):
         pro_id = int(pro_id)
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
 
         if self.contest:
             if not self.contest.is_pro(pro_id):
@@ -303,12 +283,15 @@ class ProHandler(RequestHandler):
             elif not self.contest.is_running() and not self.contest.is_member(self.acct):
                 return self.error(PERMISSION_DENIED_ERROR)
 
-        err, pro = await ProService.inst.get_pro(pro_id, self.acct, is_contest=self.contest is not None)
+            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
+
+        else:
+            if self.acct.is_kernel():
+                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
+
+        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
             return self.error(err)
-
-        if pro['status'] == ProConst.STATUS_CONTEST and not self.contest:
-            return self.error(PERMISSION_DENIED_ERROR)
 
         # NOTE: Guest cannot see tags
         # NOTE: Admin can see tags
@@ -361,7 +344,14 @@ class ProTagsHandler(RequestHandler):
         tags = self.get_argument('tags')
         pro_id = int(self.get_argument('pro_id'))
 
-        err, pro = await ProService.inst.get_pro(pro_id, self.acct)
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
+        if self.contest:
+            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
+        else:
+            if self.acct.is_kernel():
+                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
+
+        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
             return self.error(err)
 
@@ -371,7 +361,7 @@ class ProTagsHandler(RequestHandler):
         )
 
         err, _ = await ProService.inst.update_pro(
-            pro_id, pro['name'], pro['status'], '', None, tags, pro['allow_submit']
+            pro_id, pro['name'], pro['status'], tags, pro['allow_submit']
         )
 
         if err:
