@@ -15,6 +15,7 @@ from services.log import LogService
 from services.pro import ProService, ProConst
 from services.user import UserConst
 from services.pack import PackService
+from utils.numeric import parse_str_to_list
 
 PERMISSION_DENIED_ERROR = ('Eacces', 'Permission denied')
 ALLOW_STATUSES = [ProConst.STATUS_ONLINE, ProConst.STATUS_CONTEST, ProConst.STATUS_HIDDEN]
@@ -49,6 +50,49 @@ class ManageProHandler(RequestHandler):
 
         elif page == "filemanager":
             pro_id = int(self.get_argument('proid'))
+            download = self.get_argument('download', default=None)
+            if download:
+                basepath = self.get_argument('path')
+                filename = self.get_argument('filename')
+                if basepath not in ['http', 'res/check', 'res/make']:
+                    return self.error(('Eparam', 'Invalid basepath'))
+
+
+                basepath = f'problem/{pro_id}/{basepath}'
+                if not self._is_file_access_safe(basepath, filename):
+                    await LogService.inst.add_log(
+                        f'{self.acct.name} tried to download {filename} for problem #{pro_id}, but it was suspicious',
+                        'manage.pro.update.filemanager.download.failed'
+                    )
+                    return self.error(PERMISSION_DENIED_ERROR)
+
+                filepath = os.path.join(basepath, filename)
+
+                if not os.path.exists(filepath):
+                    await LogService.inst.add_log(
+                        f'{self.acct.name} tried to download {filename} for problem #{pro_id} but not found',
+                        'manage.pro.update.filemanager.download.failed'
+                    )
+                    return self.error(('Enoext', 'File not found'))
+
+                await LogService.inst.add_log(f'{self.acct.name} download {filename} for problem #{pro_id}',
+                                              'manage.pro.update.filemanager.download')
+
+                self.set_header('Content-Type', 'application/octet-stream')
+                self.set_header('Content-Disposition', f'attachment; filename="{filename}"')
+                with open(filepath, 'rb') as f:
+                    try:
+                        while True:
+                            buffer = f.read(65536)
+                            if buffer:
+                                self.write(buffer)
+                            else:
+                                self.finish()
+                                return
+                    except:
+                        self.error(('Eunk', 'Unknown error'))
+                return
+
             err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
             if err:
                 return self.error(err)
@@ -79,26 +123,50 @@ class ManageProHandler(RequestHandler):
 
         elif page == "updatetests":
             pro_id = int(self.get_argument('proid'))
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
+            if err:
+                return self.error(err)
+
+            await self.render(
+                'manage/pro/updatetests',
+                page='pro',
+                pro_id=pro_id,
+                tests=pro['testm_conf'],
+            )
+
+        elif page == "updatetestdata":
+            pro_id = int(self.get_argument('proid'))
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
+            if err:
+                return self.error(err)
 
             download = self.get_argument('download', default=None)
 
             if download:
-                return NotImplemented
+                testdata_type = self.get_argument('type')
+                if testdata_type not in ['input', 'output']:
+                    return self.error(('Eparam', 'Invalid testdata file type'))
+
+                testdata_id = int(self.get_argument('testdata_id'))
+                if testdata_id not in pro['testm_conf']['testdatas']:
+                    self.error(('Enoext', 'Testdata not found'))
+                    return
+
+                if testdata_type == "input":
+                    file = pro['testm_conf']['testdatas'][testdata_id]['inputfile']
+                else:
+                    file = pro['testm_conf']['testdatas'][testdata_id]['outputfile']
+
                 basepath = f'problem/{pro_id}/res/testdata'
-                filepath = f'{basepath}/{download}'
-                if not self._is_file_access_safe(basepath, download):
-                    # TODO: log illegal action
-                    self.error('Eacces')
-                    return
-
+                filepath = f'{basepath}/{file}'
                 if not os.path.exists(filepath):
-                    self.error('Enoext')
-                    return
+                    return self.error(('Enoext', 'Testdata file not found'))
 
-                # TODO: log
+                await LogService.inst.add_log(f'{self.acct.name} download testdata {testdata_id} with {testdata_type} type for problem #{pro_id}',
+                                            'manage.pro.update.testdata.download')
 
                 self.set_header('Content-Type', 'application/octet-stream')
-                self.set_header('Content-Disposition', f'attachment; filename="{download}"')
+                self.set_header('Content-Disposition', f'attachment; filename="{file}"')
                 with open(filepath, 'rb') as f:
                     try:
                         while True:
@@ -109,24 +177,14 @@ class ManageProHandler(RequestHandler):
                                 self.finish()
                                 return
                     except:
-                        self.error('Eunk')
-
+                        self.error(('Eunk', 'Unknown error'))
                 return
 
-
-            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
-            if err:
-                return self.error(err)
-
-            files = natsorted(set(map(lambda file: file.replace('.in', '').replace('.out', ''),
-                        filter(lambda file: file.endswith('.in') or file.endswith('.out'), os.listdir(f'problem/{pro_id}/res/testdata')))))
-
             await self.render(
-                'manage/pro/updatetests',
+                'manage/pro/updatetestdata',
                 page='pro',
                 pro_id=pro_id,
                 tests=pro['testm_conf'],
-                files=files
             )
 
     @reqenv
@@ -160,47 +218,207 @@ class ManageProHandler(RequestHandler):
 
             self.error(('S', pro_id))
 
-        elif page == "updatetests":
+        elif page == "updatetestdata":
             pro_id = int(self.get_argument('pro_id'))
             err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
             if err:
                 return self.error(err)
 
             if reqtype == "preview":
-                filename = self.get_argument('filename')
-                test_type = self.get_argument('type')
+                testdata_id = int(self.get_argument('testdata_id'))
+                testdata_type = self.get_argument('type')
 
-                if test_type not in ['out', 'in']:
-                    return self.error(('Eparam', 'Invalid testcase file type'))
+                if testdata_id not in pro['testm_conf']['testdatas']:
+                    return self.error(('Enoext', 'Testdata not found'))
 
-                filename += f".{test_type}"
+                if testdata_type not in ['output', 'input']:
+                    return self.error(('Eparam', 'Invalid testdata file type'))
+
+                if testdata_type == 'input':
+                    filename = pro['testm_conf']['testdatas'][testdata_id]['inputfile']
+                else:
+                    filename = pro['testm_conf']['testdatas'][testdata_id]['outputfile']
+
                 basepath = f'problem/{pro_id}/res/testdata'
-                if not self._is_file_access_safe(basepath, filename):
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to preview file:{filename} for problem #{pro_id}, but it was suspicious',
-                        'manage.pro.update.tests.preview.failed'
-                    )
-                    return self.error(PERMISSION_DENIED_ERROR)
-
                 filepath = os.path.join(basepath, filename)
 
                 if not os.path.exists(filepath):
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to preview file:{filename} for problem #{pro_id} but not found',
-                        'manage.pro.update.tests.preview.failed'
+                        'manage.pro.update.testdata.preview.failed'
                     )
                     return self.error(('Enoext', 'File not found'))
 
-                await LogService.inst.add_log(f'{self.acct.name} preview file:{filename} for problem #{pro_id}',
-                                            'manage.pro.update.tests.preview')
-                with open(filepath, 'r') as testcase_f:
-                    content = testcase_f.readlines()
+                await LogService.inst.add_log(f'{self.acct.name} preview testdata {testdata_id} with {testdata_type} type for problem #{pro_id}',
+                                            'manage.pro.update.testdata.preview')
+                with open(filepath, 'r') as testdata_f:
+                    content = testdata_f.readlines()
                     if len(content) > 25:
                         return self.error(('Efile', 'File too large'))
 
-                    self.error(('S', ''.join(content)))
+                    self.error(('S', tornado.escape.xhtml_escape(''.join(content))))
 
-            elif reqtype == "updateweight":
+            elif reqtype == 'updatesinglefile':
+                testdata_id = int(self.get_argument('testdata_id'))
+                testdata_type = self.get_argument('type')
+                pack_token = self.get_argument('pack_token')
+
+                failed = True
+                try:
+                    testdatas: dict[int, dict] = pro['testm_conf']['testdatas']
+                    if testdata_id not in testdatas:
+                        return self.error(('Enoext', 'Testdata not found'))
+
+                    if testdata_type not in ['output', 'input']:
+                        return self.error(('Eparam', 'Invalid testdata file type'))
+
+                    if testdata_type == 'input':
+                        filename = testdatas[testdata_id]['inputfile']
+                    else:
+                        filename = testdatas[testdata_id]['outputfile']
+
+                    basepath = f'problem/{pro_id}/res/testdata'
+                    filepath = f'{basepath}/{filename}'
+
+                    if not self._is_file_access_safe(basepath, filename):
+                        await LogService.inst.add_log(
+                            f'{self.acct.name} tried to update testdata {testdata_id} with {testdata_type} type for problem #{pro_id}, but it was suspicious',
+                            'manage.pro.update.testdata.updatesinglefile.failed',
+                            {
+                                'testdata': testdatas[testdata_id]
+                            }
+                        )
+                        return self.error(PERMISSION_DENIED_ERROR)
+
+                    if not os.path.exists(filepath):
+                        await LogService.inst.add_log(
+                            f'{self.acct.name} tried to update testdata {testdata_id} with {testdata_type} type for problem #{pro_id} but not found',
+                            'manage.pro.update.testdata.updatesinglefile.failed',
+                            {
+                                'testdata': testdatas[testdata_id]
+                            }
+                        )
+                        return self.error(('Enoext', 'Testdata file not found'))
+                    failed = False
+
+                finally:
+                    # NOTE: Like golang defer
+                    if failed:
+                        await PackService.inst.clear(pack_token)
+
+                _ = await PackService.inst.direct_copy(pack_token, filepath)
+
+                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                await LogService.inst.add_log(
+                    f'{self.acct.name} has sent a request to update testdata {testdata_id} with {testdata_type} type for problem #{pro_id}',
+                    'manage.pro.update.testdata.updatesinglefile',
+                )
+
+                self.error(('S', ''))
+
+            elif reqtype == "addsinglefile":
+                filename = self.get_argument('filename')
+                input_pack_token = self.get_argument('input_pack_token')
+                output_pack_token = self.get_argument('output_pack_token')
+
+                testm_conf = pro['testm_conf']
+                testdatas: dict[int, dict] = testm_conf['testdatas']
+                try:
+                    new_testdata_id = max(testdatas.keys()) + 1
+                except ValueError:
+                    new_testdata_id = 0
+
+
+                basepath = f'problem/{pro_id}/res/testdata'
+                inputfile_path = f'{basepath}/{filename}.in'
+                outputfile_path = f'{basepath}/{filename}.out'
+
+                if not self._is_file_access_safe(
+                    basepath, f'{filename}.in'
+                ) or not self._is_file_access_safe(basepath, f'{filename}.out'):
+                    await PackService.inst.clear(input_pack_token)
+                    await PackService.inst.clear(output_pack_token)
+                    await LogService.inst.add_log(
+                        f'{self.acct.name} tried to add a single file:{filename} for problem #{pro_id}, but it was suspicious',
+                        'manage.pro.update.testdata.addsinglefile.failed'
+                    )
+                    return self.error(PERMISSION_DENIED_ERROR)
+
+                if os.path.exists(inputfile_path) or os.path.exists(outputfile_path):
+                    await PackService.inst.clear(input_pack_token)
+                    await PackService.inst.clear(output_pack_token)
+                    await LogService.inst.add_log(
+                        f'{self.acct.name} tried to add single file:{filename} for problem #{pro_id} but {filename} already exists',
+                        'manage.pro.update.testdata.addsinglefile.failed'
+                    )
+                    return self.error(('Eexist', 'File already exists'))
+
+                _ = await PackService.inst.direct_copy(input_pack_token, inputfile_path)
+                _ = await PackService.inst.direct_copy(output_pack_token, outputfile_path)
+                testdatas[new_testdata_id] = {
+                    'id': new_testdata_id,
+                    'inputfile': f'{filename}.in',
+                    'outputfile': f'{filename}.out',
+                }
+                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+
+                await LogService.inst.add_log(
+                    f'{self.acct.name} has sent a request to add testdata {new_testdata_id} named {filename} for problem #{pro_id}',
+                    'manage.pro.update.testdata.addsinglefile',
+                )
+
+                self.error(('S', ''))
+
+            elif reqtype == 'deletesinglefile':
+                testdata_id = int(self.get_argument('testdata_id'))
+                testm_conf = pro['testm_conf']
+                testdatas: dict[int, dict] = testm_conf['testdatas']
+
+                if testdata_id not in testdatas:
+                    return self.error(('Enoext', 'Testdata not found'))
+
+                inputfile = testdatas[testdata_id]['inputfile']
+                outputfile = testdatas[testdata_id]['outputfile']
+
+                basepath = f'problem/{pro_id}/res/testdata'
+                if not os.path.exists(f'{basepath}/{inputfile}') or not os.path.exists(f'{basepath}/{outputfile}'):
+                    await LogService.inst.add_log(
+                        f'{self.acct.name} tried to delete testdata {testdata_id} for problem #{pro_id} but not found',
+                        'manage.pro.update.testdata.deletesinglefile.failed',
+                        {
+                            'testdata': testdatas[testdata_id]
+                        }
+                    )
+                    return self.error(('Enoext', 'Testdata file not found'))
+
+                os.remove(f'{basepath}/{inputfile}')
+                os.remove(f'{basepath}/{outputfile}')
+
+                for test_group in pro['testm_conf']['test_group'].values():
+                    try:
+                        test_group['testdatas'].remove(testdata_id)
+                    except ValueError:
+                        pass
+                deleted_testdata = pro['testm_conf']['testdatas'].pop(testdata_id)
+
+                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                await LogService.inst.add_log(
+                    f'{self.acct.name} has sent a request to delete testdata {testdata_id} for problem #{pro_id}',
+                    'manage.pro.update.tests.deletesinglefile',
+                    {
+                        'testdata': deleted_testdata
+                    }
+                )
+
+                self.error(('S', ''))
+
+        elif page == "updatetests":
+            pro_id = int(self.get_argument('pro_id'))
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
+            if err:
+                return self.error(err)
+
+            if reqtype == "updateweight":
                 group = int(self.get_argument('group'))
                 weight = int(self.get_argument('weight'))
 
@@ -227,7 +445,7 @@ class ManageProHandler(RequestHandler):
 
                 test_group[len(test_group)] = {
                     'weight': weight,
-                    'metadata': {'data': []}
+                    'testdatas': []
                 }
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
@@ -262,217 +480,28 @@ class ManageProHandler(RequestHandler):
                 )
                 self.error(('S', ''))
 
-            elif reqtype == 'addsingletestcase':
+            elif reqtype == 'settestdata':
                 group = int(self.get_argument('group'))
-                testcase = self.get_argument('testcase')
-
-                basepath = f'problem/{pro_id}/res/testdata'
-                if not os.path.exists(f'{basepath}/{testcase}.in') or not os.path.exists(f'{basepath}/{testcase}.out'):
-                    return self.error(('Enoext', 'Testcase file not found'))
+                testdatas = parse_str_to_list(self.get_argument('testdatas'))
 
                 test_group = pro['testm_conf']['test_group']
                 if group not in test_group:
                     return self.error(('Enoext', 'Group not found'))
 
-                for t in test_group[group]['metadata']['data']:
-                    if testcase == str(t):
-                        await LogService.inst.add_log(
-                            f'{self.acct.name} tried to add testcase:{testcase} for problem #{pro_id} but already exists',
-                            'manage.pro.update.tests.addsingletestcase',
-                        )
-                        return self.error(('Eexist', 'Testcase already exists'))
-
-                test_group[group]['metadata']['data'].append(testcase)
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
-                await LogService.inst.add_log(
-                    f'{self.acct.name} has sent a request to add a testcase:{testcase} to group#{group} for problem #{pro_id}',
-                    'manage.pro.update.tests.addsingletestcase',
-                )
-                self.error(('S', ''))
-
-            elif reqtype == 'deletesingletestcase':
-                group = int(self.get_argument('group'))
-                testcase = self.get_argument('testcase')
-
-                test_group = pro['testm_conf']['test_group']
-                if group not in test_group:
-                    return self.error(('Enoext', 'Group not found'))
-
-                try:
-                    test_group[group]['metadata']['data'].remove(testcase)
-                except ValueError:
-                    return self.error(('Enoext', 'Testcase not found'))
+                test_group[group]['testdatas'] = []
+                for testdata_id in testdatas:
+                    if testdata_id not in pro['testm_conf']['testdatas']:
+                        continue
+                    test_group[group]['testdatas'].append(testdata_id)
 
                 await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
                 await LogService.inst.add_log(
-                    f'{self.acct.name} has sent a request to delete a testcase:{testcase} to group#{group} for problem #{pro_id}',
-                    'manage.pro.update.tests.deletesingletestcase',
+                    f'{self.acct.name} has sent a request to set testdatas to group#{group} for problem #{pro_id}',
+                    'manage.pro.update.tests.settestdata',
+                    {
+                        'testdatas': testdatas
+                    }
                 )
-                self.error(('S', ''))
-
-            elif reqtype == 'renamesinglefile':
-                old_filename = self.get_argument('old_filename')
-                new_filename = self.get_argument('new_filename')
-
-                # check filename
-                basepath = f'problem/{pro_id}/res/testdata'
-                old_inputfile_path = f'{basepath}/{old_filename}.in'
-                old_outputfile_path = f'{basepath}/{old_filename}.out'
-                new_inputfile_path = f'{basepath}/{new_filename}.in'
-                new_outputfile_path = f'{basepath}/{new_filename}.out'
-                if not self._is_file_access_safe(basepath, f'{old_filename}.in') or not self._is_file_access_safe(basepath, f'{new_filename}.in'):
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id}, but it was suspicious',
-                        'manage.pro.update.tests.renamesinglefile.failed'
-                    )
-                    return self.error(PERMISSION_DENIED_ERROR)
-
-                if not os.path.exists(old_inputfile_path) or not os.path.exists(old_outputfile_path):
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id} but {old_filename} not found',
-                        'manage.pro.update.tests.renamesinglefile.failed'
-                    )
-                    return self.error(('Enoext', 'Old filename not found'))
-
-                if os.path.exists(new_inputfile_path) or os.path.exists(new_outputfile_path):
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id} but {new_filename} already exists',
-                        'manage.pro.update.tests.renamesinglefile.failed'
-                    )
-                    return self.error(('Eexist', 'New filename already exists'))
-
-                os.rename(old_inputfile_path, new_inputfile_path)
-                os.rename(old_outputfile_path, new_outputfile_path)
-
-                is_modified = False
-                for test_group in pro['testm_conf']['test_group'].values():
-                    test = test_group['metadata']['data']
-
-                    for i in range(len(test)):
-                        if test[i] == old_filename:
-                            is_modified = True
-                            test[i] = new_filename
-
-                if is_modified:
-                    await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
-                await LogService.inst.add_log(
-                    f'{self.acct.name} has sent a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
-                    'manage.pro.update.tests.renamesinglefile',
-                )
-                self.error(('S', ''))
-
-            elif reqtype == 'updatesinglefile':
-                filename = self.get_argument('filename')
-                test_type = self.get_argument('type')
-                pack_token = self.get_argument('pack_token')
-
-                if test_type not in ['output', 'input']:
-                    PackService.inst.clear(pack_token)
-                    return self.error(('Eparam', 'Invalid testcase file type'))
-
-                basepath = f'problem/{pro_id}/res/testdata'
-                filepath = f'{basepath}/{filename}.{test_type[0:-3]}'
-
-                if not self._is_file_access_safe(basepath, f"{filename}.{test_type[0:-3]}"):
-                    PackService.inst.clear(pack_token)
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to update {filename} for problem #{pro_id}, but it was suspicious',
-                        'manage.pro.update.tests.updatesinglefile.failed'
-                    )
-                    return self.error(PERMISSION_DENIED_ERROR)
-
-                if not os.path.exists(filepath):
-                    PackService.inst.clear(pack_token)
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to update {filename}.{test_type[0:-3]} for problem #{pro_id} but not found',
-                        'manage.pro.update.tests.updatesinglefile.failed'
-                    )
-                    return self.error(('Enoext', 'Testcase file not found'))
-
-                _ = await PackService.inst.direct_copy(pack_token, filepath)
-
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
-                await LogService.inst.add_log(
-                    f'{self.acct.name} has sent a request to update a single file:{filename} for problem #{pro_id}',
-                    'manage.pro.update.tests.updatesinglefile',
-                )
-
-                self.error(('S', ''))
-
-            elif reqtype == "addsinglefile":
-                filename = self.get_argument('filename')
-                input_pack_token = self.get_argument('input_pack_token')
-                output_pack_token = self.get_argument('output_pack_token')
-
-                basepath = f'problem/{pro_id}/res/testdata'
-                inputfile_path = f'{basepath}/{filename}.in'
-                outputfile_path = f'{basepath}/{filename}.out'
-
-                if not self._is_file_access_safe(
-                    basepath, f'{filename}.in'
-                ) or not self._is_file_access_safe(basepath, f'{filename}.out'):
-                    PackService.inst.clear(input_pack_token)
-                    PackService.inst.clear(output_pack_token)
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to add a single file:{filename} for problem #{pro_id}, but it was suspicious',
-                        'manage.pro.update.tests.addsinglefile.failed'
-                    )
-                    return self.error(PERMISSION_DENIED_ERROR)
-
-                if os.path.exists(inputfile_path) or os.path.exists(outputfile_path):
-                    PackService.inst.clear(input_pack_token)
-                    PackService.inst.clear(output_pack_token)
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to add single file:{filename} for problem #{pro_id} but {filename} already exists',
-                        'manage.pro.update.tests.addsinglefile.failed'
-                    )
-                    return self.error(('Eexist', 'File already exists'))
-
-                _ = await PackService.inst.direct_copy(input_pack_token, inputfile_path)
-                _ = await PackService.inst.direct_copy(output_pack_token, outputfile_path)
-
-                await LogService.inst.add_log(
-                    f'{self.acct.name} has sent a request to add a single file:{filename} for problem #{pro_id}',
-                    'manage.pro.update.tests.addsinglefile',
-                )
-
-                self.error(('S', ''))
-
-            elif reqtype == 'deletesinglefile':
-                filename = self.get_argument('filename')
-
-                basepath = f'problem/{pro_id}/res/testdata'
-                if not self._is_file_access_safe(basepath, f'{filename}.in'):
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to delete a single file:{filename} for problem #{pro_id}, but it was suspicious',
-                        'manage.pro.update.tests.deletesinglefile.failed'
-                    )
-                    return self.error(PERMISSION_DENIED_ERROR)
-
-                if not os.path.exists(f'{basepath}/{filename}.in') or not os.path.exists(f'{basepath}/{filename}.out'):
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to delete a single file:{filename} for problem #{pro_id} but not found',
-                        'manage.pro.update.tests.deletesinglefile.failed'
-                    )
-                    return self.error(('Enoext', 'Testcase file not found'))
-
-                os.remove(f'{basepath}/{filename}.in')
-                os.remove(f'{basepath}/{filename}.out')
-
-                for test_group in pro['testm_conf']['test_group'].values():
-                    test = test_group['metadata']['data']
-
-                    try:
-                        test.remove(filename)
-                    except ValueError:
-                        pass
-
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
-                await LogService.inst.add_log(
-                    f'{self.acct.name} has sent a request to delete a single file:{filename} for problem #{pro_id}',
-                    'manage.pro.update.tests.deletesinglefile',
-                )
-
                 self.error(('S', ''))
 
         elif page == "filemanager":
@@ -522,7 +551,7 @@ class ManageProHandler(RequestHandler):
                 basepath = f'problem/{pro_id}/{basepath}'
                 old_filepath = f'{basepath}/{old_filename}'
                 new_filepath = f'{basepath}/{new_filename}'
-                if not self._is_file_access_safe(basepath, new_filename):
+                if not self._is_file_access_safe(basepath, new_filename) or not self._is_file_access_safe(basepath, old_filename):
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.renamesinglefile.failed'
@@ -558,7 +587,7 @@ class ManageProHandler(RequestHandler):
                 filepath = f'{basepath}/{filename}'
 
                 if not self._is_file_access_safe(basepath, filename):
-                    PackService.inst.clear(pack_token)
+                    await PackService.inst.clear(pack_token)
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to update {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.updatesinglefile.failed'
@@ -566,7 +595,7 @@ class ManageProHandler(RequestHandler):
                     return self.error(PERMISSION_DENIED_ERROR)
 
                 if not os.path.exists(filepath):
-                    PackService.inst.clear(pack_token)
+                    await PackService.inst.clear(pack_token)
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to update {filename} for problem #{pro_id} but not found',
                         'manage.pro.update.filemanager.updatesinglefile.failed'
@@ -589,7 +618,7 @@ class ManageProHandler(RequestHandler):
                 filepath = f'{basepath}/{filename}'
 
                 if not self._is_file_access_safe(basepath, filename):
-                    PackService.inst.clear(pack_token)
+                    await PackService.inst.clear(pack_token)
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to add {filename} for problem #{pro_id}, but it was suspicious',
                         'manage.pro.update.filemanager.addsinglefile.failed'
@@ -597,7 +626,7 @@ class ManageProHandler(RequestHandler):
                     return self.error(PERMISSION_DENIED_ERROR)
 
                 if os.path.exists(filepath):
-                    PackService.inst.clear(pack_token)
+                    await PackService.inst.clear(pack_token)
                     await LogService.inst.add_log(
                         f'{self.acct.name} tried to add {filename} for problem #{pro_id} but {filename} already exists',
                         'manage.pro.update.filemanager.addsinglefile.failed'
@@ -723,7 +752,7 @@ class ManageProHandler(RequestHandler):
 
                 err, _ = await ProService.inst.unpack_pro(pro_id, pack_token)
                 if err:
-                    PackService.inst.clear(pack_token)
+                    await PackService.inst.clear(pack_token)
                     await LogService.inst.add_log(
                         f"{self.acct.name} tried to update the problem #{pro_id} by uploading problem package but failed",
                         'manage.pro.update.pro.package.failed',

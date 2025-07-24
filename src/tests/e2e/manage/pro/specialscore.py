@@ -50,10 +50,10 @@ class ManageProSpecialScoreTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
 
-            # NOTE: In this case, the testcase is not important, but we need at least one testcase because without any test cases, the judge cannot function.
+            # NOTE: In this case, the testdata is not important, but we need at least one testdata because without any test cases, the judge cannot function.
             inputfile_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
             outputfile_token = await self._upload_file('tests/static_file/toj3/3.out', admin_session)
-            res = admin_session.post('manage/pro/updatetests', data={
+            res = admin_session.post('manage/pro/updatetestdata', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': expected_pro_id,
                 'filename': '1',
@@ -94,9 +94,9 @@ class ManageProSpecialScoreTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
 
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
-                'reqtype': 'addsingletestcase',
+                'reqtype': 'settestdata',
                 'pro_id': 5,
-                'testcase': '1',
+                'testdatas': '0',
                 'group': 0,
             })
             self.assertAPIReturnSuccess(res.text)
@@ -144,9 +144,9 @@ class ManageProSpecialScoreTest(AsyncTest):
                 self.assertAPIReturnSuccess(res.text)
 
                 res = admin_session.post('manage/pro/updatetests?proid=1', data={
-                    'reqtype': 'addsingletestcase',
+                    'reqtype': 'settestdata',
                     'pro_id': 6,
-                    'testcase': '1',
+                    'testdatas': '0',
                     'group': group_idx,
                 })
                 self.assertAPIReturnSuccess(res.text)

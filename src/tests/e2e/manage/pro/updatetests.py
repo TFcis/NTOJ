@@ -1,3 +1,4 @@
+import re
 import os
 import copy
 import json
@@ -14,7 +15,7 @@ class ManageProUpdateTestsTest(AsyncTest):
 
         return pack_token
 
-    def assertTable(self, default_data: dict, assert_tables: list[dict], session):
+    def assertTable(self, url: str, default_data: dict, assert_tables: list[dict], session):
         for table in assert_tables:
             equal_value = table.pop("equal_value")
 
@@ -22,35 +23,47 @@ class ManageProUpdateTestsTest(AsyncTest):
             for key, val in table.items():
                 d[key] = val
 
-            res = session.post('manage/pro/updatetests', data=d)
+            res = session.post(url, data=d)
             self.assertAPIReturnValue(res.text, equal_value)
 
     async def main(self):
         with AccountContext("admin@test", "testtest") as admin_session:
             # NOTE: preview
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
                 'reqtype': 'preview',
                 'pro_id': 1,
-                'filename': '1',
-                'type': 'out',
+                'testdata_id': 0,
+                'type': 'output',
             })
             self.assertEqual(json.loads(res.text)['data'], open('tests/static_file/toj3/res/testdata/1.out').read())
 
             self.assertTable(
+                'manage/pro/updatetestdata',
                 {
                     'reqtype': 'preview',
                     'pro_id': 1,
-                    'filename': '1',
-                    'type': 'out',
+                    'testdata_id': 0,
+                    'type': 'output',
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
-                    {'filename': '2', 'equal_value': ('Efile', 'File too large')}, # file has more than 25 lines or cannot be decoded as UTF-8.
-                    {'filename': '../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
-                    {'filename': '5', 'equal_value': ('Enoext', 'File not found')} # file not found
+                    {'testdata_id': 1, 'equal_value': ('Efile', 'File too large')}, # file has more than 25 lines or cannot be decoded as UTF-8.
+                    {'testdata_id': 100, 'equal_value': ('Enoext', 'Testdata not found')},
                 ],
                 admin_session
             )
+
+            # NOTE: download file
+            res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=0&type=output')
+            self.assertIsNotNone(res.headers.get("content-disposition"))
+            self.assertEqual(re.findall(r'filename="?([^";]+)"?', res.headers.get("content-disposition"))[0], "1.out")
+            self.assertEqual(res.content.decode('utf-8'), open('tests/static_file/toj3/res/testdata/1.out').read())
+
+            res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=123&type=output')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Testdata not found'))
+
+            res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=0&type=what')
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid testdata file type'))
 
             # NOTE: updateweight
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
@@ -88,7 +101,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             # NOTE: addsinglefile
             inputfile_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
             outputfile_token = await self._upload_file('tests/static_file/toj3/3.out', admin_session)
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': 1,
                 'filename': '3',
@@ -100,8 +113,15 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertTrue(os.path.exists('problem/1/res/testdata/3.out'))
             self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/res/testdata/3.in').read())
             self.assertEqual(open('tests/static_file/toj3/3.out').read(), open('problem/1/res/testdata/3.out').read())
+            html = self.get_html('manage/pro/updatetestdata?proid=1', admin_session)
+            trs = html.select('tbody > tr')
+            self.assertEqual(len(trs), 3)
+            self.assertEqual(trs[2].attrs['testdata_id'], '2')
+            self.assertEqual(trs[2].select_one('a.input').text.strip(), '3.in')
+            self.assertEqual(trs[2].select_one('a.output').text.strip(), '3.out')
 
             self.assertTable(
+                'manage/pro/updatetestdata',
                 {
                     'reqtype': 'addsinglefile',
                     'pro_id': 1,
@@ -117,35 +137,17 @@ class ManageProUpdateTestsTest(AsyncTest):
                 admin_session
             )
 
-            # NOTE: addsingletestcase
+            # NOTE: settestdata (add testdata to range)
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
-                'reqtype': 'addsingletestcase',
+                'reqtype': 'settestdata',
                 'pro_id': 1,
-                'testcase': '3',
+                'testdatas': '0-2',
                 'group': 2,
             })
             self.assertAPIReturnSuccess(res.text)
             html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
             groups = html.select_one('div#tests').select('div.accordion-item')
-            testcase_trs = groups[2].select('tbody > tr')
-            self.assertEqual(testcase_trs[0].select('td')[0].text.strip(), '3')
-            self.assertEqual(testcase_trs[0].attrs.get('testcase'), '3')
-
-            self.assertTable(
-                {
-                    'reqtype': 'addsingletestcase',
-                    'pro_id': 1,
-                    'testcase': '3',
-                    'group': 2,
-                },
-                [
-                    {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
-                    {'testcase': '300', 'equal_value': ('Enoext', 'Testcase file not found')}, # testcase not found
-                    {'group': '300', 'equal_value': ('Enoext', 'Group not found')}, # group not found
-                    {'testcase': '3', 'equal_value': ('Eexist', 'Testcase already exists')}, # testcase already exists
-                ],
-                admin_session
-            )
+            self.assertEqual(groups[2].select_one('#testdatas').attrs['value'].strip(), "0-2")
 
             def callback():
                 res = admin_session.post('submit', data={
@@ -157,64 +159,30 @@ class ManageProUpdateTestsTest(AsyncTest):
             chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
             self.assertEqual(chal_states_result, [ChalConst.STATE_AC] * len(chal_states_result))
 
-            # NOTE: renamesinglefile
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
-                'reqtype': 'renamesinglefile',
-                'pro_id': 1,
-                'old_filename': '3',
-                'new_filename': '4',
-            })
-            self.assertAPIReturnSuccess(res.text)
-            self.assertTrue(os.path.exists('problem/1/res/testdata/4.in'))
-            self.assertTrue(os.path.exists('problem/1/res/testdata/4.out'))
-            self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/res/testdata/4.in').read())
-            self.assertEqual(open('tests/static_file/toj3/3.out').read(), open('problem/1/res/testdata/4.out').read())
-            html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
-            groups = html.select_one('div#tests').select('div.accordion-item')
-            testcase_trs = groups[2].select('tbody > tr')
-            self.assertEqual(testcase_trs[0].select('td')[0].text.strip(), '4')
-            self.assertEqual(testcase_trs[0].attrs.get('testcase'), '4')
-
-            self.assertTable(
-                {
-                    'reqtype': 'renamesinglefile',
-                    'pro_id': 1,
-                    'old_filename': '3',
-                    'new_filename': '4',
-                },
-                [
-                    {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
-                    {'old_filename': '../conf.json', 'new_filename': '../tw87.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
-                    {'old_filename': '4', 'new_filename': '4', 'equal_value': ('Eexist', 'New filename already exists')}, # new file already exists
-                    {'old_filename': '5', 'equal_value': ('Enoext', 'Old filename not found')}, # old file not found
-                ],
-                admin_session
-            )
-
             # NOTE: updatesinglefile
             pack_token = await self._upload_file('tests/static_file/toj3/3.out.incorrect', admin_session)
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
                 'reqtype': 'updatesinglefile',
                 'pro_id': 1,
-                'filename': '4',
+                'testdata_id': 2,
                 'type': 'output',
                 'pack_token': pack_token,
             })
             self.assertAPIReturnSuccess(res.text)
 
             self.assertTable(
+                'manage/pro/updatetestdata',
                 {
                     'reqtype': 'updatesinglefile',
                     'pro_id': 1,
-                    'filename': '4',
+                    'testdata_id': 2,
                     'type': 'output',
                     'pack_token': pack_token,
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
-                    {'type': '../../', 'equal_value': ('Eparam', 'Invalid testcase file type')}, # type in ['output', 'input']
-                    {'filename': '../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
-                    {'filename': '5', 'equal_value': ('Enoext', 'Testcase file not found')}, # file not found
+                    {'type': '../../', 'equal_value': ('Eparam', 'Invalid testdata file type')}, # type in ['output', 'input']
+                    {'testdata_id': 100, 'equal_value': ('Enoext', 'Testdata not found')},
                 ],
                 admin_session
             )
@@ -229,31 +197,31 @@ class ManageProUpdateTestsTest(AsyncTest):
             chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
             self.assertEqual(chal_states_result, [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA])
 
-            # NOTE: deletesingletestcase
+            # NOTE: settestdata (remove testdata from range)
             inputfile_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
             outputfile_token = await self._upload_file('tests/static_file/toj3/3.out', admin_session)
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': 1,
-                'filename': '3',
+                'filename': '4',
                 'input_pack_token': inputfile_token,
                 'output_pack_token': outputfile_token,
             })
             self.assertAPIReturnSuccess(res.text)
+            html = self.get_html('manage/pro/updatetestdata?proid=1', admin_session)
+            trs = html.select('tbody > tr')
+            self.assertEqual(len(trs), 4)
+
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
-                'reqtype': 'addsingletestcase',
+                'reqtype': 'settestdata',
                 'pro_id': 1,
-                'testcase': '3',
+                'testdatas': '0-1, 3',
                 'group': 2,
             })
             self.assertAPIReturnSuccess(res.text)
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
-                'reqtype': 'deletesingletestcase',
-                'pro_id': 1,
-                'testcase': '4',
-                'group': 2,
-            })
-            self.assertAPIReturnSuccess(res.text)
+            html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
+            groups = html.select_one('div#tests').select('div.accordion-item')
+            self.assertEqual(groups[2].select_one('#testdatas').attrs['value'].strip(), "0-1,3")
             def callback():
                 res = admin_session.post('submit', data={
                     'reqtype': 'rechal',
@@ -265,25 +233,28 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(chal_states_result, [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_AC])
 
             # NOTE: deletesinglefile
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
                 'reqtype': 'deletesinglefile',
                 'pro_id': 1,
-                'filename': '4',
+                'testdata_id': 3,
             })
             self.assertAPIReturnSuccess(res.text)
             self.assertFalse(os.path.exists('problem/1/res/testdata/4.in'))
             self.assertFalse(os.path.exists('problem/1/res/testdata/4.out'))
+            html = self.get_html('manage/pro/updatetestdata?proid=1', admin_session)
+            trs = html.select('tbody > tr')
+            self.assertEqual(len(trs), 3)
 
             self.assertTable(
+                'manage/pro/updatetestdata',
                 {
                     'reqtype': 'deletesinglefile',
                     'pro_id': 1,
-                    'filename': '4',
+                    'testdata_id': 3,
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
-                    {'filename': '../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
-                    {'filename': '5', 'equal_value': ('Enoext', 'Testcase file not found')}, # file not found
+                    {'testdata_id': 100, 'equal_value': ('Enoext', 'Testdata not found')}, # illegal filepath access
                 ],
                 admin_session
             )

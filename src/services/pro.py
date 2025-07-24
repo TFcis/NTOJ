@@ -1,6 +1,7 @@
-import json
 import os
 import re
+import json
+import shutil
 
 from msgpack import packb, unpackb
 
@@ -105,18 +106,33 @@ class ProService:
 
             result = await con.fetch(
                 """
-                    SELECT "test_idx", "weight", "metadata"
+                    SELECT "test_idx", "weight", "testdatas"
                     FROM "test_config" WHERE "pro_id" = $1 ORDER BY "test_idx" ASC;
                 """,
                 pro_id,
             )
 
-        test_groups = {}
-        for test_group_idx, weight, metadata in result:
-            test_groups[test_group_idx] = {
-                "weight": weight,
-                "metadata": json.loads(metadata),
-            }
+            test_groups = {}
+            for test_group_idx, weight, testdatas in result:
+                test_groups[test_group_idx] = {
+                    "weight": weight,
+                    "testdatas": testdatas,
+                }
+
+            result = await con.fetch(
+                """
+                    SELECT "id", "inputfile", "outputfile"
+                    FROM "testdata" WHERE "pro_id" = $1;
+                """,
+                pro_id
+            )
+            testdatas = {}
+            for id, inputfile, outputfile in result:
+                testdatas[id] = {
+                    "id": id,
+                    "inputfile": inputfile,
+                    "outputfile": outputfile,
+                }
 
         testm_conf = {
             "chalmeta": chalmeta,
@@ -125,6 +141,7 @@ class ProService:
             "is_makefile": is_makefile,
             "test_group": test_groups,
             "rate_precision": rate_precision,
+            "testdatas": testdatas
         }
 
         return (
@@ -327,7 +344,8 @@ class ProService:
             - Related Redis cache (`rate`, `pro_rate`) will be invalidated.
         """
 
-        insert_values = []
+        insert_test_config_values = []
+        insert_testdatas_values = []
         is_makefile = testm_conf['is_makefile']
         check_type = testm_conf['check_type']
         chalmeta = testm_conf['chalmeta']
@@ -335,22 +353,36 @@ class ProService:
         rate_precision = testm_conf['rate_precision']
         for test_group_idx, test_group_conf in testm_conf['test_group'].items():
             weight = test_group_conf['weight']
-            insert_values.append((pro_id, test_group_idx, weight, json.dumps(test_group_conf['metadata'])))
+            insert_test_config_values.append((pro_id, test_group_idx, weight, test_group_conf['testdatas']))
+
+        for testdata in testm_conf['testdatas'].values():
+            insert_testdatas_values.append((pro_id, testdata['id'], testdata['inputfile'], testdata['outputfile']))
 
         async with self.db.acquire() as con:
             await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
+            await con.execute('DELETE FROM "testdata" WHERE "pro_id" = $1;', int(pro_id))
             await con.execute(
                 'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4, "rate_precision" = $5 WHERE pro_id = $6',
                 is_makefile, check_type, json.dumps(chalmeta), json.dumps(limit), rate_precision, pro_id
             )
 
-            if insert_values:
+            if insert_test_config_values:
                 await con.executemany(
                     '''INSERT INTO "test_config"
-                        ("pro_id", "test_idx", "weight", "metadata")
+                        ("pro_id", "test_idx", "weight", "testdatas")
                         VALUES ($1, $2, $3, $4);''',
-                    insert_values
+                    insert_test_config_values
                 )
+
+            if insert_testdatas_values:
+                await con.executemany(
+                    '''
+                        INSERT INTO "testdata" ("pro_id", "id", "inputfile", "outputfile")
+                        VALUES ($1, $2, $3, $4);
+                    ''',
+                    insert_testdatas_values
+                )
+
 
         await self.db.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
         await self.rs.delete('rate')
@@ -373,98 +405,116 @@ class ProService:
         """
 
         from services.chal import ChalConst
-        err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
-        if err:
-            return err, None
-
+        failed = True
         try:
-            os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-            os.symlink(
-                os.path.abspath(f"problem/{pro_id}/http"),
-                f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
-            )
+            err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
+            if err:
+                return err, None
 
-        except FileExistsError:
-            pass
-
-        try:
-            with open(f"problem/{pro_id}/conf.json") as conf_f:
-                conf = json.load(conf_f)
-        except json.decoder.JSONDecodeError:
-            return ("Econf", "Problem config json syntax error"), None
-
-        is_makefile = False
-        if 'compile' in conf:
-            is_makefile = conf["compile"] == 'makefile'
-        elif 'is_makefile' in conf:
-            is_makefile = conf["is_makefile"]
-
-        check_type = ProConst.STR_2_CHECKER_TYPE[conf["check"]]
-
-        ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
-        if is_makefile:
-            ALLOW_COMPILERS = {'default', 'gcc', 'g++', 'clang', 'clang++'}
-
-        if "limit" in conf:
-            limits = {}
-            for comp_type, limit in conf["limit"].items():
-                if comp_type not in ALLOW_COMPILERS:
-                    continue
-
-                try:
-                    limit['timelimit'] = max(int(limit['timelimit']), 0)
-                    limit['memlimit'] = max(int(limit['memlimit']) * 1024, 0)
-                except KeyError as e:
-                    limit[e.args[0]] = 0
-                except ValueError:
-                    continue
-
-                limits[comp_type] = limit
-
-            if 'default' not in limits:
-                return ("Econf", "Problem limit config require default value"), None
-
-        elif 'timelimit' in conf and 'memlimit' in conf:
             try:
-                limits = {
-                    'default': {
-                        'timelimit': int(conf["timelimit"]),
-                        'memlimit': int(conf["memlimit"]) * 1024
+                os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
+                os.symlink(
+                    os.path.abspath(f"problem/{pro_id}/http"),
+                    f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
+                )
+
+            except FileExistsError:
+                pass
+
+            try:
+                with open(f"problem/{pro_id}/conf.json") as conf_f:
+                    conf = json.load(conf_f)
+            except json.decoder.JSONDecodeError:
+                return ("Econf", "Problem config json syntax error"), None
+
+            testm_conf = {
+                'rate_precision': 0,
+            }
+
+            testm_conf['is_makefile'] = False
+            if 'compile' in conf:
+                testm_conf['is_makefile'] = conf["compile"] == 'makefile'
+            elif 'is_makefile' in conf:
+                testm_conf['is_makefile'] = conf["is_makefile"]
+
+            testm_conf['check_type'] = ProConst.STR_2_CHECKER_TYPE[conf["check"]]
+
+            ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
+            if testm_conf['is_makefile']:
+                ALLOW_COMPILERS = {'default', 'gcc', 'g++', 'clang', 'clang++'}
+
+            if "limit" in conf:
+                limits = {}
+                for comp_type, limit in conf["limit"].items():
+                    if comp_type not in ALLOW_COMPILERS:
+                        continue
+
+                    try:
+                        limit['timelimit'] = max(int(limit['timelimit']), 0)
+                        limit['memlimit'] = max(int(limit['memlimit']) * 1024, 0)
+                    except KeyError as e:
+                        limit[e.args[0]] = 0
+                    except ValueError:
+                        continue
+
+                    limits[comp_type] = limit
+
+                if 'default' not in limits:
+                    return ("Econf", "Problem limit config require default value"), None
+
+            elif 'timelimit' in conf and 'memlimit' in conf:
+                try:
+                    limits = {
+                        'default': {
+                            'timelimit': int(conf["timelimit"]),
+                            'memlimit': int(conf["memlimit"]) * 1024
+                        }
                     }
-                }
-            except ValueError:
-                return ("Econf", "Problem limit config have invalid value"), None
-        else:
-                return ("Econf", "Problem config require limit or timelimit/memlimit"), None
+                except ValueError:
+                    return ("Econf", "Problem limit config have invalid value"), None
+            else:
+                    return ("Econf", "Problem config require limit or timelimit/memlimit"), None
+            testm_conf['limit'] = limits
 
-        chalmeta = {}
-        if 'metadata' in conf:
-            chalmeta = conf["metadata"]  # INFO: ioredir data
+            if 'metadata' in conf:
+                testm_conf['chalmeta'] = conf["metadata"]  # INFO: ioredir data
 
-        async with self.db.acquire() as con:
-            await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
-            await con.execute(
-                'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4 WHERE pro_id = $5',
-                is_makefile, check_type, json.dumps(chalmeta), json.dumps(limits), pro_id
-            )
-
-            insert_values = []
-
+            test_group = {}
+            testdatas: dict[str, int] = {}
+            testdata_id_counter = 0
             for test_idx, test_conf in enumerate(conf["test"]):
                 for i in range(len(test_conf["data"])):
                     test_conf["data"][i] = str(test_conf["data"][i])
+                    if test_conf["data"][i] not in testdatas:
+                        testdatas[test_conf["data"][i]] = testdata_id_counter
+                        testdata_id_counter += 1
 
-                metadata = {"data": test_conf["data"]}
-                insert_values.append((pro_id, test_idx, test_conf['weight'], json.dumps(metadata)))
+                test_group[test_idx] = {
+                    'weight': int(test_conf['weight']),
+                    'testdatas': []
+                }
 
-            await con.executemany(
-                '''INSERT INTO "test_config"
-                    ("pro_id", "test_idx", "weight", "metadata")
-                    VALUES ($1, $2, $3, $4);''',
-                insert_values
-            )
-            await con.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
+            for test_idx, test_conf in enumerate(conf["test"]):
+                for i in range(len(test_conf["data"])):
+                    test_group[test_idx]['testdatas'].append(testdatas[test_conf["data"][i]])
 
+            testm_conf['testdatas'] = {}
+
+            for testdata, testdata_id in testdatas.items():
+                testm_conf['testdatas'][testdata_id] = {
+                    'id': testdata_id,
+                    'inputfile': f"{testdata}.in",
+                    'outputfile': f"{testdata}.out",
+                }
+
+            testm_conf['test_group'] = test_group
+            failed = False
+
+        finally:
+            if failed and os.path.exists(f"problem/{pro_id}"):
+                shutil.rmtree(f"problem/{pro_id}")
+
+        await self.update_test_config(pro_id, testm_conf)
         await self.rs.delete("prolist")
 
         return None, None
