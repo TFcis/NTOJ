@@ -7,45 +7,15 @@
 <script type="text/javascript" id="contjs">
 	function init() {
 		let pro_id = "{{ pro_id }}";
-		let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
-        let add_single_file_modal = new bootstrap.Modal(document.getElementById('addSingleFileModal'));
-
-		document.querySelectorAll('a.preview-file').forEach(el => {
-			el.addEventListener('click', function (e) {
-				let tr = $(this).parents('tr');
-                let filename = tr.attr('filename');
-                let type = '';
-				if ($(this).hasClass('input')) {
-					type = 'in';
-				} else {
-					type = 'out';
-				}
-
-				let file_content = '';
-				$.post('/oj/be/manage/pro/updatetests', {
-					'reqtype': 'preview',
-					'pro_id': pro_id,
-                    'filename': filename,
-					'type': type,
-				}, function (res) {
-                    res = JSON.parse(res);
-                    file_content = res.data;
-
-					$("#code").find("code").html(file_content);
-                    $("#preview-title").text(`${filename}.${type}`);
-                    Prism.highlightAll();
-					preview_modal.show();
-				});
-			});
-		});
+        let re = /^(\d+(-\d+)?)(\s*,\s*\d+(-\d+)?)*$/;
 
         document.querySelectorAll('.edit-weight').forEach(el => {
 			el.addEventListener('click', function (e) {
 				let group = $(this).parents('.accordion-collapse').attr('group');
+                let weight = $(this).siblings('#weight').val();
 
-				let weight = parseInt(prompt('new weight', $(this).attr('weight')));
 				if (isNaN(weight)) {
-					alert('請輸入數字');
+					alert('Weight must be a number');
 					return;
 				}
 
@@ -72,210 +42,8 @@
 			});
 		});
 
-        document.querySelectorAll('button.rename-single-file').forEach(el => {
-			el.addEventListener('click', function (e) {
-                let old_filename = $(this).parents('tr').attr('filename');
-                let new_filename = prompt('New testcase filename', old_filename);
-
-				$.post('/oj/be/manage/pro/updatetests', {
-                    'reqtype': 'renamesinglefile',
-					'pro_id': pro_id,
-                    'old_filename': old_filename,
-                    'new_filename': new_filename,
-				}, function (res) {
-                    					let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Rename ${old_filename} to ${new_filename} successfully.`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
-                    index.reload();
-				});
-			});
-        });
-
-		document.querySelectorAll('button.delete-single-file').forEach(el => {
-			el.addEventListener('click', function (e) {
-				let filename = $(this).parents('tr').attr('filename');
-
-				$.post('/oj/be/manage/pro/updatetests', {
-					'reqtype': 'deletesinglefile',
-					'pro_id': pro_id,
-                    'filename': filename,
-				}, function (res) {
-					let msg = '';
-					let dialog_type = null;
-					if (res[0] == 'E') {
-						dialog_type = index.DIALOG_TYPE.error;
-						if (res == 'Enoext') {
-							msg = 'File not found';
-						} else {
-							msg = res;
-						}
-					} else {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Delete Input & Output File ${filename} successfully.`;
-					}
-
-					index.show_notify_dialog(msg, dialog_type);
-                    index.reload();
-				});
-			});
-		});
-
-        let j_add_single_file = $("#addSingleFileModal");
-        $("button.add-single-file").on('click', function(e) {
-            j_add_single_file.find("input.filename").val("");
-            j_add_single_file.find("input.inputfile").val("");
-            j_add_single_file.find("input.outputfile").val("");
-            add_single_file_modal.show();
-        });
-
-        j_add_single_file.find("button.cancel").on('click', function(e) {
-            add_single_file_modal.hide();
-        });
-
-        j_add_single_file.find("button.upload").on('click', function(e) {
-			function _update(input_pack_token, output_pack_token, filename) {
-				$.post('/oj/be/manage/pro/updatetests', {
-					'reqtype': 'addsinglefile',
-					'input_pack_token': input_pack_token,
-					'output_pack_token': output_pack_token,
-					'pro_id': pro_id,
-                    'filename': filename,
-				}, function (res) {
-                    let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Upload single file successfully`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
-                    index.reload();
-				});
-			}
-            add_single_file_modal.hide();
-
-            let filename = j_add_single_file.find("input.filename").val();
-            if (filename.length == 0) {
-                index.show_notify_dialog('Filename should not empty', index.DIALOG_TYPE.error);
-                return;
-            }
-
-            let inputfiles = j_add_single_file.find("input.inputfile")[0].files;
-            let outputfiles = j_add_single_file.find("input.outputfile")[0].files;
-
-            if (inputfiles.length == 0 || outputfiles.length == 0) {
-                index.show_notify_dialog('File should not empty', index.DIALOG_TYPE.error);
-                return;
-            }
-
-            let inputfile = inputfiles[0];
-            let outputfile = outputfiles[0];
-
-            pack.get_token().done(function(input_token) {
-                index.create_progress_bar('Input File Uploading...');
-
-                pack.send(input_token, inputfile).done(function () {
-                    index.update_progress_bar_progress(100);
-                    pack.get_token().done(function(output_token) {
-                        index.update_progress_bar_progress(0);
-                        index.update_progress_bar_title("Output File Uploading...");
-
-                        pack.send(output_token, outputfile).done(function() {
-                            index.update_progress_bar_progress(100);
-                            index.remove_progress_bar();
-                            _update(input_token, output_token, filename);
-
-                            j_add_single_file.find("input.inputfile").val("");
-                            j_add_single_file.find("input.outputfile").val("");
-                        }).progress(function(prog) {
-                            index.update_progress_bar_progress(prog * 100);
-                        });
-                    });
-
-                }).progress(function(prog) {
-                    index.update_progress_bar_progress(prog * 100);
-                });
-            });
-        });
-
-		document.querySelectorAll('button.update-single-file').forEach(el => {
-			let type = null;
-			let j_input = $(el).siblings('input');
-
-            function _update(pack_token, filename, group_idx) {
-				$.post('/oj/be/manage/pro/updatetests', {
-                    'reqtype': 'updatesinglefile',
-					'pack_token': pack_token,
-					'pro_id': pro_id,
-                    'filename': filename,
-					'type': type,
-				}, function (res) {
-                    					let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Update ${type} File ${filename} successfully.`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
-                    index.reload();
-				});
-			}
-
-			el.addEventListener('click', function (e) {
-				j_input.click();
-				if ($(this).hasClass('input')) {
-					type = 'input';
-				} else {
-					type = 'output';
-				}
-				e.preventDefault();
-				e.stopPropagation();
-			});
-
-			j_input.on('change', function (e) {
-				if (e.target.files.length == 0) {
-					return;
-				}
-
-                let filename = $(this).parents('tr').attr('filename');
-				let group = $(this).parents('.accordion-collapse').attr('group');
-				let file = e.target.files[0];
-				pack.get_token().done(function(token) {
-					index.create_progress_bar('Uploading...');
-
-					pack.send(token, file).done(function () {
-						index.update_progress_bar_progress(100);
-						index.remove_progress_bar();
-						_update(token, filename, group);
-						j_input.val(''); // for the same file upload
-
-					}).progress(function(prog) {
-						index.update_progress_bar_progress(prog * 100);
-					});
-				});
-			});
-        });
-
         $("button.add-group").on('click', function(e) {
-            let weight = parseInt(prompt('new test group weight: '));
+            let weight = parseInt(prompt('New test group weight: '));
             $.post('/oj/be/manage/pro/updatetests', {
                 'reqtype': 'addtaskgroup',
                 'pro_id': pro_id,
@@ -322,16 +90,20 @@
             });
         });
 
-        document.querySelectorAll('button.add-single-testcase').forEach(el => {
+        document.querySelectorAll('button.set-testdatas').forEach(el => {
             el.addEventListener('click', function(e) {
                 let group = $(this).parents('.accordion-collapse').attr('group');
-                let testcase = prompt("");
-                if (testcase.length == 0) return;
+                let testdatas = $(this).siblings('#testdatas').val();
+                if (!re.test(testdatas)) {
+                    index.show_notify_dialog("Testdatas wrong. Please follow the instruction", index.DIALOG_TYPE.warning);
+                    return;
+                }
+
 				$.post('/oj/be/manage/pro/updatetests', {
-					'reqtype': 'addsingletestcase',
+					'reqtype': 'settestdata',
 					'pro_id': pro_id,
                     'group': group,
-                    'testcase': testcase,
+                    'testdatas': testdatas,
 				}, function (res) {
                     let msg = '';
 					let dialog_type = null;
@@ -339,34 +111,7 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Add single testcase ${testcase} to task group #${group} successfully.`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
-                    index.reload();
-				});
-            });
-        });
-
-        document.querySelectorAll('button.delete-single-testcase').forEach(el => {
-            el.addEventListener('click', function(e) {
-                let group = $(this).parents('.accordion-collapse').attr('group');
-                let testcase = $(this).parents('tr').attr('testcase');
-				$.post('/oj/be/manage/pro/updatetests', {
-					'reqtype': 'deletesingletestcase',
-					'pro_id': pro_id,
-                    'group': group,
-                    'testcase': testcase,
-				}, function (res) {
-                    let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Delete single testcase ${testcase} from task group #${group} successfully.`;
+                        msg = `Task group #${group} set testdatas successfully.`;
                     } else {
                         msg = res.data;
                     }
@@ -381,65 +126,15 @@
 {% end %}
 
 {% block content %}
-<div class="modal fade" id="previewModal" aria-hidden="true">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-content">
-			<div class="modal-header">
-                <h5 class="modal-title" id="preview-title">Preview Testcase File</h5>
-			</div>
-
-			<div class="modal-body">
-				<pre id="code"
-					data-language="markup"
-					data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"
-				>
-					<code class="language-markup"></code>
-				</pre>
-			</div>
-
-			<div class="modal-footer">
-				<button class="btn btn-primary">Download(WIP)</button>
-			</div>
-		</div>
-
-	</div>
-</div>
-
-<div class="modal fade" id="addSingleFileModal" aria-hidden="true">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="preview-title">Add Single File</h5>
-			</div>
-
-			<div class="modal-body">
-                <form>
-                    <label for="" class="form-label">Filename</label>
-                    <input class="form-control filename" type="text">
-                    <label for="" class="form-label">Input File</label>
-                    <input type="file" class="form-control inputfile">
-                    <label for="" class="form-label">Output File</label>
-                    <input type="file" class="form-control outputfile">
-                </form>
-			</div>
-
-			<div class="modal-footer">
-				<button class="btn btn-primary upload">Upload</button>
-				<button class="btn btn-secondary cancel">Cancel</button>
-			</div>
-		</div>
-
-	</div>
-</div>
-
-<div class="col-lg-5 ms-lg-2 mt-lg-2">
+{% from utils.numeric import merge_list_to_str %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
 	<button class="btn btn-primary add-group">Add Task Group</button>
 
 	<div class="accordion" id="tests">
     {% for test_group_idx, test_conf in tests['test_group'].items() %}
 		<div class="accordion-item">
 			<h2 class="accordion-header">
-					<button
+				    <button
 						class="accordion-button"
 						type="button"
 						data-bs-toggle="collapse"
@@ -452,93 +147,22 @@
 			</h2>
 			<div id="collapse{{ test_group_idx }}" class="accordion-collapse collapse" data-bs-parent="#tests" group="{{ test_group_idx }}">
 				<div class="accordion-body">
-                    <button class="btn btn-primary add-single-testcase">Add Single Testcase</button>
+                    <button class="btn btn-danger delete-group">Delete Current Task Group</button>
 
-                    <button class="btn btn-primary edit-weight" weight="{{ test_conf['weight'] }}">Edit Task Group Weight</button>
-                    <button class="btn btn-primary delete-group">Delete Current Task Group</button>
+                    <div class="input-group mb-3">
+                        <input id="weight" class="form-control mb-1" type="number" value="{{ test_conf['weight'] }}" placeholder="Weight">
+                        <button class="btn btn-primary edit-weight">Update weight</button>
+                    </div>
 
-					<table class="table table-hover table-sm table-responsive-sm my-3">
-						<thead>
-							<tr>
-								<th scope="col">#</th>
-                                <th scope="col">Filename</th>
-								<th scope="col">Operation</th>
-							</tr>
-						</thead>
-
-						<tbody>
-                            {% for idx, testcase in enumerate(test_conf['metadata']['data']) %}
-                                <tr idx="{{ idx }}" testcase="{{ testcase }}">
-									<th scope="row">{{ idx + 1 }}</th>
-                                    <td>{{ testcase }}</td>
-									<td>
-										<div class="btn-toolbar">
-											<button class="btn btn-danger me-2 delete-single-testcase">Delete</button>
-										</div>
-									</td>
-								</tr>
-							{% end %}
-						</tbody>
-					</table>
+                    <label for="testdatas" class="form-label">Testdata id. Starts from 0, for examples: <code>0</code>, <code>1-4</code>, <code>2,4,9-11,13-18</code></label>
+                    <div class="input-group mb-3">
+                        <input id="testdatas" class="form-control mb-1" type="text" value="{{ merge_list_to_str(test_conf['testdatas']) }}" placeholder="Testdata">
+                        <button class="btn btn-primary set-testdatas">Update Testdatas</button>
+                    </div>
 				</div>
 			</div>
 		</div>
 	{% end %}
 	</div>
 </div>
-
-<div class="col-lg-5 ms-lg-2 mt-lg-2">
-    <button class="btn btn-primary add-single-file">
-        Add Single File
-    </button>
-    <!-- <button class="btn btn-primary">Add Multiple Files (WIP)</button>
-    <button class="btn btn-danger">Delete All Files (WIP)</button>
-    <button class="btn btn-primary">Download All Files (WIP)</button> -->
-    <table class="table table-hover table-sm table-responsive-sm my-3">
-        <thead>
-            <tr>
-                <th scope="col">#</th>
-                <th scope="col">Filename</th>
-                <th scope="col">Input</th>
-                <th scope="col">Output</th>
-                <th scope="col">Operation</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for idx, filename in enumerate(files) %}
-                <tr idx="{{ idx }}" filename="{{ filename }}">
-                    <th scope="row">{{ idx + 1 }}</th>
-                    <td>{{ filename }}</td>
-                    <td><a class="preview-file input">Show Input</a></td>
-                    <td><a class="preview-file output">Show Output</a></td>
-                    <td>
-                        <div class="btn-toolbar">
-                            <div class="dropdown me-2">
-                                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Update
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <input type="file" style="display: none;">
-                                        <button class="btn btn-primary dropdown-item update-single-file input">Input</button>
-                                    </li>
-
-                                    <li>
-                                        <input type="file" style="display: none;">
-                                        <button class="btn btn-primary dropdown-item update-single-file output">Output</button>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <button class="btn btn-danger me-2 delete-single-file">Delete</button>
-                            <button class="btn btn-secondary me-2 rename-single-file">Rename</button>
-                        </div>
-                    </td>
-                </tr>
-            {% end %}
-        </tbody>
-</table>
-</div>
-
 {% end %}

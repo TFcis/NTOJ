@@ -28,11 +28,20 @@
 
 					$("#code").find("code").html(file_content);
                     $("#preview-title").text(filename);
+                    $("#preview-title").attr("filename", filename);
+                    $("#preview-title").attr("path", path);
                     Prism.highlightAll();
 					preview_modal.show();
 				});
 			});
 		});
+
+        $("#previewModal").find("button.download").on('click', function(e) {
+            let filename = $("#preview-title").attr("filename");
+            let path = $("#preview-title").attr("path");
+
+            window.open(`/oj/be/manage/pro/filemanager?proid=${pro_id}&download=1&filename=${filename}&path=${path}`);
+        });
 
 		document.querySelectorAll('button.rename-single-file').forEach(el => {
 			el.addEventListener('click', function (e) {
@@ -238,7 +247,7 @@
 			</div>
 
 			<div class="modal-footer">
-                <a href="" id="downloadLink">Download(WIP)</a>
+				<button class="btn btn-primary download">Download</button>
 			</div>
 		</div>
 	</div>
@@ -309,7 +318,6 @@
                                             <button class="btn btn-primary me-2 update-single-file">Update</button>
                                             <button class="btn btn-danger me-2 delete-single-file">Delete</button>
                                             <button class="btn btn-secondary me-2 rename-single-file">Rename</button>
-                                            <button class="btn btn-secondary me-2 download-single-file">Download(WIP)</button>
                                         </div>
                                     </td>
 								</tr>

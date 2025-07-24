@@ -494,7 +494,7 @@ class ChalService:
                         'test_idx': test_group_idx,
                         'timelimit': timelimit,
                         'memlimit': memlimit,
-                        'metadata': test['metadata'],
+                        'metadata': {'data': [testm_conf['testdatas'][testdata_id]['inputfile'].removesuffix('.in') for testdata_id in test['testdatas']]},
                     }
                 )
                 insert_values.append((chal_id, acct_id, pro_id, test_group_idx, ChalConst.STATE_JUDGE, timestamp))
