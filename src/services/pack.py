@@ -73,4 +73,25 @@ class PackService:
         os.remove(f'tmp/{pack_token}')
         await self._run_and_wait_process('/bin/bash', 'newline.sh', f'{dst}/res/testdata')
 
-        return None, None
+        def check_file_illegal(path):
+            if os.path.islink(path):
+                return ('Eparam', f'{path} should not be a link. So suspicious. You maybe a hacker.')
+
+            if not os.path.isfile(path):
+                return ('Eparam', f'What the heck about {path}. What file are you uploading? So suspicious.')
+
+            return None
+
+        err = None
+        def dfs(path):
+            nonlocal err
+            if err:
+                return
+            for name in os.listdir(path):
+                if os.path.isdir(os.path.join(path, name)):
+                    dfs(os.path.join(path, name))
+                else:
+                    err = check_file_illegal(os.path.join(path, name))
+
+
+        return err, None
