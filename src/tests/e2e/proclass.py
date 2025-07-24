@@ -99,7 +99,7 @@ class ProClassTest(AsyncTest):
 
             html = self.get_html('manage/proclass/update?proclassid=1', admin_session)
             self.assertEqual(html.select_one('input#name').attrs.get('value'), 'test')
-            self.assertEqual(html.select_one('input#list').attrs.get('value'), '1, 2')
+            self.assertEqual(html.select_one('input#list').attrs.get('value'), '1-2')
             self.assertIsNotNone(html.select('select#type > option')[0].attrs.get('selected'))
             res = admin_session.get('manage/proclass/update?proclassid=1')
             self.assertEqual(re.findall(r'j_form\.find\("#desc"\)\.val\(index\.unescape_html\(`(.*)`\)\);', res.text, re.I)[0], 'desc desc')
