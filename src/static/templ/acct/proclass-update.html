@@ -1,4 +1,5 @@
 {% from services.pro import ProClassConst %}
+{% from utils.numeric import merge_list_to_str %}
 
 <script type="text/javascript">
     function init() {
@@ -104,8 +105,7 @@
 
         <div class="mb-1">
             <label>Problem List</label>
-            {% set list = str(proclass['list']) %}
-            <input class="form-control" id="list" type="text" value="{{ list[1:-1] }}">
+            <input class="form-control" id="list" type="text" value="{{ merge_list_to_str(proclass['list']) }}">
         </div>
 
         <div class="mb-1">

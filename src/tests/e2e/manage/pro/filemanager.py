@@ -1,3 +1,4 @@
+import re
 import os
 import copy
 import json
@@ -60,6 +61,18 @@ class ManageProFileManagerTest(AsyncTest):
                 ],
                 admin_session
             )
+
+            # NOTE: download
+            res = admin_session.get('manage/pro/filemanager?proid=1&download=1&filename=cont.html&path=http')
+            self.assertIsNotNone(res.headers.get("content-disposition"))
+            self.assertEqual(re.findall(r'filename="?([^";]+)"?', res.headers.get("content-disposition"))[0], "cont.html")
+            self.assertEqual(res.content.decode('utf-8'), open('tests/static_file/toj3/http/cont.html').read())
+
+            res = admin_session.get('manage/pro/filemanager?proid=1&download=1&filename=test.html&path=http')
+            self.assertAPIReturnValue(res.text, ('Enoext', 'File not found'))
+
+            res = admin_session.get('manage/pro/filemanager?proid=1&download=1&filename=passwd&path=/etc')
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid basepath'))
 
             # NOTE: addsinglefile
             pack_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)

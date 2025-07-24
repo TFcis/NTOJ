@@ -32,7 +32,7 @@ class BoardTest(AsyncTest):
                              (now - datetime.timedelta(days=7)).strftime('%Y/%m/%d %H:%M'))
             self.assertEqual(html.select_one('input#datepickerEndInput').attrs.get('value'),
                              (now + datetime.timedelta(days=7)).strftime('%Y/%m/%d %H:%M'))
-            self.assertEqual(html.select_one('input#pro_list').attrs.get('value').strip(), '1,2')
+            self.assertEqual(html.select_one('input#pro_list').attrs.get('value').strip(), '1-2')
             self.assertEqual(html.select_one('input#acct_list').attrs.get('value').strip(), '1')
 
             html = self.get_html('board/1', admin_session)
