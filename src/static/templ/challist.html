@@ -11,7 +11,8 @@
         {% end %}
     };
     var chalsub_count;
-    let re = /^(\d+(-\d+)?)(\s*,\s*\d+(-\d+)?)*$/;
+    var re = /^(\d+(-\d+)?)(\s*,\s*\d+(-\d+)?)*$/;
+    var j_filter = $('#filter');
 
     function get_goto_filtered_challist_url() {
         let proid = j_filter.find('#proid').val();
@@ -20,13 +21,13 @@
         let compiler_type = j_filter.find("#compiler").val();
         let url = location.pathname.split('?')[0] + '?';
 
-        if (!re.test(proid)) {
+        if (proid.length && !re.test(proid)) {
             j_filter.find("#proid").val('');
             index.show_notify_dialog("請輸入數字、逗號、減號與空白做查詢，範例：1, 2, 3, 5-7", index.DIALOG_TYPE.warning);
             return;
         }
 
-        if (!re.test(acctid)) {
+        if (acctid.length && !re.test(acctid)) {
             j_filter.find('#acctid').val('');
             index.show_notify_dialog("請輸入數字、逗號、減號與空白做查詢，範例：1, 2, 3, 5-7", index.DIALOG_TYPE.warning);
             return;
@@ -52,7 +53,6 @@
     }
 
     function init() {
-        var j_filter = $('#filter');
         var j_chalsub = $('#chalsub');
 	    j_filter.find('input, select').keypress(function(e) {
             // NOTE:  KeyCode 13 means Enter
