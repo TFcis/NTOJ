@@ -1,6 +1,7 @@
 {% import math %}
 {% from services.pro import ProConst %}
 {% from services.chal import ChalConst %}
+{% from utils.htmlgen import pro_idx_to_pro_alphabet %}
 
 <script type="text/javascript">
     function init() {
@@ -81,9 +82,9 @@ font-weight: bolder;
                         <td class="state-{{ pro['state'] }}">{{ ChalConst.STATE_LONG_STR[pro['state']] }}</td>
                     {% end %}
 
-                    {% set pro_name = pro['name'] %}
-                    {% if f"{chr(65+idx)}." not in pro_name and f"p{chr(65+idx)}" not in pro_name %}
-                        {% set pro_name = f"p{chr(65+idx)}. {pro_name}" %}
+                    {% set pro_name = pro.name %}
+                    {% if f"{pro_idx_to_pro_alphabet(idx)}." not in pro_name and pro_idx_to_pro_alphabet(idx) not in pro_name %}
+                        {% set pro_name = f"{pro_idx_to_pro_alphabet(idx)}. {pro_name}" %}
                     {% end %}
 
                     <!-- TODO: test this feature -->
