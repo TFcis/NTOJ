@@ -39,11 +39,11 @@ class ContestTest(AsyncTest):
                 'reqtype': 'update',
                 'name': 'contest 1',
 
-                'contest_mode': ContestMode.IOI.value,
+                'contest_mode': ContestMode.IOI,
                 'contest_start': self.get_isoformat(contest_start),
                 'contest_end': self.get_isoformat(contest_end),
 
-                'reg_mode': RegMode.INVITED.value,
+                'reg_mode': RegMode.INVITED,
                 'reg_end': self.get_isoformat(reg_end),
 
                 'allow_compilers[]': ['g++', 'clang++'],
@@ -208,7 +208,7 @@ class ContestTest(AsyncTest):
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             config = copy.deepcopy(default_config)
-            config['reg_mode'] = RegMode.FREE_REG.value
+            config['reg_mode'] = RegMode.FREE_REG
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
 
@@ -251,7 +251,7 @@ class ContestTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
 
             config = copy.deepcopy(default_config)
-            config['reg_mode'] = RegMode.REG_APPROVAL.value
+            config['reg_mode'] = RegMode.REG_APPROVAL
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
 
@@ -415,7 +415,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': 'cc1',
-                'comp_type': 'g++',
+                'compiler_type': 'g++',
             })
             self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not in contest'))
 
@@ -423,7 +423,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 7,
                 'code': 'cc2',
-                'comp_type': 'python3',
+                'compiler_type': 'python3',
             })
             self.assertAPIReturnValue(res.text, ('Ecomp', 'The compiler is not allowed'))
 
@@ -431,7 +431,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 7,
                 'code': open('tests/static_file/code/toj674.ac.cpp').read(),
-                'comp_type': 'g++',
+                'compiler_type': 'g++',
             })
             self.assertAPIReturnValue(res.text, ('S', 17))
 
@@ -450,7 +450,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 7,
                 'code': open('tests/static_file/code/toj674.ac.cpp').read(),
-                'comp_type': 'g++',
+                'compiler_type': 'g++',
             })
             self.assertAPIReturnValue(res.text, ('Esame', 'Do not submit same code'))
 
@@ -458,7 +458,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 7,
                 'code': 'cc3',
-                'comp_type': 'g++',
+                'compiler_type': 'g++',
             })
             res = json.loads(res.text)
             self.assertEqual(res['status'], 'Einternal')

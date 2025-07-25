@@ -81,12 +81,12 @@ class ManageProUpdateTest(AsyncTest):
                 'pro_id': 1,
                 'limits': json.dumps({
                     'default': {
-                        'timelimit': 1000,
-                        'memlimit': 65536,
+                        'time': 1000,
+                        'memory': 65536,
                     },
                     'python3': {
-                        'timelimit': 1500,
-                        'memlimit': 65536
+                        'time': 1500,
+                        'memory': 65536
                     },
                     'gcc': {},
                     'g++': {
@@ -114,9 +114,9 @@ class ManageProUpdateTest(AsyncTest):
 
             await self.wait_for_judge_finish(callback)
             html = self.get_html(f'chal/{chal_id}', admin_session)
-            states_trs = html.select('table#test > tbody > tr')
-            self.assertGreaterEqual(int(states_trs[0].select_one('td.runtime').text), 1000)
-            self.assertGreaterEqual(int(states_trs[1].select_one('td.runtime').text), 1000)
+            states_trs = html.select('table#subtasks > tbody > tr')
+            self.assertGreaterEqual(int(states_trs[0].select_one('td.time').text), 1000)
+            self.assertGreaterEqual(int(states_trs[1].select_one('td.time').text), 1000)
 
             # TODO: we should check limits and file
             pack_token = self.get_upload_token(admin_session)

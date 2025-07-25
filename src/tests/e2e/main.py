@@ -168,7 +168,7 @@ class E2ETest(AsyncTest):
                 })
                 res = json.loads(res.text)
                 self.assertNotEqual(res['status'], 'Eacces')
-                self.assertEqual(res['data']['comp_type'], 'python')
+                self.assertEqual(res['data']['compiler_type'], 'python')
                 self.assertEqual(res['data']['code'].strip(),
                                  tornado.escape.xhtml_escape(open('tests/static_file/code/toj3.ac.py').read().strip()))
 

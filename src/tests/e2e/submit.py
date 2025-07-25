@@ -10,7 +10,7 @@ class SubmitTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': '',
-                'comp_type': 'g++',
+                'compiler_type': 'g++',
             })
             self.assertAPIReturnValue(res.text, ('Eempty', 'Submitted code should not be empty'))
 
@@ -18,7 +18,7 @@ class SubmitTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': open('tests/static_file/code/large.cpp').read(),
-                'comp_type': 'g++',
+                'compiler_type': 'g++',
             })
             self.assertAPIReturnValue(res.text, ('Ecodemax', 'Submitted code too long'))
 
@@ -26,7 +26,7 @@ class SubmitTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': 'cc',
-                'comp_type': 'tobiichi',
+                'compiler_type': 'tobiichi',
             })
             self.assertAPIReturnValue(res.text, ('Ecomp', 'The compiler is not allowed'))
 
@@ -34,7 +34,7 @@ class SubmitTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': 'cc',
-                'comp_type': 'python3',
+                'compiler_type': 'python3',
             })
             self.assertAPIReturnValue(res.text, ('S', 10))
             html = self.get_html('submit/1', user_session)
@@ -46,7 +46,7 @@ class SubmitTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': 'cc',
-                'comp_type': 'g++',
+                'compiler_type': 'g++',
             })
             res = json.loads(res.text)
             self.assertEqual(res['status'], 'Einternal')

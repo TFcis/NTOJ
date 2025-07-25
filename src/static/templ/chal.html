@@ -1,6 +1,10 @@
 {% from services.chal import ChalConst %}
+{% import datetime %}
 <script src="/oj/third/prism.js"></script>
 <link rel="stylesheet" href="/oj/third/prism.css">
+
+{% set TZ = datetime.timezone(datetime.timedelta(hours=+8)) %}
+<!-- TODO: move timezone to config -->
 
 <script type="text/javascript">
     var ws;
@@ -11,8 +15,8 @@
     };
 
     function init() {
-        const chal_id = "{{ chal['chal_id'] }}";
-        const contest_id = "{{ chal['contest_id'] }}";
+        const chal_id = "{{ chal.chal_id }}";
+        const contest_id = "{{ chal.contest_id }}";
         ws = index.get_ws("chalnewstatesub");
 
         if ((document.querySelectorAll('td.state-{{ ChalConst.STATE_JUDGE }}').length == 0 && document.querySelectorAll('td.state-{{ ChalConst.STATE_NOTSTARTED }}') == 0)) {
@@ -23,7 +27,7 @@
                     let state = element.querySelector('td.state');
                     state.innerHTML = state_map[chal_state_data[idx]['state']];
                     state.className = `state state-${chal_state_data[idx]['state']}`;
-                    element.querySelector('td.runtime').innerHTML = chal_state_data[idx]['runtime'];
+                    element.querySelector('td.time').innerHTML = chal_state_data[idx]['time'];
                     element.querySelector('td.memory').innerHTML = Math.round((chal_state_data[idx]['memory'] / 1024));
                     element.querySelector('td.score').innerHTML = chal_state_data[idx]['rate'];
                 });
@@ -43,10 +47,10 @@
         {% if rechal == True %}
         $('#rechal').on('click', function(e) {
             let url = '';
-            {% if chal['contest_id'] == 0 %}
+            {% if chal.contest_id == 0 %}
                 url = '/oj/be/submit';
             {% else %}
-                url = '/oj/be/contests/{{ chal['contest_id'] }}/submit';
+                url = '/oj/be/contests/{{ chal.contest_id }}/submit';
             {% end %}
             $.post(url, {
                 'reqtype': 'rechal',
@@ -70,13 +74,13 @@
             if (res.status[0] == 'E') return;
 
             let code = $("#code");
-            code.attr("data-language", res.data.comp_type);
-            code.find("code").addClass(`language-${res.data.comp_type}`);
+            code.attr("data-language", res.data.compiler_type);
+            code.find("code").addClass(`language-${res.data.compiler_type}`);
             code.find("code").html(res.data.code);
             Prism.highlightAll();
 	    });
 
-        {% if user.acct_id == chal['acct_id'] %}
+        {% if user.acct_id == chal.acct_id %}
         $('#report_pro_button').on('click', function(e) {
             index.go(`/oj/report/?chal_id=${chal_id}`);
         });
@@ -101,39 +105,39 @@
             <tbody>
                 <tr>
                     <td>Challenge</td>
-                    <td>{{ chal['chal_id'] }}</td>
+                    <td>{{ chal.chal_id }}</td>
                 </tr>
                 <tr>
                     <td>Problem</td>
-                    {% if chal['contest_id'] == 0 %}
+                    {% if chal.contest_id == 0 %}
                     <td>
-                        <a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }} / {{ pro['name'] }}</a> (<a href="/oj/chal/?proid={{ pro['pro_id'] }}">chals</a>)
+                        <a href="/oj/pro/{{ pro.pro_id }}/">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="/oj/chal/?proid={{ pro.pro_id }}">chals</a>)
                     </td>
                     {% else %}
                     <td>
-                        <a href="/oj/contests/{{ chal['contest_id']}}/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }} / {{ pro['name'] }}</a> (<a href="/oj/contests/{{ chal['contest_id'] }}/chal/?proid={{ pro['pro_id'] }}">chals</a>)
+                        <a href="/oj/contests/{{ chal.contest_id }}/pro/{{ pro.pro_id }}/">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="/oj/contests/{{ chal.contest_id }}/chal/?proid={{ pro.pro_id }}">chals</a>)
                     </td>
                     {% end %}
                 </tr>
                 <tr>
                     <td>Compiler</td>
-                    <td>{{ chal['comp_type'] }}</td>
+                    <td>{{ chal.compiler_type }}</td>
                 </tr>
                 <tr>
                     <td>Account</td>
-                    {% if chal['contest_id'] == 0 %}
+                    {% if chal.contest_id == 0 %}
                     <td>
-                        <a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a> (<a href="/oj/chal/?acctid={{ chal['acct_id'] }}">chals</a>)
+                        <a href="/oj/acct/{{ chal.acct_id }}/">{{ chal.acct_name }}</a> (<a href="/oj/chal/?acctid={{ chal.acct_id }}">chals</a>)
                     </td>
                     {% else %}
                     <td>
-                        <a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a> (<a href="/oj/contests/{{ chal['contest_id'] }}/chal/?acctid={{ chal['acct_id'] }}">chals</a>)
+                        <a href="/oj/acct/{{ chal.acct_id }}/">{{ chal.acct_name }}</a> (<a href="/oj/contests/{{ chal.contest_id }}/chal/?acctid={{ chal.acct_id }}">chals</a>)
                     </td>
                     {% end %}
                 </tr>
                 <tr>
                     <td>Timestamp</td>
-                    <td class="time">{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td class="time">{{ chal.timestamp.astimezone(TZ).strftime('%Y-%m-%d %H:%M:%S') }}</td>
                 </tr>
             </tbody>
         </table>
@@ -141,30 +145,30 @@
     {% if rechal == True %}
         <button id="rechal" class="btn btn-warning">Rechallenge</button>
     {% end %}
-    {% if chal['acct_id'] == user.acct_id %}
+    {% if chal.acct_id == user.acct_id %}
         <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
     {% end %}
     </div>
 
     <div class="col-lg-8">
-        <table id="test" class="table">
+        <table id="subtasks" class="table">
             <thead>
                 <tr>
-                    <th>Test</th>
+                    <th>Subtask</th>
                     <th>State</th>
-                    <th>Runtime(ms)</th>
+                    <th>Time(ms)</th>
                     <th>Memory(KB)</th>
                     <th>Score</th>
                 </tr>
             </thead>
             <tbody>
-            {% for test in chal['testl'] %}
+            {% for subtask in chal.subtask_results.values() %}
                 <tr class="states">
-                    <td class="idx">{{ '%04d' % (test['test_idx'] + 1) }}</td>
-                    <td class="state state-{{ test['state'] }}">{{ ChalConst.STATE_LONG_STR[test['state']] }}</td>
-                    <td class="runtime">{{ test['runtime'] }}</td>
-                    <td class="memory">{{ round(test['memory'] / 1024) }}</td>
-                    <td class="score">{{ test['rate'] }}</td>
+                    <td class="idx">{{ '%04d' % (subtask.subtask_id + 1) }}</td>
+                    <td class="state state-{{ subtask.state }}">{{ ChalConst.STATE_LONG_STR[subtask.state] }}</td>
+                    <td class="time">{{ subtask.time }}</td>
+                    <td class="memory">{{ round(subtask.memory / 1024) }}</td>
+                    <td class="score">{{ subtask.rate }}</td>
                 </tr>
             {% end %}
             </tbody>
@@ -173,7 +177,9 @@
 </div>
 
 
-{% if response != '' and (user.is_kernel() or chal['acct_id'] == user.acct_id) %}
+<!-- FIXME: Only user in can_see_code_user can view response -->
+<!-- TODO: Move response to code.py -->
+{% if response != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
     <div class="panel panel-default mt-3" id="response">
         <div class="panel-heading">
             <span>Compilation Error Message</span>

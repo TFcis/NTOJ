@@ -75,11 +75,12 @@ font-weight: bolder;
             <tbody>
             {% for idx, pro in enumerate(prolist) %}
                 <tr>
-                    <td class="id">{{ pro['pro_id'] }}</td>
-                    {% if pro['state'] is None %}
+                    {% set pro_id = pro.pro_id %}
+                    <td class="id">{{ pro_id }}</td>
+                    {% if score_map[pro_id]['state'] is None %}
                         <td>Todo</td>
                     {% else %}
-                        <td class="state-{{ pro['state'] }}">{{ ChalConst.STATE_LONG_STR[pro['state']] }}</td>
+                        <td class="state-{{ score_map[pro_id]['state'] }}">{{ ChalConst.STATE_LONG_STR[score_map[pro_id]['state']] }}</td>
                     {% end %}
 
                     {% set pro_name = pro.name %}
@@ -88,28 +89,28 @@ font-weight: bolder;
                     {% end %}
 
                     <!-- TODO: test this feature -->
-                    {% if is_end and pro['status'] == ProConst.STATUS_ONLINE %}
+                    {% if is_end and pro.status == ProConst.STATUS_ONLINE %}
                         <td class="name">
-                            <a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro_name }}</a>
+                            <a href="/oj/pro/{{ pro.pro_id }}/">{{ pro_name }}</a>
                         </td>
                     {% else %}
                         <td class="name">
-                            <a href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro['pro_id'] }}/">{{ pro_name }}</a>
+                            <a href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro.pro_id }}/">{{ pro_name }}</a>
                         </td>
                     {% end %}
 
-                    {% set state_idx = int(pro['score'] / 10) %}
-                    {% if pro['state'] == ChalConst.STATE_AC or state_idx > 10 %}
+                    {% set state_idx = int(score_map[pro_id]['score'] / 10) %}
+                    {% if score_map[pro_id]['state'] == ChalConst.STATE_AC or state_idx > 10 %}
                         {% set state_idx = 10 %}
                     {% elif state_idx < 0 %}
                         {% set state_idx = 0 %}
                     {% end %}
                     <td class="{{ score_color_class_map[state_idx] }} score">
-                        {{ pro['score'] }}
+                        {{ score_map[pro_id]['score'] }}
                     </td>
 
                     {% if show_ac_ratio %}
-                        {% set rate = pro['rate_data'] %}
+                        {% set rate = score_map[pro_id]['rate_data'] %}
                         <td>
                             {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
                                 {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}%
@@ -124,9 +125,9 @@ font-weight: bolder;
                             {% else %}
                                 {{ '0.00%' }}
                             {% end %}
-                            (<a href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}&state={{ ChalConst.STATE_AC }}">{{ rate['ac_chal_cnt'] }}</a>
+                            (<a href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro.pro_id }}&state={{ ChalConst.STATE_AC }}">{{ rate['ac_chal_cnt'] }}</a>
                             /
-                            <a href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}">{{ rate['all_chal_cnt'] }}</a>)
+                            <a href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro.pro_id }}">{{ rate['all_chal_cnt'] }}</a>)
                         </td>
                     {% end %}
                 </tr>

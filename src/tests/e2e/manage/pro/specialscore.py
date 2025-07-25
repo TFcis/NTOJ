@@ -43,8 +43,8 @@ class ManageProSpecialScoreTest(AsyncTest):
                 'pro_id': expected_pro_id,
                 'limits': json.dumps({
                     'default': {
-                        'timelimit': 1000,
-                        'memlimit': 65536,
+                        'time': 1000,
+                        'memory': 65536,
                     }
                 })
             })
@@ -87,9 +87,9 @@ class ManageProSpecialScoreTest(AsyncTest):
             await self.setup_basic_special_score_problem(5, 'tests/static_file/special_score')
 
             res = admin_session.post('manage/pro/updatetests', data={
-                'reqtype': 'addtaskgroup',
+                'reqtype': 'addsubtask',
                 'pro_id': 5,
-                'weight': 100, # NOTE: weight is not important, because we will be overwritten by the checker
+                'rate': 100, # NOTE: rate is not important, because we will be overwritten by the checker
             })
             self.assertAPIReturnSuccess(res.text)
 
@@ -97,7 +97,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                 'reqtype': 'settestdata',
                 'pro_id': 5,
                 'testdatas': '0',
-                'group': 0,
+                'subtask': 0,
             })
             self.assertAPIReturnSuccess(res.text)
 
@@ -134,12 +134,12 @@ class ManageProSpecialScoreTest(AsyncTest):
         with AccountContext("admin@test", "testtest") as admin_session:
             await self.setup_basic_special_score_problem(6, 'tests/static_file/special_score_cms')
 
-            group_weights = [50, 25, 25]
-            for group_idx, weight in enumerate(group_weights):
+            subtask_rates = [50, 25, 25]
+            for subtask_id, rate in enumerate(subtask_rates):
                 res = admin_session.post('manage/pro/updatetests', data={
-                    'reqtype': 'addtaskgroup',
+                    'reqtype': 'addsubtask',
                     'pro_id': 6,
-                    'weight': weight,
+                    'rate': rate,
                 })
                 self.assertAPIReturnSuccess(res.text)
 
@@ -147,7 +147,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                     'reqtype': 'settestdata',
                     'pro_id': 6,
                     'testdatas': '0',
-                    'group': group_idx,
+                    'subtask': subtask_id,
                 })
                 self.assertAPIReturnSuccess(res.text)
 

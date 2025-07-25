@@ -2,33 +2,11 @@ from handlers.base import RequestHandler, reqenv, require_permission
 from services.chal import ChalConst
 from services.judge import JudgeServerClusterService
 from services.log import LogService
-from services.pro import ProClassService, ProClassConst, ProConst, ProService
+from services.pro import ProClassService, ProClassConst, ProConst, ProService, Problem
 from services.rate import RateService
 from services.user import UserService, UserConst
 
 PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
-
-def user_ac_cmp(pro):
-    user_ac_chal_cnt = pro['rate_data']['user_ac_chal_cnt']
-    user_all_chal_cnt = pro['rate_data']['user_all_chal_cnt']
-
-    if user_ac_chal_cnt and user_all_chal_cnt:
-        return user_ac_chal_cnt / user_all_chal_cnt
-
-    else:
-        return -1
-
-
-def chal_ac_cmp(pro):
-    ac_chal_cnt = pro['rate_data']['ac_chal_cnt']
-    all_chal_cnt = pro['rate_data']['all_chal_cnt']
-
-    if ac_chal_cnt and all_chal_cnt:
-        return ac_chal_cnt / all_chal_cnt
-
-    else:
-        return -1
-
 
 class ProsetHandler(RequestHandler):
     @reqenv
@@ -49,6 +27,10 @@ class ProsetHandler(RequestHandler):
             'name': search_name,
             'tags': search_tags,
         }
+        if search_name:
+            search_name = search_name.lower()
+        if search_tags:
+            search_tags = search_tags.lower()
 
         proclass_id = int(self.get_argument('proclass_id', default=0))
         if proclass_id == 0:
@@ -72,72 +54,82 @@ class ProsetHandler(RequestHandler):
                 return self.error(PERMISSION_DENIED_ERROR)
 
             p_list = proclass['list']
-            prolist = list(filter(lambda pro: pro['pro_id'] in p_list, prolist))
+            prolist = list(filter(lambda pro: pro.pro_id in p_list, prolist))
             if proclass['acct_id']:
                 _, creator = await UserService.inst.info_acct(proclass['acct_id'])
                 proclass['creator_name'] = creator.name
 
-        if search_name:
-            search_name = search_name.lower()
-            def _find_name(name: str):
-                return name.lower().find(search_name) != -1
-            prolist = filter(lambda pro: _find_name(pro['name']), prolist)
-
-        if show_only_online_pro:
-            prolist = filter(lambda pro: pro['status'] == ProConst.STATUS_ONLINE, prolist)
-
         _, acct_states = await RateService.inst.map_rate_acct(self.acct)
+        score_map: dict[int, dict] = {}
         ac_pro_cnt = 0
-        def _set_pro_state_and_tags(pro):
-            nonlocal ac_pro_cnt
-            pro['state'] = acct_states.get(pro['pro_id'], {}).get('state')
-            ac_pro_cnt += pro['state'] == ChalConst.STATE_AC
-
-            if (self.acct.is_guest()) or (not self.acct.is_kernel() and pro['state'] != ChalConst.STATE_AC):
-                pro['tags'] = ''
-
-            return pro
-
-        prolist = map(lambda pro: _set_pro_state_and_tags(pro), prolist)
-
-        if search_tags:
-            search_tags = search_tags.lower()
-            def _find_tags(tags: str):
-                return tags.lower().find(search_tags) != -1
-            prolist = filter(lambda pro: _find_tags(pro['tagss']), prolist)
-
-        if problem_show == "onlyac":
-            prolist = filter(lambda pro: pro['state'] == ChalConst.STATE_AC, prolist)
-
-        elif problem_show == "notac":
-            prolist = filter(lambda pro: pro['state'] != ChalConst.STATE_AC, prolist)
-
-        prolist = list(prolist)
+        new_prolist: list[Problem] = []
         for pro in prolist:
-            _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'])
-            pro['rate_data'] = rate
+            pro_id = pro.pro_id
+            pro_state = acct_states.get(pro.pro_id, {}).get('state')
+
+            if show_only_online_pro and pro.status != ProConst.STATUS_ONLINE:
+                continue
+
+            if problem_show == "onlyac" and pro_state != ChalConst.STATE_AC:
+                continue
+
+            elif problem_show == "notac" and pro_state == ChalConst.STATE_AC:
+                continue
+
+            if search_name and pro.name.lower().find(search_name) == -1:
+                continue
+
+            if search_tags and pro.tags.lower().find(search_tags) == -1:
+                continue
+
+            if (self.acct.is_guest()) or (not self.acct.is_kernel() and pro_state != ChalConst.STATE_AC):
+                pro.tags = ''
+
+            _, rate = await RateService.inst.get_pro_ac_rate(pro.pro_id)
+            score_map[pro_id] = {'state': pro_state, 'rate_data': rate}
+            new_prolist.append(pro)
+
+        prolist = new_prolist
+        def user_ac_cmp(pro: Problem):
+            pro_id = pro.pro_id
+            user_ac_chal_cnt = score_map[pro_id]['rate_data']['user_ac_chal_cnt']
+            user_all_chal_cnt = score_map[pro_id]['rate_data']['user_all_chal_cnt']
+
+            if user_ac_chal_cnt and user_all_chal_cnt:
+                return user_ac_chal_cnt / user_all_chal_cnt
+            else:
+                return -1
+
+        def chal_ac_cmp(pro: Problem):
+            pro_id = pro.pro_id
+            ac_chal_cnt = score_map[pro_id]['rate_data']['ac_chal_cnt']
+            all_chal_cnt = score_map[pro_id]['rate_data']['all_chal_cnt']
+
+            if ac_chal_cnt and all_chal_cnt:
+                return ac_chal_cnt / all_chal_cnt
+            else:
+                return -1
+
+        def cmp(pro: Problem, key: str):
+            return score_map[pro.pro_id]['rate_data'][key]
 
         if order == "chal":
-            prolist.sort(key=chal_ac_cmp)
-
+            prolist = sorted(prolist, key=chal_ac_cmp)
         elif order == "user":
-            prolist.sort(key=user_ac_cmp)
-
+            prolist = sorted(prolist, key=user_ac_cmp)
         elif order == "chalcnt":
-            prolist.sort(key=lambda pro: pro['rate_data']['all_chal_cnt'])
-
+            prolist = sorted(prolist, key=lambda pro: cmp(pro, 'all_chal_cnt'))
         elif order == "chalaccnt":
-            prolist.sort(key=lambda pro: pro['rate_data']['ac_chal_cnt'])
-
+            prolist = sorted(prolist, key=lambda pro: cmp(pro, 'ac_chal_cnt'))
         elif order == "usercnt":
-            prolist.sort(key=lambda pro: pro['rate_data']['user_all_chal_cnt'])
-
+            prolist = sorted(prolist, key=lambda pro: cmp(pro, 'user_all_chal_cnt'))
         elif order == "useraccnt":
-            prolist.sort(key=lambda pro: pro['rate_data']['user_ac_chal_cnt'])
+            prolist = sorted(prolist, key=lambda pro: cmp(pro, 'usr_ac_chal_cnt'))
 
         if order_reverse:
-            prolist.reverse()
+            prolist = reversed(prolist)
 
+        prolist = list(prolist)
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff: pageoff + 40]
 
@@ -147,6 +139,7 @@ class ProsetHandler(RequestHandler):
             pro_total_cnt=pro_total_cnt,
             ac_pro_cnt=ac_pro_cnt,
             prolist=prolist,
+            score_map=score_map,
             cur_proclass=proclass,
             pageoff=pageoff,
             flt=flt,
@@ -248,7 +241,7 @@ class ProStaticHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        if pro['status'] == ProConst.STATUS_CONTEST:
+        if pro.status == ProConst.STATUS_CONTEST:
             if not (self.contest.is_running() or self.contest.is_admin(self.acct)):
                 return self.error(PERMISSION_DENIED_ERROR)
 
@@ -297,17 +290,17 @@ class ProHandler(RequestHandler):
         # NOTE: Admin can see tags
         # NOTE: User get ac can see tags
 
-        if self.acct.is_guest() or pro['tags'] is None or pro['tags'] == '':
-            pro['tags'] = ''
+        if self.acct.is_guest():
+            pro.tags = ''
 
         elif not self.acct.is_kernel():
             async with self.db.acquire() as con:
                 result = await con.fetchrow(
                     '''
-                        SELECT MIN("challenge_state"."state") AS "state"
+                        SELECT MIN("total_result"."state") AS "state"
                         FROM "challenge"
-                        INNER JOIN "challenge_state"
-                        ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                        INNER JOIN "total_result"
+                        ON "challenge"."chal_id" = "total_result"."chal_id"
                         AND "challenge"."acct_id" = $1
                         INNER JOIN "problem"
                         ON "challenge"."pro_id" = $3
@@ -315,11 +308,11 @@ class ProHandler(RequestHandler):
                     ''',
                     self.acct.acct_id,
                     ChalConst.STATE_AC,
-                    int(pro['pro_id']),
+                    pro.pro_id
                 )
 
             if result['state'] is None or result['state'] != ChalConst.STATE_AC:
-                pro['tags'] = ''
+                pro.tags = ''
 
         can_submit = JudgeServerClusterService.inst.is_server_online()
         topcoder = None
@@ -360,9 +353,8 @@ class ProTagsHandler(RequestHandler):
             'manage.pro.update.tag',
         )
 
-        err, _ = await ProService.inst.update_pro(
-            pro_id, pro['name'], pro['status'], tags, pro['allow_submit']
-        )
+        pro.tags = tags
+        err, _ = await ProService.inst.update_pro(pro)
 
         if err:
             return self.error(err)

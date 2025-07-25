@@ -4,7 +4,7 @@
 
 <script type="text/javascript" id="contjs" async>
     function init() {
-		let pro_id = "{{ pro['pro_id'] }}"
+		let pro_id = "{{ pro.pro_id }}"
 		let j_form = $('#form');
 		let j_form2 = $('#form2');
         let j_form3 = $('#form3');
@@ -97,11 +97,11 @@
             j_form2.find("tbody > tr").each(function() {
                 let j_tr = $(this);
                 let lang = j_tr.attr('language');
-                let timelimit = j_tr.find("input.time").val();
-                let memlimit = j_tr.find("input.mem").val();
+                let time = j_tr.find("input.time").val();
+                let memory = j_tr.find("input.mem").val();
                 limits[lang] = {
-                    timelimit: timelimit,
-                    memlimit: memlimit
+                    time: time,
+                    memory: memory
                 };
             });
 
@@ -161,30 +161,30 @@
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <form id="form" class="blk-cont">
 		<label for="" class="form-label">Problem Name</label>
-		<input type="text" class="form-control name" placeholder="Problem Name" value="{{ pro['name'] }}">
+		<input type="text" class="form-control name" placeholder="Problem Name" value="{{ pro.name }}">
 
 		<label for="" class="form-label">Problem Tags</label>
-		<input type="text" class="form-control tags" placeholder="Tags" value="{{ pro.get('tags', '') or '' }}">
+		<input type="text" class="form-control tags" placeholder="Tags" value="{{ pro.tags }}">
 
 		<label for="" class="form-label">Problem Status</label>
 		<select class="form-select status">
-            <option value="{{ ProConst.STATUS_ONLINE }}" {% if pro['status'] == ProConst.STATUS_ONLINE %} selected {% end %}>Online</option>
-			<option value="{{ ProConst.STATUS_CONTEST }}" {% if pro['status'] == ProConst.STATUS_CONTEST %} selected {% end %}>Contest</option>
-			<option value="{{ ProConst.STATUS_HIDDEN }}" {% if pro['status'] == ProConst.STATUS_HIDDEN %} selected {% end %}>Hidden</option>
+            <option value="{{ ProConst.STATUS_ONLINE }}" {% if pro.status == ProConst.STATUS_ONLINE %} selected {% end %}>Online</option>
+			<option value="{{ ProConst.STATUS_CONTEST }}" {% if pro.status == ProConst.STATUS_CONTEST %} selected {% end %}>Contest</option>
+			<option value="{{ ProConst.STATUS_HIDDEN }}" {% if pro.status == ProConst.STATUS_HIDDEN %} selected {% end %}>Hidden</option>
 		</select>
 
         <label>Score Precision (0 ~ 3)</label>
-        <input type="range" class="form-range precision" min="0" max="3" step="1" value="{{ pro['testm_conf']['rate_precision'] }}">
+        <input type="range" class="form-range precision" min="0" max="3" step="1" value="{{ pro.config.rate_precision }}">
 
         <label for="" class="form-check-label">Allow Submit</label>
-        <input type="checkbox" class="form-check-input allow-submit" {% if pro['allow_submit'] %} checked {% end %}>
+        <input type="checkbox" class="form-check-input allow-submit" {% if pro.allow_submit %} checked {% end %}>
         <br />
 
         <label for="" class="form-check-label">Is Makefile Problem</label>
-        <input type="checkbox" class="form-check-input is-makefile" {% if pro['testm_conf']['is_makefile'] %} checked {% end %}>
+        <input type="checkbox" class="form-check-input is-makefile" {% if pro.config.is_makefile %} checked {% end %}>
         <br />
 
-        {% set check_type = pro['testm_conf']['check_type'] %}
+        {% set check_type = pro.config.checker_type %}
 		<label for="" class="form-label">Checker Type</label>
         <select class="form-select check-type">
             <option value="{{ ProConst.CHECKER_DIFF }}" {% if check_type == ProConst.CHECKER_DIFF %} selected {% end %}>Diff</option>
@@ -196,7 +196,7 @@
 
         <label for="" class="form-label chalmeta" {% if check_type != ProConst.CHECKER_IOREDIR %} style="display: none;" {% end %}>IORedir Settings</label>
         <textarea rows="10" cols="80" class="form-control chalmeta" {% if check_type != ProConst.CHECKER_IOREDIR %} style="display: none;" {% end %}>
-            {{ json.dumps(pro['testm_conf']['chalmeta'], indent=4) }}
+            {{ json.dumps(pro.config.chalmeta, indent=4) }}
         </textarea>
 
 		<div class="mt-3">
@@ -224,14 +224,14 @@
                 </tr>
             </thead>
             <tbody>
-                {% set limits = pro['testm_conf']['limit'] %}
+                {% set limits = pro.config.limits %}
                 <tr language="default">
                     <td>default</td>
-                    <td><input type="number" class="form-control time" value="{{ limits['default']['timelimit'] }}"></td>
-                    <td><input type="number" class="form-control mem" value="{{ limits['default']['memlimit'] // 1024 }}"></td>
+                    <td><input type="number" class="form-control time" value="{{ limits['default'].time }}"></td>
+                    <td><input type="number" class="form-control mem" value="{{ limits['default'].memory // 1024 }}"></td>
                 </tr>
                 {% set ALLOW_COMPILERS = ChalConst.ALLOW_COMPILERS %}
-                {% if pro['testm_conf']['is_makefile'] %}
+                {% if pro.config.is_makefile %}
                     {% set ALLOW_COMPILERS = ['gcc', 'g++', 'clang', 'clang++'] %}
                 {% end %}
 
@@ -239,8 +239,8 @@
                     {% if language in limits %}
                     <tr language="{{ language }}">
                         <td>{{ language }}</td>
-                        <td><input type="number" class="form-control time" value="{{ limits[language]['timelimit'] }}"></td>
-                        <td><input type="number" class="form-control mem" value="{{ limits[language]['memlimit'] // 1024 }}"></td>
+                        <td><input type="number" class="form-control time" value="{{ limits[language].time }}"></td>
+                        <td><input type="number" class="form-control mem" value="{{ limits[language].memory // 1024 }}"></td>
                     </tr>
                     {% else %}
                     <tr language="{{ language }}">
@@ -256,8 +256,8 @@
 		<button type="button" class="btn btn-primary submit">Update</button>
     </form>
 
-	<a class="btn btn-primary" href="/oj/manage/pro/updatetests/?proid={{ pro['pro_id'] }}">Edit Subtask</a>
-	<a class="btn btn-primary" href="/oj/manage/pro/updatetestdata/?proid={{ pro['pro_id'] }}">Edit Testdata</a>
-    <a class="btn btn-primary" href="/oj/manage/pro/filemanager/?proid={{ pro['pro_id'] }}">File Manager</a>
+	<a class="btn btn-primary" href="/oj/manage/pro/updatetests/?proid={{ pro.pro_id }}">Edit Subtask</a>
+	<a class="btn btn-primary" href="/oj/manage/pro/updatetestdata/?proid={{ pro.pro_id }}">Edit Testdata</a>
+    <a class="btn btn-primary" href="/oj/manage/pro/filemanager/?proid={{ pro.pro_id }}">File Manager</a>
 </div>
 {% end %}
