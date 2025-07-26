@@ -120,6 +120,18 @@ class E2ETest(AsyncTest):
                 self.assertIsNotNone(html.select_one('li.manage'))
                 self.assertEqual(html.select_one('script#indexjs').attrs.get('acct_id'), '1')
 
+                html = self.get_html('manage/acct', admin_session)
+                trs = html.select('tbody > tr')
+                self.assertEqual(len(trs), 1)
+                self.assertEqual(trs[0].select('td')[1].text.strip(), 'admin')
+                self.assertEqual(trs[0].select('td')[2].text.strip(), 'admin@test')
+                self.assertEqual(trs[0].select('td')[4].text.strip(), 'Kernel')
+
+                html = self.get_html('manage/acct/update?acctid=1', admin_session)
+                self.assertEqual(html.select_one('h3').text.strip(), '1 / admin')
+                self.assertEqual(html.select_one('option:checked').attrs['value'], '0')
+                self.assertEqual(html.select_one('option:checked').text.strip(), 'Kernel')
+
                 html = self.get_html('manage/judge', admin_session)
                 self.assertEqual(html.select('tr')[1].select('td')[2].text, 'Online', 'Test need judge connected')
 
