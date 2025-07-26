@@ -93,6 +93,7 @@ class PackService:
                     dfs(os.path.join(path, name))
                 else:
                     err = check_file_illegal(os.path.join(path, name))
+        dfs(dst)
 
 
         return err, None

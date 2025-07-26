@@ -130,14 +130,14 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(pack_token, "")
         return pack_token
 
-    def submit_problem(self, pro_id: int, code: str, comp_type: str, session) -> int:
+    def submit_problem(self, pro_id: int, code: str, compiler_type: str, session) -> int:
         res = session.post(
             "submit",
             data={
                 "reqtype": "submit",
                 "pro_id": pro_id,
                 "code": code,
-                "comp_type": comp_type,
+                "compiler_type": compiler_type,
             },
         )
         res = json.loads(res.text)

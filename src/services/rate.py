@@ -31,7 +31,7 @@ class RateService:
                             challenge c
                         INNER JOIN problem
                             ON c.pro_id = problem.pro_id
-                        INNER JOIN challenge_state cs
+                        INNER JOIN total_result cs
                             ON c.chal_id = cs.chal_id
                         WHERE
                             c.acct_id = $1 AND
@@ -53,9 +53,9 @@ class RateService:
                     f'''
                     WITH accepted_tests AS (
                         SELECT DISTINCT
-                            t."acct_id", t."pro_id", t."test_idx", t."rate"
+                            t."acct_id", t."pro_id", t."subtask_id", t."rate"
                         FROM
-                            "test" t
+                            "subtask_result" t
                         INNER JOIN "problem"
                             ON t."pro_id" = "problem"."pro_id"
                         WHERE
@@ -69,7 +69,7 @@ class RateService:
                         test_valid_rate
                     INNER JOIN accepted_tests at
                         ON "test_valid_rate"."pro_id" = at."pro_id"
-                        AND "test_valid_rate"."test_idx" = at."test_idx"
+                        AND "test_valid_rate"."test_idx" = at."subtask_id"
                     ''',
                     acct_id
                 )
@@ -102,39 +102,39 @@ class RateService:
                 "contest_users"
             ON "contest_users"."contest_id" = $2 AND
                "contest_users"."acct_id" = "challenge"."acct_id" AND
-               "contest_users"."status" = {UserStatus.APPROVED.value}
+               "contest_users"."status" = {UserStatus.APPROVED}
 
             '''
 
         ALL_CHAL_SQL = f"""
         SELECT COUNT(*) FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
-        LEFT JOIN "challenge_state"
-        ON "challenge"."chal_id" = "challenge_state"."chal_id"
+        LEFT JOIN "total_result"
+        ON "challenge"."chal_id" = "total_result"."chal_id"
         {contest_user_filter_sql}
         WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2;
         """
         AC_CHAL_SQL = f"""
         SELECT COUNT(*) FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
-        LEFT JOIN "challenge_state"
-        ON "challenge"."chal_id" = "challenge_state"."chal_id"
+        LEFT JOIN "total_result"
+        ON "challenge"."chal_id" = "total_result"."chal_id"
         {contest_user_filter_sql}
-        WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2 AND "challenge_state"."state" = {ChalConst.STATE_AC};
+        WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2 AND "total_result"."state" = {ChalConst.STATE_AC};
         """
 
         # problem user ac rate
         USER_ALL_CHAL_SQL = f"""
         SELECT COUNT(*) FROM (SELECT DISTINCT "account"."acct_id" FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
-        LEFT JOIN "challenge_state"
-        ON "challenge"."chal_id" = "challenge_state"."chal_id"
+        LEFT JOIN "total_result"
+        ON "challenge"."chal_id" = "total_result"."chal_id"
         {contest_user_filter_sql}
         WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2) as user_cnt;
         """
         USER_AC_CHAL_SQL = f"""
         SELECT COUNT(*) FROM (SELECT DISTINCT "account"."acct_id" FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
-        LEFT JOIN "challenge_state"
-        ON "challenge"."chal_id" = "challenge_state"."chal_id"
+        LEFT JOIN "total_result"
+        ON "challenge"."chal_id" = "total_result"."chal_id"
         {contest_user_filter_sql}
-        WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2 AND "challenge_state"."state" = {ChalConst.STATE_AC}) as user_cnt;
+        WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2 AND "total_result"."state" = {ChalConst.STATE_AC}) as user_cnt;
         """
 
         key = "pro_rate"
@@ -175,7 +175,7 @@ class RateService:
         The topcoder is determined from non-contest (`contest_id = 0`) accepted (`state = AC`) challenges
         by selecting each user's best challenge, ranked primarily by:
         - highest rate
-        - lowest runtime
+        - lowest time
         - lowest memory usage
         - earliest chal_id (tie-breaker)
         This algorithm same as `ProRankHandler`.
@@ -205,23 +205,23 @@ class RateService:
                             SELECT DISTINCT ON ("challenge"."acct_id")
                                 "challenge"."chal_id",
                                 "challenge"."acct_id",
-                                "challenge_state"."runtime",
-                                "challenge_state"."memory",
-                                "challenge_state"."rate"
+                                "total_result"."time",
+                                "total_result"."memory",
+                                "total_result"."rate"
 
                                 FROM "challenge"
 
-                                INNER JOIN "challenge_state"
-                                ON "challenge"."chal_id"="challenge_state"."chal_id"
+                                INNER JOIN "total_result"
+                                ON "challenge"."chal_id"="total_result"."chal_id"
 
-                                WHERE "challenge_state"."state"={ChalConst.STATE_AC} AND "challenge"."contest_id"=0 AND "challenge"."pro_id"=$1
+                                WHERE "total_result"."state"={ChalConst.STATE_AC} AND "challenge"."contest_id"=0 AND "challenge"."pro_id"=$1
 
-                                ORDER BY "challenge"."acct_id" ASC, "challenge_state"."rate" DESC,
-                                "challenge_state"."runtime" ASC, "challenge_state"."memory" ASC,
+                                ORDER BY "challenge"."acct_id" ASC, "total_result"."rate" DESC,
+                                "total_result"."time" ASC, "total_result"."memory" ASC,
                                 "challenge"."chal_id" ASC
                         ) temp
 
-                        ORDER BY "rate" DESC, "runtime" ASC, "memory" ASC,
+                        ORDER BY "rate" DESC, "time" ASC, "memory" ASC,
                         "chal_id" ASC, "acct_id" ASC LIMIT 1
                         ) temp2
 
@@ -263,12 +263,12 @@ class RateService:
             result = await con.fetch(
                 f'''
                     SELECT "challenge"."pro_id",
-                    ROUND(MAX("challenge_state"."rate"), (SELECT rate_precision FROM problem WHERE pro_id = challenge.pro_id)) AS "score",
-                    COUNT("challenge_state") AS "count",
-                    MIN("challenge_state"."state") as "state"
+                    ROUND(MAX("total_result"."rate"), (SELECT rate_precision FROM problem WHERE pro_id = challenge.pro_id)) AS "score",
+                    COUNT("total_result") AS "count",
+                    MIN("total_result"."state") as "state"
                     FROM "challenge"
-                    INNER JOIN "challenge_state"
-                    ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."acct_id" = $1
+                    INNER JOIN "total_result"
+                    ON "challenge"."chal_id" = "total_result"."chal_id" AND "challenge"."acct_id" = $1
                     INNER JOIN "problem"
                     ON "challenge"."pro_id" = "problem"."pro_id" {problem_status_sql}
                     WHERE "challenge"."contest_id" = $2 AND "challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4
@@ -301,12 +301,12 @@ class RateService:
             result = await con.fetch(
                 '''
                     SELECT "challenge"."acct_id", "challenge"."pro_id",
-                    ROUND(MAX("challenge_state"."rate"), (SELECT rate_precision FROM problem WHERE pro_id = challenge.pro_id)) AS "rate",
-                    COUNT("challenge_state") AS "count",
-                    MIN("challenge_state"."state") AS "state"
+                    ROUND(MAX("total_result"."rate"), (SELECT rate_precision FROM problem WHERE pro_id = challenge.pro_id)) AS "rate",
+                    COUNT("total_result") AS "count",
+                    MIN("total_result"."state") AS "state"
                     FROM "challenge"
-                    INNER JOIN "challenge_state"
-                    ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                    INNER JOIN "total_result"
+                    ON "challenge"."chal_id" = "total_result"."chal_id"
                     INNER JOIN "problem"
                     ON "challenge"."pro_id" = "problem"."pro_id"
                     WHERE "challenge"."timestamp" >= $1 AND "challenge"."timestamp" <= $2 AND "challenge"."contest_id" = $3

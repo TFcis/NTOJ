@@ -296,11 +296,11 @@
         </thead>
 
         <tbody>
-            {% for testdata_id, testdata in tests['testdatas'].items() %}
+            {% for testdata_id, testdata in config.testdatas.items() %}
                 <tr testdata_id="{{ testdata_id }}">
                     <th scope="row">{{ testdata_id }}</th>
-                    <td><a class="preview-file input">{{ testdata['inputfile'] }}</a></td>
-                    <td><a class="preview-file output">{{ testdata['outputfile'] }}</a></td>
+                    <td><a class="preview-file input">{{ testdata.inputfile }}</a></td>
+                    <td><a class="preview-file output">{{ testdata.outputfile }}</a></td>
                     <td>
                         <div class="btn-toolbar">
                             <div class="dropdown me-2">

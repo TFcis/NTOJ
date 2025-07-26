@@ -32,7 +32,7 @@ class BoardHandler(RequestHandler):
         err, ratemap = await RateService.inst.map_rate(starttime=meta['start'], endtime=meta['end'])
 
         p_list = meta['pro_list']
-        prolist = list(filter(lambda pro: pro['pro_id'] in p_list, prolist))
+        prolist = list(filter(lambda pro: pro.pro_id in p_list, prolist))
 
         acctlist2 = []
         submit_count = {}
@@ -43,7 +43,7 @@ class BoardHandler(RequestHandler):
                 count = 0
 
                 for pro in prolist:
-                    pro_id = pro['pro_id']
+                    pro_id = pro.pro_id
                     if acct_id in ratemap and pro_id in ratemap[acct_id]:
                         rate = ratemap[acct_id][pro_id]
                         acct.rate += rate['rate']
@@ -79,7 +79,7 @@ class BoardHandler(RequestHandler):
         # NOTE: board最下面的score/submit那行
         pro_sc_sub = {}
         for pro in prolist:
-            pro_id = pro['pro_id']
+            pro_id = pro.pro_id
             sc = 0
             sub = 0
             for acct in acctlist2:

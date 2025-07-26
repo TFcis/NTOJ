@@ -24,7 +24,7 @@ class CodeService:
                 return ('Enoext', 'Challenge not found'), None, None
             result = result[0]
 
-            target_acct_id, pro_id, contest_id, comp_type = int(result['acct_id']), int(result['pro_id']), int(
+            target_acct_id, pro_id, contest_id, compiler_type = int(result['acct_id']), int(result['pro_id']), int(
                 result['contest_id']), result['compiler_type']
 
         owner = await self.rs.get(f'{pro_id}_owner')
@@ -44,7 +44,7 @@ class CodeService:
                 can_see = True
 
         if can_see:
-            file_ext = ChalConst.FILE_EXTENSION[comp_type]
+            file_ext = ChalConst.FILE_EXTENSION[compiler_type]
 
             try:
                 with open(f'code/{chal_id}/main.{file_ext}', 'rb') as code_f:
@@ -56,4 +56,4 @@ class CodeService:
         else:
             return ('Eacces', 'Permission denied'), None, None
 
-        return None, code, comp_type
+        return None, code, compiler_type

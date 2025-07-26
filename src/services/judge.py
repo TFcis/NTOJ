@@ -51,61 +51,59 @@ class JudgeServerService:
             await self.response_handle(ret)
 
     async def response_handle(self, ret):
-        from services.chal import ChalService, ChalConst
+        from services.chal import ChalService, ChalConst, SubtaskResult
 
         res = json.loads(ret)
 
-        if res['results'] is not None:
-            for test_idx, result in enumerate(res['results']):
+        try:
+            if res['results'] is not None:
+                for subtask_id, result in enumerate(res['results']):
+                    score = decimal.Decimal('inf')
+                    is_cms_type = False
+                    if 'score_type' in result and result['score_type'] in ["CMS", "CF"]:
+                        is_cms_type = result['score_type'] == "CMS"
+                        if 'score' in result:
+                            try:
+                                score = decimal.Decimal(result['score'])
+                            except decimal.InvalidOperation:
+                                result['status'] = ChalConst.STATE_SJE
 
-                score = None
-                is_cms_type = False
-                if 'score_type' in result and result['score_type'] in ["CMS", "CF"]:
-                    is_cms_type = result['score_type'] == "CMS"
-                    if 'score' in result:
-                        try:
-                            score = decimal.Decimal(result['score'])
-                        except decimal.InvalidOperation:
-                            score = None
-                            result['status'] = ChalConst.STATE_SJE
+                    _, ret = await ChalService.inst.update_subtask_result(
+                        res['chal_id'],
+                        SubtaskResult(subtask_id, result['status'], int(result['time'] / 10 ** 6),
+                                    result['memory'], result['verdict'], score),
+                        rate_is_cms_type=is_cms_type,
+                        refresh_db=False,
+                    )
 
-                _, ret = await ChalService.inst.update_test(
-                    res['chal_id'],
-                    test_idx,
-                    result['status'],
-                    int(result['time'] / 10 ** 6),  # ns to ms
-                    result['memory'],
-                    score,
-                    result['verdict'],
-                    rate_is_cms_type=is_cms_type,
-                    refresh_db=False,
+                self.running_chal_cnt -= 1
+                await ChalService.inst.update_total_result(res['chal_id'])
+
+                await self.rs.publish('chalstatesub', res['chal_id'])
+                await self.rs.publish('challiststatesub', res['chal_id'])
+                await self.rs.publish(
+                    'judgechalcnt_sub',
+                    json.dumps(
+                        {
+                            "judge_id": self.judge_id,
+                            "chal_cnt": self.running_chal_cnt,
+                        }
+                    ),
                 )
 
-            self.running_chal_cnt -= 1
-            await ChalService.inst.update_challenge_state(res['chal_id'])
+                pro_id = self.chal_map[res['chal_id']]['pro_id']
+                contest_id = self.chal_map[res['chal_id']]['contest_id']
+                if contest_id != 0:
+                    await self.rs.publish('contestnewchalsub', contest_id)
+                    await self.rs.hdel(f'contest_{contest_id}_scores', str(pro_id))
 
-            await self.rs.publish('chalstatesub', res['chal_id'])
-            await self.rs.publish('challiststatesub', res['chal_id'])
-            await self.rs.publish(
-                'judgechalcnt_sub',
-                json.dumps(
-                    {
-                        "judge_id": self.judge_id,
-                        "chal_cnt": self.running_chal_cnt,
-                    }
-                ),
-            )
-
-            pro_id = self.chal_map[res['chal_id']]['pro_id']
-            contest_id = self.chal_map[res['chal_id']]['contest_id']
-            if contest_id != 0:
-                await self.rs.publish('contestnewchalsub', contest_id)
-                await self.rs.hdel(f'contest_{contest_id}_scores', str(pro_id))
-
-            # NOTE: Recalculate problem rate
-            await self.rs.hdel('pro_rate', f"pro_id_{pro_id}_contest_id_{contest_id}")
-            await self.rs.hdel('pro_topcoder', str(pro_id))
-            self.chal_map.pop(res['chal_id'])
+                # NOTE: Recalculate problem rate
+                await self.rs.hdel('pro_rate', f"pro_id_{pro_id}_contest_id_{contest_id}")
+                await self.rs.hdel('pro_topcoder', str(pro_id))
+                self.chal_map.pop(res['chal_id'])
+        except Exception as e:
+            import traceback
+            traceback.print_exception(e)
 
     async def disconnect_server(self):
         if not self.status:

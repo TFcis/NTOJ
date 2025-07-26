@@ -15,7 +15,6 @@ from handlers.index import (
     AbouotHandler,
     DevInfoHandler,
     IndexHandler,
-    OnlineCounterHandler,
 )
 from handlers.log import LogHandler
 from handlers.manage.url import get_manage_url
@@ -68,7 +67,6 @@ def get_url(db, rs, pool):
         (r'/users', UserRankHandler, args),
         (r'/code', CodeHandler, args),
         (r'/informsub', BulletinSub, sub_args),
-        (r'/online_count', OnlineCounterHandler, args),
         (r'/dev-info', DevInfoHandler, args),
         (r'/report', ReportHandler, args),
     ] + get_manage_url(db, rs, pool) + get_contests_url(db, rs, pool)

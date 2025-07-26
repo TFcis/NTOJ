@@ -48,10 +48,10 @@ class SubmitHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        if not pro['allow_submit']:
+        if not pro.allow_submit:
             return self.error(('Eacces', 'Problem did not allow submit'))
 
-        if pro['testm_conf']['is_makefile']:
+        if pro.config.is_makefile:
             allow_compilers = list(filter(lambda compiler: compiler in ['gcc', 'g++', 'clang', 'clang++'], allow_compilers))
 
         await self.render('submit', pro=pro,
@@ -77,7 +77,7 @@ class SubmitHandler(RequestHandler):
         if reqtype == 'submit':
             pro_id = int(self.get_argument('pro_id'))
             code = self.get_argument('code')
-            comp_type = str(self.get_argument('comp_type'))
+            compiler_type = str(self.get_argument('compiler_type'))
 
             if self.contest:
                 pri = ChalConst.CONTEST_PRI
@@ -92,22 +92,22 @@ class SubmitHandler(RequestHandler):
                 if self.acct.is_kernel():
                     allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
-            if err := await self.is_allow_submit(code, comp_type, pro_id):
+            if err := await self.is_allow_submit(code, compiler_type, pro_id):
                 return self.error(err)
 
             err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
             if err:
                 return self.error(err)
 
-            if not pro['allow_submit']:
+            if not pro.allow_submit:
                 return self.error(('Eacces', 'Problem did not allow submit'))
 
-            err, chal_id = await ChalService.inst.add_chal(pro_id, self.acct.acct_id, contest_id, comp_type, code)
+            err, chal_id = await ChalService.inst.add_chal(pro_id, self.acct.acct_id, contest_id, compiler_type, code)
             if err:
                 return self.error(err)
 
-            if self.acct.last_compiler != comp_type:
-                self.acct.last_compiler = comp_type
+            if self.acct.last_compiler != compiler_type:
+                self.acct.last_compiler = compiler_type
                 err, _ = await UserService.inst.update_acct(self.acct)
                 if err:
                     return self.error(err)
@@ -125,8 +125,8 @@ class SubmitHandler(RequestHandler):
                 err, _ = await ChalService.inst.reset_chal(chal_id)
                 err, chal = await ChalService.inst.get_chal(chal_id)
 
-                pro_id = chal['pro_id']
-                comp_type = chal['comp_type']
+                pro_id = chal.pro_id
+                compiler_type = chal.compiler_type
                 err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
                 if err:
                     return self.error(err)
@@ -134,22 +134,16 @@ class SubmitHandler(RequestHandler):
         else:
             return self.error(('Eunk', 'Unknown error'))
 
-        err, _ = await ChalService.inst.emit_chal(
-            chal_id,
-            pro_id,
-            pro['testm_conf'],
-            comp_type,
-            pri=pri
-        )
+        err, _ = await ChalService.inst.emit_chal(chal_id, pro_id, pro.config, compiler_type, pri)
         if err:
             return self.error(err)
 
-        if reqtype == 'submit' and pro['status'] == ProConst.STATUS_ONLINE:
+        if reqtype == 'submit' and pro.status == ProConst.STATUS_ONLINE:
             await self.rs.publish('challist_sub', str(1))
 
         self.error(('S', chal_id))
 
-    async def is_allow_submit(self, code: str, comp_type: str, pro_id: int):
+    async def is_allow_submit(self, code: str, compiler_type: str, pro_id: int):
         # limits variable config
         allow_compilers = ChalConst.ALLOW_COMPILERS
         submit_cd_time = 30
@@ -164,7 +158,7 @@ class SubmitHandler(RequestHandler):
             return ('Ecodemax', 'Submitted code too long')
 
         # TODO: if problem is makefile type, we should restrict compiler type
-        if comp_type not in allow_compilers:
+        if compiler_type not in allow_compilers:
             return ('Ecomp', 'The compiler is not allowed')
 
         should_check_submit_cd = (
@@ -176,7 +170,7 @@ class SubmitHandler(RequestHandler):
         name = ''
         crc32 = ''
         if self.contest:
-            name = f'contest_{self.contest.contest_id}_acct_{self.acct.acct_id}_pro_{pro_id}_compiler_{comp_type}'
+            name = f'contest_{self.contest.contest_id}_acct_{self.acct.acct_id}_pro_{pro_id}_compiler_{compiler_type}'
             crc32 = str(zlib.crc32(code.encode('utf-8')))
 
             if (await self.rs.sismember(name, crc32)):

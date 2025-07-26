@@ -1,5 +1,7 @@
 {% import math %}
+{% import datetime %}
 {% from services.chal import ChalConst %}
+{% set TZ = datetime.timezone(datetime.timedelta(hours=+8)) %}
 
 <link rel="stylesheet" type="text/css" href="/oj/challist.css">
 
@@ -89,9 +91,9 @@
         })();
 
         (() => {
-            let update_state = ({chal_id, state, runtime, memory, rate}) => {
+            let update_state = ({chal_id, state, time, memory, rate}) => {
                 let tr = document.querySelector(`#chal${chal_id}`);
-                tr.querySelector('#runtime').innerText = parseInt(runtime);
+                tr.querySelector('#time').innerText = parseInt(time);
                 tr.querySelector('#memory').innerText = Math.round(memory / 1024);
                 tr.querySelector('#score').innerText = rate;
 
@@ -103,10 +105,14 @@
             newstate_ws = index.get_ws('challistnewstatesub');
 
             newstate_ws.onopen = (e) => {
+                let chalids = [
+                    {% for chal in challist %}
+                        {{ chal.chal_id }},
+                    {% end %}
+                ];
                 newstate_ws.send(JSON.stringify({
                     acct_id: '{{ user.acct_id }}',
-                    last_chal_id: "{{ challist[0]['chal_id'] if len(challist) > 0 else -1 }}",
-                    first_chal_id: "{{ challist[-1]['chal_id'] if len(challist) > 0 else -1 }}"
+                    chalids: chalids,
                 }));
             };
 
@@ -118,7 +124,7 @@
         {% if (flt.state == 100 or flt.state == 101) and isadmin %}
             let chalids = [
                 {% for chal in challist %}
-                    {{ chal['chal_id'] }},
+                    {{ chal.chal_id }},
                 {% end %}
             ];
             $('#rechalall').on('click', function(e) {
@@ -198,7 +204,7 @@
                     <th scope="col">Problem</th>
                     <th scope="col">Account</th>
                     <th scope="col">State</th>
-                    <th scope="col">Runtime</th>
+                    <th scope="col">Time</th>
                     <th scope="col">Memory</th>
                     <th scope="col">Score</th>
                     <th scope="col">Compiler</th>
@@ -211,22 +217,22 @@
                     <td colspan=4><a href="" style="color:#58B2DC"></a></td>
                 </tr>
             {% for chal in challist %}
-                <tr id="chal{{ chal['chal_id'] }}">
-                    {% if chal['contest_id'] == 0 %}
-                        <td><a href="/oj/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
-                        <td><a href="/oj/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
+                <tr id="chal{{ chal.chal_id }}">
+                    {% if chal.contest_id == 0 %}
+                        <td><a href="/oj/chal/{{ chal.chal_id }}/">{{ chal.chal_id }}</a></td>
+                        <td><a href="/oj/pro/{{ chal.pro_id }}/">{{ chal.pro_id }}</a></td>
                     {% else %}
-                        <td><a href="/oj/contests/{{ chal['contest_id'] }}/chal/{{ chal['chal_id'] }}/">{{ chal['chal_id'] }}</a></td>
-                        <td><a href="/oj/contests/{{ chal['contest_id'] }}/pro/{{ chal['pro_id'] }}/">{{ chal['pro_id'] }}</a></td>
+                        <td><a href="/oj/contests/{{ chal.contest_id }}/chal/{{ chal.chal_id }}/">{{ chal.chal_id }}</a></td>
+                        <td><a href="/oj/contests/{{ chal.contest_id }}/pro/{{ chal.pro_id }}/">{{ chal.pro_id }}</a></td>
                     {% end %}
 
-                    <td><a href="/oj/acct/{{ chal['acct_id'] }}/">{{ chal['acct_name'] }}</a></td>
-                    <td id="state" class="state-{{ chal['state'] }}">{{ ChalConst.STATE_LONG_STR[chal['state']] }}</td>
-                    <td id="runtime">{{ chal['runtime'] }}</td>
-                    <td id="memory">{{ round(chal['memory'] / 1024) }}</td>
-                    <td id="score">{{ chal['rate'] }}</td>
-                    <td>{{ chal['comp_type'] }}</td>
-                    <td class="time">{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td><a href="/oj/acct/{{ chal.acct_id }}/">{{ chal.acct_name }}</a></td>
+                    <td id="state" class="state-{{ chal.total_result.state }}">{{ ChalConst.STATE_LONG_STR[chal.total_result.state] }}</td>
+                    <td id="time">{{ chal.total_result.time }}</td>
+                    <td id="memory">{{ round(chal.total_result.memory / 1024) }}</td>
+                    <td id="score">{{ chal.total_result.rate }}</td>
+                    <td>{{ chal.compiler_type }}</td>
+                    <td class="time">{{ chal.timestamp.astimezone(TZ).strftime('%Y-%m-%d %H:%M:%S') }}</td>
                 </tr>
             {% end %}
             </tbody>
@@ -254,7 +260,7 @@
             <div class="col pt-3">
                 {% set _p_pageoff = pageoff %}
                 {% set _p_pagenum = 20 %}
-                {% set _p_total_cnt = chalstat['total_chal'] %}
+                {% set _p_total_cnt = chal_cnt %}
                 {% set _p_postfix = postfix %}
                 {% include "pagination.html" %}
             </div>

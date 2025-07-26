@@ -1,5 +1,3 @@
-import tornado
-
 from handlers.base import reqenv, RequestHandler
 from services.pro import ProConst, ProService
 from services.rate import RateService
@@ -22,28 +20,25 @@ class ContestProsetHandler(RequestHandler):
             _, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_CONTEST_USER)
 
             prolist_order = {pro_id: idx for idx, pro_id in enumerate(self.contest.pro_list.keys())}
-            prolist = sorted(filter(lambda pro: self.contest.is_pro(pro['pro_id']), prolist),
-                                  key=lambda pro: prolist_order[pro['pro_id']])
+            prolist = sorted(filter(lambda pro: self.contest.is_pro(pro.pro_id), prolist),
+                                  key=lambda pro: prolist_order[pro.pro_id])
 
-            def get_score(pro):
-                pro['score'] = 0
-                pro['state'] = None
-                if pro['pro_id'] in acct_rates:
-                    pro['score'] += acct_rates[pro['pro_id']]['rate']
-                    pro['state'] = acct_rates[pro['pro_id']]['state']
-
-                return pro
-
-            prolist = list(map(get_score, prolist))
+            score_map: dict[int, dict] = {}
+            for pro in prolist:
+                pro_id = pro.pro_id
+                score_map[pro_id] = {'score': 0, 'state': None}
+                if pro_id in acct_rates:
+                    score_map[pro_id]['score'] += acct_rates[pro.pro_id]['rate']
+                    score_map[pro_id]['state'] = acct_rates[pro.pro_id]['state']
 
             if self.contest.is_public_scoreboard or self.contest.is_admin(self.acct):
                 show_ac_ratio = True
                 for pro in prolist:
-                    _, rate = await RateService.inst.get_pro_ac_rate(pro['pro_id'], contest_id=self.contest.contest_id)
-                    pro['rate_data'] = rate
+                    _, rate = await RateService.inst.get_pro_ac_rate(pro.pro_id, contest_id=self.contest.contest_id)
+                    score_map[pro.pro_id]['rate_data'] = rate
 
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff: pageoff + 40]
 
         await self.render('contests/proset', contest=self.contest, show_ac_ratio=show_ac_ratio,
-                          prolist=prolist, pro_total_cnt=pro_total_cnt, pageoff=pageoff)
+                          prolist=prolist, pro_total_cnt=pro_total_cnt, score_map=score_map, pageoff=pageoff)

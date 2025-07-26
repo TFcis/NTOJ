@@ -24,7 +24,7 @@ class ChalTest(AsyncTest):
             })
             res = json.loads(res.text)
             self.assertNotEqual(res['status'], 'Eacces')
-            self.assertEqual(res['data']['comp_type'], 'python')
+            self.assertEqual(res['data']['compiler_type'], 'python')
             self.assertEqual(res['data']['code'].strip(), 'EROOR: The code is lost on server.')
 
             res = admin_session.post('submit', data={
@@ -92,8 +92,7 @@ class ChalListTest(AsyncTest):
                                           on_message_callback=_message)
 
             await ws2.write_message(json.dumps({
-                'first_chal_id': 1,
-                'last_chal_id': 2,
+                'chalids': [1, 2],
                 'acct_id': 1,
             }))
 

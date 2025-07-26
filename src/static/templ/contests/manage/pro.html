@@ -103,15 +103,15 @@
 					<tbody>
 					{% for pro in pro_list %}
 						<tr>
-							<th scope="row"><a href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro['pro_id'] }}/">{{ pro['pro_id'] }}</a></th>
-							<td>{{ pro['name'] }}</td>
+							<th scope="row"><a href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro.pro_id }}/">{{ pro.pro_id }}</a></th>
+							<td>{{ pro.name }}</td>
 							<td>
-								<button class="btn btn-warning me-2 remove" pro_id="{{ pro['pro_id'] }}">Remove</button>
-								<button class="btn btn-danger me-2 rechal" pro_id="{{ pro['pro_id'] }}">Rechallenge</button>
+								<button class="btn btn-warning me-2 remove" pro_id="{{ pro.pro_id }}">Remove</button>
+								<button class="btn btn-danger me-2 rechal" pro_id="{{ pro.pro_id }}">Rechallenge</button>
                                 <button
                                     class="btn btn-danger me-2 public"
-                                    pro_id="{{ pro['pro_id'] }}"
-                                    {% if not contest.is_end() or pro['status'] != ProConst.STATUS_CONTEST %} disabled {% end %}
+                                    pro_id="{{ pro.pro_id }}"
+                                    {% if not contest.is_end() or pro.status != ProConst.STATUS_CONTEST %} disabled {% end %}
                                 >Public Problem</button>
 							</td>
 						</tr>
