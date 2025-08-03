@@ -1,10 +1,41 @@
 from dataclasses import dataclass
 import datetime
+import enum
 import os
 import decimal
 
 from services.judge import JudgeServerClusterService
-from services.pro import ProConst, ProblemConfig
+from services.pro import ProService, ProConst
+
+class Compiler(enum.IntEnum):
+    GCC = 1
+    CLANG = 2
+    GPP = 3
+    CLANGPP = 4
+    RUST = 5
+    PYTHON3 = 6
+    JAVA = 7
+    ASMC = 8
+    ASMCPP = 9
+
+@dataclass(slots=True, frozen=True)
+class CompilerInfo:
+    compiler: Compiler
+    grader_name: str
+    version_name: str
+    short_name: str
+    source_ext: str
+
+COMPILER_INFOS: list[CompilerInfo] = [None] * (max(v for v in Compiler) + 1)
+COMPILER_INFOS[Compiler.GCC] = CompilerInfo(Compiler.GCC, "c", "GCC 12.2.0 GNU11", "gcc", "c")
+COMPILER_INFOS[Compiler.CLANG] = CompilerInfo(Compiler.CLANG, "c", "Clang 15.0.6 C11", "clang", "c")
+COMPILER_INFOS[Compiler.GPP] = CompilerInfo(Compiler.GPP, "cpp", "G++ 12.2.0 GNU++17", "g++", "cpp")
+COMPILER_INFOS[Compiler.CLANGPP] = CompilerInfo(Compiler.CLANGPP, "cpp", "Clang++ 15.0.6 C++17", "clang++", "cpp")
+COMPILER_INFOS[Compiler.RUST] = CompilerInfo(Compiler.RUST, "rust", "Rustc 1.63", "rust", "rs")
+COMPILER_INFOS[Compiler.PYTHON3] = CompilerInfo(Compiler.PYTHON3, "python", "CPython 3.11.2", "python3", "py")
+COMPILER_INFOS[Compiler.JAVA] = CompilerInfo(Compiler.JAVA, "java", "OpenJDK 17.0.8", "java", "java")
+COMPILER_INFOS[Compiler.ASMC] = CompilerInfo(Compiler.ASMC, "asm", "Gas x86_64 Linux 2.42 w/ libc", "asmc", "s")
+COMPILER_INFOS[Compiler.ASMCPP] = CompilerInfo(Compiler.ASMCPP, "asm", "Gas x86_64 Linux 2.42 w/ libstdc++", "asmcpp", "s")
 
 class ChalConst:
     STATE_AC = 1
@@ -18,9 +49,11 @@ class ChalConst:
     STATE_CE = 9
     STATE_CLE = 10
     STATE_ERR = 11
-    STATE_SJE = 12
+    STATE_JE = 12
     STATE_JUDGE = 100
     STATE_NOTSTARTED = 101
+    STATE_SKIPPED = 102
+    STATE_REJECTED = 103
 
     STATE_STR = {
         STATE_AC: 'AC',
@@ -33,10 +66,12 @@ class ChalConst:
         STATE_CE: 'CE',
         STATE_CLE: 'CLE',
         STATE_OLE: 'OLE',
-        STATE_SJE: 'SJE',
+        STATE_JE: 'JE',
         STATE_ERR: 'IE',
         STATE_JUDGE: 'Challenging',
-        STATE_NOTSTARTED: 'Not Started'
+        STATE_NOTSTARTED: 'Not Started',
+        STATE_SKIPPED: 'SP',
+        STATE_REJECTED: 'RJ'
     }
 
     STATE_LONG_STR = {
@@ -51,72 +86,92 @@ class ChalConst:
         STATE_CE: 'Compile Error',
         STATE_CLE: 'Compilation Limit Exceed',
         STATE_ERR: 'Internal Error',
-        STATE_SJE: 'Special Judge Error',
+        STATE_JE: 'Judge Error',
         STATE_JUDGE: 'Challenging',
         STATE_NOTSTARTED: 'Not Started',
+        STATE_SKIPPED: 'Skipped',
+        STATE_REJECTED: 'Rejected'
     }
 
-    FILE_EXTENSION = {
-        'gcc': 'c',
-        'clang': 'c',
-        'g++': 'cpp',
-        'clang++': 'cpp',
-        'rustc': 'rs',
-        'python3': 'py',
-        'java': 'java',
+    OLD_STR_2_COMPILER = {
+        "g++": Compiler.GPP,
+        "clang++": Compiler.CLANGPP,
+        "gcc": Compiler.GCC,
+        "clang": Compiler.CLANG,
+        "rustc": Compiler.RUST,
+        "python3": Compiler.PYTHON3,
+        "java": Compiler.JAVA,
+        "asmc": Compiler.ASMC,
+        "asmcpp": Compiler.ASMCPP,
     }
-
-    ALLOW_COMPILERS = FILE_EXTENSION.keys()
-
-    COMPILER_NAME = {
-        'gcc': 'GCC 12.2.0 GNU11',
-        'g++': 'G++ 12.2.0 GNU++17',
-        'clang': 'Clang++ 15.0.6 C11',
-        'clang++': 'Clang++ 15.0.6 C++17',
-        'rustc': 'Rustc 1.63',
-        'python3': 'CPython 3.11.2',
-        'java': 'OpenJDK 17.0.8',
-    }
-
-    assert len(FILE_EXTENSION) == len(COMPILER_NAME)
-    assert sorted(FILE_EXTENSION.keys()) == sorted(COMPILER_NAME.keys())
 
     NORMAL_PRI = 0
     CONTEST_PRI = 1
     CONTEST_REJUDGE_PRI = 2
     NORMAL_REJUDGE_PRI = 3
 
+class MessageType(enum.IntEnum):
+    NONE = 1
+    TEXT = 2
+    HTML = 3
+
+@dataclass(slots=True)
+class TestdataResult:
+    """
+    - 'testdata_id' (int): Testdata result id.
+    - 'state' (int): Challenge state, between ChalConst.STATE_AC and ChalConst.STATE_NOTSTARTED.
+    - 'time' (int): Total time in milliseconds.
+    - 'memory' (int): Memory usage in kilobytes.
+    - 'message' (str): Message from checker
+    - 'message_type' (MessageType): Message type
+
+    """
+    testdata_id: int
+    state: int
+    time: int
+    memory: int
+    message: str
+    message_type: MessageType
+
 @dataclass(slots=True)
 class SubtaskResult:
     """
     - 'subtask_id' (int): Subtask result id.
-    - 'state' (int): Challenge state, between ChalConst.STATE_AC and ChalConst.STATE_NOTSTARTED.
-    - 'time' (int): Total time in milliseconds.
+    - 'state' (int): State, between ChalConst.STATE_AC and ChalConst.STATE_NOTSTARTED.
+    - 'time' (int): Time in milliseconds.
     - 'memory' (int): Memory usage in kilobytes.
-    - 'response' (str): Compiler or checker message.
     - 'rate' (decimal.Decimal), rounded by problem.rate_precision
     """
     subtask_id: int
     state: int
     time: int
     memory: int
-    response: str
     rate: decimal.Decimal
 
     def __post_init__(self):
-        assert ChalConst.STATE_AC <= self.state <= ChalConst.STATE_NOTSTARTED
+        assert ChalConst.STATE_AC <= self.state <= ChalConst.STATE_REJECTED
         assert self.time >= 0
         assert self.memory >= 0
 
 @dataclass(slots=True)
 class TotalResult:
+    """
+    - 'state' (int): Challenge state, between ChalConst.STATE_AC and ChalConst.STATE_NOTSTARTED.
+    - 'time' (int): Max time in milliseconds.
+    - 'memory' (int): Total Memory usage in kilobytes.
+    - 'rate' (decimal.Decimal): rounded by problem.rate_precision
+    - 'message' (str): Message from compiler, judge or custom summary
+    - 'message_type' (MessageType): Message type
+    """
     state: int
     time: int
     memory: int
     rate: decimal.Decimal
+    message: str
+    message_type: MessageType
 
     def __post_init__(self):
-        assert ChalConst.STATE_AC <= self.state <= ChalConst.STATE_NOTSTARTED
+        assert ChalConst.STATE_AC <= self.state <= ChalConst.STATE_REJECTED
         assert self.time >= 0
         assert self.memory >= 0
 
@@ -127,14 +182,11 @@ class Challenge:
     acct_id: int
     contest_id: int
     acct_name: str
-    compiler_type: str
+    compiler_type: Compiler
     timestamp: datetime.datetime
-    subtask_results: dict[int, SubtaskResult] | None
     total_result: TotalResult | None
-
-    def __post_init__(self):
-        assert self.compiler_type in ChalConst.ALLOW_COMPILERS
-
+    subtask_results: dict[int, SubtaskResult] | None
+    testdata_results: dict[int, TestdataResult] | None
 
 @dataclass
 class ChalSearchingParam:
@@ -156,10 +208,10 @@ class ChalSearchingParam:
             - Other values: exact match (e.g., `ChalConst.STATE_AC`, `ChalConst.STATE_WA`, etc.).
             - See `ChalConst.STATE_*` for available state constants.
 
-        compiler (str | None): Compiler type to filter.
-            - If "all": no filtering is applied.
-            - Otherwise, matches the exact compiler string.
-            - Valid values are defined in `ChalConst.COMPILER_NAME`.
+        compiler (int | Compiler): Compiler type to filter.
+            - If -1: no filtering is applied.
+            - Otherwise, matches the exact compiler number.
+            - Valid values are defined in `services.chal.Compiler`.
 
         allow_pro_statuses (list[int] | None): A list of allowed problem statuses to include.
             - If None or empty: defaults to `[ProConst.STATUS_ONLINE]` only.
@@ -174,7 +226,7 @@ class ChalSearchingParam:
     pro: list[int] | None
     acct: list[int] | None
     state: int | None
-    compiler: str | None
+    compiler: int | Compiler
     allow_pro_statuses: list[int] | None
     contest: int = 0
 
@@ -205,7 +257,7 @@ class ChalSearchingParam:
             else:
                 query.append(f' AND "total_result"."state" = {self.state} ')
 
-        if self.compiler != 'all':
+        if self.compiler != -1:
             query.append(f' AND "challenge"."compiler_type"=\'{self.compiler}\' ')
 
         if self.contest != 0:
@@ -232,7 +284,7 @@ class ChalSearchingParamBuilder:
             builder.pro([756, 1015, 1016, 1017])
                    .acct([3227, 6057, 8199, 9787])
                    .state(ChalConst.STATE_AC)
-                   .compiler("gcc")
+                   .compiler(Compiler.GPP)
                    .pro_statuses([ProConst.STATUS_ONLINE, ProConst.STATUS_HIDDEN])
                    .contest(0)
                    .build()
@@ -249,7 +301,7 @@ class ChalSearchingParamBuilder:
     """
 
     def __init__(self):
-        self.param = ChalSearchingParam([], [], 0, "all", [ProConst.STATUS_ONLINE], 0)
+        self.param = ChalSearchingParam([], [], 0, -1, [ProConst.STATUS_ONLINE], 0)
 
     def pro(self, pro: list[int] | None):
         """Sets the list of problem IDs to filter."""
@@ -269,9 +321,10 @@ class ChalSearchingParamBuilder:
             self.param.state = state
         return self
 
-    def compiler(self, compiler: str | None):
+    def compiler(self, compiler: int | Compiler):
         """Sets the compiler type to filter."""
-        self.param.compiler = compiler
+        if compiler != -1:
+            self.param.compiler = compiler
         return self
 
     def contest(self, contest: int | None):
@@ -308,7 +361,7 @@ class ChalService:
 
         ChalService.inst = self
 
-    async def add_chal(self, pro_id: int, acct_id: int, contest_id: int, compiler_type: str, code: str) -> tuple[None, int] | ErrorType:
+    async def add_chal(self, pro_id: int, acct_id: int, contest_id: int, compiler_type: Compiler, code: str) -> tuple[None, int] | ErrorType:
         """
         Add a new challenge entry and save the submitted source code.
 
@@ -316,7 +369,7 @@ class ChalService:
             pro_id (int): Problem ID.
             acct_id (int): Account ID (user submitting the challenge).
             contest_id (int): Contest ID.
-            compiler_type (str): Compiler type (must be in ChalConst.ALLOW_COMPILERS).
+            compiler_type (Compiler): Compiler type.
             code (str): Source code content as string.
 
         Returns:
@@ -325,10 +378,10 @@ class ChalService:
                 On failure, (error_code, None).
         """
 
-        assert compiler_type in ChalConst.ALLOW_COMPILERS
-
         pro_id = int(pro_id)
         acct_id = int(acct_id)
+
+        _, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -341,23 +394,36 @@ class ChalService:
                 compiler_type,
                 contest_id,
             )
-        if len(result) != 1:
-            return ('Eunk', 'Unknown error'), None
-        result = result[0]
+            if len(result) != 1:
+                return ('Eunk', 'Unknown error'), None
+            result = result[0]
+            chal_id = result['chal_id']
 
-        chal_id = result['chal_id']
+            need_judge_testdatas = set()
+            insert_subtask_values = []
+            for subtask_id, subtask in pro.config.subtask_configs.items():
+                insert_subtask_values.append((chal_id, pro_id, subtask_id))
+                need_judge_testdatas.update(testdata.testdata_id for testdata in subtask.testdatas)
 
-        file_ext = ChalConst.FILE_EXTENSION[compiler_type]
+            insert_testdata_values = []
+            for testdata_id in need_judge_testdatas:
+                insert_testdata_values.append((chal_id, pro_id, testdata_id))
+
+            await con.execute('INSERT INTO total_result (chal_id) VALUES ($1)', chal_id)
+            await con.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id) VALUES ($1, $2, $3);', insert_subtask_values)
+            await con.executemany('INSERT INTO testdata_result (chal_id, pro_id, id) VALUES ($1, $2, $3);', insert_testdata_values)
+
+        source_ext = COMPILER_INFOS[compiler_type].source_ext
 
         os.mkdir(f'code/{chal_id}')
-        with open(f"code/{chal_id}/main.{file_ext}", 'wb') as code_f:
+        with open(f"code/{chal_id}/main.{source_ext}", 'wb') as code_f:
             code_f.write(code.encode('utf-8'))
 
         return None, chal_id
 
     async def reset_chal(self, chal_id: int) -> tuple[None, None]:
+        # TODO: docstring
         """
-        Reset a challenge by deleting all its associated tests and updating its state.
 
         Args:
             chal_id (int): Challenge ID to reset.
@@ -368,14 +434,29 @@ class ChalService:
 
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
-            await con.execute('DELETE FROM "subtask_result" WHERE "chal_id" = $1;', chal_id)
+            await con.execute('UPDATE total_result SET state=DEFAULT, time=DEFAULT, memory=DEFAULT, rate=DEFAULT WHERE chal_id=$1;',
+                              chal_id)
 
-        await self.update_total_result(chal_id)
+            await con.execute(
+                '''
+                    UPDATE subtask_result SET state=$1, time=DEFAULT, memory=DEFAULT, rate=DEFAULT WHERE chal_id=$2;
+                ''',
+                ChalConst.STATE_NOTSTARTED, chal_id
+            )
+
+            await con.execute(
+                '''
+                    UPDATE testdata_result SET state=$1, time=DEFAULT, memory=DEFAULT,
+                    message=DEFAULT, message_type=DEFAULT WHERE chal_id=$2;
+                ''',
+                ChalConst.STATE_NOTSTARTED, chal_id
+            )
+
         return None, None
 
     async def get_subtask_results(self, chal_id: int) -> tuple[None, dict[int, SubtaskResult]]:
         """
-        Retrieve detailed test results of a challenge.
+        Retrieve detailed subtask results of a challenge.
 
         Args:
             chal_id (int): Challenge ID.
@@ -389,11 +470,9 @@ class ChalService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT subtask_result.subtask_id, state, time, memory, response,
-                    ROUND(COALESCE(subtask_result.rate, tvr.rate), problem.rate_precision)
+                    SELECT subtask_result.subtask_id, state, time, memory,
+                    ROUND(subtask_result.rate, problem.rate_precision)
                     FROM subtask_result
-                    INNER JOIN test_valid_rate AS tvr
-                    ON subtask_result.pro_id = tvr.pro_id AND subtask_result.subtask_id = tvr.test_idx
                     INNER JOIN problem
                     ON subtask_result.pro_id = problem.pro_id
                     WHERE "chal_id" = $1 ORDER BY "subtask_id" ASC;
@@ -401,15 +480,40 @@ class ChalService:
                 chal_id,
             )
 
-        results: dict[int, SubtaskResult] = {}
-        for subtask_id, state, time, memory, response, rate in result:
-            r = 0
-            if state in [ChalConst.STATE_AC, ChalConst.STATE_PC]:
-                r = rate
+        subtask_results: dict[int, SubtaskResult] = {}
+        for subtask_id, state, time, memory, rate in result:
+            subtask_results[subtask_id] = SubtaskResult(subtask_id, state, int(time), int(memory), decimal.Decimal(rate))
 
-            results[subtask_id] = SubtaskResult(subtask_id, state, int(time), int(memory), response, decimal.Decimal(r))
+        return None, subtask_results
 
-        return None, results
+    async def get_testdata_results(self, chal_id: int) -> tuple[None, dict[int, TestdataResult]]:
+        """
+        Retrieve detailed testdata results of a challenge.
+
+        Args:
+            chal_id (int): Challenge ID.
+
+        Returns:
+            tuple[Optional[tuple[str, str]], Optional[dict[int, TestdataResult]]:
+                On success, (None, dict[int, TestdataResult]) where each dict represents a testdata.
+                On failure, (error_code, None).
+        """
+        chal_id = int(chal_id)
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                '''
+                    SELECT id, state, time, memory, message, message_type
+                    FROM testdata_result WHERE chal_id = $1 ORDER BY id;
+                ''',
+                chal_id
+            )
+
+        testdata_results: dict[int, TestdataResult] = {}
+        for testdata_id, state, time, memory, message, message_type in result:
+            testdata_results[testdata_id] = TestdataResult(testdata_id, state, time, memory, message, MessageType(message_type))
+
+        return None, testdata_results
+
 
     async def get_chal(self, chal_id: int, with_result=False) -> tuple[None, Challenge] | ErrorType:
         """
@@ -417,7 +521,7 @@ class ChalService:
 
         Args:
             chal_id (int): Challenge ID.
-            with_test (bool): Whether to include detailed test results.
+            with_test (bool): Whether to include detailed results.
 
         Returns:
             tuple[Optional[tuple[str, str]], Optional[Challenge]]:
@@ -451,14 +555,18 @@ class ChalService:
             result['acct_name'],
         )
 
-        subtask_results = {}
+        subtask_results = None
+        testdata_results = None
+        total_results = None
         if with_result:
             _, subtask_results = await self.get_subtask_results(chal_id)
+            _, testdata_results = await self.get_testdata_results(chal_id)
+            _, total_results = await self.get_total_result(chal_id)
 
         return None, Challenge(chal_id, pro_id, acct_id, contest_id, acct_name, compiler_type,
-                               timestamp, subtask_results, total_result=None)
+                               timestamp, total_results, subtask_results, testdata_results)
 
-    async def emit_chal(self, chal_id: int, pro_id: int, conf: ProblemConfig, compiler_type: str, pri: int) -> tuple[None, None] | ErrorType:
+    async def emit_chal(self, chal_id: int, pro_id: int, compiler_type: Compiler, priority: int, skip_nonac: bool=False) -> tuple[None, None] | ErrorType:
         """
         Create and submit tests for a challenge based on the test metadata configuration,
         then send the challenge to the judging cluster.
@@ -466,16 +574,14 @@ class ChalService:
         Args:
             chal_id (int): Challenge ID.
             pro_id (int): Problem ID.
-            testm_conf (dict): Test metadata configuration.
-            compiler_type (str): Compiler type (must be in ChalConst.ALLOW_COMPILERS).
-            pri (int): Priority level (within ChalConst.NORMAL_PRI and ChalConst.NORMAL_REJUDGE_PRI).
+            compiler_type (Compiler): Compiler type.
+            priority (int): Priority level (within ChalConst.NORMAL_PRI and ChalConst.NORMAL_REJUDGE_PRI).
+            skip_nonac (bool): Skip the remaining testdata in the task if any of the testdata got non-AC or PC
 
         Returns:
             tuple[None, None]: Always returns (None, None) on completion.
         """
-
-        assert compiler_type in ChalConst.ALLOW_COMPILERS
-        assert ChalConst.NORMAL_PRI <= pri <= ChalConst.NORMAL_REJUDGE_PRI
+        assert ChalConst.NORMAL_PRI <= priority <= ChalConst.NORMAL_REJUDGE_PRI
 
         chal_id = int(chal_id)
         pro_id = int(pro_id)
@@ -483,7 +589,7 @@ class ChalService:
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "acct_id", "contest_id", "timestamp" FROM "challenge"
+                    SELECT "acct_id", "contest_id" FROM "challenge"
                     WHERE "chal_id" = $1;
                 ''',
                 chal_id,
@@ -492,57 +598,80 @@ class ChalService:
             return ('Enoext', 'Challenge not found'), None
         result = result[0]
 
-        acct_id, contest_id, timestamp = int(result['acct_id']), int(result['contest_id']), result['timestamp']
-        limits = conf.limits
-        timelimit = limits.get(compiler_type, limits['default']).time
-        memlimit = limits.get(compiler_type, limits['default']).memory
+        acct_id, contest_id = int(result['acct_id']), int(result['contest_id'])
+        _, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
+        limits = pro.config.limits
+        limit = limits.get(compiler_type, limits['default'])
+        await self.db.execute('UPDATE total_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
+        await self.db.execute('UPDATE subtask_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
+        await self.db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
 
-        async with self.db.acquire() as con:
-            testl = []
-            insert_values = []
-            for subtask_id, subtask_conf in conf.subtask_configs.items():
-                testl.append(
-                    {
-                        'test_idx': subtask_id,
-                        'timelimit': timelimit,
-                        'memlimit': memlimit,
-                        'metadata': {'data': [conf.testdatas[testdata.testdata_id].inputfile.removesuffix('.in') for testdata in subtask_conf.testdatas]},
-                    }
-                )
-                insert_values.append((chal_id, acct_id, pro_id, subtask_id, ChalConst.STATE_JUDGE, timestamp))
+        need_judge_testdatas: set[int] = set()
+        subtasks = []
+        for subtask_id, subtask_config in pro.config.subtask_configs.items():
+            t = [testdata.testdata_id for testdata in subtask_config.testdatas]
+            need_judge_testdatas.update(t)
+            subtasks.append({
+                "id": subtask_id,
+                "score": subtask_config.rate,
+                "testdatas": t,
+                "dependency_subtasks": [], # TODO: dep subtask
+            })
 
-            await con.executemany(
-            '''INSERT INTO "subtask_result"
-                ("chal_id", "acct_id", "pro_id", "subtask_id", "state", "timestamp")
-                VALUES ($1, $2, $3, $4, $5, $6);''',
-                insert_values
-            )
+        testdatas = []
+        for testdata_id in need_judge_testdatas:
+            testdata = pro.config.testdatas[testdata_id]
+            testdatas.append({
+                "id": testdata.testdata_id,
+                "input": testdata.inputfile,
+                "output": testdata.outputfile,
+            })
 
-        await self.update_total_result(chal_id)
+        source_ext = COMPILER_INFOS[compiler_type].source_ext
 
-        file_ext = ChalConst.FILE_EXTENSION[compiler_type]
+        if not os.path.isfile(f"code/{chal_id}/main.{source_ext}"):
+            await self.update_total_result(chal_id, TotalResult(ChalConst.STATE_ERR, 0, 0, decimal.Decimal(), "", MessageType.NONE))
+            for subtask_id in pro.config.subtask_configs:
+                await self.update_subtask_result(chal_id, SubtaskResult(subtask_id, ChalConst.STATE_ERR, 0, 0, decimal.Decimal()))
 
-        if not os.path.isfile(f"code/{chal_id}/main.{file_ext}"):
-            for subtask_conf in testl:
-                await self.update_subtask_result(chal_id,
-                                                 SubtaskResult(subtask_conf['test_idx'], ChalConst.STATE_ERR, time=0, memory=0, response='', rate=decimal.Decimal(0)),
-                                                 rate_is_cms_type=False, refresh_db=False)
-            await self.update_total_result(chal_id)
+            for testdata_id in need_judge_testdatas:
+                await self.update_testdata_result(chal_id, TestdataResult(testdata_id, ChalConst.STATE_ERR, 0, 0, "", MessageType.NONE))
+
             return None, None
-
-        if conf.is_makefile:
-            compiler_type = 'makefile'
 
         await JudgeServerClusterService.inst.send(
             {
-                'pri': pri,
+                'acct_id': acct_id,
+                'pro_id': pro_id,
+                'contest_id': contest_id,
                 'chal_id': chal_id,
-                'test': testl,
-                'code_path': f'{chal_id}/main.{file_ext}',
+
                 'res_path': f'{pro_id}/res',
-                'metadata': conf.chalmeta,
-                'comp_type': compiler_type,
-                'check_type': ProConst.CHECKER_TYPE[conf.checker_type],
+                'code_path': f'{chal_id}/main.{source_ext}',
+
+                'subtasks': subtasks,
+                'testdatas': testdatas,
+
+                'limit': {
+                    'output': limit.output * 1024, # NOTE: kib to bytes
+                    'time': limit.time * 10 ** 6, # NOTE: ms to ns
+                    'memory': limit.memory * 1024, # NOTE: kib to bytes
+                },
+
+                'has_grader': pro.config.has_grader,
+                'userprog_compiler': compiler_type,
+                'userprog_compile_args': pro.config.userprog_compile_args,
+
+                'checker_type': pro.config.checker_type,
+                'checker_compiler': pro.config.checker_compiler,
+                'checker_compile_args': pro.config.checker_compile_args,
+
+                'summary_type': pro.config.summary_type,
+                'summary_compiler': pro.config.summary_compiler,
+                'summary_compile_args': pro.config.summary_compile_args,
+
+                'priority': priority,
+                'skip_nonac': skip_nonac,
             },
             pro_id,
             contest_id,
@@ -553,7 +682,6 @@ class ChalService:
         return None, None
 
     async def list_chal(self, off: int, num: int, flt: ChalSearchingParam) -> tuple[None, list[Challenge]]:
-        # TODO: docstirng without challenge.subtask_result
         """
         List challenges with filtering, pagination, and joined related info.
 
@@ -573,7 +701,7 @@ class ChalService:
                     SELECT "challenge"."chal_id", "challenge"."pro_id", "challenge"."acct_id", "challenge"."contest_id",
                     "challenge"."compiler_type", "challenge"."timestamp", "account"."name" AS "acct_name",
                     "total_result"."state", "total_result"."time", "total_result"."memory",
-                    ROUND("total_result"."rate", problem.rate_precision)
+                    ROUND("total_result"."rate", problem.rate_precision), "total_result"."message", "total_result"."message_type"
                     FROM "challenge"
                     INNER JOIN "account"
                     ON "challenge"."acct_id" = "account"."acct_id"
@@ -587,31 +715,15 @@ class ChalService:
             )
 
         challist: list[Challenge] = []
-        for chal_id, pro_id, acct_id, contest_id, compiler_type, timestamp, acct_name, state, time, memory, rate in result:
-            if state is None:
-                state = ChalConst.STATE_NOTSTARTED
-
-            if time is None:
-                time = 0
-            else:
-                time = int(time)
-
-            if memory is None:
-                memory = 0
-            else:
-                memory = int(memory)
-
+        for chal_id, pro_id, acct_id, contest_id, compiler_type, timestamp, acct_name, state, time, memory, rate, message, message_type in result:
             challist.append(Challenge(chal_id, pro_id, acct_id, contest_id, acct_name,
-                                      compiler_type, timestamp, subtask_results=None,
-                                      total_result=TotalResult(state, time, memory, rate)))
+                                      compiler_type, timestamp, subtask_results=None, testdata_results=None,
+                                      total_result=TotalResult(state, time, memory, rate, message, message_type)))
         return None, challist
 
-    async def get_total_result(self, chal_id: int, allow_pro_statuses: list[int]) -> tuple[None, TotalResult] | tuple[tuple[str, str], None]:
+    async def get_total_result(self, chal_id: int) -> tuple[None, TotalResult] | tuple[tuple[str, str], None]:
         """
-        Retrieve the aggregated state of a challenge filtered by allowed problem statuses.
-
-        This method queries the `total_result` table joined with `problem` to ensure
-        that only challenges related to problems with statuses in `allow_pro_statuses` are considered.
+        Retrieve the aggregated state of a challenge.
 
         Args:
             chal_id (int): The ID of the challenge to retrieve.
@@ -624,29 +736,26 @@ class ChalService:
                 On failure (e.g., challenge not found), returns (error_code, None).
         """
 
-        assert len(allow_pro_statuses)
-        for status in allow_pro_statuses:
-            assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
-
         chal_id = int(chal_id)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
-                f'''
+                '''
                     SELECT
                         cs.state,
                         cs.time,
                         cs.memory,
-                        ROUND(cs.rate, p.rate_precision) AS rate
+                        ROUND(cs.rate, p.rate_precision) AS rate,
+                        cs.message,
+                        cs.message_type
                     FROM
                         challenge c
                     INNER JOIN
-                        problem p ON c.pro_id = p.pro_id
-                    INNER JOIN
                         total_result cs ON c.chal_id = cs.chal_id
+                    INNER JOIN
+                        problem p ON p.pro_id = c.pro_id
                     WHERE
-                        p.status IN ({",".join(map(str, allow_pro_statuses))})
-                        AND cs.chal_id = $1;
+                        cs.chal_id = $1;
                 ''',
                 chal_id,
             )
@@ -655,7 +764,7 @@ class ChalService:
             return ('Enoext', 'Challenge not found'), None
         result = result[0]
 
-        return None, TotalResult(result['state'], result['time'], result['memory'], result['rate'])
+        return None, TotalResult(result['state'], result['time'], result['memory'], result['rate'], result['message'], result['message_type'])
 
 
     async def get_chals_count(self, flt: ChalSearchingParam):
@@ -675,18 +784,16 @@ class ChalService:
 
         async with self.db.acquire() as con:
             result = await con.fetch(
-                (
-                    f'''
-                        SELECT COUNT(1) FROM "challenge"
-                        INNER JOIN "account"
-                        ON "challenge"."acct_id" = "account"."acct_id"
-                        INNER JOIN "problem"
-                        ON "challenge"."pro_id" = "problem"."pro_id"
-                        LEFT JOIN "total_result"
-                        ON "challenge"."chal_id"="total_result"."chal_id"
-                        WHERE 1=1 {fltquery};
-                    '''
-                )
+                f'''
+                    SELECT COUNT(1) FROM "challenge"
+                    INNER JOIN "account"
+                    ON "challenge"."acct_id" = "account"."acct_id"
+                    INNER JOIN "problem"
+                    ON "challenge"."pro_id" = "problem"."pro_id"
+                    LEFT JOIN "total_result"
+                    ON "challenge"."chal_id"="total_result"."chal_id"
+                    WHERE 1=1 {fltquery};
+                '''
             )
 
         if len(result) != 1:
@@ -695,62 +802,61 @@ class ChalService:
         total_chal = result[0]['count']
         return None, total_chal
 
-    async def update_subtask_result(self, chal_id: int, subtask: SubtaskResult, rate_is_cms_type=False, refresh_db=True) -> tuple[None, None]:
+    async def update_testdata_result(self, chal_id: int, testdata_result: TestdataResult) -> tuple[None, None]:
+        chal_id = int(chal_id)
+        async with self.db.acquire() as con:
+            await con.execute(
+                '''
+                    UPDATE "testdata_result"
+                    SET "state" = $1, "time" = $2, "memory" = $3, "message" = $4, "message_type" = $5
+                    WHERE "chal_id" = $6 AND "id" = $7;
+                ''',
+                testdata_result.state,
+                testdata_result.time,
+                testdata_result.memory,
+                testdata_result.message,
+                testdata_result.message_type,
+                chal_id,
+                testdata_result.testdata_id
+            )
+
+        return None, None
+
+    async def update_subtask_result(self, chal_id: int, subtask_result: SubtaskResult) -> tuple[None, None]:
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
             await con.execute(
                 '''
                     UPDATE "subtask_result"
-                    SET "state" = $1, "time" = $2, "memory" = $3, "response" = $4, "rate" = $5
-                    WHERE "chal_id" = $6 AND "subtask_id" = $7;
+                    SET "state" = $1, "time" = $2, "memory" = $3, "rate" = $4
+                    WHERE "chal_id" = $5 AND "subtask_id" = $6;
                 ''',
-                subtask.state,
-                subtask.time,
-                subtask.memory,
-                subtask.response,
-                None if subtask.rate.is_infinite() else subtask.rate,
+                subtask_result.state,
+                subtask_result.time,
+                subtask_result.memory,
+                subtask_result.rate,
                 chal_id,
-                subtask.subtask_id,
+                subtask_result.subtask_id,
             )
-
-            if rate_is_cms_type:
-                await con.execute(
-                    '''
-                        UPDATE "subtask_result"
-                        SET "rate" = $1::decimal * "subtask_config"."rate"::decimal
-                        FROM "subtask_config"
-                        WHERE "subtask_result"."chal_id" = $2 AND
-                              "subtask_config"."pro_id" = "subtask_result"."pro_id" AND
-                              "subtask_config"."subtask_id" = $3 AND
-                              "subtask_result"."subtask_id" = $3;
-                    ''',
-                    subtask.rate, chal_id, subtask.subtask_id
-                )
-
-        if refresh_db:
-            await self.update_total_result(chal_id)
 
         return None, None
 
-    async def update_total_result(self, chal_id: int):
-        """
-        Trigger the database function to aggregate and update the overall state of a challenge.
+    async def update_total_result(self, chal_id: int, total_result: TotalResult):
+        chal_id = int(chal_id)
+        async with self.db.acquire() as con:
+            await con.execute(
+                '''
+                    UPDATE "total_result"
+                    SET "state" = $1, "time" = $2, "memory" = $3, "rate" = $4, "message" = $5, "message_type" = $6
+                    WHERE "chal_id" = $7;
+                ''',
+                total_result.state,
+                total_result.time,
+                total_result.memory,
+                total_result.rate,
+                total_result.message,
+                total_result.message_type,
+                chal_id,
+            )
 
-        This function calls the PostgreSQL stored procedure `update_total_result(p_chal_id INTEGER)`
-        which calculates the following aggregates from all tests belonging to the challenge:
-        - The maximum test state (indicating the overall challenge status).
-        - The sum of time across tests.
-        - The sum of memory usage across tests.
-        - The sum of rates/scores, considering special scores or default rates.
-
-        The aggregated results are then upserted into the `total_result` table,
-        updating only when values have changed to avoid unnecessary writes.
-
-        Args:
-            chal_id (int): The challenge ID to update.
-
-        Returns:
-            None
-        """
-
-        await self.db.execute(f'SELECT update_total_result({chal_id});')
+        return None, None

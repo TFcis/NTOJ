@@ -1,48 +1,126 @@
 {% extends '../manage.html' %}
 {% block head %}
-{% from services.pro import ProConst %}
+{% from services.pro import ProConst, CheckerType, SummaryType %}
 
 <script type="text/javascript" id="contjs" async>
     function init() {
-		let pro_id = "{{ pro.pro_id }}"
-		let j_form = $('#form');
-		let j_form2 = $('#form2');
-        let j_form3 = $('#form3');
+		let pro_id = "{{ pro.pro_id }}";
+        let general_form = $('#general');
+        let limits_form = $('#limits');
+        let judge_form = $('#judge');
+        let tab_switcher = $('#switcher');
 
-        j_form.find('select.check-type').on('change', function(e) {
-            if ($(this).val() == "{{ ProConst.CHECKER_IOREDIR }}") {
-                j_form.find("label.chalmeta").show();
-                j_form.find("textarea.chalmeta").show();
+        tab_switcher.find('.nav-item > a').each((i, element) => {
+            $(element).on('click', function(e) {
+                let j_this = $(this);
+                tab_switcher.find('.nav-item > a').each((i, e) => $(e).removeClass('active'));
+                j_this.addClass('active');
+
+                general_form.hide();
+                limits_form.hide();
+                judge_form.hide();
+                $(`#${j_this.attr('type')}`).show();
+            });
+        });
+
+        judge_form.find('select#checkerType').on('change', function(e) {
+            let checker_type = $(this).val();
+            if (checker_type == "{{ CheckerType.IOREDIR }}") {
+                judge_form.find("label#chalmeta").show();
+                judge_form.find("textarea#chalmeta").show();
             } else {
-                j_form.find("label.chalmeta").hide();
-                j_form.find("textarea.chalmeta").hide();
+                judge_form.find("label#chalmeta").hide();
+                judge_form.find("textarea#chalmeta").hide();
+            }
+
+            const need_build_checkers = {% raw [v.value for v in CheckerType.need_build_checkers()] %};
+            console.log(need_build_checkers);
+            if (need_build_checkers.find(ele => ele == checker_type)) {
+                judge_form.find("#checkerCompileArgs").show();
+                judge_form.find("#checkerCompiler").show();
+                judge_form.find("#checkerCompileArgsLabel").show();
+                judge_form.find("#checkerCompilerLabel").show();
+            } else {
+                judge_form.find("#checkerCompileArgs").hide();
+                judge_form.find("#checkerCompiler").hide();
+                judge_form.find("#checkerCompileArgsLabel").hide();
+                judge_form.find("#checkerCompilerLabel").hide();
             }
         });
 
-		j_form.find('button.submit').on('click', function(e) {
-		    let name = j_form.find('input.name').val();
-		    let tags = j_form.find('input.tags').val();
-		    let status = j_form.find('select.status').val();
-            let rate_precision = j_form.find('input.precision').val();
-            let check_type = j_form.find('select.check-type').val();
-            let is_makefile = j_form.find('input.is-makefile').is(':checked');
-            let allow_submit = j_form.find('input.allow-submit').is(":checked");
-
-            let chalmeta = '';
-            if (check_type == "{{ ProConst.CHECKER_IOREDIR }}") {
-                chalmeta = j_form.find('textarea.chalmeta').val();
+        judge_form.find('select#summaryType').on('change', function(e) {
+            let summary_type = $(this).val();
+            if (summary_type == "{{ SummaryType.CUSTOM }}") {
+                judge_form.find("#summaryCompileArgs").show();
+                judge_form.find("#summaryCompiler").show();
+                judge_form.find("#summaryCompileArgsLabel").show();
+                judge_form.find("#summaryCompilerLabel").show();
+            } else {
+                judge_form.find("#summaryCompileArgs").hide();
+                judge_form.find("#summaryCompiler").hide();
+                judge_form.find("#summaryCompileArgsLabel").hide();
+                judge_form.find("#summaryCompilerLabel").hide();
             }
+        });
+
+        judge_form.find('button.submit').on('click', function(e) {
+            let userprog_compile_args = judge_form.find('#userprogCompileArgs').val();
+            let rate_precision = judge_form.find('input#score-precision').val();
+            let checker_type = judge_form.find('select#checkerType').val();
+            let checker_compiler = judge_form.find('#checkerCompiler').val();
+            let checker_compile_args = judge_form.find('#checkerCompileArgs').val();
+            let summary_type = judge_form.find('select#summaryType').val();
+            let summary_compiler = judge_form.find('#summaryCompiler').val();
+            let summary_compile_args = judge_form.find('#summaryCompileArgs').val();
+            let has_grader = judge_form.find('input#has-grader').is(':checked');
+            let allow_compilers = [];
+            judge_form[0].querySelectorAll('.compilers').forEach(el => {
+                if ($(el).is(":checked")) {
+                    allow_compilers.push($(el).val());
+                }
+            });
+            let chalmeta = '';
+            if (checker_type == "{{ CheckerType.IOREDIR }}") {
+                chalmeta = judge_form.find('textarea.chalmeta').val();
+            }
+
             $.post('/oj/be/manage/pro/update', {
-                'reqtype': 'updatepro',
+                'reqtype': 'updatejudge',
+                'pro_id': pro_id,
+                userprog_compile_args: userprog_compile_args,
+                rate_precision: rate_precision,
+                checker_type: checker_type,
+                checker_compiler: checker_compiler,
+                checker_compile_args: checker_compile_args,
+                summary_type: summary_type,
+                summary_compiler: summary_compiler,
+                summary_compile_args: summary_compile_args,
+                has_grader: has_grader,
+                allow_compilers: allow_compilers,
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        });
+
+		general_form.find('button.submit').on('click', function(e) {
+		    let name = general_form.find('input.name').val();
+		    let tags = general_form.find('input.tags').val();
+		    let status = general_form.find('select#status').val();
+            let allow_submit = general_form.find('input#allow-submit').is(":checked");
+
+            $.post('/oj/be/manage/pro/update', {
+                'reqtype': 'updategeneral',
                 'pro_id': pro_id,
                 'name': name,
                 'tags': tags,
                 'status': status,
-                'rate_precision': rate_precision,
                 'allow_submit': allow_submit,
-                'check_type': check_type,
-                'is_makefile': is_makefile,
-                'chalmeta': chalmeta,
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
@@ -54,7 +132,7 @@
             });
 		});
 
-        j_form3.find('button.upload').on('click', function(e) {
+        general_form.find('button.upload').on('click', function(e) {
             function _update(token) {
                 $.post('/oj/be/manage/pro/update', {
                     'reqtype': 'uploadpackage',
@@ -71,7 +149,7 @@
                 });
             }
 
-            let files = j_form3.find('input.file')[0].files;
+            let files = general_form.find('input.file')[0].files;
             if (files.length == 0) {
                 index.show_notify_dialog('Package file should not empty');
                 return;
@@ -90,15 +168,13 @@
             });
         });
 
-		j_form.find('button.cancel').on('click', () => index.go('/oj/manage/pro/'));
-
-		j_form2.find('button.submit').on('click', function(e) {
+		limits_form.find('button.submit').on('click', function(e) {
             let limits = {};
-            j_form2.find("tbody > tr").each(function() {
+            limits_form.find("tbody > tr").each(function() {
                 let j_tr = $(this);
-                let lang = j_tr.attr('language');
+                let lang = j_tr.attr('compiler');
                 let time = j_tr.find("input.time").val();
-                let memory = j_tr.find("input.mem").val();
+                let memory = j_tr.find("input.memory").val();
                 limits[lang] = {
                     time: time,
                     memory: memory
@@ -120,7 +196,7 @@
 			});
 		});
 
-        j_form.find('button.rechal').on('click', function (e) {
+        general_form.find('button.rechal').on('click', function (e) {
 			$.post('/oj/be/manage/pro', {
 				'reqtype': 'rechal',
 				'pro_id': pro_id
@@ -134,9 +210,8 @@
 			});
 		});
 
-		j_form.find('button.rechalall').on('click', function (e) {
+		general_form.find('button.rechalall').on('click', function (e) {
 			let pwd = prompt('server config password');
-
 			$.post('/oj/be/manage/pro', {
 				'reqtype': 'rechalall',
 				'pro_id': pro_id,
@@ -150,108 +225,190 @@
                 }
 			});
 		});
+
     }
 </script>
 {% end %}
 {% block content %}
-{% from services.chal import ChalConst %}
-{% from services.pro import ProConst %}
+{% from services.chal import Compiler, COMPILER_INFOS %}
+{% from services.pro import ProConst, SummaryType, CheckerType %}
 {% import json %}
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
-    <form id="form" class="blk-cont">
+    <ul class="nav nav-tabs" id="switcher">
+        <li class="nav-item">
+            <a class="nav-link active" type="general">General</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" type="limits">Limits</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" type="judge">Judge</a>
+        </li>
+    </ul>
+
+    <form id="general">
 		<label for="" class="form-label">Problem Name</label>
 		<input type="text" class="form-control name" placeholder="Problem Name" value="{{ pro.name }}">
 
 		<label for="" class="form-label">Problem Tags</label>
 		<input type="text" class="form-control tags" placeholder="Tags" value="{{ pro.tags }}">
 
-		<label for="" class="form-label">Problem Status</label>
-		<select class="form-select status">
+		<label for="status" id="status" class="form-label">Problem Status</label>
+		<select id="status" class="form-select">
             <option value="{{ ProConst.STATUS_ONLINE }}" {% if pro.status == ProConst.STATUS_ONLINE %} selected {% end %}>Online</option>
 			<option value="{{ ProConst.STATUS_CONTEST }}" {% if pro.status == ProConst.STATUS_CONTEST %} selected {% end %}>Contest</option>
 			<option value="{{ ProConst.STATUS_HIDDEN }}" {% if pro.status == ProConst.STATUS_HIDDEN %} selected {% end %}>Hidden</option>
 		</select>
 
-        <label>Score Precision (0 ~ 3)</label>
-        <input type="range" class="form-range precision" min="0" max="3" step="1" value="{{ pro.config.rate_precision }}">
-
-        <label for="" class="form-check-label">Allow Submit</label>
-        <input type="checkbox" class="form-check-input allow-submit" {% if pro.allow_submit %} checked {% end %}>
+        <label for="allow-submit" class="form-check-label">Allow Submit</label>
+        <input type="checkbox" id="allow-submit" class="form-check-input" {% if pro.allow_submit %} checked {% end %}>
         <br />
-
-        <label for="" class="form-check-label">Is Makefile Problem</label>
-        <input type="checkbox" class="form-check-input is-makefile" {% if pro.config.is_makefile %} checked {% end %}>
-        <br />
-
-        {% set check_type = pro.config.checker_type %}
-		<label for="" class="form-label">Checker Type</label>
-        <select class="form-select check-type">
-            <option value="{{ ProConst.CHECKER_DIFF }}" {% if check_type == ProConst.CHECKER_DIFF %} selected {% end %}>Diff</option>
-            <option value="{{ ProConst.CHECKER_DIFF_STRICT }}" {% if check_type == ProConst.CHECKER_DIFF_STRICT %} selected {% end %}>Strict Diff</option>
-            <option value="{{ ProConst.CHECKER_DIFF_FLOAT }}" {% if check_type == ProConst.CHECKER_DIFF_FLOAT %} selected {% end %}>Float Diff(WIP)</option>
-            <option value="{{ ProConst.CHECKER_IOREDIR }}" {% if check_type == ProConst.CHECKER_IOREDIR %} selected {% end %}>IORedir</option>
-            <option value="{{ ProConst.CHECKER_CMS }}" {% if check_type == ProConst.CHECKER_CMS %} selected {% end %}>CMS</option>
-        </select>
-
-        <label for="" class="form-label chalmeta" {% if check_type != ProConst.CHECKER_IOREDIR %} style="display: none;" {% end %}>IORedir Settings</label>
-        <textarea rows="10" cols="80" class="form-control chalmeta" {% if check_type != ProConst.CHECKER_IOREDIR %} style="display: none;" {% end %}>
-            {{ json.dumps(pro.config.chalmeta, indent=4) }}
-        </textarea>
 
 		<div class="mt-3">
 			<button type="button" class="btn btn-primary submit">Update</button>
-			<button type="button" class="btn btn-secondary cancel">Cancel</button>
             <button type="button" class="btn btn-warning rechal">Rechallenge</button>
             <button type="button" class="btn btn-danger rechalall">All Challenges (Danger)</button>
 		</div>
+
+        <div>
+            <label class="form-label" style="color: red;">Danger Zone</label>
+            <label class="form-label" style="color: red;"><strong>Only problem package(.tar.xz) are allowed</strong></label>
+            <input type="file" class="form-control file">
+            <button type="button" class="btn btn-danger upload">Upload</button>
+        </div>
     </form>
 
-    <form id="form3">
-        <label class="form-label" style="color: red;">Danger Zone</label>
-        <label class="form-label" style="color: red;"><strong>Only problem package(.tar.xz) are allowed</strong></label>
-        <input type="file" class="form-control file">
-        <button type="button" class="btn btn-danger upload">Upload</button>
-    </form>
-
-	<form id="form2" class="blk-cont">
+	<form id="limits" style="display: none;">
         <table class="table">
             <thead>
                 <tr>
-                    <th>Language</th>
+                    <th>Compiler</th>
                     <th>Time (ms)</th>
-                    <th>Memory (Kb)</th>
+                    <th>Memory (Kib)</th>
+                    <th>Output (Kib)</th>
                 </tr>
             </thead>
             <tbody>
                 {% set limits = pro.config.limits %}
-                <tr language="default">
+                <tr compiler="default">
                     <td>default</td>
                     <td><input type="number" class="form-control time" value="{{ limits['default'].time }}"></td>
-                    <td><input type="number" class="form-control mem" value="{{ limits['default'].memory // 1024 }}"></td>
+                    <td><input type="number" class="form-control memory" value="{{ limits['default'].memory }}"></td>
+                    <td><input type="number" class="form-control output" value="{{ limits['default'].output }}"></td>
                 </tr>
-                {% set ALLOW_COMPILERS = ChalConst.ALLOW_COMPILERS %}
-                {% if pro.config.is_makefile %}
-                    {% set ALLOW_COMPILERS = ['gcc', 'g++', 'clang', 'clang++'] %}
-                {% end %}
 
-                {% for language in ALLOW_COMPILERS %}
-                    {% if language in limits %}
-                    <tr language="{{ language }}">
-                        <td>{{ language }}</td>
-                        <td><input type="number" class="form-control time" value="{{ limits[language].time }}"></td>
-                        <td><input type="number" class="form-control mem" value="{{ limits[language].memory // 1024 }}"></td>
+                {% for compiler in pro.config.allow_compilers %}
+                    {% if str(compiler) in limits %}
+                    <tr compiler="{{ compiler }}">
+                        <td>{{ COMPILER_INFOS[compiler].short_name }}</td>
+                        <td><input type="number" class="form-control time" value="{{ limits[compiler].time }}"></td>
+                        <td><input type="number" class="form-control memory" value="{{ limits[compiler].memory }}"></td>
+                        <td><input type="number" class="form-control output" value="{{ limits[compiler].output }}"></td>
                     </tr>
                     {% else %}
-                    <tr language="{{ language }}">
-                        <td>{{ language }}</td>
+                    <tr compiler="{{ compiler }}">
+                        <td>{{ COMPILER_INFOS[compiler].short_name }}</td>
                         <td><input type="number" class="form-control time"></td>
-                        <td><input type="number" class="form-control mem"></td>
+                        <td><input type="number" class="form-control memory"></td>
+                        <td><input type="number" class="form-control output"></td>
                     </tr>
                     {% end %}
                 {% end %}
             </tbody>
         </table>
+
+		<button type="button" class="btn btn-primary submit">Update</button>
+    </form>
+
+    <form id="judge" style="display: none;">
+        <div class="mb-1">
+            <label class="form-label">Allow Compilers</label>
+        </div>
+        {% for compiler in Compiler %}
+            <div class="form-check form-check-inline">
+                <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox{{ compiler }}" value="{{ compiler }}"{% if compiler in pro.config.allow_compilers %} checked {% end %}>
+                <label class="form-check-label" for="inlineCheckbox{{ compiler }}">{{ COMPILER_INFOS[compiler].version_name }}</label>
+            </div>
+        {% end %}
+
+        <br />
+        <label for="score-precision">Score Precision (0 ~ 3)</label>
+        <input type="range" id="score-precision" class="form-range" min="0" max="3" step="1" value="{{ pro.config.rate_precision }}">
+
+        <label for="has-grader" class="form-check-label">Has Grader</label>
+        <input type="checkbox" id="has-grader" class="form-check-input" {% if pro.config.has_grader %} checked {% end %}>
+        <br />
+
+        <label id="userprogCompileArgsLabel" for="userprogCompileArgs" class="form-label">Userprog Compile Addition Args</label>
+        <input
+            id="userprogCompileArgs"
+            type="text"
+            class="form-control"
+            placeholder="Userprog Compile Addition Args"
+            value="{{ pro.config.userprog_compile_args }}"
+        >
+
+        <div class="mb-1">
+            <label for="checkerType" class="form-label">Checker Type</label>
+            <select id="checkerType" class="form-select">
+                {% for checker_type in CheckerType %}
+                    <option value="{{ checker_type }}" {% if pro.config.checker_type == checker_type %} selected {% end %}>{{ ProConst.CHECKER_TYPE_2_STR[checker_type] }}</option>
+                {% end %}
+            </select>
+
+            {% set need_build_checker = pro.config.checker_type in CheckerType.need_build_checkers() %}
+            <label id="checkerCompilerLabel" for="checkerCompiler" class="form-label" {% if not need_build_checker %} style="display: none;" {% end %}>Checker Compiler</label>
+            <select id="checkerCompiler" class="form-select" {% if not need_build_checker %} style="display: none;" {% end %}>
+                {% for compiler in Compiler %}
+                    <option value="{{ compiler }}" {% if pro.config.checker_compiler == compiler %} selected {% end %}>{{ COMPILER_INFOS[compiler].version_name }}</option>
+                {% end %}
+            </select>
+
+            <label id="checkerCompileArgsLabel" for="checkerCompileArgs" class="form-label" {% if not need_build_checker %} style="display: none;" {% end %}>
+                Checker Compile Addition Args
+            </label>
+            <input
+                id="checkerCompileArgs"
+                type="text"
+                class="form-control"
+                placeholder="Checker Compile Addition Args"
+                value="{{ pro.config.checker_compile_args }}"
+                {% if not need_build_checker %} style="display: none;" {% end %}
+            >
+
+            <label for="chalmeta" id="chalmeta" class="form-label" {% if pro.config.checker_type != CheckerType.IOREDIR %} style="display: none;" {% end %}>IORedir Settings (WIP)</label>
+            <textarea rows="10" cols="80" id="chalmeta" class="form-control" {% if pro.config.checker_type != CheckerType.IOREDIR %} style="display: none;" {% end %}>
+                {{ json.dumps(pro.config.chalmeta, indent=4) }}
+            </textarea>
+        </div>
+
+        <div class="mb-1">
+            <label for="summaryType" class="form-label">Summary Type</label>
+            <select id="summaryType" class="form-select">
+                {% for summary_type in SummaryType %}
+                    <option value="{{ summary_type }}" {% if pro.config.summary_type == summary_type %} selected {% end %}>{{ ProConst.SUMMARY_TYPE_2_STR[summary_type] }}</option>
+                {% end %}
+            </select>
+
+            {% set need_build_summary = pro.config.summary_type == SummaryType.CUSTOM %}
+            <label id="summaryCompilerLabel" for="summaryCompiler" class="form-label" {% if not need_build_summary %} style="display: none;" {% end %}>Summary Compiler</label>
+            <select id="summaryCompiler" class="form-select" {% if not need_build_summary %} style="display: none;" {% end %}>
+                {% for compiler in Compiler %}
+                    <option value="{{ compiler }}" {% if pro.config.summary_compiler == compiler %} selected {% end %}>{{ COMPILER_INFOS[compiler].version_name }}</option>
+                {% end %}
+            </select>
+
+            <label id="summaryCompileArgsLabel" for="summaryCompileArgs" class="form-label" {% if not need_build_summary %} style="display: none;" {% end %}>Summary Compile Addition Args</label>
+            <input
+                id="summaryCompileArgs"
+                type="text"
+                class="form-control"
+                placeholder="Summary Compile Addition Args"
+                value="{{ pro.config.summary_compile_args }}"
+                {% if not need_build_summary %} style="display: none;" {% end %}
+            >
+        </div>
 
 		<button type="button" class="btn btn-primary submit">Update</button>
     </form>

@@ -1,19 +1,21 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-int main() {
+int main(int argc, char** argv) {
+    ifstream test_out(argv[2]);
+    ifstream user_ans(argv[3]);
 	long double Answer, Output;
-	FILE *ansf = fdopen(2, "r");
 
-	scanf("%Lf", &Output);
-	fscanf(ansf, "%Lf", &Answer);
+    test_out >> Output;
+    user_ans >> Answer;
 
 	long double Ae = abs(Answer - Output);
 	long double Re = Ae / Answer;
 
 	if (Ae <= 0.000001 || Re <= 0.000001) {
-		return 0;
+        puts("1.0");
 	} else {
-		return -1;
+        puts("0.0");
 	}
+    return 0;
 }

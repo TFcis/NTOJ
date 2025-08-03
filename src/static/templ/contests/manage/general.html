@@ -125,6 +125,7 @@
 {% import datetime %}
 {% from services.contests import ContestMode %}
 {% from services.contests import RegMode %}
+{% from services.chal import Compiler, COMPILER_INFOS %}
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <div class="mb-1">
@@ -230,38 +231,12 @@
         <div class="mb-1">
             <label for="" class="form-label">Allow Compilers</label>
         </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox1" value="gcc"{% if 'gcc' in contest.allow_compilers %} checked {% end %}>
-            <label class="form-check-label" for="inlineCheckbox1">GCC GNU11</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox2" value="clang"{% if 'clang' in contest.allow_compilers %} checked {% end %}>
-            <label class="form-check-label" for="inlineCheckbox2">Clang C11</label>
-        </div>
-        <div class="form-check form-check-inline">
-            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox3" value="g++"{% if 'g++' in contest.allow_compilers %} checked {% end %}>
-            <label class="form-check-label" for="inlineCheckbox3">G++ GNU++17</label>
-        </div>
-
-        <div class="form-check form-check-inline">
-            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox4" value="clang++"{% if 'clang++' in contest.allow_compilers %} checked {% end %}>
-            <label class="form-check-label" for="inlineCheckbox4">Clang++ C++17</label>
-        </div>
-
-        <div class="form-check form-check-inline">
-            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox5" value="python3"{% if 'python3' in contest.allow_compilers %} checked {% end %}>
-            <label class="form-check-label" for="inlineCheckbox5">CPython 3.11</label>
-        </div>
-
-        <div class="form-check form-check-inline">
-            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox6" value="rustc"{% if 'rustc' in contest.allow_compilers %} checked {% end %}>
-            <label class="form-check-label" for="inlineCheckbox6">Rustc Rust1.63</label>
-        </div>
-
-        <div class="form-check form-check-inline">
-            <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox7" value="java"{% if 'java' in contest.allow_compilers %} checked {% end %}>
-            <label class="form-check-label" for="inlineCheckbox7">OpenJDK Java17</label>
-        </div>
+        {% for compiler in Compiler %}
+            <div class="form-check form-check-inline">
+                <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox{{ compiler }}" value="{{ compiler }}"{% if compiler in contest.allow_compilers %} checked {% end %}>
+                <label class="form-check-label" for="inlineCheckbox1">{{ COMPILER_INFOS[compiler].version_name }}</label>
+            </div>
+        {% end %}
     </div>
 
     <button class="btn btn-primary submit">Update</button>

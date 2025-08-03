@@ -53,23 +53,22 @@ class RateService:
                     f'''
                     WITH accepted_tests AS (
                         SELECT DISTINCT
-                            t."acct_id", t."pro_id", t."subtask_id", t."rate"
+                            c.acct_id, t.pro_id, t.subtask_id, t.rate
                         FROM
-                            "subtask_result" t
-                        INNER JOIN "problem"
-                            ON t."pro_id" = "problem"."pro_id"
+                            subtask_result t
+                        INNER JOIN problem p
+                            ON t.pro_id = p.pro_id
+                        INNER JOIN challenge c
+                            ON t.chal_id = c.chal_id
                         WHERE
-                            "problem"."status" = {ProConst.STATUS_ONLINE}
-                            AND t."state" <= {ChalConst.STATE_PC}
-                            AND t.acct_id = $1
+                            p.status = {ProConst.STATUS_ONLINE}
+                            AND t.state IN ({ChalConst.STATE_AC}, {ChalConst.STATE_PC})
+                            AND c.acct_id = $1
                     )
                     SELECT
-                        SUM(CASE WHEN at.rate IS NULL THEN test_valid_rate.rate ELSE at.rate END) AS total_rate
+                        SUM(at.rate) AS total_rate
                     FROM
-                        test_valid_rate
-                    INNER JOIN accepted_tests at
-                        ON "test_valid_rate"."pro_id" = at."pro_id"
-                        AND "test_valid_rate"."test_idx" = at."subtask_id"
+                        accepted_tests at;
                     ''',
                     acct_id
                 )
@@ -251,13 +250,11 @@ class RateService:
         if isinstance(endtime, str):
             endtime = datetime.datetime.fromisoformat(endtime)
 
-        problem_status_sql = ''
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if contest_id != 0:
-            problem_status_sql = f'AND "problem"."status" = {ProConst.STATUS_CONTEST} OR "problem"."status" = {ProConst.STATUS_ONLINE}'
+            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
         elif acct.is_kernel():
-            problem_status_sql = f'AND "problem"."status" <= {ProConst.STATUS_HIDDEN} AND "problem"."status" != {ProConst.STATUS_CONTEST}'
-        else:
-            problem_status_sql = f'AND "problem"."status" <= {ProConst.STATUS_ONLINE} AND "problem"."status" != {ProConst.STATUS_CONTEST}'
+            allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -270,7 +267,7 @@ class RateService:
                     INNER JOIN "total_result"
                     ON "challenge"."chal_id" = "total_result"."chal_id" AND "challenge"."acct_id" = $1
                     INNER JOIN "problem"
-                    ON "challenge"."pro_id" = "problem"."pro_id" {problem_status_sql}
+                    ON "challenge"."pro_id" = "problem"."pro_id" AND "problem"."status" IN ({",".join(map(str, allow_statuses))})
                     WHERE "challenge"."contest_id" = $2 AND "challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4
                     GROUP BY "challenge"."pro_id";
                 ''',

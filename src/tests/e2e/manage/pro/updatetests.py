@@ -156,8 +156,8 @@ class ManageProUpdateTestsTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
-            chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
-            self.assertEqual(chal_states_result, [ChalConst.STATE_AC] * len(chal_states_result))
+            _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
 
             # NOTE: updatesinglefile
             pack_token = await self._upload_file('tests/static_file/toj3/3.out.incorrect', admin_session)
@@ -194,8 +194,8 @@ class ManageProUpdateTestsTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
-            chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
-            self.assertEqual(chal_states_result, [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA])
+            _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA])
 
             # NOTE: settestdata (remove testdata from range)
             inputfile_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
@@ -229,8 +229,8 @@ class ManageProUpdateTestsTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
-            chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
-            self.assertEqual(chal_states_result, [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_AC])
+            _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_AC])
 
             # NOTE: deletesinglefile
             res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
@@ -273,5 +273,5 @@ class ManageProUpdateTestsTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
-            chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
-            self.assertEqual(chal_states_result, [ChalConst.STATE_AC, ChalConst.STATE_AC])
+            _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC])

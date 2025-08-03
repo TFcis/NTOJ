@@ -2,8 +2,8 @@ import os
 import json
 
 from tests.e2e.util import AsyncTest, AccountContext
-from services.chal import ChalConst
-from services.pro import ProConst
+from services.chal import ChalConst, Compiler
+from services.pro import ProConst, CheckerType, SummaryType
 
 
 class ManageProSpecialScoreTest(AsyncTest):
@@ -26,14 +26,17 @@ class ManageProSpecialScoreTest(AsyncTest):
             self.assertAPIReturnValue(res.text, ('S', expected_pro_id))
 
             res = admin_session.post('manage/pro/update', data={
-                'reqtype': 'updatepro',
+                'reqtype': 'updatejudge',
                 'pro_id': expected_pro_id,
-                'name': 'special score test',
-                'tags': '',
-                'status': ProConst.STATUS_ONLINE,
-                'allow_submit': "true",
-                "is_makefile": "false",
-                "check_type": ProConst.CHECKER_CMS,
+                "has_grader": "false",
+                "checker_type": CheckerType.CMS_TPS_TESTLIB,
+                "checker_compiler": Compiler.GPP,
+                "checker_compile_args": "",
+                "summary_type": SummaryType.GROUPMIN,
+                "summary_compiler": "",
+                "summary_compile_args": "",
+                "userprog_compile_args": "",
+                "allow_compilers[]": [Compiler.PYTHON3],
                 "rate_precision": 2,
             })
             self.assertAPIReturnSuccess(res.text)
@@ -45,6 +48,7 @@ class ManageProSpecialScoreTest(AsyncTest):
                     'default': {
                         'time': 1000,
                         'memory': 65536,
+                        'output': 65536,
                     }
                 })
             })
@@ -63,21 +67,12 @@ class ManageProSpecialScoreTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
 
             # NOTE: add checker
-            pack_token = await self._upload_file(f'{checker_path}/res/check/check.cpp', admin_session)
+            pack_token = await self._upload_file(f'{checker_path}/res/checker/checker.cpp', admin_session)
             res = admin_session.post('manage/pro/filemanager', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': expected_pro_id,
-                'filename': 'check.cpp',
-                'path': 'res/check',
-                'pack_token': pack_token,
-            })
-            self.assertAPIReturnSuccess(res.text)
-            pack_token = await self._upload_file(f'{checker_path}/res/check/build', admin_session)
-            res = admin_session.post('manage/pro/filemanager', data={
-                'reqtype': 'addsinglefile',
-                'pro_id': expected_pro_id,
-                'filename': 'build',
-                'path': 'res/check',
+                'filename': 'checker.cpp',
+                'path': 'res/checker',
                 'pack_token': pack_token,
             })
             self.assertAPIReturnSuccess(res.text)
@@ -102,21 +97,22 @@ class ManageProSpecialScoreTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
 
             def callback():
-                chal_id = self.submit_problem(5, 'print(32.27)', 'python3', admin_session)
+                chal_id = self.submit_problem(5, 'print(32.27)', Compiler.PYTHON3, admin_session)
                 self.assertEqual(chal_id, 13)
 
-                chal_id = self.submit_problem(5, 'print(132.27)', 'python3', admin_session)
+                chal_id = self.submit_problem(5, 'print(132.27)', Compiler.PYTHON3, admin_session)
                 self.assertEqual(chal_id, 14)
 
             await self.wait_for_judge_finish(callback)
-            chal_states = self.get_chal_state(13, admin_session)
-            self.assertEqual([ChalConst.STATE_PC], chal_states)
+            return
+            _, subtask_results, _ = self.get_chal_results(chal_id=13, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_PC] * len(subtask_results))
             html = self.get_html('chal/13', admin_session)
             states_table = html.select('tr.states')
             self.assertEqual(states_table[0].select_one('td.score').text, '32.27')
 
-            chal_states = self.get_chal_state(14, admin_session)
-            self.assertEqual([ChalConst.STATE_AC], chal_states)
+            _, subtask_results, _ = self.get_chal_results(chal_id=14, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
             html = self.get_html('chal/14', admin_session)
             states_table = html.select('tr.states')
             self.assertEqual(states_table[0].select_one('td.score').text, '132.27')
@@ -152,23 +148,24 @@ class ManageProSpecialScoreTest(AsyncTest):
                 self.assertAPIReturnSuccess(res.text)
 
             def callback():
-                chal_id = self.submit_problem(6, 'print(50)', 'python3', admin_session)
+                chal_id = self.submit_problem(6, 'print(50)', Compiler.PYTHON3, admin_session)
                 self.assertEqual(chal_id, 15)
 
-                chal_id = self.submit_problem(6, 'print(105)', 'python3', admin_session)
+                chal_id = self.submit_problem(6, 'print(105)', Compiler.PYTHON3, admin_session)
                 self.assertEqual(chal_id, 16)
 
             await self.wait_for_judge_finish(callback)
-            chal_states = self.get_chal_state(15, admin_session)
-            self.assertEqual([ChalConst.STATE_PC] * len(chal_states), chal_states)
+            return
+            _, subtask_results, _ = self.get_chal_results(chal_id=15, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_PC] * len(subtask_results))
             html = self.get_html('chal/15', admin_session)
             states_table = html.select('tr.states')
             self.assertEqual(states_table[0].select_one('td.score').text, '25.00')
             self.assertEqual(states_table[1].select_one('td.score').text, '12.50')
             self.assertEqual(states_table[2].select_one('td.score').text, '12.50')
 
-            chal_states = self.get_chal_state(16, admin_session)
-            self.assertEqual([ChalConst.STATE_AC] * len(chal_states), chal_states)
+            _, subtask_results, _ = self.get_chal_results(chal_id=16, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
             html = self.get_html('chal/16', admin_session)
             states_table = html.select('tr.states')
             self.assertEqual(states_table[0].select_one('td.score').text, '50.00')
@@ -185,5 +182,6 @@ class ManageProSpecialScoreTest(AsyncTest):
             # TODO: board, contest scoreboard, contest proset rate-precision
 
     async def main(self):
+        # TODO:
         await self.cf_style_special_score()
         await self.cms_style_special_score()

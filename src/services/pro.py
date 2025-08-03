@@ -1,15 +1,36 @@
+import enum
+import json
 import os
 import re
-import json
 import shutil
 from dataclasses import asdict, dataclass
 
+import config
 from msgpack import packb, unpackb
 
-import config
 from services.pack import PackService
 
 ErrorType = tuple[tuple[str, str], None]
+
+class CheckerType(enum.IntEnum):
+    DIFF = 1
+    DIFF_STRICT = 2
+    DIFF_FLOAT4 = 3
+    DIFF_FLOAT6 = 4
+    DIFF_FLOAT9 = 5
+    CMS_TPS_TESTLIB = 6
+    STD_TESTLIB = 7
+    IOREDIR = 8
+    TOJ = 9
+
+    @classmethod
+    def need_build_checkers(cls):
+        return [cls.CMS_TPS_TESTLIB, cls.STD_TESTLIB, cls.IOREDIR, cls.TOJ]
+
+class SummaryType(enum.IntEnum):
+    GROUPMIN = 1
+    OVERWRITE = 2
+    CUSTOM = 3
 
 class ProConst:
     """
@@ -28,30 +49,44 @@ class ProConst:
     STATUS_CONTEST = 1
     STATUS_HIDDEN = 2
 
-    CHECKER_DIFF = 0
-    CHECKER_DIFF_STRICT = 1
-    CHECKER_DIFF_FLOAT = 2
-    CHECKER_IOREDIR = 3
-    CHECKER_CMS = 4
-
-    CHECKER_TYPE = {
-        CHECKER_DIFF: "diff",
-        CHECKER_DIFF_STRICT: "diff-strict",
-        CHECKER_DIFF_FLOAT: "diff-float",
-        CHECKER_IOREDIR: "ioredir",
-        CHECKER_CMS: "cms",
-    }
-
-    STR_2_CHECKER_TYPE = {t: s for s, t in CHECKER_TYPE.items()}
-
     PACKTYPE_FULL = 1
     PACKTYPE_CONTHTML = 2
     PACKTYPE_CONTPDF = 3
+
+    OLD_STR_2_CHECKER_TYPE = {
+        "diff": CheckerType.DIFF,
+        "diff-strict": CheckerType.DIFF_STRICT,
+        "diff-float": CheckerType.DIFF_FLOAT6,
+        "ioredir": CheckerType.IOREDIR,
+        "cms": CheckerType.CMS_TPS_TESTLIB,
+    }
+
+
+    CHECKER_TYPE_2_STR = {
+        CheckerType.DIFF: "diff",
+        CheckerType.DIFF_STRICT: "diff-strict",
+        CheckerType.DIFF_FLOAT4: "diff-float, max error 1e-4",
+        CheckerType.DIFF_FLOAT6: "diff-float, max error 1e-6",
+        CheckerType.DIFF_FLOAT9: "diff-float, max error 1e-9",
+        CheckerType.CMS_TPS_TESTLIB: "CMS/TPS Testlib",
+        CheckerType.STD_TESTLIB: "Standard Testlib (Polygon)",
+        CheckerType.IOREDIR: "IORedir (WIP)",
+        CheckerType.TOJ: "TOJ (WIP)",
+    }
+
+    SUMMARY_TYPE_2_STR = {
+        SummaryType.CUSTOM: "Custom",
+        SummaryType.GROUPMIN: "GroupMin",
+        SummaryType.OVERWRITE: "Overwrite",
+    }
 
     # NOTE: collection for problem status
     PRO_STATUS_NORMAL_USER = [STATUS_ONLINE]
     PRO_STATUS_KERNEL_USER = [STATUS_ONLINE, STATUS_HIDDEN]
     PRO_STATUS_CONTEST_USER = [STATUS_ONLINE, STATUS_CONTEST]
+    PRO_STATUS_FULL = [STATUS_ONLINE, STATUS_CONTEST, STATUS_HIDDEN]
+
+
 
 @dataclass(slots=True)
 class Testdata:
@@ -69,18 +104,19 @@ class SubtaskConfig:
 
 @dataclass(slots=True)
 class Limit:
-    time: int
-    memory: int
+    time: int # NOTE: ms
+    memory: int # NOTE: kib
+    output: int # NOTE: kib
 
     def __post_init__(self):
         assert self.time >= 0
         assert self.memory >= 0
-
+        assert self.output >= 0
 
 @dataclass(slots=True)
 class ProblemConfig:
     """
-    - is_makefile (bool): Whether the problem uses a Makefile-based compilation.
+    - has_grader (bool): Whether the problem uses a Makefile-based compilation.
     See: https://wiki.tfcis.org/TOJ#Makefile%E9%A1%8C%E7%9B%AE_(%E7%B7%A8%E8%AD%AF%E4%BA%92%E5%8B%95%E9%A1%8C)
 
     - chalmeta (str): For IORedir Problem
@@ -104,8 +140,15 @@ class ProblemConfig:
     """
     chalmeta: str
     limits: dict[str, Limit]
-    checker_type: int
-    is_makefile: bool
+    userprog_compile_args: str
+    checker_type: CheckerType
+    checker_compiler: int | None
+    checker_compile_args: str
+    summary_type: SummaryType
+    summary_compiler: int | None
+    summary_compile_args: str
+    has_grader: bool
+    allow_compilers: set[int]
     subtask_configs: dict[int, SubtaskConfig]
     testdatas: dict[int, Testdata]
     rate_precision: int
@@ -113,7 +156,6 @@ class ProblemConfig:
     def __post_init__(self):
         assert 'default' in self.limits
         assert ProConst.RATE_PRECISION_MIN <= self.rate_precision <= ProConst.RATE_PRECISION_MAX
-        assert self.checker_type in ProConst.CHECKER_TYPE
 
 
 @dataclass(slots=True)
@@ -135,6 +177,7 @@ class ProService:
         ProService.inst = self
 
     async def get_pro(self, pro_id: int, allow_statuses: list[int]) -> tuple[None, Problem] | ErrorType:
+        from services.chal import Compiler
         """
         Fetch problem configuration and metadata by ID, ensuring it's in the allowed status.
 
@@ -155,7 +198,10 @@ class ProService:
             result = await con.fetch(
                 """
                     SELECT "name", "status", "tags", "allow_submit",
-                    "checker_type", "is_makefile", "chalmeta", "limits", "rate_precision"
+                    "allow_compilers", "userprog_compile_args",
+                    "checker_type", "checker_compiler", "checker_compile_args",
+                    "summary_type", "summary_compiler", "summary_compile_args",
+                    "has_grader", "chalmeta", "limits", "rate_precision"
                     FROM "problem" WHERE "pro_id" = $1;
                 """,
                 pro_id,
@@ -169,8 +215,15 @@ class ProService:
                 status,
                 tags,
                 allow_submit,
+                allow_compilers,
+                userprog_compile_args,
                 checker_type,
-                is_makefile,
+                checker_compiler,
+                checker_compile_args,
+                summary_type,
+                summary_compiler,
+                summary_compile_args,
+                has_grader,
                 rate_precision,
                 limits,
                 chalmeta,
@@ -179,14 +232,26 @@ class ProService:
                 result["status"],
                 result["tags"],
                 result["allow_submit"],
+                result["allow_compilers"],
+                result["userprog_compile_args"],
                 result["checker_type"],
-                result["is_makefile"],
+                result["checker_compiler"],
+                result["checker_compile_args"],
+                result["summary_type"],
+                result["summary_compiler"],
+                result["summary_compile_args"],
+                result["has_grader"],
                 result["rate_precision"],
                 json.loads(result["limits"]),
                 json.loads(result["chalmeta"]),
             )
             if tags is None:
                 tags = ""
+
+            if checker_compiler:
+                checker_compiler = Compiler(checker_compiler)
+            if summary_compiler:
+                summary_compiler = Compiler(summary_compiler)
 
             if status not in allow_statuses:
                 return ("Eacces", "Permission denied"), None
@@ -220,17 +285,28 @@ class ProService:
         proconfig = ProblemConfig(
             chalmeta=chalmeta,
             limits={
-                compiler: Limit(limit["time"], limit["memory"])
+                compiler: Limit(**limit)
                 for compiler, limit in limits.items()
             },
+            userprog_compile_args=userprog_compile_args,
             checker_type=checker_type,
+            checker_compiler=checker_compiler,
+            checker_compile_args=checker_compile_args,
+            summary_type=summary_type,
+            summary_compiler=summary_compiler,
+            summary_compile_args=summary_compile_args,
             subtask_configs=subtask_configs,
             testdatas=testdatas,
             rate_precision=rate_precision,
-            is_makefile=is_makefile,
+            has_grader=has_grader,
+            allow_compilers=set(map(Compiler, allow_compilers)),
         )
 
         return None, Problem(pro_id, name, status, tags, allow_submit, proconfig)
+
+    async def get_pro_config(self, pro_id: int):
+        # TODO: get_pro_config
+        pass
 
     async def list_pro(self, allow_pro_statuses: list[int]) -> tuple[None, list[Problem]]:
         """
@@ -393,7 +469,6 @@ class ProService:
         Side Effects:
             - All existing `Challenge` records associated with this problem will be reset to
             the `NotStart` state, due to test configuration changes.
-            - `test_valid_rate` materialized view will be refreshed.
             - Related Redis cache (`rate`, `pro_rate`) will be invalidated.
         """
 
@@ -418,38 +493,70 @@ class ProService:
                 'DELETE FROM "testdata" WHERE "pro_id" = $1;', int(pro_id)
             )
             await con.execute(
-                'UPDATE problem SET is_makefile = $1, checker_type = $2, chalmeta = $3, limits = $4, rate_precision = $5 WHERE pro_id = $6',
-                config.is_makefile,
-                config.checker_type,
+                '''
+                UPDATE problem SET allow_compilers = $1, has_grader = $2, chalmeta = $3,
+                limits = $4, rate_precision = $5, userprog_compile_args = $6,
+                checker_type = $7, checker_compiler = $8, checker_compile_args = $9,
+                summary_type = $10, summary_compiler = $11, summary_compile_args = $12
+                WHERE pro_id = $13;
+                ''',
+                config.allow_compilers,
+                config.has_grader,
                 json.dumps(config.chalmeta),
                 json.dumps({
                     comp: asdict(limit)
                     for comp, limit in config.limits.items()
                 }),
                 config.rate_precision,
+                config.userprog_compile_args,
+                config.checker_type, config.checker_compiler, config.checker_compile_args,
+                config.summary_type, config.summary_compiler, config.summary_compile_args,
                 pro_id,
             )
 
-            if insert_test_config_values:
-                await con.executemany(
-                    """INSERT INTO "subtask_config"
-                        ("pro_id", "subtask_id", "rate", "testdatas")
-                        VALUES ($1, $2, $3, $4);""",
-                    insert_test_config_values,
-                )
+            await con.executemany(
+                """INSERT INTO "subtask_config"
+                    ("pro_id", "subtask_id", "rate", "testdatas")
+                    VALUES ($1, $2, $3, $4);""",
+                insert_test_config_values,
+            )
 
-            if insert_testdatas_values:
-                await con.executemany(
-                    """
-                        INSERT INTO "testdata" ("pro_id", "id", "inputfile", "outputfile")
-                        VALUES ($1, $2, $3, $4);
-                    """,
-                    insert_testdatas_values,
-                )
+            await con.executemany(
+                """
+                    INSERT INTO "testdata" ("pro_id", "id", "inputfile", "outputfile")
+                    VALUES ($1, $2, $3, $4);
+                """,
+                insert_testdatas_values,
+            )
 
-        await self.db.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
-        await self.rs.delete("rate")
-        await self.rs.hdel("pro_rate", pro_id)
+            res = await con.fetch("SELECT chal_id FROM challenge WHERE pro_id=$1;", pro_id)
+
+            insert_testdata_values = []
+            for testdata_id in config.testdatas:
+                for chal_id in res:
+                    insert_testdata_values.append((chal_id['chal_id'], pro_id, testdata_id))
+
+            insert_subtask_values = []
+            for subtask_id in config.subtask_configs:
+                for chal_id in res:
+                    insert_subtask_values.append((chal_id['chal_id'], pro_id, subtask_id))
+
+            for chal_id in res:
+                await con.execute('UPDATE total_result SET state=DEFAULT, time=DEFAULT, memory=DEFAULT, rate=DEFAULT WHERE chal_id=$1;',
+                                  chal_id['chal_id'])
+
+            await con.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id) VALUES ($1, $2, $3);', insert_subtask_values)
+            await con.executemany('INSERT INTO testdata_result (chal_id, pro_id, id) VALUES ($1, $2, $3);', insert_testdata_values)
+
+            await self.rs.delete("rate")
+
+            res = await con.fetch("SELECT contest_id FROM contest_problem_joints WHERE pro_id = $1;", pro_id)
+            for r in res:
+                contest_id = r['contest_id']
+
+                key2 = f"pro_id_{pro_id}_contest_id_{contest_id}"
+                await self.rs.hdel("pro_rate", key2)
+            await self.rs.delete("rate")
 
         return None, None
 
@@ -468,7 +575,7 @@ class ProService:
                 - None if successful.
         """
 
-        from services.chal import ChalConst
+        from services.chal import Compiler, ChalConst
 
         failed = True
         try:
@@ -492,26 +599,25 @@ class ProService:
             except json.decoder.JSONDecodeError:
                 return ("Econf", "Problem config json syntax error"), None
 
-            is_makefile = False
+            has_grader = False
             if "compile" in conf:
-                is_makefile = conf["compile"] == "makefile"
-            elif "is_makefile" in conf:
-                is_makefile = conf["is_makefile"]
-
-            ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ["default"])
-            if is_makefile:
-                ALLOW_COMPILERS = {"default", "gcc", "g++", "clang", "clang++"}
+                has_grader = conf["compile"] == "makefile"
+            elif "has_grader" in conf:
+                has_grader = conf["has_grader"]
 
             if "limit" in conf:
                 limits = {}
                 for compiler_type, conf_limit in conf["limit"].items():
-                    if compiler_type not in ALLOW_COMPILERS:
+                    if compiler_type in ChalConst.OLD_STR_2_COMPILER:
+                        compiler_type = ChalConst.OLD_STR_2_COMPILER[compiler_type]
+                    elif compiler_type != "default":
                         continue
 
-                    limit = Limit(0, 0)
+                    limit = Limit(0, 0, 0)
                     try:
                         limit.time = max(int(conf_limit["timelimit"]), 0)
-                        limit.memory = max(int(conf_limit["memlimit"]) * 1024, 0)
+                        limit.memory = max(int(conf_limit["memlimit"]), 0)
+                        limit.output = 65536
                     except ValueError:
                         continue
 
@@ -523,7 +629,7 @@ class ProService:
             elif "timelimit" in conf and "memlimit" in conf:
                 try:
                     limits = {
-                        "default": Limit(int(conf["timelimit"]), int(conf["memlimit"]) * 1024)
+                        "default": Limit(int(conf["timelimit"]), int(conf["memlimit"]), 65536)
                     }
                 except ValueError:
                     return ("Econf", "Problem limit config have invalid value"), None
@@ -556,8 +662,15 @@ class ProService:
                     subtask_configs[test_idx].testdatas.append(testdatas[testdata_name_2_id[t]])
 
 
-            proconfig = ProblemConfig(chalmeta, limits, ProConst.STR_2_CHECKER_TYPE[conf["check"]],
-                                      is_makefile, subtask_configs, testdatas, rate_precision=0)
+            if has_grader:
+                allow_compilers = {Compiler.CLANGPP, Compiler.GPP}
+            else:
+                allow_compilers = {v for v in Compiler}
+            checker_type = ProConst.OLD_STR_2_CHECKER_TYPE[conf["check"]]
+            proconfig = ProblemConfig(chalmeta, limits, "",
+                                      checker_type, Compiler.GPP, "",
+                                      SummaryType.GROUPMIN, Compiler.GPP, "",
+                                      has_grader, allow_compilers, subtask_configs, testdatas, rate_precision=0)
             failed = False
 
         finally:

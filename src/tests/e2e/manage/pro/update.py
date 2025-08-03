@@ -2,28 +2,26 @@ import os
 import json
 
 from tests.e2e.util import AsyncTest, AccountContext
-from services.pro import ProConst
+from services.pro import ProConst, CheckerType
+from services.chal import Compiler
 
 
 class ManageProUpdateTest(AsyncTest):
     async def main(self):
         with AccountContext("admin@test", "testtest") as admin_session:
             res = admin_session.post('manage/pro/update', data={
-                'reqtype': 'updatepro',
+                'reqtype': 'updategeneral',
                 'pro_id': 1,
                 'name': 'GCDGCD',
                 'tags': 'GCD',
                 'status': ProConst.STATUS_HIDDEN,
                 'allow_submit': "false",
-                "is_makefile": "false",
-                "check_type": ProConst.CHECKER_DIFF,
-                "rate_precision": ProConst.RATE_PRECISION_MIN,
             })
             self.assertAPIReturnSuccess(res.text)
             html = self.get_html('manage/pro/update?proid=1', admin_session)
-            self.assertIsNone(html.select_one('input.allow-submit').get('checked'))
-            self.assertEqual(html.select_one('select.status > option[selected]').text, 'Hidden')
-            self.assertEqual(int(html.select_one('select.status > option[selected]').get('value')), ProConst.STATUS_HIDDEN)
+            self.assertIsNone(html.select_one('input#allow-submit').get('checked'))
+            self.assertEqual(html.select_one('select#status > option[selected]').text, 'Hidden')
+            self.assertEqual(int(html.select_one('select#status > option[selected]').get('value')), ProConst.STATUS_HIDDEN)
 
             res = admin_session.get('pro/1')
             self.assertNotIn('Eacces', res.text)
@@ -57,15 +55,12 @@ class ManageProUpdateTest(AsyncTest):
             # self.assertEqual(trs[1].select('td')[2].text.strip().replace('\n', ''), 'Move')
 
             admin_session.post('manage/pro/update', data={
-                'reqtype': 'updatepro',
+                'reqtype': 'updategeneral',
                 'pro_id': 1,
                 'name': 'GCD',
                 'status': ProConst.STATUS_ONLINE,
                 'tags': '',
                 'allow_submit': 'true',
-                'is_makefile': 'false',
-                'check_type': ProConst.CHECKER_DIFF,
-                "rate_precision": ProConst.RATE_PRECISION_MIN,
             })
 
             res = admin_session.post('manage/pro/update', data={
@@ -83,13 +78,15 @@ class ManageProUpdateTest(AsyncTest):
                     'default': {
                         'time': 1000,
                         'memory': 65536,
+                        'output': 65536,
                     },
-                    'python3': {
+                    Compiler.PYTHON3: {
                         'time': 1500,
-                        'memory': 65536
+                        'memory': 65536,
+                        'output': 65536,
                     },
-                    'gcc': {},
-                    'g++': {
+                    Compiler.GCC: {},
+                    Compiler.GPP: {
                         'timelimit': '',
                         'memlimit': '',
                     }
@@ -110,7 +107,7 @@ class ManageProUpdateTest(AsyncTest):
             chal_id = -1
             def callback():
                 nonlocal chal_id
-                chal_id = self.submit_problem(1, open('tests/static_file/code/tle.py').read(), 'python3', admin_session)
+                chal_id = self.submit_problem(1, open('tests/static_file/code/tle.py').read(), Compiler.PYTHON3, admin_session)
 
             await self.wait_for_judge_finish(callback)
             html = self.get_html(f'chal/{chal_id}', admin_session)

@@ -1,3 +1,4 @@
+import decimal
 import hashlib
 import time
 import asyncio
@@ -9,6 +10,7 @@ import unittest
 import requests
 from bs4 import BeautifulSoup
 from tornado.websocket import websocket_connect
+from services.chal import Compiler, TotalResult, SubtaskResult, TestdataResult, MessageType
 
 from runtests import testing_loop, db
 
@@ -51,16 +53,55 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
     def get_isoformat(self, time: datetime.datetime) -> str:
         return time.isoformat(timespec="milliseconds") + "Z"
 
-    def get_chal_state(self, chal_id: int, session):
+    def get_chal_results(self, chal_id: int, session) -> tuple[TotalResult, dict[int, SubtaskResult], dict[int, TestdataResult]]:
         html = self.get_html(f"chal/{chal_id}", session)
-        all_states = []
-        for tr in html.select("tr.states"):
-            td = tr.select_one("td.state")
-            # NOTE: <td class="state state-1"></td>
-            state = int(td.attrs["class"][1].split("-")[1])
-            all_states.append(state)
 
-        return all_states
+        tds = html.select("#total > tbody > tr > td")
+        # NOTE: <td class="state state-\d+"></td>
+        total_result_message = html.select_one('#challengeTotalResultMessage')
+        self.assertIsNotNone(total_result_message)
+        message_type = MessageType.NONE
+        message = ""
+        if total_result_message.select_one('pre') is not None:
+            message_type = MessageType.TEXT
+            message = total_result_message.select_one('pre').text.strip()
+        elif total_result_message.select_one('div') is not None:
+            message = total_result_message.select_one('div').decode_contents()
+            message_type = MessageType.HTML
+
+        total_result = TotalResult(int(tds[1].attrs['class'][1].split("-")[1]), int(tds[2].text.strip()),
+                    int(tds[3].text.strip()), decimal.Decimal(tds[4].text.strip()), message, message_type)
+        subtask_results = {}
+        for tr in html.select("#subtasks > tbody > tr"):
+            tds = tr.select('td')
+            id = int(tds[0].text.strip())
+            subtask_results[id] = SubtaskResult(id, int(tds[1].attrs['class'][1].split("-")[1]), int(tds[2].text.strip()),
+                    int(tds[3].text.strip()), decimal.Decimal(tds[4].text.strip()))
+
+        testdata_results = {}
+        for tr in html.select("#testdatas > tbody > tr"):
+            if 'collapse' in tr.attrs['class']:
+                continue
+            tds = tr.select('td')
+            id = int(tds[0].text.strip().removesuffix('(Expand)').strip())
+
+            testdata_result_message = html.select_one(f"#challengeTestdataResultMessage{id - 1}").select_one('.card')
+            message_type = MessageType.NONE
+            message = ""
+            if testdata_result_message.select_one('pre') is not None:
+                message = testdata_result_message.select_one('pre').text.strip()
+                message_type = MessageType.TEXT
+            elif testdata_result_message.select_one('div') is not None:
+                message_type = testdata_result_message.select_one('div').decode_contents()
+                message_type = MessageType.HTML
+
+            testdata_results[id] = TestdataResult(id, int(tds[1].attrs['class'][1].split("-")[1]), int(tds[2].text.strip()),
+                    int(tds[3].text.strip()), message, message_type)
+
+
+        return total_result, subtask_results, testdata_results
+
+
 
     async def upload_file(self, file, file_size: int, pack_token: str):
         md5 = hashlib.md5()
@@ -130,7 +171,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(pack_token, "")
         return pack_token
 
-    def submit_problem(self, pro_id: int, code: str, compiler_type: str, session) -> int:
+    def submit_problem(self, pro_id: int, code: str, compiler_type: Compiler, session) -> int:
         res = session.post(
             "submit",
             data={

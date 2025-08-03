@@ -1,10 +1,19 @@
-{% from services.chal import ChalConst %}
+{% from services.chal import ChalConst, MessageType %}
 {% import datetime %}
 <script src="/oj/third/prism.js"></script>
 <link rel="stylesheet" href="/oj/third/prism.css">
+<style>
+/* from .table-sm */
+@media (max-width: 768px) {
+  .mobile-table-sm > :not(caption) > * > * {
+    padding: 0.3rem 0.3rem;
+  }
+}
+</style>
 
 {% set TZ = datetime.timezone(datetime.timedelta(hours=+8)) %}
 <!-- TODO: move timezone to config -->
+<!-- TODO: Testdata Result Message e2etest -->
 
 <script type="text/javascript">
     var ws;
@@ -14,35 +23,110 @@
         {% end %}
     };
 
+    var total_table = document.getElementById("total");
+    var total_result_message_collapse = document.getElementById("total-result-message-accordion");
+    var total_result_message = document.getElementById("challengeTotalResultMessage");
+    function update_total_result(time, memory, state, rate, message, message_type) {
+        let state_element = total_table.querySelector('td.state');
+        state_element.innerHTML = state_map[state];
+        state_element.className = `state state-${state}`;
+        total_table.querySelector('td.time').innerHTML = time;
+        total_table.querySelector('td.memory').innerHTML = memory;
+        total_table.querySelector('td.score').innerHTML = rate;
+
+        if (message_type !== {{ MessageType.NONE.value }}) total_result_message.innerHTML = '';
+        if (message_type === {{ MessageType.TEXT.value }}) {
+            let text = document.createTextNode(message);
+            let pre = document.createElement('pre');
+            pre.appendChild(text);
+            $(total_result_message_collapse).show();
+        } else if (message_type === {{ MessageType.HTML.value }}) {
+            let div = document.createElement('div');
+            div.innerHTML = message;
+            total_result_message.appendChild(div);
+        }
+
+        $(total_result_message_collapse).show();
+    }
+
+    var subtask_table = document.getElementById("subtasks");
+    function update_subtask_result(idx, time, memory, state, rate) {
+        let tr = subtask_table.querySelector(`tr#id${idx}`);
+
+        let state_element = tr.querySelector('td.state');
+        state_element.innerHTML = state_map[state];
+        state_element.className = `state state-${state}`;
+        tr.querySelector('td.time').innerHTML = time;
+        tr.querySelector('td.memory').innerHTML = memory;
+        tr.querySelector('td.score').innerHTML = rate;
+    }
+
+    var testdata_table = document.getElementById("testdatas");
+    function update_testdata_result(idx, time, memory, state, message, message_type) {
+        let tr = testdata_table.querySelector(`tr#id${idx}`);
+        let message_tr = testdata_table.querySelector(`tr#challengeTestdataResultMessage${idx}`);
+
+        let state_element = tr.querySelector('td.state');
+        state_element.innerHTML = state_map[state];
+        state_element.className = `state state-${state}`;
+        tr.querySelector('td.time').innerHTML = time;
+        tr.querySelector('td.memory').innerHTML = memory;
+
+        if (message_type !== {{ MessageType.NONE.value }}) {
+            let message_card = message_tr.querySelector('.card');
+            message_card.innerHTML = '';
+            if (message_type === {{ MessageType.TEXT.value }}) {
+                let text = document.createTextNode(message);
+                let pre = document.createElement('pre');
+                pre.appendChild(text);
+                message_card.appendChild(pre);
+            } else if (message_type === {{ MessageType.HTML.value }}) {
+                let div = document.createElement('div');
+                div.innerHTML = message;
+                message_card.appendChild(div);
+            }
+            $(message_tr).show();
+            $(tr).find('span').show();
+        }
+    }
+
+    function update_state_data(result) {
+        if (result.total_result != undefined) {
+            let total_result = result.total_result;
+            let message = "";
+            let state = total_result.status;
+            if (state === {{ ChalConst.STATE_CE }} || state === {{ ChalConst.STATE_CLE }}) {
+                message = total_result.ce_message;
+            } else if (state === {{ ChalConst.STATE_JE }} || state === {{ ChalConst.STATE_ERR }}) {
+                message = total_result.ie_message;
+            }
+            update_total_result(total_result.time, total_result.memory, total_result.status, total_result.score, message, total_result.message_type);
+
+            for (const [subtask_id, subtask] of Object.entries(result.subtask_results)) {
+                update_subtask_result(subtask_id, subtask.time, subtask.memory, subtask.status, subtask.score);
+            }
+
+            for (const [testdata_id, testdata] of Object.entries(result.testdata_results)) {
+                update_testdata_result(testdata_id, testdata.time, testdata.memory, testdata.status, testdata.message, testdata.message_type);
+            }
+        } else {
+            update_testdata_result(result.id, result.time, result.memory,
+                                    result.status, result.message, result.message_type);
+        }
+    }
+
     function init() {
         const chal_id = "{{ chal.chal_id }}";
         const contest_id = "{{ chal.contest_id }}";
         ws = index.get_ws("chalnewstatesub");
+        ws.onopen = function(e) {
+            ws.send(chal_id);
+        };
 
-        if ((document.querySelectorAll('td.state-{{ ChalConst.STATE_JUDGE }}').length == 0 && document.querySelectorAll('td.state-{{ ChalConst.STATE_NOTSTARTED }}') == 0)) {
-        } else {
-            function update_state_data(chal_state_data) {
-                var states = document.querySelectorAll('tr.states');
-                states.forEach(function(element, idx, arr) {
-                    let state = element.querySelector('td.state');
-                    state.innerHTML = state_map[chal_state_data[idx]['state']];
-                    state.className = `state state-${chal_state_data[idx]['state']}`;
-                    element.querySelector('td.time').innerHTML = chal_state_data[idx]['time'];
-                    element.querySelector('td.memory').innerHTML = Math.round((chal_state_data[idx]['memory'] / 1024));
-                    element.querySelector('td.score').innerHTML = chal_state_data[idx]['rate'];
-                });
-                index.reload();
-            };
-
-            ws.onopen = function(e) {
-                ws.send(chal_id);
-            };
-
-            ws.onmessage = function(e) {
-                var chal_state_data = JSON.parse(e['data']);
-                update_state_data(chal_state_data);
-            };
-        }
+        ws.onmessage = function(e) {
+            var chal_state_data = JSON.parse(e['data']);
+            update_state_data(chal_state_data);
+        };
 
         {% if rechal == True %}
         $('#rechal').on('click', function(e) {
@@ -59,6 +143,7 @@
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.reload();
+                    // TODO: make all state to notstart, memory, time, rate to 0
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
@@ -151,23 +236,45 @@
     </div>
 
     <div class="col-lg-8">
-        <table id="subtasks" class="table">
+        <table id="total" class="table mobile-table-sm">
+            <thead>
+                <tr>
+                    <th>Total</th>
+                    <th>State</th>
+                    <th>Time</th>
+                    <th>Memory</th>
+                    <th>Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="states">
+                    {% set total_result = chal.total_result %}
+                    <td>Total</td>
+                    <td class="state state-{{ total_result.state }}">{{ ChalConst.STATE_LONG_STR[total_result.state] }}</td>
+                    <td class="time">{{ total_result.time }}</td>
+                    <td class="memory">{{ total_result.memory }}</td>
+                    <td class="score">{{ total_result.rate }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table id="subtasks" class="table mobile-table-sm">
             <thead>
                 <tr>
                     <th>Subtask</th>
                     <th>State</th>
-                    <th>Time(ms)</th>
-                    <th>Memory(KB)</th>
-                    <th>Score</th>
+                    <th>Time</th>
+                    <th>Memory</th>
+                    <th>Rate</th>
                 </tr>
             </thead>
             <tbody>
             {% for subtask in chal.subtask_results.values() %}
-                <tr class="states">
+                <tr class="states" id="id{{ subtask.subtask_id }}">
                     <td class="idx">{{ '%04d' % (subtask.subtask_id + 1) }}</td>
                     <td class="state state-{{ subtask.state }}">{{ ChalConst.STATE_LONG_STR[subtask.state] }}</td>
                     <td class="time">{{ subtask.time }}</td>
-                    <td class="memory">{{ round(subtask.memory / 1024) }}</td>
+                    <td class="memory">{{ subtask.memory }}</td>
                     <td class="score">{{ subtask.rate }}</td>
                 </tr>
             {% end %}
@@ -176,24 +283,111 @@
     </div>
 </div>
 
+<div class="row">
+	<div class="accordion" id="testdatas-accordion">
+		<div class="accordion-item">
+			<h2 class="accordion-header">
+				    <button
+						class="accordion-button"
+						type="button"
+						data-bs-toggle="collapse"
+						data-bs-target="#collapse_testdatas"
+						aria-expanded="true"
+						aria-controls="collapseOne"
+					>
+                        Testdata Results
+					</button>
+			</h2>
+			<div id="collapse_testdatas" class="accordion-collapse collapse show" data-bs-parent="#testdatas-accordion">
+				<div class="accordion-body">
+                    <table id="testdatas" class="table mobile-table-sm">
+                        <thead>
+                            <tr>
+                                <th>Testdata</th>
+                                <th>State</th>
+                                <th>Time</th>
+                                <th>Memory</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for testdata_result in chal.testdata_results.values() %}
+                            {% set message = testdata_result.message %}
+                            {% set message_type = testdata_result.message_type %}
+                            {% set show_message = message_type != MessageType.NONE %}
+                            <tr
+                                class="states"
+                                id="id{{ testdata_result.testdata_id }}"
+                                data-bs-toggle="collapse"
+                                role="button"
+                                data-bs-target="#challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
+                            >
+                            <td class="idx">{{ '%04d' % (testdata_result.testdata_id + 1) }}
+                                    <span {% if not show_message %} style="display: none;" {% end %}> (Expand)<span>
+                            </td>
+                                <td class="state state-{{ testdata_result.state }}">{{ ChalConst.STATE_LONG_STR[testdata_result.state] }}</td>
+                                <td class="time">{{ testdata_result.time }}</td>
+                                <td class="memory">{{ testdata_result.memory }}</td>
+                            </tr>
+                            <tr
+                                class="collapse"
+                                id="challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
+                            >
+                                <td colspan="4">
+                                    <div class="card card-body" {% if not show_message %} style="display: none;" {% end %}>
+                                        {% if message != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
+                                            {% if message_type == MessageType.TEXT %}
+                                                <pre>{{message.strip()}}</pre>
+                                            {% elif message_type == MessageType.HTML %}
+                                                <div>{% raw message %}</div>
+                                            {% end %}
+                                        {% end %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% end %}
+                        </tbody>
+                    </table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
 
-<!-- FIXME: Only user in can_see_code_user can view response -->
+
+
+<!-- FIXME: Only user in can_see_code_user can view all message -->
 <!-- TODO: Move response to code.py -->
-{% if response != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
-    <div class="panel panel-default mt-3" id="response">
-        <div class="panel-heading">
-            <span>Compilation Error Message</span>
-            <span class="material-symbols-outlined ms-auto" data-bs-toggle="collapse" data-bs-target="#challengeResponseInfo" aria-expanded="false" aria-controls="challengeResponseInfo">
-                expand_more
-            </span>
-        </div>
-        <div class="panel-body">
-            <pre class="collapse show" id="challengeResponseInfo" style="margin-top: 32px;">
-                {{ response }}
-            </pre>
+
+{% set message = chal.total_result.message %}
+{% set message_type = chal.total_result.message_type %}
+
+<div class="accordion" id="total-result-message-accordion" {% if message == '' or not user.is_kernel() or chal.acct_id != user.acct_id %} style="display: none;" {% end %}>
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+                <button
+                    class="accordion-button"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapse_total_result_message"
+                    aria-expanded="true"
+                    aria-controls="collapseOne"
+                >
+                    Total Result Message
+                </button>
+        </h2>
+        <div id="collapse_total_result_message" class="accordion-collapse collapse show" data-bs-parent="#testdatas-accordion">
+            <div class="accordion-body" id="challengeTotalResultMessage">
+            {% if message != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
+                {% if message_type == MessageType.TEXT %}
+                    <pre>{{message.strip()}}</pre>
+                {% elif message_type == MessageType.HTML %}
+                    <div>{% raw message %}</div>
+                {% end %}
+            {% end %}
+            </div>
         </div>
     </div>
-{% end %}
+</div>
 
 <pre id="code" class="line-numbers"
     data-language=""

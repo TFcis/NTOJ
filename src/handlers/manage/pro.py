@@ -5,15 +5,15 @@ import json
 import os
 
 import tornado.escape
-from msgpack import packb, unpackb
+from msgpack import packb
 from natsort import natsorted
 
 import config
 from handlers.base import RequestHandler, reqenv, require_permission
-from services.chal import ChalConst, ChalService
+from services.chal import ChalConst, ChalService, Compiler, COMPILER_INFOS
 from services.judge import JudgeServerClusterService
 from services.log import LogService
-from services.pro import Limit, ProService, ProConst, SubtaskConfig, Testdata
+from services.pro import Limit, ProService, ProConst, SubtaskConfig, Testdata, CheckerType, SummaryType
 from services.user import UserConst
 from services.pack import PackService
 from utils.numeric import parse_str_to_list
@@ -53,11 +53,27 @@ class ManageProHandler(RequestHandler):
 
         elif page == "filemanager":
             pro_id = int(self.get_argument('proid'))
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
+            if err:
+                return self.error(err)
+
             download = self.get_argument('download', default=None)
             if download:
                 basepath = self.get_argument('path')
                 filename = self.get_argument('filename')
-                if basepath not in ['http', 'res/check', 'res/make']:
+                ALLOW_PATH = ['http', 'res/checker', 'res/grader']
+                if pro.config.has_grader:
+                    used_grader = set()
+                    for compiler in pro.config.allow_compilers:
+                        grader_name = COMPILER_INFOS[compiler].grader_name
+                        if grader_name in used_grader:
+                            continue
+                        grader_path = os.path.join("problem", str(pro_id), "res", "grader", grader_name)
+                        if not os.path.exists(grader_path):
+                            continue
+                        ALLOW_PATH.append(f'res/grader/{grader_name}')
+                        used_grader.add(grader_name)
+                if basepath not in ALLOW_PATH:
                     return self.error(('Eparam', 'Invalid basepath'))
 
 
@@ -96,23 +112,38 @@ class ManageProHandler(RequestHandler):
                         self.error(('Eunk', 'Unknown error'))
                 return
 
-            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
-            if err:
-                return self.error(err)
 
             config = pro.config
             dirs = []
-            if config.is_makefile:
-                files = list(natsorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/res/make/{name}'), os.listdir(f'problem/{pro_id}/res/make'))))
+            if config.has_grader:
+                used_grader = set()
+
+                for compiler in pro.config.allow_compilers:
+                    grader_name = COMPILER_INFOS[compiler].grader_name
+                    if grader_name in used_grader:
+                        continue
+
+                    grader_path = os.path.join("problem", str(pro_id), "res", "grader", grader_name)
+                    if not os.path.exists(grader_path):
+                        continue
+
+                    files = list(natsorted(filter(lambda name: os.path.isfile(os.path.join(grader_path, name)), os.listdir(grader_path))))
+                    dirs.append({
+                        'path': f'res/grader/{grader_name}',
+                        'files': files,
+                    })
+                    used_grader.add(grader_name)
+
+                files = list(natsorted(filter(lambda name: os.path.isfile(f"problem/{pro_id}/res/grader/{name}"), os.listdir(f"problem/{pro_id}/res/grader"))))
                 dirs.append({
-                    'path': 'res/make',
+                    'path': 'res/grader',
                     'files': files,
                 })
 
-            if config.checker_type in [ProConst.CHECKER_IOREDIR, ProConst.CHECKER_CMS]:
-                files = list(natsorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/res/check/{name}'), os.listdir(f'problem/{pro_id}/res/check'))))
+            if config.checker_type in CheckerType.need_build_checkers():
+                files = list(natsorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/res/checker/{name}'), os.listdir(f'problem/{pro_id}/res/checker'))))
                 dirs.append({
-                    'path': 'res/check',
+                    'path': 'res/checker',
                     'files': files,
                 })
 
@@ -498,12 +529,21 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
         elif page == "filemanager":
-            ALLOW_PATH = ['http', 'res/check', 'res/make']
             pro_id = int(self.get_argument('pro_id'))
             basepath = self.get_argument('path')
             err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
             if err:
                 return self.error(err)
+            ALLOW_PATH = ['http', 'res/checker', 'res/grader']
+            if pro.config.has_grader:
+                used_grader = set()
+                for compiler in pro.config.allow_compilers:
+                    grader_name = COMPILER_INFOS[compiler].grader_name
+                    if grader_name in used_grader:
+                        continue
+                    ALLOW_PATH.append(f'res/grader/{grader_name}')
+                    used_grader.add(grader_name)
+
             if basepath not in ALLOW_PATH:
                 return self.error(('Eparam', 'Invalid basepath'))
 
@@ -663,22 +703,66 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
         elif page == "update":
-            if reqtype == 'updatepro':
+            if reqtype == 'updategeneral':
                 pro_id = int(self.get_argument('pro_id'))
                 name = self.get_argument('name')
                 status = int(self.get_argument('status'))
                 tags = self.get_argument('tags')
                 allow_submit = self.get_argument('allow_submit') == "true"
-                # NOTE: subtask config
+
+                err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
+                if err:
+                    return self.error(err)
+                assert pro
+                pro.name = name
+                pro.status = status
+                pro.tags = tags
+                pro.allow_submit = allow_submit
+                err, _ = await ProService.inst.update_pro(pro)
+
+                await LogService.inst.add_log(
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.general',
+                    {
+                        'name': name,
+                        'status': status,
+                        'tags': tags,
+                        'allow_submit': allow_submit,
+                    }
+                )
+                if err:
+                    return self.error(err)
+
+                self.error(('S', ''))
+
+            elif reqtype == "updatejudge":
+                # TODO: Exception handle
+                pro_id = int(self.get_argument('pro_id'))
                 rate_precision = int(self.get_argument('rate_precision'))
                 if rate_precision > ProConst.RATE_PRECISION_MAX or rate_precision < ProConst.RATE_PRECISION_MIN:
                     return self.error(('Eparam', 'Invalid rate precision'))
 
-                is_makefile = self.get_argument('is_makefile') == "true"
-                check_type = int(self.get_argument('check_type'))
+                has_grader = self.get_argument('has_grader') == "true"
+                userprog_compile_args = self.get_argument('userprog_compile_args')
+                checker_type = int(self.get_argument('checker_type'))
+                checker_compiler = self.get_argument('checker_compiler')
+                if checker_compiler:
+                    checker_compiler = Compiler(int(checker_compiler))
+                else:
+                    checker_compiler = None
+                checker_compile_args = self.get_argument('checker_compile_args')
+                summary_type = SummaryType(int(self.get_argument('summary_type')))
+                summary_compiler = self.get_argument('summary_compiler')
+                if summary_compiler:
+                    summary_compiler = Compiler(int(summary_compiler))
+                else:
+                    summary_compiler = None
+                summary_compile_args = self.get_argument('summary_compile_args')
+                allow_compilers = self.get_arguments("allow_compilers[]")
+                allow_compilers = set(map(lambda x: Compiler(int(x)),
+                                          filter(lambda compiler: int(compiler) in Compiler._value2member_map_, allow_compilers)))
 
                 chalmeta = ''
-                if check_type == ProConst.CHECKER_IOREDIR:
+                if checker_type == CheckerType.IOREDIR:
                     chalmeta = self.get_argument('chalmeta')
                     try:
                         json.loads(chalmeta)
@@ -688,47 +772,51 @@ class ManageProHandler(RequestHandler):
                 err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
                 if err:
                     return self.error(err)
-                pro.name = name
-                pro.status = status
-                pro.tags = tags
-                pro.allow_submit = allow_submit
-                err, _ = await ProService.inst.update_pro(pro)
+                assert pro
 
                 config = pro.config
-                if (
-                    config.is_makefile != is_makefile
-                    or config.checker_type != check_type
-                    or config.rate_precision != rate_precision
-                ):
-                    old_is_makefile = config.is_makefile
-                    old_check_type = config.checker_type
-                    custom_check_type = [ProConst.CHECKER_IOREDIR, ProConst.CHECKER_CMS]
-                    if not old_is_makefile and is_makefile:
-                        if not os.path.exists(f'problem/{pro_id}/res/make'):
-                            os.mkdir(f'problem/{pro_id}/res/make')
-                    config.is_makefile = is_makefile
+                assert config
+                if has_grader:
+                    grader_path = os.path.join("problem", str(pro_id), "res", "grader")
+                    if not os.path.exists(grader_path):
+                        os.mkdir(grader_path)
 
-                    if old_check_type not in custom_check_type and check_type in custom_check_type:
-                        if not os.path.exists(f'problem/{pro_id}/res/check'):
-                            os.mkdir(f'problem/{pro_id}/res/check')
-                    config.checker_type = check_type
+                    used_grader = set()
+                    for compiler in pro.config.allow_compilers:
+                        grader_name = COMPILER_INFOS[compiler].grader_name
+                        if grader_name in used_grader:
+                            continue
+                        grader_compiler_path = os.path.join(grader_path, grader_name)
+                        if not os.path.exists(grader_compiler_path):
+                            os.mkdir(grader_compiler_path)
+                        used_grader.add(grader_name)
+                config.has_grader = has_grader
 
-                    if check_type == ProConst.CHECKER_IOREDIR:
-                        config.chalmeta = chalmeta
+                config.userprog_compile_args = userprog_compile_args
+                need_build_checkers = CheckerType.need_build_checkers()
+                if checker_type in need_build_checkers:
+                    if not os.path.exists(f'problem/{pro_id}/res/checker'):
+                        os.mkdir(f'problem/{pro_id}/res/checker')
+                config.checker_type = CheckerType(checker_type)
+                config.checker_compiler = checker_compiler
+                config.checker_compile_args = checker_compile_args
 
-                    config.rate_precision = rate_precision
-                    await ProService.inst.update_pro_config(pro_id, config)
+                if summary_type == SummaryType.CUSTOM:
+                    if not os.path.exists(f'problem/{pro_id}/res/summary'):
+                        os.mkdir(f'problem/{pro_id}/res/summary')
+                config.summary_type = summary_type
+                config.summary_compiler = summary_compiler
+                config.summary_compile_args = summary_compile_args
+                config.allow_compilers = allow_compilers
+
+                if checker_type == CheckerType.IOREDIR:
+                    config.chalmeta = chalmeta
+                config.rate_precision = rate_precision
+                await ProService.inst.update_pro_config(pro_id, config)
                 await LogService.inst.add_log(
-                    f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.pro',
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.judge',
                     {
-                        'name': name,
-                        'status': status,
-                        'tags': tags,
-                        'allow_submit': allow_submit,
-                        'is_makefile': is_makefile,
-                        'chalmeta': chalmeta,
-                        'check_type': check_type,
-                        'rate_precision': rate_precision,
+
                     }
                 )
                 if err:
@@ -781,19 +869,22 @@ class ManageProHandler(RequestHandler):
                 err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
                 if err:
                     return self.error(err)
+                assert pro
 
-                ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
-                if pro.config.is_makefile:
-                    ALLOW_COMPILERS = {'gcc', 'g++', 'clang', 'clang++', 'default'}
+                ALLOW_COMPILERS = pro.config.allow_compilers.copy()
+                ALLOW_COMPILERS.add('default')
 
                 new_limits: dict[str, Limit] = {}
                 for compiler_type, limit in limits.items():
+                    if compiler_type != "default":
+                        compiler_type = Compiler(int(compiler_type))
                     if compiler_type not in ALLOW_COMPILERS:
                         continue
-                    new_limits[compiler_type] = Limit(0, 0)
+                    new_limits[compiler_type] = Limit(0, 0, 0)
                     try:
                         new_limits[compiler_type].time = max(int(limit['time']), 0)
-                        new_limits[compiler_type].memory = max(int(limit['memory']) * 1024, 0)
+                        new_limits[compiler_type].memory = max(int(limit['memory']), 0)
+                        new_limits[compiler_type].output = max(int(limit['output']), 0)
                     except (ValueError, KeyError):
                         new_limits.pop(compiler_type)
                         continue
@@ -863,7 +954,7 @@ class ManageProHandler(RequestHandler):
             async def _rechal(rechals):
                 for chal_id, compiler_type in rechals:
                     _, _ = await ChalService.inst.reset_chal(chal_id)
-                    _, _ = await ChalService.inst.emit_chal(chal_id, pro_id, pro.config, compiler_type, ChalConst.NORMAL_REJUDGE_PRI)
+                    _, _ = await ChalService.inst.emit_chal(chal_id, pro_id, compiler_type, ChalConst.NORMAL_REJUDGE_PRI, skip_nonac=False)
 
             await asyncio.create_task(_rechal(rechals=result))
 
