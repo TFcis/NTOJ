@@ -18,7 +18,7 @@ class SubmitTest(AsyncTest):
             res = user_session.post('submit', data={
                 'reqtype': 'submit',
                 'pro_id': 1,
-                'code': open('tests/static_file/code/large.cpp').read(),
+                'code': '1110' * 1110 * 1110,
                 'compiler_type': Compiler.GPP,
             })
             self.assertAPIReturnValue(res.text, ('Ecodemax', 'Submitted code too long'))
