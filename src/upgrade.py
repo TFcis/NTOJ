@@ -69,7 +69,7 @@ with tempfile.TemporaryDirectory() as working_path:
                 cwd=f'{working_path}/NTOJ/migration',
                 shell=True)
 
-    subprocess.run(["""find /srv/testing_oj/handlers ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/oj\\//testing-oj\\//g' {} +"""])
-    subprocess.run(["""find /srv/testing_oj/handlers ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/\\/oj/\\/testing-oj/g' {} +"""])
-    subprocess.run(["""find /srv/testing_oj/static ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/oj\\//testing-oj\\//g' {} +"""])
-    subprocess.run(["""find /srv/testing_oj_web/oj ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/oj\\//testing-oj\\//g' {} +"""])
+    subprocess.run(["""find /srv/testing_oj/handlers ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/oj\\//testing-oj\\//g' {} +"""], shell=True)
+    subprocess.run(["""find /srv/testing_oj/handlers ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/\\/oj/\\/testing-oj/g' {} +"""], shell=True)
+    subprocess.run(["""find /srv/testing_oj/static ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/oj\\//testing-oj\\//g' {} +"""], shell=True)
+    subprocess.run(["""find /srv/testing_oj_web/oj ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/oj\\//testing-oj\\//g' {} +"""], shell=True)
