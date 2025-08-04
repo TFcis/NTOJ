@@ -112,7 +112,7 @@ class ContestManageProHandler(RequestHandler):
             async def _rechal(rechals):
                 for chal_id, compiler_type in rechals:
                     _, _ = await ChalService.inst.reset_chal(chal_id)
-                    _, _ = await ChalService.inst.emit_chal(chal_id, pro_id, pro.config, compiler_type, ChalConst.CONTEST_REJUDGE_PRI)
+                    _, _ = await ChalService.inst.emit_chal(chal_id, pro_id, compiler_type, ChalConst.CONTEST_REJUDGE_PRI, skip_nonac=False)
 
             await asyncio.create_task(_rechal(rechals=result))
             self.error(('S', f'Problem(#{pro_id}) is rechallenging.'))

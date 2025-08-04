@@ -2,13 +2,14 @@ import time
 import base64
 import pickle
 from dataclasses import dataclass
-from typing import List, Literal, Tuple
+from typing import List, Tuple
 
 import asyncpg
 import bcrypt
 from msgpack import unpackb
 
 from services.log import LogService
+from services.chal import Compiler
 from utils.dbg import dbg_print
 
 
@@ -28,7 +29,6 @@ class UserConst:
 
     ACCTID_GUEST = 0
 
-
 @dataclass
 class Account:
     acct_id: int
@@ -39,7 +39,7 @@ class Account:
     cover: str
     motto: str
     lastip: str
-    last_compiler: str
+    last_compiler: Compiler
     proclass_collection: list[int]
 
     def is_kernel(self):
@@ -50,7 +50,7 @@ class Account:
 
 
 GUEST_ACCOUNT = Account(
-    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', last_compiler='', motto='', proclass_collection=[]
+    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', last_compiler=Compiler.GPP, motto='', proclass_collection=[]
 )
 
 
@@ -248,7 +248,6 @@ class UserService:
         return None, acct
 
     async def update_acct(self, acct: Account):
-        from services.chal import ChalConst
         if acct.acct_type not in [UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER]:
             return ('Eparam', 'Invalid account type'), None
         name_len = len(acct.name)
@@ -262,7 +261,7 @@ class UserService:
         if motto_len > UserConst.MOTTO_MAX:
             return ('Emottomax', 'Motto too long'), None
 
-        if acct.last_compiler not in ChalConst.ALLOW_COMPILERS:
+        if Compiler(acct.last_compiler) not in Compiler:
             return ('Eparam', 'Invalid last compiler option'), None
 
         async with self.db.acquire() as con:
@@ -289,8 +288,6 @@ class UserService:
             )
             if len(result) != 1:
                 return ('Enoext', 'Account not found'), None
-
-            await con.execute('REFRESH MATERIALIZED VIEW test_valid_rate;')
 
         await self.rs.delete(f'account@{acct.acct_id}')
         await self.rs.delete('acctlist')

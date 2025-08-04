@@ -1,9 +1,8 @@
-import json
-
 import tornado.escape
 
 from handlers.base import RequestHandler, reqenv
 from services.code import CodeService
+from services.chal import Compiler
 
 
 class CodeHandler(RequestHandler):
@@ -19,13 +18,13 @@ class CodeHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        if compiler_type in ['gcc', 'g++', 'clang', 'clang++']:
+        if compiler_type in [Compiler.GCC, Compiler.CLANG, Compiler.GPP, Compiler.CLANGPP]:
             compiler_type = 'cpp'
-        elif compiler_type == 'rustc':
+        elif compiler_type == Compiler.RUST:
             compiler_type = 'rust'
-        elif compiler_type in ['python3', 'pypy3']:
+        elif compiler_type == Compiler.PYTHON3:
             compiler_type = 'python'
-        elif compiler_type == 'java':
+        elif compiler_type == Compiler.JAVA:
             compiler_type = 'java'
         else:
             compiler_type = 'cpp'

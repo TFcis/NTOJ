@@ -53,6 +53,7 @@
     }
 </script>
 
+{% from services.chal import COMPILER_INFOS %}
 <link rel="stylesheet" type="text/css" href="/oj/submit.css">
 
 <script type="text/javascript">
@@ -133,9 +134,8 @@
             <div class="mb-1">
                 <label for="" class="form-label">Compiler</label>
                 <select id="compilerList" class="form-select">
-                    <!-- TODO:  -->
                     {% for compiler in allow_compilers %}
-                        <option value="{{ compiler }}" {% if user.last_compiler == compiler %} selected {% end %}>{{ ChalConst.COMPILER_NAME[compiler] }}</option>
+                        <option value="{{ compiler }}" {% if user.last_compiler == compiler %} selected {% end %}>{{ COMPILER_INFOS[compiler].version_name }}</option>
                     {% end %}
                 </select>
             </div>

@@ -7,6 +7,7 @@ from tornado.websocket import websocket_connect
 
 from services.contests import ContestMode, RegMode
 from services.pro import ProConst
+from services.chal import Compiler
 from .util import AsyncTest, AccountContext
 
 
@@ -46,7 +47,7 @@ class ContestTest(AsyncTest):
                 'reg_mode': RegMode.INVITED,
                 'reg_end': self.get_isoformat(reg_end),
 
-                'allow_compilers[]': ['g++', 'clang++'],
+                'allow_compilers[]': [Compiler.GPP, Compiler.CLANGPP],
                 'is_public_scoreboard': 'true',
                 'allow_view_other_page': 'true',
                 'hide_admin': 'true',
@@ -415,7 +416,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': 'cc1',
-                'compiler_type': 'g++',
+                'compiler_type': Compiler.GPP,
             })
             self.assertAPIReturnValue(res.text, ('Enoext', 'Problem not in contest'))
 
@@ -423,7 +424,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 7,
                 'code': 'cc2',
-                'compiler_type': 'python3',
+                'compiler_type': Compiler.PYTHON3,
             })
             self.assertAPIReturnValue(res.text, ('Ecomp', 'The compiler is not allowed'))
 
@@ -431,7 +432,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 7,
                 'code': open('tests/static_file/code/toj674.ac.cpp').read(),
-                'compiler_type': 'g++',
+                'compiler_type': Compiler.GPP,
             })
             self.assertAPIReturnValue(res.text, ('S', 17))
 
@@ -450,7 +451,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 7,
                 'code': open('tests/static_file/code/toj674.ac.cpp').read(),
-                'compiler_type': 'g++',
+                'compiler_type': Compiler.GPP,
             })
             self.assertAPIReturnValue(res.text, ('Esame', 'Do not submit same code'))
 
@@ -458,7 +459,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 7,
                 'code': 'cc3',
-                'compiler_type': 'g++',
+                'compiler_type': Compiler.GPP,
             })
             res = json.loads(res.text)
             self.assertEqual(res['status'], 'Einternal')

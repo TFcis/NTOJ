@@ -43,11 +43,11 @@ jobs:
       - name: Deploy NTOJ-Judge
         run: |
           cd $HOME
-          git clone https://github.com/tobiichi3227/NTOJ-Judge
-          cd NTOJ-Judge/src
+          git clone https://github.com/tobiichi3227/NTOJ-Judge-Rewrite
+          cd NTOJ-Judge-Rewrite/src
+          cd default-checker && make && cd ..
           sudo pip3 install tornado cffi --break-system-packages
-          chmod +x ./runserver.sh
-          sudo ./runserver.sh > output.log 2>&1 &
+          sudo python3 server.py > output.log 2>&1 &
 
       - name: Run e2e test
         run: |
@@ -57,7 +57,7 @@ jobs:
 
       - name: Output judge log
         run: |
-          cd $HOME/NTOJ-Judge/src
+          cd $HOME/NTOJ-Judge-Rewrite/src
           cat output.log
 
       - name: Upload Coverage Report

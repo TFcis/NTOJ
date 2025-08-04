@@ -1,9 +1,8 @@
 import datetime
-import json
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
-from services.chal import ChalConst
+from services.chal import ChalConst, Compiler
 from services.user import UserConst
 from services.contests import ContestService, ContestMode, RegMode, UserStatus
 
@@ -57,7 +56,8 @@ class ContestManageGeneralHandler(RequestHandler):
             except ValueError:
                 freeze_scoreboard_period = 0
 
-            allow_compilers = list(filter(lambda compiler: compiler in ChalConst.ALLOW_COMPILERS, allow_compilers))
+            allow_compilers = set(map(lambda x: Compiler(int(x)),
+                                      filter(lambda compiler: int(compiler) in Compiler._value2member_map_, allow_compilers)))
 
             err, contest_start = trantime(contest_start)
             if err:

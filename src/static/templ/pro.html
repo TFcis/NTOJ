@@ -1,3 +1,4 @@
+{% from services.chal import COMPILER_INFOS %}
 <link rel="stylesheet" type="text/css" href="/oj/pro.css">
 <link rel="stylesheet" href="/oj/third/pdf_viewer.min.css"/>
 <script type="text/x-mathjax-config">
@@ -150,7 +151,7 @@
     }
 </script>
 <div class="row">
-    <div id="side" class="col-lg-2 col-12 mt-lg-2">
+    <div id="side" class="col-lg-3 col-12 mt-lg-2">
         <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
         {% if can_submit and pro.allow_submit %}
             {% if contest and not contest.is_end() %}
@@ -212,48 +213,62 @@
             {% end %}
         {% end %}
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Lang</th>
-                    <th>Time</th>
-                    <th>Memory</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for language, limit in pro.config.limits.items() %}
-                <tr>
-                    <td>{{ language }}</td>
-                    <td>{{ limit.time }} </td>
-                    <td>{{ limit.memory // 1024 }} </td>
-                </tr>
-                {% end %}
-            </tbody>
-        </table>
-
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Subtask</th>
-                    <th>Rate</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for subtask_id, subtask in pro.config.subtask_configs.items() %}
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
                     <tr>
-                        <td>{{ '%04d' % (subtask_id + 1) }}</td>
-                        <td>{{ subtask.rate }}</td>
+                        <th>Compiler</th>
+                        <th>Time(ms)</th>
+                        <th>Memory(Kib)</th>
+                        <th>Output(Kib)</th>
                     </tr>
-                {% end %}
-            </tbody>
-        </table>
-        {% if user.is_kernel() %}
-            <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro.pro_id}}">Manage</a>
-        {% end %}
+                </thead>
+                <tbody>
+                    {% set default = pro.config.limits.pop('default') %}
+                    <tr>
+                        <td>default</td>
+                        <td>{{ default.time }} </td>
+                        <td>{{ default.memory }} </td>
+                        <td>{{ default.output }} </td>
+                    </tr>
+
+                    {% for compiler, limit in pro.config.limits.items() %}
+                    <tr>
+                        <td>{{ COMPILER_INFOS[int(compiler)].short_name }}</td>
+                        <td>{{ limit.time }} </td>
+                        <td>{{ limit.memory }} </td>
+                        <td>{{ limit.output }} </td>
+                    </tr>
+                    {% end %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Subtask</th>
+                        <th>Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subtask_id, subtask in pro.config.subtask_configs.items() %}
+                        <tr>
+                            <td>{{ '%04d' % (subtask_id + 1) }}</td>
+                            <td>{{ subtask.rate }}</td>
+                        </tr>
+                    {% end %}
+                </tbody>
+            </table>
+            {% if user.is_kernel() %}
+                <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro.pro_id}}">Manage</a>
+            {% end %}
+        </div>
     </div>
 
     <!-- TODO: Remove fixed height -->
-    <div id="cont" class="col-lg-10 col-12" style="height: 904px;">
+    <div id="cont" class="col-lg-9 col-12" style="height: 904px;">
         <strong>Loading...</strong>
     </div>
 </div>

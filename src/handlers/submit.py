@@ -1,12 +1,11 @@
-import json
 import time
 import zlib
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
-from services.chal import ChalConst, ChalService
+from services.chal import ChalConst, ChalService, Compiler
 from services.judge import JudgeServerClusterService
-from services.pro import ProService, ProConst
+from services.pro import ProService, ProConst, Problem
 from services.user import UserService, UserConst
 from services.contests import UserStatus
 
@@ -23,7 +22,6 @@ class SubmitHandler(RequestHandler):
         pro_id = int(pro_id)
 
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
-        allow_compilers = ChalConst.ALLOW_COMPILERS
         if self.contest:
             if not self.contest.is_running() and not self.contest.is_admin(self.acct):
                 return self.error(PERMISSION_DENIED_ERROR)
@@ -31,28 +29,26 @@ class SubmitHandler(RequestHandler):
             if not self.contest.is_pro(pro_id):
                 return self.error(('Enoext', 'Problem not in contest'))
 
-            allow_compilers = self.contest.allow_compilers
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
         else:
             if self.acct.is_kernel():
                 allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
-        can_submit = JudgeServerClusterService.inst.is_server_online()
-
-        if not can_submit:
-            self.finish('<h1 style="color: red;">All Judge Server Offline</h1>')
-            return
-
-        pro_id = int(pro_id)
         err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
             return self.error(err)
 
+        can_submit = JudgeServerClusterService.inst.is_server_online()
+        if not can_submit:
+            self.finish('<h1 style="color: red;">All Judge Server Offline</h1>')
+            return
+
+        allow_compilers = pro.config.allow_compilers
+        if self.contest:
+            allow_compilers.intersection_update(self.contest.allow_compilers)
+
         if not pro.allow_submit:
             return self.error(('Eacces', 'Problem did not allow submit'))
-
-        if pro.config.is_makefile:
-            allow_compilers = list(filter(lambda compiler: compiler in ['gcc', 'g++', 'clang', 'clang++'], allow_compilers))
 
         await self.render('submit', pro=pro,
                           allow_compilers=allow_compilers, contest_id=self.contest.contest_id if self.contest else 0)
@@ -77,10 +73,13 @@ class SubmitHandler(RequestHandler):
         if reqtype == 'submit':
             pro_id = int(self.get_argument('pro_id'))
             code = self.get_argument('code')
-            compiler_type = str(self.get_argument('compiler_type'))
+            try:
+                compiler_type = Compiler(int(self.get_argument('compiler_type')))
+            except ValueError:
+                return self.error(('Ecomp', 'The compiler is not allowed'))
 
             if self.contest:
-                pri = ChalConst.CONTEST_PRI
+                priority = ChalConst.CONTEST_PRI
                 if not self.contest.is_running() and not self.contest.is_admin(self.acct):
                     return self.error(PERMISSION_DENIED_ERROR)
 
@@ -88,15 +87,15 @@ class SubmitHandler(RequestHandler):
                     return self.error(('Enoext', 'Problem not in contest'))
 
             else:
-                pri = ChalConst.NORMAL_PRI
+                priority = ChalConst.NORMAL_PRI
                 if self.acct.is_kernel():
                     allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
-            if err := await self.is_allow_submit(code, compiler_type, pro_id):
-                return self.error(err)
-
             err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
             if err:
+                return self.error(err)
+
+            if err := await self.is_allow_submit(code, compiler_type, pro):
                 return self.error(err)
 
             if not pro.allow_submit:
@@ -117,9 +116,9 @@ class SubmitHandler(RequestHandler):
             if ((self.contest is None and self.acct.is_kernel())  # not in contest
                     or (self.contest and self.contest.is_admin(self.acct))):  # in contest
                 if self.contest:
-                    pri = ChalConst.CONTEST_REJUDGE_PRI
+                    priority = ChalConst.CONTEST_REJUDGE_PRI
                 else:
-                    pri = ChalConst.NORMAL_REJUDGE_PRI
+                    priority = ChalConst.NORMAL_REJUDGE_PRI
                     allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
                 err, _ = await ChalService.inst.reset_chal(chal_id)
@@ -134,7 +133,7 @@ class SubmitHandler(RequestHandler):
         else:
             return self.error(('Eunk', 'Unknown error'))
 
-        err, _ = await ChalService.inst.emit_chal(chal_id, pro_id, pro.config, compiler_type, pri)
+        err, _ = await ChalService.inst.emit_chal(chal_id, pro_id, compiler_type, priority, skip_nonac=False)
         if err:
             return self.error(err)
 
@@ -143,12 +142,13 @@ class SubmitHandler(RequestHandler):
 
         self.error(('S', chal_id))
 
-    async def is_allow_submit(self, code: str, compiler_type: str, pro_id: int):
+    async def is_allow_submit(self, code: str, compiler_type: Compiler, pro: Problem):
         # limits variable config
-        allow_compilers = ChalConst.ALLOW_COMPILERS
+        pro_id = pro.pro_id
+        allow_compilers = pro.config.allow_compilers
         submit_cd_time = 30
         if self.contest:
-            allow_compilers = self.contest.allow_compilers
+            allow_compilers.intersection_update(self.contest.allow_compilers)
             submit_cd_time = self.contest.submission_cd_time
 
         if len(code.strip()) == 0:
@@ -157,7 +157,6 @@ class SubmitHandler(RequestHandler):
         if len(code) > ProConst.CODE_MAX:
             return ('Ecodemax', 'Submitted code too long')
 
-        # TODO: if problem is makefile type, we should restrict compiler type
         if compiler_type not in allow_compilers:
             return ('Ecomp', 'The compiler is not allowed')
 

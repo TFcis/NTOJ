@@ -5,6 +5,7 @@ import pickle
 
 import asyncpg
 
+from services.chal import Compiler
 from services.user import Account
 
 
@@ -49,7 +50,7 @@ class Contest:
     reg_mode: RegMode
     reg_end: datetime.datetime
 
-    allow_compilers: list[str] = field(default_factory=list)
+    allow_compilers: set[Compiler] = field(default_factory=set)
     is_public_scoreboard: bool = False
     allow_view_other_page: bool = False  # TODO: finish allow view other page
     hide_admin: bool = True
@@ -442,7 +443,7 @@ class ContestService:
     async def get_ioi2017_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
         res = await self.db.fetch('''
         WITH contest_challenges AS (
-            SELECT chal_id, acct_id, pro_id
+            SELECT chal_id, acct_id, pro_id, timestamp
             FROM challenge
             WHERE contest_id = $1 AND timestamp < $3
         ),
@@ -462,7 +463,7 @@ class ContestService:
                     WHEN t.state = 1 AND t.rate IS NOT NULL THEN t.rate
                     ELSE 0
                 END AS rate,
-                t.timestamp
+                cc.timestamp
             FROM problem_tests pt
             JOIN subtask_result t ON pt.pro_id = t.pro_id AND pt.subtask_id = t.subtask_id
             JOIN contest_challenges cc ON t.chal_id = cc.chal_id
