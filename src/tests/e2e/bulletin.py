@@ -36,6 +36,29 @@ class BulletinTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
 
+            html = self.get_html('manage/bulletin', admin_session)
+            trs = html.select('tbody > tr')
+            self.assertEqual(len(trs), 2)
+            self.assertEqual(trs[0].select('td')[0].text.strip(), 'bulletin 1')
+            self.assertIsNone(trs[0].select('td')[0].select_one('span'))
+            self.assertEqual(trs[0].select('td')[1].text.strip(), 'white')
+            self.assertEqual(trs[0].select('td')[2].text.strip(), 'admin')
+
+            self.assertIn('bulletin 2 (pinned)', trs[1].select('td')[0].text.strip())
+            self.assertIsNotNone(trs[1].select('td')[0].select_one('span'))
+            self.assertEqual(trs[1].select('td')[1].text.strip(), 'red')
+            self.assertEqual(trs[1].select('td')[2].text.strip(), 'admin')
+
+            html = self.get_html('manage/bulletin/update?bulletinid=1', admin_session)
+            self.assertNotIn('checked', html.select_one('input#pinned').attrs)
+            self.assertEqual(html.select_one('input#title').attrs['value'].strip(), 'bulletin 1')
+            self.assertEqual(html.select_one('input#color').attrs['value'].strip(), 'white')
+
+            html = self.get_html('manage/bulletin/update?bulletinid=2', admin_session)
+            self.assertIn('checked', html.select_one('input#pinned').attrs)
+            self.assertEqual(html.select_one('input#title').attrs['value'].strip(), 'bulletin 2 (pinned)')
+            self.assertEqual(html.select_one('input#color').attrs['value'].strip(), 'red')
+
             res = admin_session.post('manage/bulletin/add', data={
                 'reqtype': 'add',
                 'title': '',

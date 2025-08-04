@@ -25,13 +25,11 @@
             <tr>
                 <th scope="row">{{ bulletin['bulletin_id'] }}</th>
                 <td>
-                    <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/"
-                        <font size=5>
+                    <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/">
                         {% if bulletin['pinned'] %}
                             <span class="material-symbols-outlined">push_pin</span>
                         {% end %}
-                            {{ bulletin['title'] }}
-                        </font>
+                        {{ bulletin['title'] }}
                     </a>
                 </td>
                 <td style="color: {{ bulletin['color'] }}">{{ bulletin['color'] }}</td>

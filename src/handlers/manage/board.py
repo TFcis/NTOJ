@@ -62,7 +62,7 @@ class ManageBoardHandler(RequestHandler):
             acct_list = parse_str_to_list(acct_list_str)
             pro_list = parse_str_to_list(pro_list_str)
             await LogService.inst.add_log(
-                f"{self.acct.name} was added to the contest \"{name}\".", 'manage.board.add',
+                f"{self.acct.name} was added to the board \"{name}\".", 'manage.board.add',
                 {
                     "name": name,
                     "status": status,
@@ -99,7 +99,7 @@ class ManageBoardHandler(RequestHandler):
             pro_list = parse_str_to_list(pro_list_str)
 
             await LogService.inst.add_log(
-                f"{self.acct.name} was updated in the contest \"{name}\".", 'manage.board.update',
+                f"{self.acct.name} was updated in the board \"{name}\".", 'manage.board.update',
                 {
                     "name": name,
                     "status": status,
@@ -117,6 +117,6 @@ class ManageBoardHandler(RequestHandler):
             board_id = int(self.get_argument('board_id'))
             await BoardService.inst.remove_board(board_id)
             await LogService.inst.add_log(
-                f"{self.acct.name} was removed the contest \"{board_id}\".", 'manage.board.remove'
+                f"{self.acct.name} was removed the board \"{board_id}\".", 'manage.board.remove'
             )
             self.error(('S', ''))

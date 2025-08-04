@@ -77,7 +77,7 @@ font-weight: bolder;
         secs %= 3600;
         mm = round(secs / 60) % 60;
 
-        return (dd > 0 ? (dd + ' Day' + (Math.abs(dd) > 1 ? 's ': ' ')) : '')
+        return (dd != 0 ? (dd + ' Day' + (Math.abs(dd) > 1 ? 's ': ' ')) : '')
                 + hh + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
     }
 

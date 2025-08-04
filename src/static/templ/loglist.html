@@ -37,7 +37,7 @@
             {% for log in loglist %}
                 <tr>
                     <td class="id"><a href="/oj/log/{{ log['log_id'] }}/">{{ log['log_id'] }}</a></td>
-                    <td>{% raw log['message'] %}</td>
+                    <td>{{ log['message'] }}</td>
                     <td>{{ log['timestamp'] }}</td>
                 </tr>
             {% end %}

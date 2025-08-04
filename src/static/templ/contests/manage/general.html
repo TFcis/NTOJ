@@ -140,8 +140,8 @@
         <div class="mb-1">
             <label for="contestMode" class="form-label">Contest Mode</label>
             <select id="contestMode" class="form-select">
-                <option value="{{ ContestMode.IOI.value }}"{% if contest.contest_mode == ContestMode.IOI %} selected {% end %}>IOI</option>
-                <option value="{{ ContestMode.ACM.value }}"{% if contest.contest_mode == ContestMode.ACM %} selected {% end %}>ACM</option>
+                <option value="{{ ContestMode.IOI }}"{% if contest.contest_mode == ContestMode.IOI %} selected {% end %}>IOI</option>
+                <option value="{{ ContestMode.ACM }}"{% if contest.contest_mode == ContestMode.ACM %} selected {% end %}>ACM</option>
             </select>
         </div>
 
@@ -174,9 +174,9 @@
         <div class="mb-1">
             <label for="regMode" class="form-label">Registration Mode</label>
             <select id="regMode" class="form-select">
-                <option value="{{ RegMode.INVITED.value }}"{% if contest.reg_mode == RegMode.INVITED %} selected {% end %}>Invited</option>
-                <option value="{{ RegMode.FREE_REG.value }}"{% if contest.reg_mode == RegMode.FREE_REG %} selected {% end %}>Free registration</option>
-                <option value="{{ RegMode.REG_APPROVAL.value }}"{% if contest.reg_mode == RegMode.REG_APPROVAL %} selected {% end %}>Free registration but need approval</option>
+                <option value="{{ RegMode.INVITED }}"{% if contest.reg_mode == RegMode.INVITED %} selected {% end %}>Invited</option>
+                <option value="{{ RegMode.FREE_REG }}"{% if contest.reg_mode == RegMode.FREE_REG %} selected {% end %}>Free registration</option>
+                <option value="{{ RegMode.REG_APPROVAL }}"{% if contest.reg_mode == RegMode.REG_APPROVAL %} selected {% end %}>Free registration but need approval</option>
             </select>
         </div>
 

@@ -39,7 +39,7 @@ class ContestManageProHandler(RequestHandler):
                 return self.error(('Eexist', f'Problem(#{pro_id}) is already in contest'))
 
             self.contest.pro_list[pro_id] = {
-                "score_type": ProblemScoreType.IOI2017.value
+                "score_type": ProblemScoreType.IOI2017
             }
 
             await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
@@ -62,7 +62,7 @@ class ContestManageProHandler(RequestHandler):
             pro_id = parse_str_to_list(pro_id)
             for p_id in pro_id:
                 self.contest.pro_list[p_id] = {
-                    "score_type": ProblemScoreType.IOI2017.value
+                    "score_type": ProblemScoreType.IOI2017
                 }
 
             await ContestService.inst.update_contest(self.acct, self.contest, prolist_updated=True)
@@ -96,8 +96,8 @@ class ContestManageProHandler(RequestHandler):
                 result = await con.fetch(
                     f'''
                         SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"
-                        INNER JOIN "challenge_state"
-                        ON "challenge"."chal_id" = "challenge_state"."chal_id" AND "challenge"."contest_id" = {self.contest.contest_id}
+                        INNER JOIN "total_result"
+                        ON "challenge"."chal_id" = "total_result"."chal_id" AND "challenge"."contest_id" = {self.contest.contest_id}
                         WHERE "pro_id" = $1;
                     ''',
                     pro_id
@@ -110,15 +110,9 @@ class ContestManageProHandler(RequestHandler):
 
             # TODO: send notify to user
             async def _rechal(rechals):
-                for chal_id, comp_type in rechals:
+                for chal_id, compiler_type in rechals:
                     _, _ = await ChalService.inst.reset_chal(chal_id)
-                    _, _ = await ChalService.inst.emit_chal(
-                        chal_id,
-                        pro_id,
-                        pro['testm_conf'],
-                        comp_type,
-                        ChalConst.CONTEST_REJUDGE_PRI,
-                    )
+                    _, _ = await ChalService.inst.emit_chal(chal_id, pro_id, pro.config, compiler_type, ChalConst.CONTEST_REJUDGE_PRI)
 
             await asyncio.create_task(_rechal(rechals=result))
             self.error(('S', f'Problem(#{pro_id}) is rechallenging.'))
@@ -135,7 +129,8 @@ class ContestManageProHandler(RequestHandler):
             if err:
                 return self.error(err)
 
-            err, _ = await ProService.inst.update_pro(pro_id, pro['name'], ProConst.STATUS_ONLINE, pro['tags'])
+            pro.status = ProConst.STATUS_ONLINE
+            err, _ = await ProService.inst.update_pro(pro)
             if err:
                 return self.error(err)
 

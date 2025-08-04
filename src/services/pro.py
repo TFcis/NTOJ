@@ -2,12 +2,14 @@ import os
 import re
 import json
 import shutil
+from dataclasses import asdict, dataclass
 
 from msgpack import packb, unpackb
 
 import config
 from services.pack import PackService
 
+ErrorType = tuple[tuple[str, str], None]
 
 class ProConst:
     """
@@ -51,6 +53,80 @@ class ProConst:
     PRO_STATUS_KERNEL_USER = [STATUS_ONLINE, STATUS_HIDDEN]
     PRO_STATUS_CONTEST_USER = [STATUS_ONLINE, STATUS_CONTEST]
 
+@dataclass(slots=True)
+class Testdata:
+    testdata_id: int
+    inputfile: str
+    outputfile: str
+
+
+@dataclass(slots=True)
+class SubtaskConfig:
+    subtask_id: int
+    testdatas: list[Testdata]
+    rate: int
+
+
+@dataclass(slots=True)
+class Limit:
+    time: int
+    memory: int
+
+    def __post_init__(self):
+        assert self.time >= 0
+        assert self.memory >= 0
+
+
+@dataclass(slots=True)
+class ProblemConfig:
+    """
+    - is_makefile (bool): Whether the problem uses a Makefile-based compilation.
+    See: https://wiki.tfcis.org/TOJ#Makefile%E9%A1%8C%E7%9B%AE_(%E7%B7%A8%E8%AD%AF%E4%BA%92%E5%8B%95%E9%A1%8C)
+
+    - chalmeta (str): For IORedir Problem
+    See: https://wiki.tfcis.org/TOJ#IORedir
+
+    - checker_type (int): One of the values defined in ProConst.CHECKER_TYPE, indicating
+    the type of checker (e.g., diff, float-diff, ioredir).
+
+    - limits (dict[str, Limit]): Per-language time and memory limits.
+        - Keys are compiler types (e.g., "gcc", "clang", "default").
+            Allowed compilers can be found in `ChalConst.ALLOW_COMPILERS`.
+        - Must include a "default" configuration.
+
+    - rate_precision (int): Precision of the score (e.g., 0 for integers, 2 for 2 decimal places).
+
+    - subtask_configs (dict[int, SubtaskConfig]): Configuration for each subtask. Each key is
+    a subtask id.
+
+    - testdatas (dict[int, Testdata]): Configuration for each testdata. Each key is
+    a testdata id.
+    """
+    chalmeta: str
+    limits: dict[str, Limit]
+    checker_type: int
+    is_makefile: bool
+    subtask_configs: dict[int, SubtaskConfig]
+    testdatas: dict[int, Testdata]
+    rate_precision: int
+
+    def __post_init__(self):
+        assert 'default' in self.limits
+        assert ProConst.RATE_PRECISION_MIN <= self.rate_precision <= ProConst.RATE_PRECISION_MAX
+        assert self.checker_type in ProConst.CHECKER_TYPE
+
+
+@dataclass(slots=True)
+class Problem:
+    pro_id: int
+    name: str
+    status: int
+    tags: str
+    allow_submit: bool
+    config: ProblemConfig | None
+
+    def __post_init__(self):
+        assert ProConst.STATUS_ONLINE <= self.status <= ProConst.STATUS_HIDDEN
 
 class ProService:
     def __init__(self, db, rs):
@@ -58,7 +134,7 @@ class ProService:
         self.rs = rs
         ProService.inst = self
 
-    async def get_pro(self, pro_id: int, allow_statuses: list[int]):
+    async def get_pro(self, pro_id: int, allow_statuses: list[int]) -> tuple[None, Problem] | ErrorType:
         """
         Fetch problem configuration and metadata by ID, ensuring it's in the allowed status.
 
@@ -67,9 +143,8 @@ class ProService:
             allow_statuses (list[int]): Allowed problem statuses for access.
 
         Returns:
-            Tuple[Optional[Tuple[str, str]], Optional[dict]]:
+            Tuple[Optional[Tuple[str, str]], Optional[Problem]]:
                 - Error code and message if any error occurs.
-                - A dictionary containing problem metadata if successful.
         """
 
         for status in allow_statuses:
@@ -80,7 +155,7 @@ class ProService:
             result = await con.fetch(
                 """
                     SELECT "name", "status", "tags", "allow_submit",
-                    "check_type", "is_makefile", "chalmeta", "limit", "rate_precision"
+                    "checker_type", "is_makefile", "chalmeta", "limits", "rate_precision"
                     FROM "problem" WHERE "pro_id" = $1;
                 """,
                 pro_id,
@@ -89,74 +164,75 @@ class ProService:
                 return ("Enoext", "Problem not found"), None
             result = result[0]
 
-            name, status, tags, allow_submit, check_type, is_makefile, rate_precision, limit, chalmeta = (
+            (
+                name,
+                status,
+                tags,
+                allow_submit,
+                checker_type,
+                is_makefile,
+                rate_precision,
+                limits,
+                chalmeta,
+            ) = (
                 result["name"],
                 result["status"],
                 result["tags"],
                 result["allow_submit"],
-                result["check_type"],
+                result["checker_type"],
                 result["is_makefile"],
                 result["rate_precision"],
-                json.loads(result["limit"]),
+                json.loads(result["limits"]),
                 json.loads(result["chalmeta"]),
             )
+            if tags is None:
+                tags = ""
 
             if status not in allow_statuses:
                 return ("Eacces", "Permission denied"), None
 
             result = await con.fetch(
                 """
-                    SELECT "test_idx", "weight", "testdatas"
-                    FROM "test_config" WHERE "pro_id" = $1 ORDER BY "test_idx" ASC;
-                """,
-                pro_id,
-            )
-
-            test_groups = {}
-            for test_group_idx, weight, testdatas in result:
-                test_groups[test_group_idx] = {
-                    "weight": weight,
-                    "testdatas": testdatas,
-                }
-
-            result = await con.fetch(
-                """
                     SELECT "id", "inputfile", "outputfile"
                     FROM "testdata" WHERE "pro_id" = $1;
                 """,
-                pro_id
+                pro_id,
             )
-            testdatas = {}
+            testdatas: dict[int, Testdata] = {}
             for id, inputfile, outputfile in result:
-                testdatas[id] = {
-                    "id": id,
-                    "inputfile": inputfile,
-                    "outputfile": outputfile,
-                }
+                testdatas[id] = Testdata(id, inputfile, outputfile)
 
-        testm_conf = {
-            "chalmeta": chalmeta,
-            "limit": limit,
-            "check_type": check_type,
-            "is_makefile": is_makefile,
-            "test_group": test_groups,
-            "rate_precision": rate_precision,
-            "testdatas": testdatas
-        }
+            result = await con.fetch(
+                """
+                    SELECT "subtask_id", "rate", "testdatas"
+                    FROM "subtask_config" WHERE "pro_id" = $1 ORDER BY "subtask_id" ASC;
+                """,
+                pro_id,
+            )
+            subtask_configs: dict[int, SubtaskConfig] = {}
+            for subtask_id, rate, testdata_ids in result:
+                subtask_configs[subtask_id] = SubtaskConfig(
+                    subtask_id,
+                    [testdatas[testdata_id] for testdata_id in testdata_ids],
+                    rate,
+                )
 
-        return (
-            None,
-            {
-                "pro_id": pro_id,
-                "name": name,
-                "status": status,
-                "testm_conf": testm_conf,
-                "tags": tags,
-                "allow_submit": allow_submit,
+        proconfig = ProblemConfig(
+            chalmeta=chalmeta,
+            limits={
+                compiler: Limit(limit["time"], limit["memory"])
+                for compiler, limit in limits.items()
             },
+            checker_type=checker_type,
+            subtask_configs=subtask_configs,
+            testdatas=testdatas,
+            rate_precision=rate_precision,
+            is_makefile=is_makefile,
         )
 
-    async def list_pro(self, allow_pro_statuses: list[int]):
+        return None, Problem(pro_id, name, status, tags, allow_submit, proconfig)
+
+    async def list_pro(self, allow_pro_statuses: list[int]) -> tuple[None, list[Problem]]:
         """
         List problems with statuses in `allow_pro_statuses`, with Redis caching.
 
@@ -175,20 +251,22 @@ class ProService:
         field = f"{allow_pro_statuses}"
         if (prolist := (await self.rs.hget("prolist", field))) is not None:
             prolist = unpackb(prolist)
+            for i in range(len(prolist)):
+                prolist[i] = Problem(**prolist[i], config=None)
 
         else:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     f"""
-                        SELECT "problem"."pro_id", "problem"."name", "problem"."status", "problem"."tags"
-                        FROM "problem"
-                        WHERE "problem"."status" IN ({",".join(map(str, allow_pro_statuses))})
-                        ORDER BY "pro_id" ASC;
+                        SELECT p.pro_id, p.name, p.status, p.tags, p.allow_submit
+                        FROM "problem" p
+                        WHERE p."status" IN ({",".join(map(str, allow_pro_statuses))})
+                        ORDER BY pro_id ASC;
                     """
                 )
 
             prolist = []
-            for pro_id, name, status, tags in result:
+            for pro_id, name, status, tags, allow_submit in result:
                 if tags is None:
                     tags = ""
 
@@ -198,10 +276,15 @@ class ProService:
                         "name": name,
                         "status": status,
                         "tags": tags,
+                        "allow_submit": allow_submit,
                     }
                 )
 
             await self.rs.hset("prolist", field, packb(prolist))
+
+            for i in range(len(prolist)):
+                prolist[i] = Problem(**prolist[i], config=None)
+
 
         return None, prolist
 
@@ -256,16 +339,13 @@ class ProService:
 
         return None, pro_id
 
-    async def update_pro(self, pro_id: int, name: str, status: int, tags="", allow_submit=True):
+    async def update_pro(self, pro: Problem):
         """
         Update problem metadata such as name, status, tags, and submission permission.
 
         Args:
             pro_id (int): The ID of the problem to update.
-            name (str): New name.
-            status (int): New status (online/contest/hidden).
-            tags (str, optional): Tag string. Defaults to "".
-            allow_submit (bool, optional): Submission permission. Defaults to True.
+            pro (Problem): The problem
 
         Returns:
             Tuple[Optional[Tuple[str, str]], None]:
@@ -273,15 +353,14 @@ class ProService:
                 - None if successful.
         """
 
-        assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
-        name_len = len(name)
+        name_len = len(pro.name)
         if name_len < ProConst.NAME_MIN:
             return ("Enamemin", "Problem name too short"), None
         if name_len > ProConst.NAME_MAX:
             return ("Enamemax", "Problem name too long"), None
-        if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
+        if pro.status < ProConst.STATUS_ONLINE or pro.status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
-        if tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", tags):
+        if pro.tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", pro.tags):
             return ("Etags", "Invalid problem tag"), None
 
         async with self.db.acquire() as con:
@@ -291,48 +370,22 @@ class ProService:
                     SET "name" = $1, "status" = $2, "tags" = $3, "allow_submit" = $4
                     WHERE "pro_id" = $5 RETURNING "pro_id";
                 """,
-                name,
-                status,
-                tags,
-                allow_submit,
-                int(pro_id),
+                pro.name, pro.status, pro.tags, pro.allow_submit, pro.pro_id
             )
             if len(result) != 1:
                 return ("Enoext", "Problem not found"), None
-
 
         await self.rs.delete("prolist")
 
         return None, None
 
-    async def update_test_config(self, pro_id: int, testm_conf: dict):
+    async def update_pro_config(self, pro_id: int, config: ProblemConfig):
         """
         Update the test configuration (testm_conf) for a given problem.
 
         Args:
             pro_id (int): The ID of the problem to update.
-            testm_conf (dict): The test configuration, with the following structure:
-
-                - is_makefile (bool): Whether the problem uses a Makefile-based compilation.
-                See: https://wiki.tfcis.org/TOJ#Makefile%E9%A1%8C%E7%9B%AE_(%E7%B7%A8%E8%AD%AF%E4%BA%92%E5%8B%95%E9%A1%8C)
-
-                - check_type (int): One of the values defined in ProConst.CHECKER_TYPE, indicating
-                the type of checker (e.g., diff, float-diff, ioredir).
-
-                - limit (dict[str, dict[str, int]]): Per-language time and memory limits.
-                    - Keys are compiler types (e.g., "gcc", "clang", "default").
-                        Allowed compilers can be found in `ChalConst.ALLOW_COMPILERS`.
-                    - Each value must contain:
-                        - "timelimit" (int): Time limit in seconds (>= 0)
-                        - "memlimit" (int): Memory limit in kilobytes (>= 0)
-                    - Must include a "default" configuration.
-
-                - rate_precision (int): Precision of the score (e.g., 0 for integers, 2 for 2 decimal places).
-
-                - test_group (dict[int, dict]): Configuration for each test group (subtask). Each key is
-                a test group index, and each value is a dict:
-                    - "weight" (int): The score weight of this test group.
-                    - "metadata" (dict): Metadata describing the test cases, e.g., input/output file names.
+            config (ProblemConfig): The problem configuration.
 
         Returns:
             Tuple[None, None]: Always returns (None, None) on success.
@@ -346,53 +399,64 @@ class ProService:
 
         insert_test_config_values = []
         insert_testdatas_values = []
-        is_makefile = testm_conf['is_makefile']
-        check_type = testm_conf['check_type']
-        chalmeta = testm_conf['chalmeta']
-        limit = testm_conf['limit']
-        rate_precision = testm_conf['rate_precision']
-        for test_group_idx, test_group_conf in testm_conf['test_group'].items():
-            weight = test_group_conf['weight']
-            insert_test_config_values.append((pro_id, test_group_idx, weight, test_group_conf['testdatas']))
+        for subtask_id, subtask_config in config.subtask_configs.items():
+            rate = subtask_config.rate
+            insert_test_config_values.append(
+                (pro_id, subtask_id, rate, [testdata.testdata_id for testdata in subtask_config.testdatas])
+            )
 
-        for testdata in testm_conf['testdatas'].values():
-            insert_testdatas_values.append((pro_id, testdata['id'], testdata['inputfile'], testdata['outputfile']))
+        for testdata in config.testdatas.values():
+            insert_testdatas_values.append(
+                (pro_id, testdata.testdata_id, testdata.inputfile, testdata.outputfile)
+            )
 
         async with self.db.acquire() as con:
-            await con.execute('DELETE FROM "test_config" WHERE "pro_id" = $1;', int(pro_id))
-            await con.execute('DELETE FROM "testdata" WHERE "pro_id" = $1;', int(pro_id))
             await con.execute(
-                'UPDATE "problem" SET is_makefile = $1, check_type = $2, chalmeta = $3, "limit" = $4, "rate_precision" = $5 WHERE pro_id = $6',
-                is_makefile, check_type, json.dumps(chalmeta), json.dumps(limit), rate_precision, pro_id
+                'DELETE FROM "subtask_config" WHERE "pro_id" = $1;', int(pro_id)
+            )
+            await con.execute(
+                'DELETE FROM "testdata" WHERE "pro_id" = $1;', int(pro_id)
+            )
+            await con.execute(
+                'UPDATE problem SET is_makefile = $1, checker_type = $2, chalmeta = $3, limits = $4, rate_precision = $5 WHERE pro_id = $6',
+                config.is_makefile,
+                config.checker_type,
+                json.dumps(config.chalmeta),
+                json.dumps({
+                    comp: asdict(limit)
+                    for comp, limit in config.limits.items()
+                }),
+                config.rate_precision,
+                pro_id,
             )
 
             if insert_test_config_values:
                 await con.executemany(
-                    '''INSERT INTO "test_config"
-                        ("pro_id", "test_idx", "weight", "testdatas")
-                        VALUES ($1, $2, $3, $4);''',
-                    insert_test_config_values
+                    """INSERT INTO "subtask_config"
+                        ("pro_id", "subtask_id", "rate", "testdatas")
+                        VALUES ($1, $2, $3, $4);""",
+                    insert_test_config_values,
                 )
 
             if insert_testdatas_values:
                 await con.executemany(
-                    '''
+                    """
                         INSERT INTO "testdata" ("pro_id", "id", "inputfile", "outputfile")
                         VALUES ($1, $2, $3, $4);
-                    ''',
-                    insert_testdatas_values
+                    """,
+                    insert_testdatas_values,
                 )
 
-
         await self.db.execute("REFRESH MATERIALIZED VIEW test_valid_rate;")
-        await self.rs.delete('rate')
-        await self.rs.hdel('pro_rate', pro_id)
+        await self.rs.delete("rate")
+        await self.rs.hdel("pro_rate", pro_id)
 
         return None, None
 
     async def unpack_pro(self, pro_id: int, pack_token: str):
         """
         Unpack and apply a packed problem archive.
+        If failed, this function will call PackService.inst.clear() to clear tmp file and clear problem/{pro_id}.
 
         Args:
             pro_id (int): The ID of the problem to unpack into.
@@ -405,6 +469,7 @@ class ProService:
         """
 
         from services.chal import ChalConst
+
         failed = True
         try:
             err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
@@ -427,97 +492,85 @@ class ProService:
             except json.decoder.JSONDecodeError:
                 return ("Econf", "Problem config json syntax error"), None
 
-            testm_conf = {
-                'rate_precision': 0,
-            }
+            is_makefile = False
+            if "compile" in conf:
+                is_makefile = conf["compile"] == "makefile"
+            elif "is_makefile" in conf:
+                is_makefile = conf["is_makefile"]
 
-            testm_conf['is_makefile'] = False
-            if 'compile' in conf:
-                testm_conf['is_makefile'] = conf["compile"] == 'makefile'
-            elif 'is_makefile' in conf:
-                testm_conf['is_makefile'] = conf["is_makefile"]
-
-            testm_conf['check_type'] = ProConst.STR_2_CHECKER_TYPE[conf["check"]]
-
-            ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
-            if testm_conf['is_makefile']:
-                ALLOW_COMPILERS = {'default', 'gcc', 'g++', 'clang', 'clang++'}
+            ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ["default"])
+            if is_makefile:
+                ALLOW_COMPILERS = {"default", "gcc", "g++", "clang", "clang++"}
 
             if "limit" in conf:
                 limits = {}
-                for comp_type, limit in conf["limit"].items():
-                    if comp_type not in ALLOW_COMPILERS:
+                for compiler_type, conf_limit in conf["limit"].items():
+                    if compiler_type not in ALLOW_COMPILERS:
                         continue
 
+                    limit = Limit(0, 0)
                     try:
-                        limit['timelimit'] = max(int(limit['timelimit']), 0)
-                        limit['memlimit'] = max(int(limit['memlimit']) * 1024, 0)
-                    except KeyError as e:
-                        limit[e.args[0]] = 0
+                        limit.time = max(int(conf_limit["timelimit"]), 0)
+                        limit.memory = max(int(conf_limit["memlimit"]) * 1024, 0)
                     except ValueError:
                         continue
 
-                    limits[comp_type] = limit
+                    limits[compiler_type] = limit
 
-                if 'default' not in limits:
+                if "default" not in limits:
                     return ("Econf", "Problem limit config require default value"), None
 
-            elif 'timelimit' in conf and 'memlimit' in conf:
+            elif "timelimit" in conf and "memlimit" in conf:
                 try:
                     limits = {
-                        'default': {
-                            'timelimit': int(conf["timelimit"]),
-                            'memlimit': int(conf["memlimit"]) * 1024
-                        }
+                        "default": Limit(int(conf["timelimit"]), int(conf["memlimit"]) * 1024)
                     }
                 except ValueError:
                     return ("Econf", "Problem limit config have invalid value"), None
             else:
-                    return ("Econf", "Problem config require limit or timelimit/memlimit"), None
-            testm_conf['limit'] = limits
+                return (
+                    "Econf",
+                    "Problem config require limit or timelimit/memlimit",
+                ), None
 
-            if 'metadata' in conf:
-                testm_conf['chalmeta'] = conf["metadata"]  # INFO: ioredir data
+            chalmeta = conf["metadata"]  # INFO: ioredir data
 
-            test_group = {}
-            testdatas: dict[str, int] = {}
+            subtask_configs: dict[int, SubtaskConfig] = {}
+            testdatas: dict[int, Testdata] = {}
+            testdata_name_2_id: dict[str, int] = {}
             testdata_id_counter = 0
             for test_idx, test_conf in enumerate(conf["test"]):
-                for i in range(len(test_conf["data"])):
-                    test_conf["data"][i] = str(test_conf["data"][i])
-                    if test_conf["data"][i] not in testdatas:
-                        testdatas[test_conf["data"][i]] = testdata_id_counter
+                for t in test_conf["data"]:
+                    if t not in testdata_name_2_id:
+                        t = os.path.basename(str(t))
+                        testdata_name_2_id[t] = testdata_id_counter
+                        testdatas[testdata_id_counter] = Testdata(testdata_id_counter, f"{t}.in", f"{t}.out")
                         testdata_id_counter += 1
 
-                test_group[test_idx] = {
-                    'weight': int(test_conf['weight']),
-                    'testdatas': []
-                }
+                subtask_configs[test_idx] = SubtaskConfig(test_idx, [], int(test_conf["weight"]))
+
 
             for test_idx, test_conf in enumerate(conf["test"]):
-                for i in range(len(test_conf["data"])):
-                    test_group[test_idx]['testdatas'].append(testdatas[test_conf["data"][i]])
+                for t in test_conf["data"]:
+                    t = os.path.basename(str(t))
+                    subtask_configs[test_idx].testdatas.append(testdatas[testdata_name_2_id[t]])
 
-            testm_conf['testdatas'] = {}
 
-            for testdata, testdata_id in testdatas.items():
-                testm_conf['testdatas'][testdata_id] = {
-                    'id': testdata_id,
-                    'inputfile': f"{testdata}.in",
-                    'outputfile': f"{testdata}.out",
-                }
-
-            testm_conf['test_group'] = test_group
+            proconfig = ProblemConfig(chalmeta, limits, ProConst.STR_2_CHECKER_TYPE[conf["check"]],
+                                      is_makefile, subtask_configs, testdatas, rate_precision=0)
             failed = False
 
         finally:
+            # NOTE: Like golang defer
             if failed and os.path.exists(f"problem/{pro_id}"):
                 shutil.rmtree(f"problem/{pro_id}")
+            await PackService.inst.clear(pack_token)
 
-        await self.update_test_config(pro_id, testm_conf)
+        await self.update_pro_config(pro_id, proconfig)
         await self.rs.delete("prolist")
 
         return None, None
+
 
 class ProClassConst:
     OFFICIAL_PUBLIC = 0
@@ -544,8 +597,9 @@ class ProClassService:
 
             if len(res) != 1:
                 return ("Enoext", "Problem class not found"), None
+            res = res[0]
 
-        return None, res[0]
+        return None, res
 
     async def get_proclass_list(self):
         async with self.db.acquire() as con:
@@ -571,10 +625,12 @@ class ProClassService:
 
     async def remove_proclass(self, proclass_id: int):
         async with self.db.acquire() as con:
-            result: str = await con.execute('DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id))
-            affected_row_cnt = int(result.split(" ")[1]) # NOTE: DELETE \d+
+            result: str = await con.execute(
+                'DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id)
+            )
+            affected_row_cnt = int(result.split(" ")[1])  # NOTE: DELETE \d+
             if affected_row_cnt == 0:
-                return ('Enoext', 'Bulletin not found'), None
+                return ("Enoext", "Bulletin not found"), None
 
     async def update_proclass(self, proclass_id, name, p_list, desc, proclass_type):
         proclass_id = int(proclass_id)

@@ -65,12 +65,12 @@ class ManageProUpdateTestsTest(AsyncTest):
             res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=0&type=what')
             self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid testdata file type'))
 
-            # NOTE: updateweight
+            # NOTE: updaterate
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
-                'reqtype': 'updateweight',
+                'reqtype': 'updaterate',
                 'pro_id': 1,
-                'weight': 60,
-                'group': 0,
+                'rate': 60,
+                'subtask': 0,
             })
             self.assertAPIReturnSuccess(res.text)
             html = self.get_html('pro/1', admin_session)
@@ -79,14 +79,14 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(trs[0].select('td')[1].text.strip(), '60')
 
             html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
-            groups = html.select_one('div#tests').select('div.accordion-item')
-            self.assertEqual(groups[0].select_one('button.accordion-button').text.strip(), f'Task Group { 0 + 1 } Weight: { 60 }')
+            subtasks = html.select_one('div#subtasks').select('div.accordion-item')
+            self.assertEqual(subtasks[0].select_one('button.accordion-button').text.strip(), f'Subtask { 0 + 1 } Rate: { 60 }')
 
-            # NOTE: addtaskgroup
+            # NOTE: addsubtask
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
-                'reqtype': 'addtaskgroup',
+                'reqtype': 'addsubtask',
                 'pro_id': 1,
-                'weight': 20,
+                'rate': 20,
             })
             self.assertAPIReturnSuccess(res.text)
             html = self.get_html('pro/1', admin_session)
@@ -95,8 +95,8 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(trs[2].select('td')[1].text.strip(), '20')
 
             html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
-            groups = html.select_one('div#tests').select('div.accordion-item')
-            self.assertEqual(groups[2].select_one('button.accordion-button').text.strip(), f'Task Group { 2 + 1 } Weight: { 20 }')
+            subtasks = html.select_one('div#subtasks').select('div.accordion-item')
+            self.assertEqual(subtasks[2].select_one('button.accordion-button').text.strip(), f'Subtask { 2 + 1 } Rate: { 20 }')
 
             # NOTE: addsinglefile
             inputfile_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
@@ -142,12 +142,12 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'reqtype': 'settestdata',
                 'pro_id': 1,
                 'testdatas': '0-2',
-                'group': 2,
+                'subtask': 2,
             })
             self.assertAPIReturnSuccess(res.text)
             html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
-            groups = html.select_one('div#tests').select('div.accordion-item')
-            self.assertEqual(groups[2].select_one('#testdatas').attrs['value'].strip(), "0-2")
+            subtasks = html.select_one('div#subtasks').select('div.accordion-item')
+            self.assertEqual(subtasks[2].select_one('#testdatas').attrs['value'].strip(), "0-2")
 
             def callback():
                 res = admin_session.post('submit', data={
@@ -216,12 +216,12 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'reqtype': 'settestdata',
                 'pro_id': 1,
                 'testdatas': '0-1, 3',
-                'group': 2,
+                'subtask': 2,
             })
             self.assertAPIReturnSuccess(res.text)
             html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
-            groups = html.select_one('div#tests').select('div.accordion-item')
-            self.assertEqual(groups[2].select_one('#testdatas').attrs['value'].strip(), "0-1,3")
+            subtasks = html.select_one('div#subtasks').select('div.accordion-item')
+            self.assertEqual(subtasks[2].select_one('#testdatas').attrs['value'].strip(), "0-1,3")
             def callback():
                 res = admin_session.post('submit', data={
                     'reqtype': 'rechal',
@@ -259,11 +259,11 @@ class ManageProUpdateTestsTest(AsyncTest):
                 admin_session
             )
 
-            # NOTE: deletetaskgroup
+            # NOTE: deletesubtask
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
-                'reqtype': 'deletetaskgroup',
+                'reqtype': 'deletesubtask',
                 'pro_id': 1,
-                'group': 2,
+                'subtask': 2,
             })
             self.assertAPIReturnSuccess(res.text)
             def callback():
