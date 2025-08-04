@@ -9,7 +9,7 @@ import subprocess
 import config
 
 with tempfile.TemporaryDirectory() as working_path:
-    subprocess.run(['git', 'clone', 'https://github.com/TFcis/NTOJ', f'{working_path}/NTOJ'])
+    subprocess.run(['git', 'clone', '--branch', 'tfcis-testing', 'https://github.com/TFcis/NTOJ', f'{working_path}/NTOJ'])
 
     if not os.path.exists('service-bak'):
         os.mkdir('service-bak')
@@ -68,3 +68,8 @@ with tempfile.TemporaryDirectory() as working_path:
     subprocess.run([f'$HOME/.local/bin/poetry -P {os.getcwd()} run python3 {working_path}/NTOJ/migration/migration.py'],
                 cwd=f'{working_path}/NTOJ/migration',
                 shell=True)
+
+    subprocess.run(["""find /srv/testing_oj/handlers ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/oj\\//testing-oj\\//g' {} +"""])
+    subprocess.run(["""find /srv/testing_oj/handlers ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/\\/oj/\\/testing-oj/g' {} +"""])
+    subprocess.run(["""find /srv/testing_oj/static ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/oj\\//testing-oj\\//g' {} +"""])
+    subprocess.run(["""find /srv/testing_oj_web/oj ! -type l -type f -exec grep -Iq . {} \\; -exec sed -i 's/oj\\//testing-oj\\//g' {} +"""])
