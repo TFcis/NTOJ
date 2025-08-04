@@ -33,7 +33,7 @@ class ChalListHandler(RequestHandler):
         flt_builder.state(state)
 
         compiler_type = self.get_argument('compiler_type', default=-1)
-        flt_builder.compiler(compiler_type)
+        flt_builder.compiler(int(compiler_type))
 
         isadmin = self.acct.is_kernel()
         if isadmin:

@@ -61,6 +61,7 @@ async def dochange(db, rs):
         ALTER TABLE ONLY testdata_result
             ADD CONSTRAINT testdata_result_forkey_testdata FOREIGN KEY (pro_id, id) REFERENCES testdata(pro_id, id) ON DELETE CASCADE;
     ''')
+    print("finish add testdata_result TABLE")
 
 
     await db.execute('ALTER TABLE problem RENAME COLUMN is_makefile TO has_grader;')
@@ -70,6 +71,7 @@ async def dochange(db, rs):
     # NOTE: problem add allow_compilers column
     await db.execute(f'''ALTER TABLE problem ADD COLUMN allow_compilers integer[] DEFAULT '{{ {','.join(default_allow_compilers)} }}'::integer[] NOT NULL;''')
     await db.execute('UPDATE problem SET allow_compilers = $1 WHERE has_grader=true;', default_has_grader_allow_compilers)
+    print("finish problem add allow_compilers column")
 
     # NOTE: contest comvert allow_compilers from str to IntEnum
     contest_allow_compilers: dict[int, set[int]] = {}
@@ -90,6 +92,7 @@ async def dochange(db, rs):
     for contest_id, allow_compilers in contest_allow_compilers.items():
         await db.execute('UPDATE contest SET allow_compilers = $1 WHERE contest_id = $2;', allow_compilers, contest_id)
     await db.execute('ALTER TABLE contest ALTER COLUMN allow_compilers SET NOT NULL;')
+    print("finish contest comvert allow_compilers from str to IntEnum")
 
     # NOTE:
     problems_subtasks: dict[int, dict] = {}
@@ -135,8 +138,8 @@ async def dochange(db, rs):
     )
     # NOTE: In old TOJ, NotStart means there are no any row in subtask_result and total_result, it ONLY appear in challenge.
     # NOTE: Insert NotStart testdata_result
-    res = await db.fetch('SELECT chal_id, pro_id FROM challenge;')
-    for chal_id, pro_id in res:
+    res = await db.fetch('SELECT chal_id, pro_id, acct_id FROM challenge;')
+    for chal_id, pro_id, acct_id in res:
         r = await db.fetch('SELECT chal_id FROM total_result WHERE chal_id = $1;', chal_id)
         insert = []
         for testdata_id in problems_subtasks[pro_id]['testdatas']:
@@ -145,18 +148,23 @@ async def dochange(db, rs):
         if len(r) == 0:  # NOTE: NotStart
             insert = []
             for subtask_id in problems_subtasks[pro_id]['subtasks']:
-                insert.append((chal_id, pro_id, subtask_id))
-            await db.executemany('INSERT INTO subtask_result (chal_id, pro_id, id, acct_id) VALUES ($1, $2, $3, 0);', insert)
+                insert.append((chal_id, pro_id, subtask_id, acct_id))
+            await db.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id, acct_id) VALUES ($1, $2, $3, $4);', insert)
             await db.execute('INSERT INTO total_result (chal_id) VALUES ($1);', chal_id)
+    print("finish Insert testdata_result, NotStart total_result, NotStart subtask_result")
 
     await db.execute('ALTER TABLE subtask_result ALTER COLUMN rate SET DEFAULT 0;')
+    await db.execute('UPDATE subtask_result SET rate = DEFAULT WHERE rate IS NULL;')
     await db.execute('ALTER TABLE subtask_result ALTER COLUMN rate SET NOT NULL;')
     await db.execute('ALTER TABLE subtask_result ALTER COLUMN state SET DEFAULT 101 -- NotStart;')
+    await db.execute('UPDATE subtask_result SET state = DEFAULT WHERE state IS NULL;')
     await db.execute('ALTER TABLE subtask_result ALTER COLUMN state SET NOT NULL;')
 
     await db.execute('ALTER TABLE total_result ALTER COLUMN rate SET DEFAULT 0;')
+    await db.execute('UPDATE total_result SET rate = DEFAULT WHERE rate IS NULL;')
     await db.execute('ALTER TABLE total_result ALTER COLUMN rate SET NOT NULL;')
     await db.execute('ALTER TABLE total_result ALTER COLUMN state SET DEFAULT 101 -- NotStart;')
+    await db.execute('UPDATE total_result SET state = DEFAULT WHERE state IS NULL;')
     await db.execute('ALTER TABLE total_result ALTER COLUMN state SET NOT NULL;')
 
     # NOTE: convert problem limits compiler from str to IntEnum
@@ -178,10 +186,14 @@ async def dochange(db, rs):
 
         await db.execute('UPDATE problem SET "limits" = $1 WHERE pro_id = $2;', json.dumps(new_limits), pro_id)
     await db.execute('''ALTER TABLE problem ALTER COLUMN limits SET DEFAULT '{"default":{"time":1000,"memory":65536,"output":65536}}'::jsonb;''')
+    print("finish convert problem limits compiler from str to IntEnum")
+    print("finish add output limit config")
+    print("finish memory limit unit from bytes to kib")
 
     # NOTE: total_result and subtask_result memory unit from bytes to kib
     await db.execute('UPDATE total_result SET memory = memory / 1024;')
     await db.execute('UPDATE subtask_result SET memory = memory / 1024;')
+    print("finish total_result and subtask_result memory unit from bytes to kib")
 
     # NOTE: convert problem checker_type from old style to new style
     res = await db.fetch('SELECT pro_id, checker_type FROM problem;')
