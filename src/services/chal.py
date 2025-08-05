@@ -434,8 +434,13 @@ class ChalService:
 
         chal_id = int(chal_id)
         async with self.db.acquire() as con:
-            await con.execute('UPDATE total_result SET state=DEFAULT, time=DEFAULT, memory=DEFAULT, rate=DEFAULT WHERE chal_id=$1;',
-                              chal_id)
+            await con.execute(
+                '''
+                    UPDATE total_result SET state=DEFAULT, time=DEFAULT, memory=DEFAULT, rate=DEFAULT,
+                                            message=DEFAULT, message_type=DEFAULT WHERE chal_id=$1;
+                ''',
+                chal_id
+            )
 
             await con.execute(
                 '''
