@@ -310,7 +310,12 @@
                             </tr>
                         </thead>
                         <tbody>
+                        {% set effective_testdata_ids = { t.testdata_id for t in pro.config.get_effective_testdatas() } %}
                         {% for testdata_result in chal.testdata_results.values() %}
+                            {% if testdata_result.testdata_id not in effective_testdata_ids %}
+                                {% continue %}
+                            {% end %}
+
                             {% set message = testdata_result.message %}
                             {% set message_type = testdata_result.message_type %}
                             {% set show_message = message_type != MessageType.NONE %}

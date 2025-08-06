@@ -158,6 +158,14 @@ class ProblemConfig:
         assert 'default' in self.limits
         assert ProConst.RATE_PRECISION_MIN <= self.rate_precision <= ProConst.RATE_PRECISION_MAX
 
+    def get_effective_testdatas(self) -> list[Testdata]:
+        s = set()
+        for cfg in self.subtask_configs.values():
+            for t in cfg.testdatas:
+                s.add(t.testdata_id)
+
+        return [self.testdatas[t_id] for t_id in s]
+
 
 @dataclass(slots=True)
 class Problem:

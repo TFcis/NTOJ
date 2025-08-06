@@ -605,7 +605,6 @@ class ChalService:
         limit = limits.get(compiler_type, limits['default'])
         await self.db.execute('UPDATE total_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
         await self.db.execute('UPDATE subtask_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
-        await self.db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
 
         need_judge_testdatas: set[int] = set()
         subtasks = []
@@ -618,6 +617,8 @@ class ChalService:
                 "testdatas": t,
                 "dependency_subtasks": list(subtask_config.dependency_subtasks),
             })
+        await self.db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id IN $3;',
+                              ChalConst.STATE_JUDGE, chal_id, need_judge_testdatas)
 
         testdatas = []
         for testdata_id in need_judge_testdatas:
