@@ -204,7 +204,6 @@ class ChalSearchingParam:
 
         state (int | None): Challenge state to filter.
             - If 0 or None: no filtering.
-            - If `ChalConst.STATE_NOTSTARTED`: adds `state IS NULL` to the filter.
             - Other values: exact match (e.g., `ChalConst.STATE_AC`, `ChalConst.STATE_WA`, etc.).
             - See `ChalConst.STATE_*` for available state constants.
 
@@ -252,10 +251,7 @@ class ChalSearchingParam:
                 query.append(' AND "challenge"."acct_id" IS NULL ')
 
         if self.state != 0:
-            if self.state == ChalConst.STATE_NOTSTARTED:
-                query.append(' AND "total_result"."state" IS NULL ')
-            else:
-                query.append(f' AND "total_result"."state" = {self.state} ')
+            query.append(f' AND "total_result"."state" = {self.state} ')
 
         if self.compiler != -1:
             query.append(f' AND "challenge"."compiler_type"=\'{self.compiler}\' ')
