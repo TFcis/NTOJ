@@ -143,7 +143,6 @@ DBUSER_OJ  = '${DB_USERNAME}'
 DBPW_OJ    = '${DB_PASSWORD}'
 COOKIE_SEC = '${COOKIE_SEC}'
 SITE_TITLE = '${SITE_TITLE}'
-lock_user_list = []
 can_see_code_user = [1]
 unlock_pwd = ${UNLOCK_PWD}
 WEB_PROBLEM_STATIC_FILE_DIRECTORY = '${INSTALL_DIR}/ntoj_web/oj/problem'
@@ -160,5 +159,5 @@ rm config.py
 # Run migration
 cd ../migration
 cp ${INSTALL_DIR}/ntoj/config.py ./config.py
-$HOME/.local/bin/poetry -C ${INSTALL_DIR}/ntoj run python3 migration.py
+$HOME/.local/bin/poetry -P ${INSTALL_DIR}/ntoj run python3 migration.py
 rm config.py
