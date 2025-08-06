@@ -85,7 +85,7 @@
                 div.innerHTML = message;
                 message_card.appendChild(div);
             }
-            $(message_tr).show();
+            $(message_tr).find('.card').show();
             $(tr).find('span').show();
         }
     }
@@ -361,7 +361,7 @@
 {% set message = chal.total_result.message %}
 {% set message_type = chal.total_result.message_type %}
 
-<div class="accordion" id="total-result-message-accordion" {% if message == '' or not user.is_kernel() or chal.acct_id != user.acct_id %} style="display: none;" {% end %}>
+<div class="accordion" id="total-result-message-accordion" {% if message == '' or not (user.is_kernel() and chal.acct_id != user.acct_id) %} style="display: none;" {% end %}>
     <div class="accordion-item">
         <h2 class="accordion-header">
                 <button

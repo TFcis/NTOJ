@@ -121,6 +121,38 @@
 				});
             });
         });
+
+        document.querySelectorAll('button.set-depsubtasks').forEach(el => {
+            el.addEventListener('click', function(e) {
+                let subtask = $(this).parents('.accordion-collapse').attr('subtask');
+                let dep_subtasks = $(this).siblings('#depsubtasks').val();
+                if (!re.test(dep_subtasks)) {
+                    index.show_notify_dialog("Dependency subtasks wrong. Please follow the instruction", index.DIALOG_TYPE.warning);
+                    return;
+                }
+
+				$.post('/oj/be/manage/pro/updatetests', {
+					'reqtype': 'setdepsubtasks',
+					'pro_id': pro_id,
+                    'subtask': subtask,
+                    'dep_subtasks': dep_subtasks,
+				}, function (res) {
+                    let msg = '';
+					let dialog_type = null;
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+						dialog_type = index.DIALOG_TYPE.success;
+                        msg = `Subtask #${subtask} set dependency subtasks successfully.`;
+                    } else {
+                        msg = res.data;
+                    }
+
+					index.show_notify_dialog(msg, dialog_type);
+                    index.reload();
+				});
+            });
+        });
 	}
 </script>
 {% end %}
@@ -158,6 +190,12 @@
                     <div class="input-group mb-3">
                         <input id="testdatas" class="form-control mb-1" type="text" value="{{ merge_list_to_str([testdata.testdata_id for testdata in subtask_config.testdatas]) }}" placeholder="Testdata">
                         <button class="btn btn-primary set-testdatas">Update Testdatas</button>
+                    </div>
+
+                    <label for="depsubtasks" class="form-label">Subtask id. Starts from 1, for examples: <code>0</code>, <code>1-4</code>, <code>2,4,9-11,13-18</code></label>
+                    <div class="input-group mb-3">
+                        <input id="depsubtasks" class="form-control mb-1" type="text" value="{{ merge_list_to_str(list(subtask_config.dependency_subtasks)) }}" placeholder="Dependency Subtasks">
+                        <button class="btn btn-primary set-depsubtasks">Update Dependency Subtasks</button>
                     </div>
 				</div>
 			</div>

@@ -99,6 +99,7 @@ class Testdata:
 class SubtaskConfig:
     subtask_id: int
     testdatas: list[Testdata]
+    dependency_subtasks: set[int]
     rate: int
 
 
@@ -269,16 +270,17 @@ class ProService:
 
             result = await con.fetch(
                 """
-                    SELECT "subtask_id", "rate", "testdatas"
+                    SELECT "subtask_id", "rate", "testdatas", "dep_subtasks"
                     FROM "subtask_config" WHERE "pro_id" = $1 ORDER BY "subtask_id" ASC;
                 """,
                 pro_id,
             )
             subtask_configs: dict[int, SubtaskConfig] = {}
-            for subtask_id, rate, testdata_ids in result:
+            for subtask_id, rate, testdata_ids, dep_subtasks in result:
                 subtask_configs[subtask_id] = SubtaskConfig(
                     subtask_id,
                     [testdatas[testdata_id] for testdata_id in testdata_ids],
+                    set(dep_subtasks),
                     rate,
                 )
 
@@ -472,12 +474,15 @@ class ProService:
             - Related Redis cache (`rate`, `pro_rate`) will be invalidated.
         """
 
-        insert_test_config_values = []
+        insert_subtask_config_values = []
         insert_testdatas_values = []
         for subtask_id, subtask_config in config.subtask_configs.items():
             rate = subtask_config.rate
-            insert_test_config_values.append(
-                (pro_id, subtask_id, rate, [testdata.testdata_id for testdata in subtask_config.testdatas])
+            insert_subtask_config_values.append(
+                (
+                    pro_id, subtask_id, rate,
+                    [testdata.testdata_id for testdata in subtask_config.testdatas], subtask_config.dependency_subtasks
+                )
             )
 
         for testdata in config.testdatas.values():
@@ -516,9 +521,9 @@ class ProService:
 
             await con.executemany(
                 """INSERT INTO "subtask_config"
-                    ("pro_id", "subtask_id", "rate", "testdatas")
-                    VALUES ($1, $2, $3, $4);""",
-                insert_test_config_values,
+                    ("pro_id", "subtask_id", "rate", "testdatas", "dep_subtasks")
+                    VALUES ($1, $2, $3, $4, $5);""",
+                insert_subtask_config_values,
             )
 
             await con.executemany(
@@ -653,7 +658,7 @@ class ProService:
                         testdatas[testdata_id_counter] = Testdata(testdata_id_counter, f"{t}.in", f"{t}.out")
                         testdata_id_counter += 1
 
-                subtask_configs[test_idx] = SubtaskConfig(test_idx, [], int(test_conf["weight"]))
+                subtask_configs[test_idx] = SubtaskConfig(test_idx, [], set(), int(test_conf["weight"]))
 
 
             for test_idx, test_conf in enumerate(conf["test"]):
