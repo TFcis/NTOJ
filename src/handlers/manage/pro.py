@@ -958,7 +958,7 @@ class ManageProHandler(RequestHandler):
                     sql = ""
                     log_type = "manage.chal.rechalall"
                 else:
-                    sql = '''AND "total_result"."chal_id" IS NULL'''
+                    sql = f'AND "total_result"."state" = {ChalConst.STATE_NOTSTARTED}'
                     log_type = "manage.chal.rechal"
                 result = await con.fetch(
                     f'''
