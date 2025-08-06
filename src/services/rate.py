@@ -107,14 +107,14 @@ class RateService:
 
         ALL_CHAL_SQL = f"""
         SELECT COUNT(*) FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
-        LEFT JOIN "total_result"
+        INNER JOIN "total_result"
         ON "challenge"."chal_id" = "total_result"."chal_id"
         {contest_user_filter_sql}
         WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2;
         """
         AC_CHAL_SQL = f"""
         SELECT COUNT(*) FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
-        LEFT JOIN "total_result"
+        INNER JOIN "total_result"
         ON "challenge"."chal_id" = "total_result"."chal_id"
         {contest_user_filter_sql}
         WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2 AND "total_result"."state" = {ChalConst.STATE_AC};
@@ -123,14 +123,14 @@ class RateService:
         # problem user ac rate
         USER_ALL_CHAL_SQL = f"""
         SELECT COUNT(*) FROM (SELECT DISTINCT "account"."acct_id" FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
-        LEFT JOIN "total_result"
+        INNER JOIN "total_result"
         ON "challenge"."chal_id" = "total_result"."chal_id"
         {contest_user_filter_sql}
         WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2) as user_cnt;
         """
         USER_AC_CHAL_SQL = f"""
         SELECT COUNT(*) FROM (SELECT DISTINCT "account"."acct_id" FROM "challenge" INNER JOIN "account" ON "challenge"."acct_id" = "account"."acct_id"
-        LEFT JOIN "total_result"
+        INNER JOIN "total_result"
         ON "challenge"."chal_id" = "total_result"."chal_id"
         {contest_user_filter_sql}
         WHERE "challenge"."pro_id" = $1 AND "challenge"."contest_id" = $2 AND "total_result"."state" = {ChalConst.STATE_AC}) as user_cnt;

@@ -709,7 +709,7 @@ class ChalService:
                     ON "challenge"."acct_id" = "account"."acct_id"
                     INNER JOIN "problem"
                     ON "challenge"."pro_id" = "problem"."pro_id"
-                    LEFT JOIN "total_result"
+                    INNER JOIN "total_result"
                     ON "challenge"."chal_id" = "total_result"."chal_id"
                     WHERE 1=1 {fltquery}
                     ORDER BY "challenge"."chal_id" DESC OFFSET {off} LIMIT {num};
@@ -792,7 +792,7 @@ class ChalService:
                     ON "challenge"."acct_id" = "account"."acct_id"
                     INNER JOIN "problem"
                     ON "challenge"."pro_id" = "problem"."pro_id"
-                    LEFT JOIN "total_result"
+                    INNER JOIN "total_result"
                     ON "challenge"."chal_id"="total_result"."chal_id"
                     WHERE 1=1 {fltquery};
                 '''

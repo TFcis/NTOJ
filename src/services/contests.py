@@ -448,7 +448,7 @@ class ContestService:
             WHERE contest_id = $1 AND timestamp < $3
         ),
         problem_tests AS (
-            SELECT pro_id, subtask_id, rate
+            SELECT pro_id, subtask_id
             FROM subtask_config
             WHERE pro_id = $2
         ),
@@ -458,11 +458,7 @@ class ContestService:
                 cc.chal_id,
                 pt.pro_id,
                 pt.subtask_id,
-                CASE
-                    WHEN t.state = 1 AND t.rate IS NULL THEN pt.rate
-                    WHEN t.state = 1 AND t.rate IS NOT NULL THEN t.rate
-                    ELSE 0
-                END AS rate,
+                t.rate,
                 cc.timestamp
             FROM problem_tests pt
             JOIN subtask_result t ON pt.pro_id = t.pro_id AND pt.subtask_id = t.subtask_id

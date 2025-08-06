@@ -963,7 +963,7 @@ class ManageProHandler(RequestHandler):
                 result = await con.fetch(
                     f'''
                         SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"
-                        LEFT JOIN "total_result"
+                        INNER JOIN "total_result"
                         ON "challenge"."chal_id" = "total_result"."chal_id"
                         WHERE "pro_id" = $1 {sql};
                     ''',
