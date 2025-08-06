@@ -259,7 +259,7 @@
                         <tr>
                             <td>{{ '%04d' % (subtask_id + 1) }}</td>
                             <td>{{ subtask_cfg.rate }}</td>
-                            <td>{{ merge_list_to_str(list(subtask_cfg.dependency_subtasks)) }}</td>
+                            <td>{{ merge_list_to_str(list(map(lambda x: x+1, subtask_cfg.dependency_subtasks))) }}</td>
                         </tr>
                     {% end %}
                 </tbody>

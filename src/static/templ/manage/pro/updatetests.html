@@ -194,7 +194,7 @@
 
                     <label for="depsubtasks" class="form-label">Subtask id. Starts from 1, for examples: <code>0</code>, <code>1-4</code>, <code>2,4,9-11,13-18</code></label>
                     <div class="input-group mb-3">
-                        <input id="depsubtasks" class="form-control mb-1" type="text" value="{{ merge_list_to_str(list(subtask_config.dependency_subtasks)) }}" placeholder="Dependency Subtasks">
+                        <input id="depsubtasks" class="form-control mb-1" type="text" value="{{ merge_list_to_str(list(map(lambda x: x+1, subtask_config.dependency_subtasks))) }}" placeholder="Dependency Subtasks">
                         <button class="btn btn-primary set-depsubtasks">Update Dependency Subtasks</button>
                     </div>
 				</div>
