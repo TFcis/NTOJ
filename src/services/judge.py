@@ -65,17 +65,20 @@ class JudgeServerService:
             result = res["testdata_result"]
             result["time"] = result["time"] // 10 ** 6
             result["memory"] = result["memory"] // 1024
+            if result["status"] == ChalConst.STATE_AC:
+                result["status"] = ChalConst.STATE_JUDGE
             await ChalService.inst.update_testdata_result(
                 chal_id,
                 TestdataResult(
                     result["id"],
-                    ChalConst.STATE_JUDGE,
+                    result["status"],
                     result["time"],
                     result["memory"],
                     result["message"],
                     result["message_type"],
                 ),
             )
+            await self.rs.publish('chalstatesub', json.dumps({'chal_id': chal_id, **result}))
 
         elif task_type == "scoring":
             result = res["testdata_result"]
