@@ -620,7 +620,7 @@ class ChalService:
                 "id": subtask_id,
                 "score": subtask_config.rate,
                 "testdatas": t,
-                "dependency_subtasks": [], # TODO: dep subtask
+                "dependency_subtasks": list(subtask_config.dependency_subtasks),
             })
 
         testdatas = []

@@ -1,4 +1,5 @@
 {% from services.chal import COMPILER_INFOS %}
+{% from utils.numeric import merge_list_to_str %}
 <link rel="stylesheet" type="text/css" href="/oj/pro.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf_viewer.min.css" integrity="sha512-8LkkqbXJPviYJENC5Z8qC2uKz27x0tNgrZbzsAzt7zkw0/2lXtSdrslVhfrkcR+6LRmxjZxlqniSyWXimoaH5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script type="text/x-mathjax-config">
@@ -250,13 +251,15 @@
                     <tr>
                         <th>Subtask</th>
                         <th>Rate</th>
+                        <th>Dependency Subtasks</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for subtask_id, subtask in pro.config.subtask_configs.items() %}
+                    {% for subtask_id, subtask_cfg in pro.config.subtask_configs.items() %}
                         <tr>
                             <td>{{ '%04d' % (subtask_id + 1) }}</td>
-                            <td>{{ subtask.rate }}</td>
+                            <td>{{ subtask_cfg.rate }}</td>
+                            <td>{{ merge_list_to_str(list(subtask_cfg.dependency_subtasks)) }}</td>
                         </tr>
                     {% end %}
                 </tbody>

@@ -3,6 +3,7 @@ import base64
 from dataclasses import asdict
 import json
 import os
+from collections import defaultdict
 
 import tornado.escape
 from msgpack import packb
@@ -465,11 +466,34 @@ class ManageProHandler(RequestHandler):
                 )
                 self.error(('S', ''))
 
+            elif reqtype == "setdepsubtasks":
+                subtask_id = int(self.get_argument('subtask'))
+                dep_subtasks = set(map(lambda x: x - 1, parse_str_to_list(self.get_argument('dep_subtasks'))))
+
+                subtask_configs = pro.config.subtask_configs
+                if subtask_id not in subtask_configs:
+                    return self.error(('Enoext', 'Subtask not found'))
+
+                subtask_configs[subtask_id].dependency_subtasks = set(dep_subtasks)
+
+                if self.have_cycle(subtask_configs):
+                    return self.error(('Eparam', 'Dependency subtasks have cycle'))
+
+                await ProService.inst.update_pro_config(pro_id, pro.config)
+                await LogService.inst.add_log(
+                    f'{self.acct.name} has sent a request to set dependency subtasks to subtask#{subtask_id} for problem #{pro_id}',
+                    'manage.pro.update.tests.setdepsubtasks',
+                    {
+                        'dependency_subtasks': list(dep_subtasks)
+                    }
+                )
+                self.error(('S', ''))
+
             elif reqtype == "addsubtask":
                 rate = int(self.get_argument('rate'))
 
                 subtask_configs = pro.config.subtask_configs
-                subtask_configs[len(subtask_configs)] = SubtaskConfig(len(subtask_configs), [], rate)
+                subtask_configs[len(subtask_configs)] = SubtaskConfig(len(subtask_configs), [], set(), rate)
 
                 await ProService.inst.update_pro_config(pro_id, pro.config)
                 await LogService.inst.add_log(
@@ -969,3 +993,29 @@ class ManageProHandler(RequestHandler):
             return os.path.isfile(absolute_filepath) and not os.path.islink(absolute_filepath)
         return True
 
+    def have_cycle(self, subtask_configs: dict[int, SubtaskConfig]) -> bool:
+        vis = defaultdict(int)
+        graph = defaultdict(list)
+
+        for u, sconfig in subtask_configs.items():
+            for v in sconfig.dependency_subtasks:
+                graph[u].append(v)
+
+        def dfs(u) -> bool:
+            nonlocal vis
+            vis[u] = 1
+            for v in graph[u]:
+                if vis[v] == 1:
+                    return False
+                elif vis[v] == 0:
+                    if not dfs(v):
+                        return False
+            vis[u] = 2
+            return True
+
+        for u in subtask_configs.keys():
+            if vis[u] == 0:
+                if not dfs(u):
+                    return True
+
+        return False

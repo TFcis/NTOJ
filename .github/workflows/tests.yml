@@ -45,7 +45,7 @@ jobs:
           cd $HOME
           git clone https://github.com/tobiichi3227/NTOJ-Judge-Rewrite
           cd NTOJ-Judge-Rewrite/src
-          cd default-checker && make && cd ..
+          cd default-checker && make -j4 && cd ..
           sudo pip3 install tornado cffi --break-system-packages
           sudo python3 server.py > output.log 2>&1 &
 
