@@ -175,10 +175,15 @@
                 let lang = j_tr.attr('compiler');
                 let time = j_tr.find("input.time").val();
                 let memory = j_tr.find("input.memory").val();
-                limits[lang] = {
-                    time: time,
-                    memory: memory
-                };
+                let output = j_tr.find("input.output").val();
+
+                if (time !== "" && memory !== "" && output !== "") {
+                    limits[lang] = {
+                        time: time,
+                        memory: memory,
+                        output: output,
+                    };
+                }
             });
 
 			$.post('/oj/be/manage/pro/update', {
