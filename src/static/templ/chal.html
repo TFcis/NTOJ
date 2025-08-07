@@ -283,22 +283,32 @@
     </div>
 </div>
 
+{% set not_show_testdata_result_states = [ChalConst.STATE_ERR, ChalConst.STATE_JE, ChalConst.STATE_CE, ChalConst.STATE_CLE, ChalConst.STATE_REJECTED] %}
+{% set show_testdata_result = chal.total_result.state not in not_show_testdata_result_states %}
 <div class="row">
 	<div class="accordion" id="testdatas-accordion">
 		<div class="accordion-item">
 			<h2 class="accordion-header">
 				    <button
-						class="accordion-button"
+                        class="accordion-button {% if not show_testdata_result %} collapsed {% end %}"
 						type="button"
 						data-bs-toggle="collapse"
 						data-bs-target="#collapse_testdatas"
-						aria-expanded="true"
+                        {% if show_testdata_result %}
+                            aria-expanded="true"
+                        {% else %}
+                            aria-expanded="false"
+                        {% end %}
 						aria-controls="collapseOne"
 					>
                         Testdata Results
 					</button>
 			</h2>
-			<div id="collapse_testdatas" class="accordion-collapse collapse show" data-bs-parent="#testdatas-accordion">
+			<div
+                id="collapse_testdatas"
+                class="accordion-collapse collapse {% if show_testdata_result %} show {% end %}"
+                data-bs-parent="#testdatas-accordion"
+            >
 				<div class="accordion-body">
                     <table id="testdatas" class="table mobile-table-sm">
                         <thead>
@@ -366,7 +376,7 @@
 {% set message = chal.total_result.message %}
 {% set message_type = chal.total_result.message_type %}
 
-<div class="accordion" id="total-result-message-accordion" {% if message == '' or not (user.is_kernel() and chal.acct_id != user.acct_id) %} style="display: none;" {% end %}>
+<div class="accordion" id="total-result-message-accordion" {% if message == '' or not (user.is_kernel() and chal.acct_id == user.acct_id) %} style="display: none;" {% end %}>
     <div class="accordion-item">
         <h2 class="accordion-header">
                 <button
