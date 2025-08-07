@@ -133,6 +133,13 @@ class TestdataResult:
     message: str
     message_type: MessageType
 
+    def reset(self):
+        self.state = ChalConst.STATE_NOTSTARTED
+        self.time = 0
+        self.memory = 0
+        self.message = ""
+        self.message_type = MessageType.NONE
+
 @dataclass(slots=True)
 class SubtaskResult:
     """
@@ -152,6 +159,12 @@ class SubtaskResult:
         assert ChalConst.STATE_AC <= self.state <= ChalConst.STATE_REJECTED
         assert self.time >= 0
         assert self.memory >= 0
+
+    def reset(self):
+        self.state = ChalConst.STATE_NOTSTARTED
+        self.time = 0
+        self.memory = 0
+        self.rate = decimal.Decimal()
 
 @dataclass(slots=True)
 class TotalResult:
@@ -174,6 +187,14 @@ class TotalResult:
         assert ChalConst.STATE_AC <= self.state <= ChalConst.STATE_REJECTED
         assert self.time >= 0
         assert self.memory >= 0
+
+    def reset(self):
+        self.state = ChalConst.STATE_NOTSTARTED
+        self.time = 0
+        self.memory = 0
+        self.rate = decimal.Decimal()
+        self.message = ""
+        self.message_type = MessageType.NONE
 
 @dataclass(slots=True)
 class Challenge:
@@ -204,7 +225,6 @@ class ChalSearchingParam:
 
         state (int | None): Challenge state to filter.
             - If 0 or None: no filtering.
-            - If `ChalConst.STATE_NOTSTARTED`: adds `state IS NULL` to the filter.
             - Other values: exact match (e.g., `ChalConst.STATE_AC`, `ChalConst.STATE_WA`, etc.).
             - See `ChalConst.STATE_*` for available state constants.
 
@@ -252,10 +272,7 @@ class ChalSearchingParam:
                 query.append(' AND "challenge"."acct_id" IS NULL ')
 
         if self.state != 0:
-            if self.state == ChalConst.STATE_NOTSTARTED:
-                query.append(' AND "total_result"."state" IS NULL ')
-            else:
-                query.append(f' AND "total_result"."state" = {self.state} ')
+            query.append(f' AND "total_result"."state" = {self.state} ')
 
         if self.compiler != -1:
             query.append(f' AND "challenge"."compiler_type"=\'{self.compiler}\' ')
@@ -609,7 +626,6 @@ class ChalService:
         limit = limits.get(compiler_type, limits['default'])
         await self.db.execute('UPDATE total_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
         await self.db.execute('UPDATE subtask_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
-        await self.db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
 
         need_judge_testdatas: set[int] = set()
         subtasks = []
@@ -622,6 +638,8 @@ class ChalService:
                 "testdatas": t,
                 "dependency_subtasks": list(subtask_config.dependency_subtasks),
             })
+        await self.db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id = ANY($3);',
+                              ChalConst.STATE_JUDGE, chal_id, need_judge_testdatas)
 
         testdatas = []
         for testdata_id in need_judge_testdatas:
@@ -712,7 +730,7 @@ class ChalService:
                     ON "challenge"."acct_id" = "account"."acct_id"
                     INNER JOIN "problem"
                     ON "challenge"."pro_id" = "problem"."pro_id"
-                    LEFT JOIN "total_result"
+                    INNER JOIN "total_result"
                     ON "challenge"."chal_id" = "total_result"."chal_id"
                     WHERE 1=1 {fltquery}
                     ORDER BY "challenge"."chal_id" DESC OFFSET {off} LIMIT {num};
@@ -795,7 +813,7 @@ class ChalService:
                     ON "challenge"."acct_id" = "account"."acct_id"
                     INNER JOIN "problem"
                     ON "challenge"."pro_id" = "problem"."pro_id"
-                    LEFT JOIN "total_result"
+                    INNER JOIN "total_result"
                     ON "challenge"."chal_id"="total_result"."chal_id"
                     WHERE 1=1 {fltquery};
                 '''

@@ -3,13 +3,14 @@ import decimal
 import json
 from dataclasses import is_dataclass, asdict
 
-from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
+from handlers.base import RequestHandler, WebSocketSubHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
-from services.chal import ChalService, ChalSearchingParamBuilder, COMPILER_INFOS
+from services.chal import ChalService, ChalSearchingParamBuilder, ChalConst, COMPILER_INFOS, MessageType
 from services.pro import ProService, ProConst
-from services.user import UserService
+from services.user import UserService, UserConst
 from services.contests import UserStatus
 from utils.numeric import parse_str_to_list
+from services.log import LogService
 
 
 class ChalListHandler(RequestHandler):
@@ -122,6 +123,51 @@ class ChalHandler(RequestHandler):
 
         await self.render('chal', pro=pro, chal=chal, rechal=rechal)
         return
+
+    @reqenv
+    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
+    @contest_require_permission('admin')
+    async def post(self, chal_id):
+        chal_id = int(chal_id)
+        reqtype = self.get_argument('reqtype')
+        if reqtype == "reject":
+            reason = self.get_argument('reason')
+            if err := self.len_check(reason, 0, 1024, 'reason'):
+                return self.error(err)
+
+            if not self.contest and not self.acct.is_kernel():
+                return self.error((('Eacces', 'Permission denied')))
+
+            err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
+            if err:
+                return self.error(err)
+
+
+            chal.total_result.reset()
+            chal.total_result.message = reason
+            chal.total_result.message_type = MessageType.TEXT
+            chal.total_result.state = ChalConst.STATE_REJECTED
+            await ChalService.inst.update_total_result(chal_id, chal.total_result)
+
+            for r in chal.subtask_results.values():
+                r.reset()
+                r.state = ChalConst.STATE_REJECTED
+                await ChalService.inst.update_subtask_result(chal_id, r)
+
+            for r in chal.testdata_results.values():
+                r.reset()
+                r.state = ChalConst.STATE_REJECTED
+                await ChalService.inst.update_testdata_result(chal_id, r)
+
+            await LogService.inst.add_log(
+                f"{self.acct.name}(#{self.acct.acct_id}) reject chal#{chal_id}.", 'manage.chal.reject',
+                {
+                    'reason': reason
+                }
+            )
+
+            self.error(('S', ''))
+
 
 class _Encoder(json.JSONEncoder):
     def default(self, o):

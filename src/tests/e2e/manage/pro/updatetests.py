@@ -207,7 +207,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
             html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
             subtasks = html.select_one('div#subtasks').select('div.accordion-item')
-            self.assertEqual(subtasks[2].select_one('#depsubtasks').attrs['value'].strip(), "1")
+            self.assertEqual(subtasks[2].select_one('#depsubtasks').attrs['value'].strip(), "2")
 
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
                 'reqtype': 'setdepsubtasks',

@@ -94,13 +94,11 @@ class ContestManageProHandler(RequestHandler):
 
             async with self.db.acquire() as con:
                 result = await con.fetch(
-                    f'''
-                        SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"
-                        INNER JOIN "total_result"
-                        ON "challenge"."chal_id" = "total_result"."chal_id" AND "challenge"."contest_id" = {self.contest.contest_id}
-                        WHERE "pro_id" = $1;
+                    '''
+                        SELECT chal_id, compiler_type FROM challenge
+                        WHERE contest_id = $1 AND pro_id = $2;
                     ''',
-                    pro_id
+                    self.contest.contest_id, pro_id
                 )
 
             # await LogService.inst.add_log(

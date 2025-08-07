@@ -958,12 +958,12 @@ class ManageProHandler(RequestHandler):
                     sql = ""
                     log_type = "manage.chal.rechalall"
                 else:
-                    sql = '''AND "total_result"."chal_id" IS NULL'''
+                    sql = f'AND "total_result"."state" = {ChalConst.STATE_NOTSTARTED}'
                     log_type = "manage.chal.rechal"
                 result = await con.fetch(
                     f'''
                         SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"
-                        LEFT JOIN "total_result"
+                        INNER JOIN "total_result"
                         ON "challenge"."chal_id" = "total_result"."chal_id"
                         WHERE "pro_id" = $1 {sql};
                     ''',
