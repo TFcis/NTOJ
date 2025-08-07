@@ -50,26 +50,7 @@ a:hover a:visited a:link a:active {
 /* .state-100 JUDGE */
 /* .state-101 NOTSTARTED */
 
-.panel {
-  margin-bottom: 20px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+.state-102 { /* Skipped */
+  color: rgba(220, 226, 230, 0.75) !important;
 }
-
-.panel-default {
-  border-color: #ddd;
-}
-
-.panel-heading {
-  padding: 10px 15px;
-  border-bottom: 1px solid transparent;
-  border-top-left-radius: 3px;
-  border-top-right-radius: 3px;
-}
-
-.panel-body {
-  padding: 15px;
-}
-
 /*# sourceMappingURL=index.css.map */
