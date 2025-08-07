@@ -5,7 +5,7 @@ import shutil
 import requests
 import tornado
 
-from services.chal import ChalConst
+from services.chal import ChalConst, Compiler
 from services.pro import ProConst
 from services.user import UserService, UserConst
 from .util import AccountContext, AsyncTest
@@ -163,7 +163,7 @@ class E2ETest(AsyncTest):
                 # submit problem
                 def callback():
                     chal_id = self.submit_problem(1, open('tests/static_file/code/toj3.ac.py').read(),
-                                                  'python3', admin_session)
+                                                  Compiler.PYTHON3, admin_session)
 
                     self.assertEqual(chal_id, 1)
 
@@ -171,8 +171,8 @@ class E2ETest(AsyncTest):
                 await self.wait_for_judge_finish(callback)
 
                 # view chal
-                chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
-                self.assertEqual(chal_states_result, [ChalConst.STATE_AC] * len(chal_states_result))
+                _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
+                self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
 
                 # query code
                 res = admin_session.post('code', {

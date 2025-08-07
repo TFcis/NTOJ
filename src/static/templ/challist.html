@@ -1,6 +1,6 @@
 {% import math %}
 {% import datetime %}
-{% from services.chal import ChalConst %}
+{% from services.chal import ChalConst, COMPILER_INFOS, Compiler %}
 {% set TZ = datetime.timezone(datetime.timedelta(hours=+8)) %}
 
 <link rel="stylesheet" type="text/css" href="/oj/challist.css">
@@ -94,7 +94,7 @@
             let update_state = ({chal_id, state, time, memory, rate}) => {
                 let tr = document.querySelector(`#chal${chal_id}`);
                 tr.querySelector('#time').innerText = parseInt(time);
-                tr.querySelector('#memory').innerText = Math.round(memory / 1024);
+                tr.querySelector('#memory').innerText = Math.round(memory);
                 tr.querySelector('#score').innerText = rate;
 
                 let state_el = tr.querySelector('#state');
@@ -170,7 +170,7 @@
                 <label class="form-label">Status</label>
                 <select id="state" class="form-select">
                     <option value=0 {% if flt.state == 0 %}selected{% end %}>All</option>
-                    {% for state, desc in ChalConst.STATE_STR.items() %}
+                    {% for state, desc in ChalConst.STATE_LONG_STR.items() %}
                         {% raw f'<option value="{ state }" { "selected" if flt.state == state else "" }>{ desc }</option>' %}
                     {% end %}
                 </select>
@@ -179,8 +179,9 @@
             <div class="mb-1">
                 <label class="form-label">Compiler</label>
                 <select id="compiler" class="form-select">
-                    <option value="all" {% if flt.compiler == 'all' %}selected{% end %}>All</option>
-                    {% for compiler, version in ChalConst.COMPILER_NAME.items() %}
+                    <option value="-1" {% if flt.compiler == '-1' %}selected{% end %}>All</option>
+                    {% for compiler in Compiler %}
+                        {% set version = COMPILER_INFOS[compiler].version_name %}
                         {% raw f'<option value="{ compiler }" { "selected" if flt.compiler == compiler else "" }>{ version }</option>' %}
                     {% end %}
                 </select>
@@ -229,7 +230,7 @@
                     <td><a href="/oj/acct/{{ chal.acct_id }}/">{{ chal.acct_name }}</a></td>
                     <td id="state" class="state-{{ chal.total_result.state }}">{{ ChalConst.STATE_LONG_STR[chal.total_result.state] }}</td>
                     <td id="time">{{ chal.total_result.time }}</td>
-                    <td id="memory">{{ round(chal.total_result.memory / 1024) }}</td>
+                    <td id="memory">{{ chal.total_result.memory }}</td>
                     <td id="score">{{ chal.total_result.rate }}</td>
                     <td>{{ chal.compiler_type }}</td>
                     <td class="time">{{ chal.timestamp.astimezone(TZ).strftime('%Y-%m-%d %H:%M:%S') }}</td>
@@ -238,8 +239,6 @@
             </tbody>
         </table>
         </div>
-
-        {% from tornado.escape import url_escape %}
 
         {% set postfix = '' %}
         {% if flt.pro != None %}
@@ -251,8 +250,8 @@
         {% if flt.state != 0 %}
             {% set postfix = postfix + f"&state={flt.state}" %}
         {% end %}
-        {% if flt.compiler != 'all' %}
-        {% set postfix = postfix + f"&compiler_type={url_escape(flt.compiler, False)}" %}
+        {% if flt.compiler != -1 %}
+        {% set postfix = postfix + f"&compiler_type={flt.compiler}" %}
         {% end %}
 
         <div class="row">

@@ -109,22 +109,20 @@ class UserRankHandler(RequestHandler):
             f'''
             WITH accepted_tests_per_user AS (
                 SELECT DISTINCT
-                    t."acct_id", t."pro_id", t."subtask_id", t."rate"
+                    c.acct_id, t.pro_id, t.subtask_id, t.rate
                 FROM
                     "subtask_result" t
-                INNER JOIN "problem"
-                    ON t."pro_id" = "problem"."pro_id"
+                INNER JOIN problem p
+                    ON t.pro_id = p.pro_id
+                INNER JOIN challenge c
+                    ON t.chal_id = c.chal_id
                 WHERE
-                    "problem"."status" = {ProConst.STATUS_ONLINE}
-                    AND t."state" <= {ChalConst.STATE_PC}
+                    p.status = {ProConst.STATUS_ONLINE}
+                    AND t.state <= {ChalConst.STATE_PC}
             ), user_total_rate AS (
                 SELECT
-                    acct_id, SUM(CASE WHEN accepted_tests_per_user.rate IS NULL THEN test_valid_rate.rate ELSE accepted_tests_per_user.rate END) AS rate
-                FROM
-                    test_valid_rate
-                INNER JOIN accepted_tests_per_user
-                    ON "test_valid_rate"."pro_id" = accepted_tests_per_user."pro_id"
-                    AND "test_valid_rate"."test_idx" = accepted_tests_per_user."subtask_id"
+                    acct_id, SUM(accepted_tests_per_user.rate) AS rate
+                FROM accepted_tests_per_user
                 GROUP BY acct_id
             ), user_stats AS (
                 SELECT

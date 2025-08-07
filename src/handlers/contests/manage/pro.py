@@ -94,13 +94,11 @@ class ContestManageProHandler(RequestHandler):
 
             async with self.db.acquire() as con:
                 result = await con.fetch(
-                    f'''
-                        SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"
-                        INNER JOIN "total_result"
-                        ON "challenge"."chal_id" = "total_result"."chal_id" AND "challenge"."contest_id" = {self.contest.contest_id}
-                        WHERE "pro_id" = $1;
+                    '''
+                        SELECT chal_id, compiler_type FROM challenge
+                        WHERE contest_id = $1 AND pro_id = $2;
                     ''',
-                    pro_id
+                    self.contest.contest_id, pro_id
                 )
 
             # await LogService.inst.add_log(
@@ -112,7 +110,7 @@ class ContestManageProHandler(RequestHandler):
             async def _rechal(rechals):
                 for chal_id, compiler_type in rechals:
                     _, _ = await ChalService.inst.reset_chal(chal_id)
-                    _, _ = await ChalService.inst.emit_chal(chal_id, pro_id, pro.config, compiler_type, ChalConst.CONTEST_REJUDGE_PRI)
+                    _, _ = await ChalService.inst.emit_chal(chal_id, pro_id, compiler_type, ChalConst.CONTEST_REJUDGE_PRI, skip_nonac=False)
 
             await asyncio.create_task(_rechal(rechals=result))
             self.error(('S', f'Problem(#{pro_id}) is rechallenging.'))

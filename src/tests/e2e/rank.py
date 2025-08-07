@@ -1,5 +1,5 @@
 from tests.e2e.util import AsyncTest, AccountContext
-from services.pro import ProConst
+from services.pro import ProConst, CheckerType
 
 
 class UserRankTest(AsyncTest):
@@ -23,15 +23,12 @@ class ProRankTest(AsyncTest):
             self.assertEqual(first.select('td')[2].text, 'admin')
 
             admin_session.post('manage/pro/update', data={
-                'reqtype': 'updatepro',
+                'reqtype': 'updategeneral',
                 'pro_id': 1,
                 'name': 'GCD',
                 'status': ProConst.STATUS_HIDDEN,
                 'tags': '',
                 'allow_submit': 'true',
-                'is_makefile': 'false',
-                'check_type': ProConst.CHECKER_DIFF,
-                "rate_precision": ProConst.RATE_PRECISION_MIN,
             })
 
             with AccountContext('test1@test', 'test') as user_session:
@@ -39,13 +36,10 @@ class ProRankTest(AsyncTest):
                 self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
             admin_session.post('manage/pro/update', data={
-                'reqtype': 'updatepro',
+                'reqtype': 'updategeneral',
                 'pro_id': 1,
                 'name': 'GCD',
                 'status': ProConst.STATUS_ONLINE,
                 'tags': '',
                 'allow_submit': 'true',
-                'is_makefile': 'false',
-                'check_type': ProConst.CHECKER_DIFF,
-                "rate_precision": ProConst.RATE_PRECISION_MIN,
             })
