@@ -81,6 +81,15 @@ class ChalTest(AsyncTest):
             self.assertEqual(total_result.state, ChalConst.STATE_REJECTED)
             self.assertEqual(total_result.message, 'Reject reason')
 
+            def callback():
+                res = admin_session.post('submit', data={
+                    'reqtype': 'rechal',
+                    'chal_id': 1
+                })
+                self.assertAPIReturnValue(res.text, ('S', 1))
+
+            await self.wait_for_judge_finish(callback)
+
 
 class ChalListTest(AsyncTest):
     async def main(self):
