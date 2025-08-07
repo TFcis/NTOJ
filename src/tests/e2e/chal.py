@@ -70,6 +70,17 @@ class ChalTest(AsyncTest):
             _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
             self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
 
+            res = admin_session.post('chal/1', data={
+                'reqtype': 'reject',
+                'reason': 'Reject reason'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            total_result, subtask_results, testdata_results = self.get_chal_results(chal_id=1, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_REJECTED] * len(subtask_results))
+            self.assertEqual([v.state for v in testdata_results.values()], [ChalConst.STATE_REJECTED] * len(testdata_results))
+            self.assertEqual(total_result.state, ChalConst.STATE_REJECTED)
+            self.assertEqual(total_result.message, 'Reject reason')
+
 
 class ChalListTest(AsyncTest):
     async def main(self):

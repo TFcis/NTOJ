@@ -149,6 +149,26 @@
                 }
             });
         });
+        $('#reject').on('click', function(e) {
+            let url = '';
+            {% if chal.contest_id == 0 %}
+                url = `/oj/be/chal/${chal_id}`;
+            {% else %}
+                url = `/oj/be/contests/{{ chal.contest_id }}/chal/${chal_id}`;
+            {% end %}
+            let reason = prompt('Reject Reason: ');
+            $.post(url, {
+                'reqtype': 'reject',
+                'reason': reason,
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.reload();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        });
         {% end %}
 
         let code_txt = '';
@@ -229,6 +249,7 @@
 
     {% if rechal == True %}
         <button id="rechal" class="btn btn-warning">Rechallenge</button>
+        <button id="reject" class="btn btn-danger">Reject</button>
     {% end %}
     {% if chal.acct_id == user.acct_id %}
         <button id="report_pro_button" class="btn btn-warning">Report Problem</button>

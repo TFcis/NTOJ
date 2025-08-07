@@ -133,6 +133,13 @@ class TestdataResult:
     message: str
     message_type: MessageType
 
+    def reset(self):
+        self.state = ChalConst.STATE_NOTSTARTED
+        self.time = 0
+        self.memory = 0
+        self.message = ""
+        self.message_type = MessageType.NONE
+
 @dataclass(slots=True)
 class SubtaskResult:
     """
@@ -152,6 +159,12 @@ class SubtaskResult:
         assert ChalConst.STATE_AC <= self.state <= ChalConst.STATE_REJECTED
         assert self.time >= 0
         assert self.memory >= 0
+
+    def reset(self):
+        self.state = ChalConst.STATE_NOTSTARTED
+        self.time = 0
+        self.memory = 0
+        self.rate = decimal.Decimal()
 
 @dataclass(slots=True)
 class TotalResult:
@@ -174,6 +187,14 @@ class TotalResult:
         assert ChalConst.STATE_AC <= self.state <= ChalConst.STATE_REJECTED
         assert self.time >= 0
         assert self.memory >= 0
+
+    def reset(self):
+        self.state = ChalConst.STATE_NOTSTARTED
+        self.time = 0
+        self.memory = 0
+        self.rate = decimal.Decimal()
+        self.message = ""
+        self.message_type = MessageType.NONE
 
 @dataclass(slots=True)
 class Challenge:
