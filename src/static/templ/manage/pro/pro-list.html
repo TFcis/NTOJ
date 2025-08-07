@@ -62,19 +62,19 @@
 		<tbody>
 			{% for pro in prolist %}
 			<tr>
-				<th scope="row">{{ pro['pro_id'] }}</th>
-				<td><a href="/oj/pro/{{ pro['pro_id'] }}/">{{ pro['name'] }}</a></td>
+				<th scope="row">{{ pro.pro_id }}</th>
+				<td><a href="/oj/pro/{{ pro.pro_id }}/">{{ pro.name }}</a></td>
 
-				{% if pro['status'] == ProConst.STATUS_ONLINE %}
+				{% if pro.status == ProConst.STATUS_ONLINE %}
                     <td class="status-online">Online</td>
-				{% elif pro['status'] == ProConst.STATUS_CONTEST %}
+				{% elif pro.status == ProConst.STATUS_CONTEST %}
                     <td class="status-online">Contest</td>
-				{% elif pro['status'] == ProConst.STATUS_HIDDEN %}
+				{% elif pro.status == ProConst.STATUS_HIDDEN %}
                     <td class="status-hidden">Hidden</td>
 				{% end %}
 
-				<td proid={{ pro['pro_id'] }} class="control">
-					<a class="btn btn-secondary" href="/oj/manage/pro/update/?proid={{ pro['pro_id'] }}">&#x2699</a>
+				<td proid={{ pro.pro_id }} class="control">
+					<a class="btn btn-secondary" href="/oj/manage/pro/update/?proid={{ pro.pro_id }}">&#x2699</a>
 					<div class="btn-group">
 						<button type="button" class="btn btn-warning btn-sm rechal">Rechallenge</button>
 						<button type="button" class="btn btn-danger dropdown-toggle dropdown-toggle-split"

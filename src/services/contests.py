@@ -5,6 +5,7 @@ import pickle
 
 import asyncpg
 
+from services.chal import Compiler
 from services.user import Account
 
 
@@ -49,7 +50,7 @@ class Contest:
     reg_mode: RegMode
     reg_end: datetime.datetime
 
-    allow_compilers: list[str] = field(default_factory=list)
+    allow_compilers: set[Compiler] = field(default_factory=set)
     is_public_scoreboard: bool = False
     allow_view_other_page: bool = False  # TODO: finish allow view other page
     hide_admin: bool = True
@@ -388,11 +389,11 @@ class ContestService:
                 "challenge"."pro_id",
                 "challenge"."acct_id",
                 "challenge"."timestamp",
-                ROUND("challenge_state"."rate", problem.rate_precision) AS rate,
+                ROUND("total_result"."rate", problem.rate_precision) AS rate,
 
                 ROW_NUMBER() OVER (
                     PARTITION BY "challenge"."pro_id", "challenge"."acct_id"
-                    ORDER BY "challenge_state"."rate" DESC, "challenge"."timestamp" ASC
+                    ORDER BY "total_result"."rate" DESC, "challenge"."timestamp" ASC
                 ) AS rank,
 
                 COUNT(*) OVER (
@@ -403,11 +404,11 @@ class ContestService:
             FROM "challenge"
             INNER JOIN "contest_users"
                 ON "contest_users"."contest_id" = $1 AND "contest_users"."acct_id" = "challenge"."acct_id"
-                AND "contest_users"."status" = {UserStatus.APPROVED.value} OR "contest_users"."status" = {UserStatus.ADMIN}
+                AND "contest_users"."status" = {UserStatus.APPROVED} OR "contest_users"."status" = {UserStatus.ADMIN}
 
-            INNER JOIN "challenge_state"
+            INNER JOIN "total_result"
                 ON "challenge"."contest_id" = $1 AND "challenge"."pro_id" = $2
-                AND "challenge"."timestamp" < $3 AND "challenge"."chal_id" = "challenge_state"."chal_id"
+                AND "challenge"."timestamp" < $3 AND "challenge"."chal_id" = "total_result"."chal_id"
             INNER JOIN "problem"
             ON "problem"."pro_id" = $2
         )
@@ -442,13 +443,13 @@ class ContestService:
     async def get_ioi2017_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
         res = await self.db.fetch('''
         WITH contest_challenges AS (
-            SELECT chal_id, acct_id, pro_id
+            SELECT chal_id, acct_id, pro_id, timestamp
             FROM challenge
             WHERE contest_id = $1 AND timestamp < $3
         ),
         problem_tests AS (
-            SELECT pro_id, test_idx, weight
-            FROM test_config
+            SELECT pro_id, subtask_id
+            FROM subtask_config
             WHERE pro_id = $2
         ),
         individual_test_results AS (
@@ -456,16 +457,11 @@ class ContestService:
                 cc.acct_id,
                 cc.chal_id,
                 pt.pro_id,
-                pt.test_idx,
-                pt.weight,
-                CASE
-                    WHEN t.state = 1 AND t.rate IS NULL THEN pt.weight
-                    WHEN t.state = 1 AND t.rate IS NOT NULL THEN t.rate
-                    ELSE 0
-                END AS rate,
-                t.timestamp
+                pt.subtask_id,
+                t.rate,
+                cc.timestamp
             FROM problem_tests pt
-            JOIN test t ON pt.pro_id = t.pro_id AND pt.test_idx = t.test_idx
+            JOIN subtask_result t ON pt.pro_id = t.pro_id AND pt.subtask_id = t.subtask_id
             JOIN contest_challenges cc ON t.chal_id = cc.chal_id
         ),
         ranked_results AS (
@@ -473,10 +469,10 @@ class ContestService:
                 acct_id,
                 chal_id,
                 pro_id,
-                test_idx,
+                subtask_id,
                 rate,
                 timestamp,
-                ROW_NUMBER() OVER (PARTITION BY acct_id, pro_id, test_idx ORDER BY rate DESC, timestamp ASC) AS rank
+                ROW_NUMBER() OVER (PARTITION BY acct_id, pro_id, subtask_id ORDER BY rate DESC, timestamp ASC) AS rank
             FROM individual_test_results
         ),
         best_individual_results AS (
@@ -484,7 +480,7 @@ class ContestService:
                 acct_id,
                 chal_id,
                 pro_id,
-                test_idx,
+                subtask_id,
                 rate AS best_rate,
                 timestamp
             FROM ranked_results

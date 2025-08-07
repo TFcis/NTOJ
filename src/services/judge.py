@@ -48,44 +48,108 @@ class JudgeServerService:
                 self.running_chal_cnt = 0
                 break
 
-            await self.response_handle(ret)
+            try:
+                await self.response_handle(ret)
+            except Exception as e:
+                import traceback
+                traceback.print_exception(e)
 
-    async def response_handle(self, ret):
-        from services.chal import ChalService, ChalConst
+    async def response_handle(self, ret: str):
+        from services.chal import ChalService, ChalConst, TotalResult, SubtaskResult, TestdataResult, MessageType
+        res: dict = json.loads(ret)
 
-        res = json.loads(ret)
+        chal_id = res['chal_id']
+        task_type = res['task']
 
-        if res['results'] is not None:
-            for test_idx, result in enumerate(res['results']):
+        if task_type == "execute":
+            result = res["testdata_result"]
+            result["time"] = result["time"] // 10 ** 6
+            result["memory"] = result["memory"] // 1024
+            if result["status"] == ChalConst.STATE_AC:
+                result["status"] = ChalConst.STATE_JUDGE
+            await ChalService.inst.update_testdata_result(
+                chal_id,
+                TestdataResult(
+                    result["id"],
+                    result["status"],
+                    result["time"],
+                    result["memory"],
+                    result["message"],
+                    result["message_type"],
+                ),
+            )
+            await self.rs.publish('chalstatesub', json.dumps({'chal_id': chal_id, **result}))
 
-                score = None
-                is_cms_type = False
-                if 'score_type' in result and result['score_type'] in ["CMS", "CF"]:
-                    is_cms_type = result['score_type'] == "CMS"
-                    if 'score' in result:
-                        try:
-                            score = decimal.Decimal(result['score'])
-                        except decimal.InvalidOperation:
-                            score = None
-                            result['status'] = ChalConst.STATE_SJE
+        elif task_type == "scoring":
+            result = res["testdata_result"]
+            result["time"] = result["time"] // 10 ** 6
+            result["memory"] = result["memory"] // 1024
+            await ChalService.inst.update_testdata_result(
+                chal_id,
+                TestdataResult(
+                    result["id"],
+                    result["status"],
+                    result["time"],
+                    result["memory"],
+                    result["message"],
+                    result["message_type"],
+                ),
+            )
+            await self.rs.publish('chalstatesub', json.dumps({'chal_id': chal_id, **result}))
 
-                _, ret = await ChalService.inst.update_test(
-                    res['chal_id'],
-                    test_idx,
-                    result['status'],
-                    int(result['time'] / 10 ** 6),  # ns to ms
-                    result['memory'],
-                    score,
-                    result['verdict'],
-                    rate_is_cms_type=is_cms_type,
-                    refresh_db=False,
+        elif task_type == "summary":
+            result = res["result"]
+            total_result = result["total_result"]
+            message = ""
+            if total_result["status"] in [ChalConst.STATE_CE, ChalConst.STATE_CLE]:
+                message = total_result["ce_message"]
+            elif total_result["status"] in [ChalConst.STATE_ERR, ChalConst.STATE_JE]:
+                message = total_result["ie_message"]
+            total_result["time"] = total_result["time"] // 10 ** 6
+            total_result["memory"] = total_result["memory"] // 1024
+
+            await ChalService.inst.update_total_result(
+                chal_id,
+                TotalResult(
+                    total_result["status"],
+                    total_result["time"],
+                    total_result["memory"],
+                    decimal.Decimal(total_result["score"]),
+                    message,
+                    total_result["message_type"],
+                ),
+            )
+
+            for subtask_id, subtask_result in result["subtask_results"].items():
+                subtask_result["time"] = subtask_result["time"] // 10 ** 6
+                subtask_result["memory"] = subtask_result["memory"] // 1024
+                await ChalService.inst.update_subtask_result(
+                    chal_id,
+                    SubtaskResult(
+                        int(subtask_id),
+                        subtask_result["status"],
+                        subtask_result["time"],
+                        subtask_result["memory"],
+                        decimal.Decimal(subtask_result["score"]),
+                    ),
+                )
+
+            for testdata_result in result["testdata_results"].values():
+                testdata_result["time"] = testdata_result["time"] // 10 ** 6
+                testdata_result["memory"] = testdata_result["memory"] // 1024
+                await ChalService.inst.update_testdata_result(
+                    chal_id,
+                    TestdataResult(
+                        testdata_result["id"],
+                        testdata_result["status"],
+                        testdata_result["time"],
+                        testdata_result["memory"],
+                        testdata_result["message"],
+                        MessageType(testdata_result["message_type"]),
+                    ),
                 )
 
             self.running_chal_cnt -= 1
-            await ChalService.inst.update_challenge_state(res['chal_id'])
-
-            await self.rs.publish('chalstatesub', res['chal_id'])
-            await self.rs.publish('challiststatesub', res['chal_id'])
             await self.rs.publish(
                 'judgechalcnt_sub',
                 json.dumps(
@@ -95,9 +159,11 @@ class JudgeServerService:
                     }
                 ),
             )
+            await self.rs.publish('challiststatesub', chal_id)
+            await self.rs.publish('chalstatesub', json.dumps({'chal_id': chal_id, **result}))
 
-            pro_id = self.chal_map[res['chal_id']]['pro_id']
-            contest_id = self.chal_map[res['chal_id']]['contest_id']
+            pro_id = self.chal_map[chal_id]['pro_id']
+            contest_id = self.chal_map[chal_id]['contest_id']
             if contest_id != 0:
                 await self.rs.publish('contestnewchalsub', contest_id)
                 await self.rs.hdel(f'contest_{contest_id}_scores', str(pro_id))
@@ -106,6 +172,7 @@ class JudgeServerService:
             await self.rs.hdel('pro_rate', f"pro_id_{pro_id}_contest_id_{contest_id}")
             await self.rs.hdel('pro_topcoder', str(pro_id))
             self.chal_map.pop(res['chal_id'])
+
 
     async def disconnect_server(self):
         if not self.status:

@@ -1,3 +1,5 @@
+{% from services.chal import COMPILER_INFOS %}
+{% from utils.numeric import merge_list_to_str %}
 <link rel="stylesheet" type="text/css" href="/oj/pro.css">
 <link rel="stylesheet" href="/oj/third/pdf_viewer.min.css"/>
 <script type="text/x-mathjax-config">
@@ -11,11 +13,11 @@
     var pdf_url = '';
     var html_url = '';
     {% if contest %}
-        pdf_url = '/oj/contests/{{ contest.contest_id }}/pro/{{ pro['pro_id'] }}/cont.pdf';
-        html_url = '/oj/contests/{{ contest.contest_id }}/pro/{{ pro['pro_id'] }}/cont.html'
+        pdf_url = '/oj/contests/{{ contest.contest_id }}/pro/{{ pro.pro_id }}/cont.pdf';
+        html_url = '/oj/contests/{{ contest.contest_id }}/pro/{{ pro.pro_id }}/cont.html'
     {% else %}
-        pdf_url = '/oj/pro/{{ pro['pro_id'] }}/cont.pdf';
-        html_url = '/oj/pro/{{ pro['pro_id'] }}/cont.html';
+        pdf_url = '/oj/pro/{{ pro.pro_id }}/cont.pdf';
+        html_url = '/oj/pro/{{ pro.pro_id }}/cont.html';
     {% end %}
 
     function init() {
@@ -33,7 +35,7 @@
                 // valid
                 $('#tags-invalid').hide();
                 $.post('/oj/be/set-tags', {
-                    'pro_id': {{ pro['pro_id'] }},
+                    'pro_id': {{ pro.pro_id }},
                     'tags': tags,
                 }, function() {
                     $('#tags-done').show();
@@ -150,13 +152,13 @@
     }
 </script>
 <div class="row">
-    <div id="side" class="col-lg-2 col-12 mt-lg-2">
-        <h3>{{ pro['pro_id']}} / {{ pro['name'] }}</h3>
-        {% if can_submit and pro['allow_submit'] %}
+    <div id="side" class="col-lg-3 col-12 mt-lg-2">
+        <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
+        {% if can_submit and pro.allow_submit %}
             {% if contest and not contest.is_end() %}
-                <a class="btn btn-primary btn-lg my-lg-1" href="/oj/contests/{{ contest.contest_id }}/submit/{{ pro['pro_id'] }}/">Submit</a><br />
+                <a class="btn btn-primary btn-lg my-lg-1" href="/oj/contests/{{ contest.contest_id }}/submit/{{ pro.pro_id }}/">Submit</a><br />
             {% else %}
-                <a class="btn btn-primary btn-lg my-lg-1" href="/oj/submit/{{ pro['pro_id'] }}/">Submit</a><br />
+                <a class="btn btn-primary btn-lg my-lg-1" href="/oj/submit/{{ pro.pro_id }}/">Submit</a><br />
             {% end %}
         {% else %}
             <a class="btn btn-warning btn-lg my-lg-1">Cannot Submit</a><br />
@@ -164,11 +166,11 @@
 
         <div class="my-lg-1">
             {% if contest %}
-                <a class="btn btn-success" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}&acctid={{ user.acct_id }}">My Status</a>
-                <a class="btn btn-secondary" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro['pro_id'] }}">Status</a>
+                <a class="btn btn-success" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro.pro_id }}&acctid={{ user.acct_id }}">My Status</a>
+                <a class="btn btn-secondary" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro.pro_id }}">Status</a>
             {% else %}
-                <a class="btn btn-success" href="/oj/rank/{{ pro['pro_id'] }}/">&nbsp;Rank&nbsp;</a>
-                <a class="btn btn-secondary" href="/oj/chal/?proid={{ pro['pro_id'] }}">Status</a>
+                <a class="btn btn-success" href="/oj/rank/{{ pro.pro_id }}/">&nbsp;Rank&nbsp;</a>
+                <a class="btn btn-secondary" href="/oj/chal/?proid={{ pro.pro_id }}">Status</a>
             {% end %}
 
         </div>
@@ -178,9 +180,9 @@
             <a class="btn btn-warning my-lg-1" id="switchviewer" style="display: none; width: 156px; text-align: center;">Switch Viewer</a>
         </div>
         {% if user.is_kernel() and not contest %}
-            <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width: 190px" placeholder="add tags here">
+            <input id="tags" value="{{ pro.tags }}" style="width: 190px" placeholder="add tags here">
         {% else %}
-            <input id="tags" value="{{ pro.get('tags','') or '' }}" style="width: 190px" placeholder="no tags" disabled>
+            <input id="tags" value="{{ pro.tags }}" style="width: 190px" placeholder="no tags" disabled>
         {% end %}
         <div>
 
@@ -212,48 +214,64 @@
             {% end %}
         {% end %}
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Lang</th>
-                    <th>Time</th>
-                    <th>Memory</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for language, limit in pro['testm_conf']['limit'].items() %}
-                <tr>
-                    <td>{{ language }}</td>
-                    <td>{{ limit['timelimit'] }} </td>
-                    <td>{{ limit['memlimit'] // 1024 }} </td>
-                </tr>
-                {% end %}
-            </tbody>
-        </table>
-
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Test</th>
-                    <th>Weight</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for test_group_idx, test in pro['testm_conf']['test_group'].items() %}
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
                     <tr>
-                        <td>{{ '%04d' % (test_group_idx + 1) }}</td>
-                        <td>{{ test['weight'] }}</td>
+                        <th>Compiler</th>
+                        <th>Time(ms)</th>
+                        <th>Memory(Kib)</th>
+                        <th>Output(Kib)</th>
                     </tr>
-                {% end %}
-            </tbody>
-        </table>
-        {% if user.is_kernel() %}
-            <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro['pro_id']}}">Manage</a>
-        {% end %}
+                </thead>
+                <tbody>
+                    {% set default = pro.config.limits.pop('default') %}
+                    <tr>
+                        <td>default</td>
+                        <td>{{ default.time }} </td>
+                        <td>{{ default.memory }} </td>
+                        <td>{{ default.output }} </td>
+                    </tr>
+
+                    {% for compiler, limit in pro.config.limits.items() %}
+                    <tr>
+                        <td>{{ COMPILER_INFOS[int(compiler)].short_name }}</td>
+                        <td>{{ limit.time }} </td>
+                        <td>{{ limit.memory }} </td>
+                        <td>{{ limit.output }} </td>
+                    </tr>
+                    {% end %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Subtask</th>
+                        <th>Rate</th>
+                        <th>Dependency Subtasks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subtask_id, subtask_cfg in pro.config.subtask_configs.items() %}
+                        <tr>
+                            <td>{{ '%04d' % (subtask_id + 1) }}</td>
+                            <td>{{ subtask_cfg.rate }}</td>
+                            <td>{{ merge_list_to_str(list(map(lambda x: x+1, subtask_cfg.dependency_subtasks))) }}</td>
+                        </tr>
+                    {% end %}
+                </tbody>
+            </table>
+            {% if user.is_kernel() %}
+                <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro.pro_id}}">Manage</a>
+            {% end %}
+        </div>
     </div>
 
     <!-- TODO: Remove fixed height -->
-    <div id="cont" class="col-lg-10 col-12" style="height: 904px;">
+    <div id="cont" class="col-lg-9 col-12" style="height: 904px;">
         <strong>Loading...</strong>
     </div>
 </div>

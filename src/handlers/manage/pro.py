@@ -1,21 +1,25 @@
 import asyncio
 import base64
+from dataclasses import asdict
 import json
 import os
+from collections import defaultdict
 
 import tornado.escape
-from msgpack import packb, unpackb
+from msgpack import packb
 from natsort import natsorted
 
 import config
 from handlers.base import RequestHandler, reqenv, require_permission
-from services.chal import ChalConst, ChalService
+from services.chal import ChalConst, ChalService, Compiler, COMPILER_INFOS
 from services.judge import JudgeServerClusterService
 from services.log import LogService
-from services.pro import ProService, ProConst
+from services.pro import Limit, ProService, ProConst, SubtaskConfig, Testdata, CheckerType, SummaryType
 from services.user import UserConst
 from services.pack import PackService
 from utils.numeric import parse_str_to_list
+
+# TODO: Remove unnecessary security check
 
 PERMISSION_DENIED_ERROR = ('Eacces', 'Permission denied')
 ALLOW_STATUSES = [ProConst.STATUS_ONLINE, ProConst.STATUS_CONTEST, ProConst.STATUS_HIDDEN]
@@ -50,11 +54,27 @@ class ManageProHandler(RequestHandler):
 
         elif page == "filemanager":
             pro_id = int(self.get_argument('proid'))
+            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
+            if err:
+                return self.error(err)
+
             download = self.get_argument('download', default=None)
             if download:
                 basepath = self.get_argument('path')
                 filename = self.get_argument('filename')
-                if basepath not in ['http', 'res/check', 'res/make']:
+                ALLOW_PATH = ['http', 'res/checker', 'res/grader']
+                if pro.config.has_grader:
+                    used_grader = set()
+                    for compiler in pro.config.allow_compilers:
+                        grader_name = COMPILER_INFOS[compiler].grader_name
+                        if grader_name in used_grader:
+                            continue
+                        grader_path = os.path.join("problem", str(pro_id), "res", "grader", grader_name)
+                        if not os.path.exists(grader_path):
+                            continue
+                        ALLOW_PATH.append(f'res/grader/{grader_name}')
+                        used_grader.add(grader_name)
+                if basepath not in ALLOW_PATH:
                     return self.error(('Eparam', 'Invalid basepath'))
 
 
@@ -93,23 +113,38 @@ class ManageProHandler(RequestHandler):
                         self.error(('Eunk', 'Unknown error'))
                 return
 
-            err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
-            if err:
-                return self.error(err)
 
-            testm_conf = pro['testm_conf']
+            config = pro.config
             dirs = []
-            if testm_conf['is_makefile']:
-                files = list(natsorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/res/make/{name}'), os.listdir(f'problem/{pro_id}/res/make'))))
+            if config.has_grader:
+                used_grader = set()
+
+                for compiler in pro.config.allow_compilers:
+                    grader_name = COMPILER_INFOS[compiler].grader_name
+                    if grader_name in used_grader:
+                        continue
+
+                    grader_path = os.path.join("problem", str(pro_id), "res", "grader", grader_name)
+                    if not os.path.exists(grader_path):
+                        continue
+
+                    files = list(natsorted(filter(lambda name: os.path.isfile(os.path.join(grader_path, name)), os.listdir(grader_path))))
+                    dirs.append({
+                        'path': f'res/grader/{grader_name}',
+                        'files': files,
+                    })
+                    used_grader.add(grader_name)
+
+                files = list(natsorted(filter(lambda name: os.path.isfile(f"problem/{pro_id}/res/grader/{name}"), os.listdir(f"problem/{pro_id}/res/grader"))))
                 dirs.append({
-                    'path': 'res/make',
+                    'path': 'res/grader',
                     'files': files,
                 })
 
-            if testm_conf['check_type'] in [ProConst.CHECKER_IOREDIR, ProConst.CHECKER_CMS]:
-                files = list(natsorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/res/check/{name}'), os.listdir(f'problem/{pro_id}/res/check'))))
+            if config.checker_type in CheckerType.need_build_checkers():
+                files = list(natsorted(filter(lambda name: os.path.isfile(f'problem/{pro_id}/res/checker/{name}'), os.listdir(f'problem/{pro_id}/res/checker'))))
                 dirs.append({
-                    'path': 'res/check',
+                    'path': 'res/checker',
                     'files': files,
                 })
 
@@ -131,7 +166,7 @@ class ManageProHandler(RequestHandler):
                 'manage/pro/updatetests',
                 page='pro',
                 pro_id=pro_id,
-                tests=pro['testm_conf'],
+                config=pro.config,
             )
 
         elif page == "updatetestdata":
@@ -148,14 +183,14 @@ class ManageProHandler(RequestHandler):
                     return self.error(('Eparam', 'Invalid testdata file type'))
 
                 testdata_id = int(self.get_argument('testdata_id'))
-                if testdata_id not in pro['testm_conf']['testdatas']:
+                if testdata_id not in pro.config.testdatas:
                     self.error(('Enoext', 'Testdata not found'))
                     return
 
                 if testdata_type == "input":
-                    file = pro['testm_conf']['testdatas'][testdata_id]['inputfile']
+                    file = pro.config.testdatas[testdata_id].inputfile
                 else:
-                    file = pro['testm_conf']['testdatas'][testdata_id]['outputfile']
+                    file = pro.config.testdatas[testdata_id].outputfile
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 filepath = f'{basepath}/{file}'
@@ -184,7 +219,7 @@ class ManageProHandler(RequestHandler):
                 'manage/pro/updatetestdata',
                 page='pro',
                 pro_id=pro_id,
-                tests=pro['testm_conf'],
+                config=pro.config,
             )
 
     @reqenv
@@ -228,16 +263,16 @@ class ManageProHandler(RequestHandler):
                 testdata_id = int(self.get_argument('testdata_id'))
                 testdata_type = self.get_argument('type')
 
-                if testdata_id not in pro['testm_conf']['testdatas']:
+                if testdata_id not in pro.config.testdatas:
                     return self.error(('Enoext', 'Testdata not found'))
 
                 if testdata_type not in ['output', 'input']:
                     return self.error(('Eparam', 'Invalid testdata file type'))
 
-                if testdata_type == 'input':
-                    filename = pro['testm_conf']['testdatas'][testdata_id]['inputfile']
+                if testdata_type == "input":
+                    filename = pro.config.testdatas[testdata_id].inputfile
                 else:
-                    filename = pro['testm_conf']['testdatas'][testdata_id]['outputfile']
+                    filename = pro.config.testdatas[testdata_id].outputfile
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 filepath = os.path.join(basepath, filename)
@@ -265,7 +300,7 @@ class ManageProHandler(RequestHandler):
 
                 failed = True
                 try:
-                    testdatas: dict[int, dict] = pro['testm_conf']['testdatas']
+                    testdatas = pro.config.testdatas
                     if testdata_id not in testdatas:
                         return self.error(('Enoext', 'Testdata not found'))
 
@@ -273,9 +308,9 @@ class ManageProHandler(RequestHandler):
                         return self.error(('Eparam', 'Invalid testdata file type'))
 
                     if testdata_type == 'input':
-                        filename = testdatas[testdata_id]['inputfile']
+                        filename = testdatas[testdata_id].inputfile
                     else:
-                        filename = testdatas[testdata_id]['outputfile']
+                        filename = testdatas[testdata_id].outputfile
 
                     basepath = f'problem/{pro_id}/res/testdata'
                     filepath = f'{basepath}/{filename}'
@@ -308,7 +343,7 @@ class ManageProHandler(RequestHandler):
 
                 _ = await PackService.inst.direct_copy(pack_token, filepath)
 
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                await ProService.inst.update_pro_config(pro_id, pro.config)
                 await LogService.inst.add_log(
                     f'{self.acct.name} has sent a request to update testdata {testdata_id} with {testdata_type} type for problem #{pro_id}',
                     'manage.pro.update.testdata.updatesinglefile',
@@ -321,13 +356,11 @@ class ManageProHandler(RequestHandler):
                 input_pack_token = self.get_argument('input_pack_token')
                 output_pack_token = self.get_argument('output_pack_token')
 
-                testm_conf = pro['testm_conf']
-                testdatas: dict[int, dict] = testm_conf['testdatas']
+                testdatas = pro.config.testdatas
                 try:
                     new_testdata_id = max(testdatas.keys()) + 1
                 except ValueError:
                     new_testdata_id = 0
-
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 inputfile_path = f'{basepath}/{filename}.in'
@@ -355,12 +388,8 @@ class ManageProHandler(RequestHandler):
 
                 _ = await PackService.inst.direct_copy(input_pack_token, inputfile_path)
                 _ = await PackService.inst.direct_copy(output_pack_token, outputfile_path)
-                testdatas[new_testdata_id] = {
-                    'id': new_testdata_id,
-                    'inputfile': f'{filename}.in',
-                    'outputfile': f'{filename}.out',
-                }
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                testdatas[new_testdata_id] = Testdata(new_testdata_id, f'{filename}.in', f'{filename}.out')
+                await ProService.inst.update_pro_config(pro_id, pro.config)
 
                 await LogService.inst.add_log(
                     f'{self.acct.name} has sent a request to add testdata {new_testdata_id} named {filename} for problem #{pro_id}',
@@ -371,14 +400,13 @@ class ManageProHandler(RequestHandler):
 
             elif reqtype == 'deletesinglefile':
                 testdata_id = int(self.get_argument('testdata_id'))
-                testm_conf = pro['testm_conf']
-                testdatas: dict[int, dict] = testm_conf['testdatas']
+                testdatas: dict[int, dict] = pro.config.testdatas
 
                 if testdata_id not in testdatas:
                     return self.error(('Enoext', 'Testdata not found'))
 
-                inputfile = testdatas[testdata_id]['inputfile']
-                outputfile = testdatas[testdata_id]['outputfile']
+                inputfile = testdatas[testdata_id].inputfile
+                outputfile = testdatas[testdata_id].outputfile
 
                 basepath = f'problem/{pro_id}/res/testdata'
                 if not os.path.exists(f'{basepath}/{inputfile}') or not os.path.exists(f'{basepath}/{outputfile}'):
@@ -394,19 +422,20 @@ class ManageProHandler(RequestHandler):
                 os.remove(f'{basepath}/{inputfile}')
                 os.remove(f'{basepath}/{outputfile}')
 
-                for test_group in pro['testm_conf']['test_group'].values():
+                for subtask_config in pro.config.subtask_configs.values():
                     try:
-                        test_group['testdatas'].remove(testdata_id)
+                        subtask_config.testdatas.remove(pro.config.testdatas[testdata_id])
                     except ValueError:
-                        pass
-                deleted_testdata = pro['testm_conf']['testdatas'].pop(testdata_id)
+                        continue
 
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                deleted_testdata = pro.config.testdatas.pop(testdata_id)
+
+                await ProService.inst.update_pro_config(pro_id, pro.config)
                 await LogService.inst.add_log(
                     f'{self.acct.name} has sent a request to delete testdata {testdata_id} for problem #{pro_id}',
                     'manage.pro.update.tests.deletesinglefile',
                     {
-                        'testdata': deleted_testdata
+                        'testdata': asdict(deleted_testdata)
                     }
                 )
 
@@ -418,99 +447,127 @@ class ManageProHandler(RequestHandler):
             if err:
                 return self.error(err)
 
-            if reqtype == "updateweight":
-                group = int(self.get_argument('group'))
-                weight = int(self.get_argument('weight'))
+            if reqtype == "updaterate":
+                subtask_id = int(self.get_argument('subtask'))
+                rate = int(self.get_argument('rate'))
 
-                test_group = pro['testm_conf']['test_group']
+                subtask_configs = pro.config.subtask_configs
+                if subtask_id not in subtask_configs:
+                    return self.error(('Enoext', 'Subtask not found'))
 
-                if group not in test_group:
-                    return self.error(('Enoext', 'Group not found'))
-
-                test_group[group]['weight'] = weight
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                subtask_configs[subtask_id].rate = rate
+                await ProService.inst.update_pro_config(pro_id, pro.config)
                 await LogService.inst.add_log(
-                    f'{self.acct.name} has sent a request to update weight of subtask#{group} for problem #{pro_id}',
-                    'manage.pro.update.tests.updateweight',
+                    f'{self.acct.name} has sent a request to update rate of subtask#{subtask_id} for problem #{pro_id}',
+                    'manage.pro.update.tests.updaterate',
                     {
-                        'weight': weight,
+                        'rate': rate,
                     }
                 )
                 self.error(('S', ''))
 
-            elif reqtype == "addtaskgroup":
-                weight = int(self.get_argument('weight'))
+            elif reqtype == "setdepsubtasks":
+                subtask_id = int(self.get_argument('subtask'))
+                dep_subtasks = set(map(lambda x: x - 1, parse_str_to_list(self.get_argument('dep_subtasks'))))
 
-                test_group = pro['testm_conf']['test_group']
+                subtask_configs = pro.config.subtask_configs
+                if subtask_id not in subtask_configs:
+                    return self.error(('Enoext', 'Subtask not found'))
 
-                test_group[len(test_group)] = {
-                    'weight': weight,
-                    'testdatas': []
-                }
+                subtask_configs[subtask_id].dependency_subtasks = set(dep_subtasks)
 
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                if self.have_cycle(subtask_configs):
+                    return self.error(('Eparam', 'Dependency subtasks have cycle'))
+
+                await ProService.inst.update_pro_config(pro_id, pro.config)
+                await LogService.inst.add_log(
+                    f'{self.acct.name} has sent a request to set dependency subtasks to subtask#{subtask_id} for problem #{pro_id}',
+                    'manage.pro.update.tests.setdepsubtasks',
+                    {
+                        'dependency_subtasks': list(dep_subtasks)
+                    }
+                )
+                self.error(('S', ''))
+
+            elif reqtype == "addsubtask":
+                rate = int(self.get_argument('rate'))
+
+                subtask_configs = pro.config.subtask_configs
+                subtask_configs[len(subtask_configs)] = SubtaskConfig(len(subtask_configs), [], set(), rate)
+
+                await ProService.inst.update_pro_config(pro_id, pro.config)
                 await LogService.inst.add_log(
                     f'{self.acct.name} has sent a request to add a new subtask for problem #{pro_id}',
-                    'manage.pro.update.tests.addtaskgroup',
+                    'manage.pro.update.tests.addsubtask',
                     {
-                        'weight': weight,
-                        'test_group_idx': len(test_group) - 1
+                        'rate': rate,
+                        'subtask_id': len(subtask_configs) - 1
                     }
                 )
                 self.error(('S', ''))
 
-            elif reqtype == 'deletetaskgroup':
-                group = int(self.get_argument('group'))
+            elif reqtype == 'deletesubtask':
+                subtask_id = int(self.get_argument('subtask'))
 
-                test_group = pro['testm_conf']['test_group']
-                if group not in test_group:
-                    return self.error(('Enoext', 'Group not found'))
+                subtask_configs = pro.config.subtask_configs
+                if subtask_id not in subtask_configs:
+                    return self.error(('Enoext', 'Subtask not found'))
 
-                test_group.pop(group)
-                remain_groups = list(test_group.values())
-                test_group.clear()
+                subtask_configs.pop(subtask_id)
+                remain_subtasks = list(subtask_configs.values())
+                subtask_configs.clear()
 
-                for group_idx, group in enumerate(remain_groups):
-                    test_group[group_idx] = group
+                for new_subtask_id, subtask in enumerate(remain_subtasks):
+                    subtask_configs[new_subtask_id] = subtask
 
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                await ProService.inst.update_pro_config(pro_id, pro.config)
                 await LogService.inst.add_log(
                     f'{self.acct.name} has sent a request to delete a subtask for problem #{pro_id}',
-                    'manage.pro.update.tests.deletetaskgroup',
+                    'manage.pro.update.tests.deletesubtask',
                 )
                 self.error(('S', ''))
 
             elif reqtype == 'settestdata':
-                group = int(self.get_argument('group'))
+                subtask_id = int(self.get_argument('subtask'))
                 testdatas = parse_str_to_list(self.get_argument('testdatas'))
 
-                test_group = pro['testm_conf']['test_group']
-                if group not in test_group:
-                    return self.error(('Enoext', 'Group not found'))
+                subtask_configs = pro.config.subtask_configs
+                if subtask_id not in subtask_configs:
+                    return self.error(('Enoext', 'Subtask not found'))
 
-                test_group[group]['testdatas'] = []
+                subtask_configs[subtask_id].testdatas.clear()
                 for testdata_id in testdatas:
-                    if testdata_id not in pro['testm_conf']['testdatas']:
+                    if testdata_id not in pro.config.testdatas:
                         continue
-                    test_group[group]['testdatas'].append(testdata_id)
 
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                    subtask_configs[subtask_id].testdatas.append(pro.config.testdatas[testdata_id])
+
+                await ProService.inst.update_pro_config(pro_id, pro.config)
                 await LogService.inst.add_log(
-                    f'{self.acct.name} has sent a request to set testdatas to group#{group} for problem #{pro_id}',
+                    f'{self.acct.name} has sent a request to set testdatas to subtask#{subtask_id} for problem #{pro_id}',
                     'manage.pro.update.tests.settestdata',
                     {
-                        'testdatas': testdatas
+                        'testdatas': [testdata.testdata_id for testdata in subtask_configs[subtask_id].testdatas]
                     }
                 )
                 self.error(('S', ''))
 
         elif page == "filemanager":
-            ALLOW_PATH = ['http', 'res/check', 'res/make']
             pro_id = int(self.get_argument('pro_id'))
             basepath = self.get_argument('path')
             err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
             if err:
                 return self.error(err)
+            ALLOW_PATH = ['http', 'res/checker', 'res/grader']
+            if pro.config.has_grader:
+                used_grader = set()
+                for compiler in pro.config.allow_compilers:
+                    grader_name = COMPILER_INFOS[compiler].grader_name
+                    if grader_name in used_grader:
+                        continue
+                    ALLOW_PATH.append(f'res/grader/{grader_name}')
+                    used_grader.add(grader_name)
+
             if basepath not in ALLOW_PATH:
                 return self.error(('Eparam', 'Invalid basepath'))
 
@@ -611,7 +668,7 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
             elif reqtype == 'addsinglefile':
-                filename = self.get_argument('filename')
+                filename = self.get_argument('filename') # TODO: os.path.basename()
                 pack_token = self.get_argument('pack_token')
 
                 basepath = f'problem/{pro_id}/{basepath}'
@@ -670,70 +727,120 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
         elif page == "update":
-            if reqtype == 'updatepro':
+            if reqtype == 'updategeneral':
                 pro_id = int(self.get_argument('pro_id'))
                 name = self.get_argument('name')
                 status = int(self.get_argument('status'))
                 tags = self.get_argument('tags')
                 allow_submit = self.get_argument('allow_submit') == "true"
-                # NOTE: test config
-                rate_precision = int(self.get_argument('rate_precision'))
-                if rate_precision > ProConst.RATE_PRECISION_MAX or rate_precision < ProConst.RATE_PRECISION_MIN:
-                    return self.error(('Eparam', 'Invalid rate precision'))
 
-                is_makefile = self.get_argument('is_makefile') == "true"
-                check_type = int(self.get_argument('check_type'))
-
-                chalmeta = ''
-                if check_type == ProConst.CHECKER_IOREDIR:
-                    chalmeta = self.get_argument('chalmeta')
-                    try:
-                        chalmeta = json.loads(chalmeta)
-                    except json.JSONDecodeError:
-                        return self.error(('Econf', 'Challenge metadata json syntax error'))
-
-                err, _ = await ProService.inst.update_pro(
-                    pro_id, name, status, tags, allow_submit
-                )
                 err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
                 if err:
                     return self.error(err)
+                assert pro
+                pro.name = name
+                pro.status = status
+                pro.tags = tags
+                pro.allow_submit = allow_submit
+                err, _ = await ProService.inst.update_pro(pro)
 
-                conf = pro['testm_conf']
-                if (
-                    conf['is_makefile'] != is_makefile
-                    or conf['check_type'] != check_type
-                    or conf['rate_precision'] != rate_precision
-                ):
-                    old_is_makefile = conf['is_makefile']
-                    old_check_type = conf['check_type']
-                    custom_check_type = [ProConst.CHECKER_IOREDIR, ProConst.CHECKER_CMS]
-                    if not old_is_makefile and is_makefile:
-                        if not os.path.exists(f'problem/{pro_id}/res/make'):
-                            os.mkdir(f'problem/{pro_id}/res/make')
-                    conf['is_makefile'] = is_makefile
-
-                    if old_check_type not in custom_check_type and check_type in custom_check_type:
-                        if not os.path.exists(f'problem/{pro_id}/res/check'):
-                            os.mkdir(f'problem/{pro_id}/res/check')
-                    conf['check_type'] = check_type
-
-                    if check_type == ProConst.CHECKER_IOREDIR:
-                        chalmeta = json.dumps(chalmeta)
-
-                    conf['rate_precision'] = rate_precision
-                    await ProService.inst.update_test_config(pro_id, conf)
                 await LogService.inst.add_log(
-                    f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.pro',
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.general',
                     {
                         'name': name,
                         'status': status,
                         'tags': tags,
                         'allow_submit': allow_submit,
-                        'is_makefile': is_makefile,
-                        'chalmeta': chalmeta,
-                        'check_type': check_type,
-                        'rate_precision': rate_precision,
+                    }
+                )
+                if err:
+                    return self.error(err)
+
+                self.error(('S', ''))
+
+            elif reqtype == "updatejudge":
+                # TODO: Exception handle
+                pro_id = int(self.get_argument('pro_id'))
+                rate_precision = int(self.get_argument('rate_precision'))
+                if rate_precision > ProConst.RATE_PRECISION_MAX or rate_precision < ProConst.RATE_PRECISION_MIN:
+                    return self.error(('Eparam', 'Invalid rate precision'))
+
+                has_grader = self.get_argument('has_grader') == "true"
+                userprog_compile_args = self.get_argument('userprog_compile_args')
+                checker_type = int(self.get_argument('checker_type'))
+                checker_compiler = self.get_argument('checker_compiler')
+                if checker_compiler:
+                    checker_compiler = Compiler(int(checker_compiler))
+                else:
+                    checker_compiler = None
+                checker_compile_args = self.get_argument('checker_compile_args')
+                summary_type = SummaryType(int(self.get_argument('summary_type')))
+                summary_compiler = self.get_argument('summary_compiler')
+                if summary_compiler:
+                    summary_compiler = Compiler(int(summary_compiler))
+                else:
+                    summary_compiler = None
+                summary_compile_args = self.get_argument('summary_compile_args')
+                allow_compilers = self.get_arguments("allow_compilers[]")
+                allow_compilers = set(map(lambda x: Compiler(int(x)),
+                                          filter(lambda compiler: int(compiler) in Compiler._value2member_map_, allow_compilers)))
+
+                chalmeta = ''
+                if checker_type == CheckerType.IOREDIR:
+                    chalmeta = self.get_argument('chalmeta')
+                    try:
+                        json.loads(chalmeta)
+                    except json.JSONDecodeError:
+                        return self.error(('Econf', 'Challenge metadata json syntax error'))
+
+                err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
+                if err:
+                    return self.error(err)
+                assert pro
+
+                config = pro.config
+                assert config
+                if has_grader:
+                    grader_path = os.path.join("problem", str(pro_id), "res", "grader")
+                    if not os.path.exists(grader_path):
+                        os.mkdir(grader_path)
+
+                    used_grader = set()
+                    for compiler in pro.config.allow_compilers:
+                        grader_name = COMPILER_INFOS[compiler].grader_name
+                        if grader_name in used_grader:
+                            continue
+                        grader_compiler_path = os.path.join(grader_path, grader_name)
+                        if not os.path.exists(grader_compiler_path):
+                            os.mkdir(grader_compiler_path)
+                        used_grader.add(grader_name)
+                config.has_grader = has_grader
+
+                config.userprog_compile_args = userprog_compile_args
+                need_build_checkers = CheckerType.need_build_checkers()
+                if checker_type in need_build_checkers:
+                    if not os.path.exists(f'problem/{pro_id}/res/checker'):
+                        os.mkdir(f'problem/{pro_id}/res/checker')
+                config.checker_type = CheckerType(checker_type)
+                config.checker_compiler = checker_compiler
+                config.checker_compile_args = checker_compile_args
+
+                if summary_type == SummaryType.CUSTOM:
+                    if not os.path.exists(f'problem/{pro_id}/res/summary'):
+                        os.mkdir(f'problem/{pro_id}/res/summary')
+                config.summary_type = summary_type
+                config.summary_compiler = summary_compiler
+                config.summary_compile_args = summary_compile_args
+                config.allow_compilers = allow_compilers
+
+                if checker_type == CheckerType.IOREDIR:
+                    config.chalmeta = chalmeta
+                config.rate_precision = rate_precision
+                await ProService.inst.update_pro_config(pro_id, config)
+                await LogService.inst.add_log(
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.judge',
+                    {
+
                     }
                 )
                 if err:
@@ -752,7 +859,6 @@ class ManageProHandler(RequestHandler):
 
                 err, _ = await ProService.inst.unpack_pro(pro_id, pack_token)
                 if err:
-                    await PackService.inst.clear(pack_token)
                     await LogService.inst.add_log(
                         f"{self.acct.name} tried to update the problem #{pro_id} by uploading problem package but failed",
                         'manage.pro.update.pro.package.failed',
@@ -787,34 +893,40 @@ class ManageProHandler(RequestHandler):
                 err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
                 if err:
                     return self.error(err)
+                assert pro
 
-                ALLOW_COMPILERS = set(list(ChalConst.ALLOW_COMPILERS) + ['default'])
-                if pro['testm_conf']['is_makefile']:
-                    ALLOW_COMPILERS = {'gcc', 'g++', 'clang', 'clang++', 'default'}
+                ALLOW_COMPILERS = pro.config.allow_compilers.copy()
+                ALLOW_COMPILERS.add('default')
 
-                new_limits = {}
-                for comp_type, limit in limits.items():
-                    if comp_type not in ALLOW_COMPILERS:
+                new_limits: dict[str, Limit] = {}
+                for compiler_type, limit in limits.items():
+                    if compiler_type != "default":
+                        compiler_type = Compiler(int(compiler_type))
+                    if compiler_type not in ALLOW_COMPILERS:
                         continue
+                    new_limits[compiler_type] = Limit(0, 0, 0)
                     try:
-                        limit['timelimit'] = max(int(limit['timelimit']), 0)
-                        limit['memlimit'] = max(int(limit['memlimit']) * 1024, 0)
+                        new_limits[compiler_type].time = max(int(limit['time']), 0)
+                        new_limits[compiler_type].memory = max(int(limit['memory']), 0)
+                        new_limits[compiler_type].output = max(int(limit['output']), 0)
                     except (ValueError, KeyError):
+                        new_limits.pop(compiler_type)
                         continue
-
-                    new_limits[comp_type] = limit
 
                 if 'default' not in new_limits:
                     return self.error(('Eparam', 'Missing default limit config'))
 
-                pro['testm_conf']['limit'] = new_limits
-                await ProService.inst.update_test_config(pro_id, pro['testm_conf'])
+                pro.config.limits = new_limits
+                await ProService.inst.update_pro_config(pro_id, pro.config)
 
                 await LogService.inst.add_log(
                     f"{self.acct.name} has sent a request to update the problem #{pro_id}",
                     'manage.pro.update.limit',
                     {
-                        'limits': new_limits
+                        'limits': {
+                            comp: asdict(limit)
+                            for comp, limit in pro.config.limits.items()
+                        }
                     }
                 )
 
@@ -827,6 +939,7 @@ class ManageProHandler(RequestHandler):
             is_all_chal = False
             if reqtype == 'rechalall':
                 pwd = self.get_argument('pwd')
+                import config
                 if config.unlock_pwd != base64.b64encode(packb(pwd)):
                     return self.error(('Eacces', 'Wrong password'))
                 is_all_chal = True
@@ -846,13 +959,13 @@ class ManageProHandler(RequestHandler):
                     sql = ""
                     log_type = "manage.chal.rechalall"
                 else:
-                    sql = '''AND "challenge_state"."chal_id" IS NULL'''
+                    sql = f'AND "total_result"."state" = {ChalConst.STATE_NOTSTARTED}'
                     log_type = "manage.chal.rechal"
                 result = await con.fetch(
                     f'''
                         SELECT "challenge"."chal_id", "challenge"."compiler_type" FROM "challenge"
-                        LEFT JOIN "challenge_state"
-                        ON "challenge"."chal_id" = "challenge_state"."chal_id"
+                        INNER JOIN "total_result"
+                        ON "challenge"."chal_id" = "total_result"."chal_id"
                         WHERE "pro_id" = $1 {sql};
                     ''',
                     pro_id,
@@ -864,15 +977,9 @@ class ManageProHandler(RequestHandler):
 
             # TODO: send notify to user
             async def _rechal(rechals):
-                for chal_id, comp_type in rechals:
+                for chal_id, compiler_type in rechals:
                     _, _ = await ChalService.inst.reset_chal(chal_id)
-                    _, _ = await ChalService.inst.emit_chal(
-                        chal_id,
-                        pro_id,
-                        pro['testm_conf'],
-                        comp_type,
-                        ChalConst.NORMAL_REJUDGE_PRI,
-                    )
+                    _, _ = await ChalService.inst.emit_chal(chal_id, pro_id, compiler_type, ChalConst.NORMAL_REJUDGE_PRI, skip_nonac=False)
 
             await asyncio.create_task(_rechal(rechals=result))
 
@@ -887,3 +994,29 @@ class ManageProHandler(RequestHandler):
             return os.path.isfile(absolute_filepath) and not os.path.islink(absolute_filepath)
         return True
 
+    def have_cycle(self, subtask_configs: dict[int, SubtaskConfig]) -> bool:
+        vis = defaultdict(int)
+        graph = defaultdict(list)
+
+        for u, sconfig in subtask_configs.items():
+            for v in sconfig.dependency_subtasks:
+                graph[u].append(v)
+
+        def dfs(u) -> bool:
+            nonlocal vis
+            vis[u] = 1
+            for v in graph[u]:
+                if vis[v] == 1:
+                    return False
+                elif vis[v] == 0:
+                    if not dfs(v):
+                        return False
+            vis[u] = 2
+            return True
+
+        for u in subtask_configs.keys():
+            if vis[u] == 0:
+                if not dfs(u):
+                    return True
+
+        return False

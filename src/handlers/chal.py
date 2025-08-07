@@ -1,14 +1,16 @@
 import asyncio
 import decimal
 import json
+from dataclasses import is_dataclass, asdict
 
-from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
+from handlers.base import RequestHandler, WebSocketSubHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
-from services.chal import ChalConst, ChalService, ChalSearchingParamBuilder
+from services.chal import ChalService, ChalSearchingParamBuilder, ChalConst, COMPILER_INFOS, MessageType
 from services.pro import ProService, ProConst
-from services.user import UserService
+from services.user import UserService, UserConst
 from services.contests import UserStatus
 from utils.numeric import parse_str_to_list
+from services.log import LogService
 
 
 class ChalListHandler(RequestHandler):
@@ -31,8 +33,8 @@ class ChalListHandler(RequestHandler):
         state = int(self.get_argument('state', default=0))
         flt_builder.state(state)
 
-        compiler_type = self.get_argument('compiler_type', default='all')
-        flt_builder.compiler(compiler_type)
+        compiler_type = self.get_argument('compiler_type', default=-1)
+        flt_builder.compiler(int(compiler_type))
 
         isadmin = self.acct.is_kernel()
         if isadmin:
@@ -63,12 +65,14 @@ class ChalListHandler(RequestHandler):
 
         flt = flt_builder.pro(query_pros).acct(query_accts).build()
 
-        _, chalstat = await ChalService.inst.get_chals_count(flt)
+        _, chal_cnt = await ChalService.inst.get_chals_count(flt)
         _, challist = await ChalService.inst.list_chal(pageoff, 20, flt)
+        for chal in challist:
+            chal.compiler_type = COMPILER_INFOS[chal.compiler_type].version_name
 
         await self.render(
             'challist',
-            chalstat=chalstat,
+            chal_cnt=chal_cnt,
             challist=challist,
             flt=flt,
             pageoff=pageoff,
@@ -85,21 +89,21 @@ class ChalHandler(RequestHandler):
     async def get(self, chal_id):
         chal_id = int(chal_id)
 
-        err, chal = await ChalService.inst.get_chal(chal_id, with_test=True)
+        err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
         if err:
             return self.error(err)
 
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
-        if chal['contest_id'] and not self.contest:
+        if chal.contest_id and not self.contest:
             return self.error(('Enoext', 'Contest not found'))
 
         elif self.contest:
             if not self.contest.is_start():
-                if self.contest.is_admin(acct_id=chal['acct_id']) and not self.contest.is_admin(self.acct):
+                if self.contest.is_admin(acct_id=chal.acct_id) and not self.contest.is_admin(self.acct):
                     return self.error(('Eacces', 'Permission denied'))
 
             elif self.contest.is_running():
-                if self.contest.hide_admin and self.contest.is_admin(acct_id=chal['acct_id']) and not self.contest.is_admin(self.acct):
+                if self.contest.hide_admin and self.contest.is_admin(acct_id=chal.acct_id) and not self.contest.is_admin(self.acct):
                     return self.error(('Eacces', 'Permission denied'))
 
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
@@ -107,28 +111,70 @@ class ChalHandler(RequestHandler):
         elif self.acct.is_kernel():
             allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
-        err, pro = await ProService.inst.get_pro(chal['pro_id'], allow_statuses)
+        err, pro = await ProService.inst.get_pro(chal.pro_id, allow_statuses)
         if err:
             return self.error(err)
 
-        chal['comp_type'] = ChalConst.COMPILER_NAME[chal['comp_type']]
+        chal.compiler_type = COMPILER_INFOS[chal.compiler_type].version_name
 
         rechal = self.acct.is_kernel()
         if self.contest:
             rechal = rechal and self.contest.is_admin(self.acct)
 
-        final_response = []
-        for idx, test in enumerate(chal['testl'], start=1):
-            response = test['response']
-            final_response.append(f"Task {idx}: {response}")
-
-        await self.render('chal', pro=pro, chal=chal, rechal=rechal, response='\n'.join(final_response))
+        await self.render('chal', pro=pro, chal=chal, rechal=rechal)
         return
+
+    @reqenv
+    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
+    @contest_require_permission('admin')
+    async def post(self, chal_id):
+        chal_id = int(chal_id)
+        reqtype = self.get_argument('reqtype')
+        if reqtype == "reject":
+            reason = self.get_argument('reason')
+            if err := self.len_check(reason, 0, 1024, 'reason'):
+                return self.error(err)
+
+            if not self.contest and not self.acct.is_kernel():
+                return self.error((('Eacces', 'Permission denied')))
+
+            err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
+            if err:
+                return self.error(err)
+
+
+            chal.total_result.reset()
+            chal.total_result.message = reason
+            chal.total_result.message_type = MessageType.TEXT
+            chal.total_result.state = ChalConst.STATE_REJECTED
+            await ChalService.inst.update_total_result(chal_id, chal.total_result)
+
+            for r in chal.subtask_results.values():
+                r.reset()
+                r.state = ChalConst.STATE_REJECTED
+                await ChalService.inst.update_subtask_result(chal_id, r)
+
+            for r in chal.testdata_results.values():
+                r.reset()
+                r.state = ChalConst.STATE_REJECTED
+                await ChalService.inst.update_testdata_result(chal_id, r)
+
+            await LogService.inst.add_log(
+                f"{self.acct.name}(#{self.acct.acct_id}) reject chal#{chal_id}.", 'manage.chal.reject',
+                {
+                    'reason': reason
+                }
+            )
+
+            self.error(('S', ''))
+
 
 class _Encoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
             return str(o)
+        elif is_dataclass(o):
+            return asdict(o)
         return super().default(o)
 
 class ChalListNewChalHandler(WebSocketSubHandler):
@@ -152,13 +198,18 @@ class ChalListNewStateHandler(WebSocketSubHandler):
                 continue
 
             chal_id = int(msg['data'])
-            if self.first_chal_id <= chal_id <= self.last_chal_id:
-                _, new_state = await ChalService.inst.get_calculated_chal_state(chal_id, self.allow_pro_statuses)
-                await self.write_message(json.dumps(new_state, cls=_Encoder))
+            if chal_id in self.chalids:
+                _, chal = await ChalService.inst.get_chal(chal_id)
+                err, _ = await ProService.inst.get_pro(chal.pro_id, self.allow_pro_statuses)
+                if err:
+                    self.chalids.remove(chal_id)
+
+                _, total_result = await ChalService.inst.get_total_result(chal_id)
+                await self.write_message(
+                    json.dumps({'chal_id': chal_id, **asdict(total_result)}, cls=_Encoder))
 
     async def open(self):
-        self.first_chal_id = -1
-        self.last_chal_id = -1
+        self.chalids: set[int] = None
         self.allow_pro_statuses = [ProConst.STATUS_ONLINE]
 
         await self.p.subscribe('challiststatesub')
@@ -169,26 +220,24 @@ class ChalListNewStateHandler(WebSocketSubHandler):
         # TODO: contest challist
         # TODO: user authentication
 
-        if self.first_chal_id == -1:
+        if self.chalids is None:
             j = json.loads(msg)
 
-            self.first_chal_id = int(j["first_chal_id"])
-            self.last_chal_id = int(j["last_chal_id"])
+            self.chalids = set(j["chalids"])
+
             err, acct = await UserService.inst.info_acct(acct_id=int(j["acct_id"]))
             if not err and acct.is_kernel():
                 self.allow_pro_statuses.append(ProConst.STATUS_HIDDEN)
 
 
 class ChalNewStateHandler(WebSocketSubHandler):
-
     async def listen_chalstate(self):
         async for msg in self.p.listen():
             if msg['type'] != 'message':
                 continue
 
-            if int(msg['data']) == self.chal_id:
-                _, chal_states = await ChalService.inst.get_chal_state(self.chal_id)
-                await self.write_message(json.dumps(chal_states, cls=_Encoder))
+            if json.loads(msg['data'])['chal_id'] == self.chal_id:
+                await self.write_message(msg['data'])
 
     async def open(self):
         self.chal_id = -1

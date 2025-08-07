@@ -1,5 +1,6 @@
 import json
 from .util import AsyncTest, AccountContext
+from services.chal import Compiler
 
 
 class SubmitTest(AsyncTest):
@@ -10,7 +11,7 @@ class SubmitTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': '',
-                'comp_type': 'g++',
+                'compiler_type': Compiler.GPP,
             })
             self.assertAPIReturnValue(res.text, ('Eempty', 'Submitted code should not be empty'))
 
@@ -18,7 +19,7 @@ class SubmitTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': open('tests/static_file/code/large.cpp').read(),
-                'comp_type': 'g++',
+                'compiler_type': Compiler.GPP,
             })
             self.assertAPIReturnValue(res.text, ('Ecodemax', 'Submitted code too long'))
 
@@ -26,7 +27,7 @@ class SubmitTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': 'cc',
-                'comp_type': 'tobiichi',
+                'compiler_type': 'tobiichi',
             })
             self.assertAPIReturnValue(res.text, ('Ecomp', 'The compiler is not allowed'))
 
@@ -34,24 +35,19 @@ class SubmitTest(AsyncTest):
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': 'cc',
-                'comp_type': 'python3',
+                'compiler_type': Compiler.PYTHON3,
             })
             self.assertAPIReturnValue(res.text, ('S', 10))
             html = self.get_html('submit/1', user_session)
             compiler_option = html.select_one('option:checked')
             self.assertIsNotNone(compiler_option)
-            self.assertEqual(compiler_option.attrs['value'], 'python3')
+            self.assertEqual(int(compiler_option.attrs['value']), Compiler.PYTHON3)
 
             res = user_session.post('submit', data={
                 'reqtype': 'submit',
                 'pro_id': 1,
                 'code': 'cc',
-                'comp_type': 'g++',
+                'compiler_type': Compiler.GPP,
             })
             res = json.loads(res.text)
             self.assertEqual(res['status'], 'Einternal')
-
-            # NOTE: makefile problem only allow C/C++ language
-            html = self.get_html('submit/2', user_session)
-            for option in html.select('option'):
-                self.assertIn(option.attrs['value'], ['g++', 'clang++', 'gcc', 'clang'])

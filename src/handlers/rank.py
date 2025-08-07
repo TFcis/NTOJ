@@ -33,9 +33,9 @@ class ProRankHandler(RequestHandler):
                         "challenge"."acct_id",
                         "challenge"."timestamp",
                         "account"."name" AS "acct_name",
-                        "challenge_state"."runtime",
-                        "challenge_state"."memory",
-                        ROUND("challenge_state"."rate", "problem"."rate_precision") AS rate
+                        "total_result"."time",
+                        "total_result"."memory",
+                        ROUND("total_result"."rate", "problem"."rate_precision") AS rate
 
                     FROM "challenge"
 
@@ -45,16 +45,16 @@ class ProRankHandler(RequestHandler):
                     INNER JOIN "account"
                     ON "challenge"."acct_id"="account"."acct_id"
 
-                    INNER JOIN "challenge_state"
-                    ON "challenge"."chal_id"="challenge_state"."chal_id"
+                    INNER JOIN "total_result"
+                    ON "challenge"."chal_id"="total_result"."chal_id"
 
-                    WHERE "challenge_state"."state"={ChalConst.STATE_AC} AND "challenge"."contest_id" = 0
+                    WHERE "total_result"."state"={ChalConst.STATE_AC} AND "challenge"."contest_id" = 0
 
-                    ORDER BY "challenge"."acct_id" ASC, "challenge_state"."rate" DESC,
-                    "challenge_state"."runtime" ASC, "challenge_state"."memory" ASC,
+                    ORDER BY "challenge"."acct_id" ASC, "total_result"."rate" DESC,
+                    "total_result"."time" ASC, "total_result"."memory" ASC,
                     "challenge"."timestamp" ASC
                 ) temp
-                ORDER BY "rate" DESC, "runtime" ASC, "memory" ASC,
+                ORDER BY "rate" DESC, "time" ASC, "memory" ASC,
                 "timestamp" ASC, "acct_id" ASC OFFSET $2 LIMIT $3;
                 '''
                 ,
@@ -70,9 +70,9 @@ class ProRankHandler(RequestHandler):
                 SELECT DISTINCT challenge.acct_id
                 FROM challenge
                 INNER JOIN account ON challenge.acct_id=account.acct_id
-                INNER JOIN challenge_state ON challenge.chal_id=challenge_state.chal_id
+                INNER JOIN total_result ON challenge.chal_id=total_result.chal_id
                 WHERE challenge.pro_id=$1
-                AND challenge_state.state=1
+                AND total_result.state=1
                 ) temp;
                 ''',
                 pro_id,
@@ -80,14 +80,14 @@ class ProRankHandler(RequestHandler):
             total_cnt = total_cnt[0]['count']
 
         chal_list = []
-        for rank, (chal_id, acct_id, timestamp, acct_name, runtime, memory, rate) in enumerate(result):
+        for rank, (chal_id, acct_id, timestamp, acct_name, time, memory, rate) in enumerate(result):
             chal_list.append(
                 {
                     'rank': rank + pageoff + 1,
                     'chal_id': chal_id,
                     'acct_id': acct_id,
                     'acct_name': acct_name,
-                    'runtime': int(runtime),
+                    'time': int(time),
                     'memory': int(memory),
                     'rate': rate,
                     'timestamp': timestamp.astimezone(tz),
@@ -109,22 +109,20 @@ class UserRankHandler(RequestHandler):
             f'''
             WITH accepted_tests_per_user AS (
                 SELECT DISTINCT
-                    t."acct_id", t."pro_id", t."test_idx", t."rate"
+                    c.acct_id, t.pro_id, t.subtask_id, t.rate
                 FROM
-                    "test" t
-                INNER JOIN "problem"
-                    ON t."pro_id" = "problem"."pro_id"
+                    "subtask_result" t
+                INNER JOIN problem p
+                    ON t.pro_id = p.pro_id
+                INNER JOIN challenge c
+                    ON t.chal_id = c.chal_id
                 WHERE
-                    "problem"."status" = {ProConst.STATUS_ONLINE}
-                    AND t."state" <= {ChalConst.STATE_PC}
+                    p.status = {ProConst.STATUS_ONLINE}
+                    AND t.state <= {ChalConst.STATE_PC}
             ), user_total_rate AS (
                 SELECT
-                    acct_id, SUM(CASE WHEN accepted_tests_per_user.rate IS NULL THEN test_valid_rate.rate ELSE accepted_tests_per_user.rate END) AS rate
-                FROM
-                    test_valid_rate
-                INNER JOIN accepted_tests_per_user
-                    ON "test_valid_rate"."pro_id" = accepted_tests_per_user."pro_id"
-                    AND "test_valid_rate"."test_idx" = accepted_tests_per_user."test_idx"
+                    acct_id, SUM(accepted_tests_per_user.rate) AS rate
+                FROM accepted_tests_per_user
                 GROUP BY acct_id
             ), user_stats AS (
                 SELECT
@@ -140,7 +138,7 @@ class UserRankHandler(RequestHandler):
                 INNER JOIN
                     problem p ON p.pro_id = c.pro_id
                 INNER JOIN
-                    challenge_state cs ON c.chal_id = cs.chal_id
+                    total_result cs ON c.chal_id = cs.chal_id
                 INNER JOIN
                     user_total_rate ON user_total_rate.acct_id = c.acct_id
                 WHERE

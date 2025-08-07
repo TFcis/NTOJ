@@ -5,7 +5,7 @@ import shutil
 import requests
 import tornado
 
-from services.chal import ChalConst
+from services.chal import ChalConst, Compiler
 from services.pro import ProConst
 from services.user import UserService, UserConst
 from .util import AccountContext, AsyncTest
@@ -120,6 +120,18 @@ class E2ETest(AsyncTest):
                 self.assertIsNotNone(html.select_one('li.manage'))
                 self.assertEqual(html.select_one('script#indexjs').attrs.get('acct_id'), '1')
 
+                html = self.get_html('manage/acct', admin_session)
+                trs = html.select('tbody > tr')
+                self.assertEqual(len(trs), 1)
+                self.assertEqual(trs[0].select('td')[1].text.strip(), 'admin')
+                self.assertEqual(trs[0].select('td')[2].text.strip(), 'admin@test')
+                self.assertEqual(trs[0].select('td')[4].text.strip(), 'Kernel')
+
+                html = self.get_html('manage/acct/update?acctid=1', admin_session)
+                self.assertEqual(html.select_one('h3').text.strip(), '1 / admin')
+                self.assertEqual(html.select_one('option:checked').attrs['value'], '0')
+                self.assertEqual(html.select_one('option:checked').text.strip(), 'Kernel')
+
                 html = self.get_html('manage/judge', admin_session)
                 self.assertEqual(html.select('tr')[1].select('td')[2].text, 'Online', 'Test need judge connected')
 
@@ -151,7 +163,7 @@ class E2ETest(AsyncTest):
                 # submit problem
                 def callback():
                     chal_id = self.submit_problem(1, open('tests/static_file/code/toj3.ac.py').read(),
-                                                  'python3', admin_session)
+                                                  Compiler.PYTHON3, admin_session)
 
                     self.assertEqual(chal_id, 1)
 
@@ -159,8 +171,8 @@ class E2ETest(AsyncTest):
                 await self.wait_for_judge_finish(callback)
 
                 # view chal
-                chal_states_result = self.get_chal_state(chal_id=1, session=admin_session)
-                self.assertEqual(chal_states_result, [ChalConst.STATE_AC] * len(chal_states_result))
+                _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
+                self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
 
                 # query code
                 res = admin_session.post('code', {
@@ -168,7 +180,7 @@ class E2ETest(AsyncTest):
                 })
                 res = json.loads(res.text)
                 self.assertNotEqual(res['status'], 'Eacces')
-                self.assertEqual(res['data']['comp_type'], 'python')
+                self.assertEqual(res['data']['compiler_type'], 'python')
                 self.assertEqual(res['data']['code'].strip(),
                                  tornado.escape.xhtml_escape(open('tests/static_file/code/toj3.ac.py').read().strip()))
 

@@ -61,19 +61,6 @@ class AbouotHandler(RequestHandler):
         await self.render('about')
 
 
-class OnlineCounterHandler(RequestHandler):
-    @reqenv
-    async def get(self):
-        if (cnt := (await self.rs.get('online_counter'))) is None:
-            cnt = 0
-        else:
-            cnt = cnt.decode('utf-8')
-
-        set_cnt = await self.rs.scard('online_counter_set')
-
-        self.finish(f"<h1>{cnt}</h1> <br> <h1>{set_cnt}</h1>")
-
-
 class DevInfoHandler(RequestHandler):
     @reqenv
     async def get(self):

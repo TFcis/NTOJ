@@ -1,4 +1,4 @@
-{% from services.chal import ChalConst %}
+<!--
 <script type="module">
     import * as TreeSitter from '/oj/third/web-tree-sitter.js';
     window.TreeSitter = TreeSitter;
@@ -52,13 +52,15 @@
         setTimeout(() => window.initializePlayground(), 1);
     }
 </script>
+-->
 
+{% from services.chal import COMPILER_INFOS %}
 <link rel="stylesheet" type="text/css" href="/oj/submit.css">
 
 <script type="text/javascript">
     function init() {
 	    var j_submit = $('#submit');
-        let pro_id = "{{ pro['pro_id'] }}";
+        let pro_id = "{{ pro.pro_id }}";
         let contest_id = "{{ contest_id }}";
 
 	    j_submit.find('input.file').on('change', function(e) {
@@ -73,7 +75,7 @@
 
         j_submit.find('button.submit').on('click', async function(e) {
             let code = j_submit.find('textarea.code').val();
-            let comp_type = j_submit.find('#compilerList').val();
+            let compiler_type = j_submit.find('#compilerList').val();
 
             let url = '';
             if (contest_id !== "0") {
@@ -82,6 +84,7 @@
                 url = '/oj/be/submit';
             }
 
+            /*
             if (typeof WebAssembly === "object") {
                 let lang = "";
                 if (comp_type == 'g++' || comp_type == 'clang++') {
@@ -101,12 +104,13 @@
                     return;
                 }
             }
+            */
 
             $.post(url, {
                 'reqtype': 'submit',
                 'pro_id' : pro_id,
                 'code': code,
-                'comp_type': comp_type,
+                'compiler_type': compiler_type,
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
@@ -128,14 +132,13 @@
 <div class="row">
     <div class="col-lg-2"></div>
     <div id="submit" class="col-lg-8">
-        <h3>{{ pro['pro_id']}} / {{ pro['name'] }}</h3>
+        <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
         <form>
             <div class="mb-1">
                 <label for="" class="form-label">Compiler</label>
                 <select id="compilerList" class="form-select">
-                    <!-- TODO:  -->
                     {% for compiler in allow_compilers %}
-                        <option value="{{ compiler }}" {% if user.last_compiler == compiler %} selected {% end %}>{{ ChalConst.COMPILER_NAME[compiler] }}</option>
+                        <option value="{{ compiler }}" {% if user.last_compiler == compiler %} selected {% end %}>{{ COMPILER_INFOS[compiler].version_name }}</option>
                     {% end %}
                 </select>
             </div>

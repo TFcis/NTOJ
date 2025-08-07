@@ -1,5 +1,5 @@
 import config
-from services.chal import ChalConst
+from services.chal import Compiler, COMPILER_INFOS
 from services.contests import ContestService
 from services.user import Account
 from services.log import LogService
@@ -24,8 +24,8 @@ class CodeService:
                 return ('Enoext', 'Challenge not found'), None, None
             result = result[0]
 
-            target_acct_id, pro_id, contest_id, comp_type = int(result['acct_id']), int(result['pro_id']), int(
-                result['contest_id']), result['compiler_type']
+            target_acct_id, pro_id, contest_id, compiler_type = int(result['acct_id']), int(result['pro_id']), int(
+                result['contest_id']), Compiler(result['compiler_type'])
 
         owner = await self.rs.get(f'{pro_id}_owner')
         can_see = False
@@ -44,10 +44,10 @@ class CodeService:
                 can_see = True
 
         if can_see:
-            file_ext = ChalConst.FILE_EXTENSION[comp_type]
+            source_ext = COMPILER_INFOS[compiler_type].source_ext
 
             try:
-                with open(f'code/{chal_id}/main.{file_ext}', 'rb') as code_f:
+                with open(f'code/{chal_id}/main.{source_ext}', 'rb') as code_f:
                     code = code_f.read().decode('utf-8')
 
             except FileNotFoundError:
@@ -56,4 +56,4 @@ class CodeService:
         else:
             return ('Eacces', 'Permission denied'), None, None
 
-        return None, code, comp_type
+        return None, code, compiler_type

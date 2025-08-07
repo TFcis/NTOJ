@@ -6,11 +6,9 @@ import json
 import tornado.escape
 
 import config
-from services.chal import ChalConst
+from services.chal import ChalConst, Compiler
 from services.pro import ProConst
 from tests.e2e.util import AsyncTest, AccountContext
-
-# TODO: check_type, is_makefile
 
 
 class ManageProFileManagerTest(AsyncTest):
@@ -57,7 +55,7 @@ class ManageProFileManagerTest(AsyncTest):
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
                     {'filename': '../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
                     {'filename': 'cont.html.html', 'equal_value': ('Enoext', 'File not found')}, # file not found
-                    {'path': '/etc/', 'filename': 'passwd-', 'equal_value': ('Eparam', 'Invalid basepath')}, # path in ['http', 'res/check', 'res/make']
+                    {'path': '/etc/', 'filename': 'passwd-', 'equal_value': ('Eparam', 'Invalid basepath')},
                 ],
                 admin_session
             )
@@ -100,7 +98,7 @@ class ManageProFileManagerTest(AsyncTest):
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
                     {'filename': '../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
                     {'filename': 'test', 'equal_value': ('Eexist', 'File already exists')}, # file already exists
-                    {'path': '/etc/', 'filename': 'passwd-', 'equal_value': ('Eparam', 'Invalid basepath')}, # path in ['http', 'res/check', 'res/make']
+                    {'path': '/etc/', 'filename': 'passwd-', 'equal_value': ('Eparam', 'Invalid basepath')},
                 ],
                 admin_session
             )
@@ -110,23 +108,23 @@ class ManageProFileManagerTest(AsyncTest):
             chal_id = -1
             def callback():
                 nonlocal chal_id
-                chal_id = self.submit_problem(4, open('tests/static_file/code/float_checker_wa.cpp').read(), 'g++', admin_session)
+                chal_id = self.submit_problem(4, open('tests/static_file/code/float_checker_wa.cpp').read(), Compiler.GPP, admin_session)
                 # NOTE: chal_id=12
             await self.wait_for_judge_finish(callback)
-            chal_states_result = self.get_chal_state(chal_id=chal_id, session=admin_session)
-            self.assertEqual(chal_states_result, [ChalConst.STATE_WA])
+            _, subtask_results, _ = self.get_chal_results(chal_id=chal_id, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_WA] * len(subtask_results))
 
             # NOTE: updatesinglefile
             pack_token = await self._upload_file('tests/static_file/float_checker/pass_all_checker.cpp', admin_session)
             res = admin_session.post('manage/pro/filemanager?proid=4', data={
                 'reqtype': 'updatesinglefile',
                 'pro_id': 4,
-                'filename': 'check.cpp',
+                'filename': 'checker.cpp',
                 'pack_token': pack_token,
-                'path': 'res/check',
+                'path': 'res/checker',
             })
             self.assertAPIReturnSuccess(res.text)
-            self.assertEqual(open('tests/static_file/float_checker/pass_all_checker.cpp').read(), open('problem/4/res/check/check.cpp').read())
+            self.assertEqual(open('tests/static_file/float_checker/pass_all_checker.cpp').read(), open('problem/4/res/checker/checker.cpp').read())
             def callback():
                 res = admin_session.post('submit', data={
                     'reqtype': 'rechal',
@@ -134,22 +132,22 @@ class ManageProFileManagerTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 12))
             await self.wait_for_judge_finish(callback)
-            chal_states_result = self.get_chal_state(chal_id=12, session=admin_session)
-            self.assertEqual(chal_states_result, [ChalConst.STATE_AC])
+            _, subtask_results, _ = self.get_chal_results(chal_id=12, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
 
             self.assertTable(
                 {
                     'reqtype': 'updatesinglefile',
                     'pro_id': 4,
-                    'filename': 'check.cpp',
+                    'filename': 'checker.cpp',
                     'pack_token': pack_token,
-                    'path': 'res/check',
+                    'path': 'res/checker',
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
                     {'filename': '../check.cpp', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
                     {'filename': 'abc.cpp', 'equal_value': ('Enoext', 'File not found')}, # file not found
-                    {'path': '/etc/', 'filename': 'group-', 'equal_value': ('Eparam', 'Invalid basepath')}, # path in ['http', 'res/check', 'res/make']
+                    {'path': '/etc/', 'filename': 'group-', 'equal_value': ('Eparam', 'Invalid basepath')},
                 ],
                 admin_session
             )
@@ -158,21 +156,21 @@ class ManageProFileManagerTest(AsyncTest):
             res = admin_session.post('manage/pro/filemanager?proid=4', data={
                 'reqtype': 'renamesinglefile',
                 'pro_id': 4,
-                'old_filename': 'check.cpp',
-                'new_filename': 'check.cpp.cpp',
-                'path': 'res/check'
+                'old_filename': 'checker.cpp',
+                'new_filename': 'checker.cpp.cpp',
+                'path': 'res/checker'
             })
             self.assertAPIReturnSuccess(res.text)
             res = admin_session.post('manage/pro/filemanager?proid=2', data={
                 'reqtype': 'renamesinglefile',
                 'pro_id': 2,
                 'old_filename': 'stub.cpp',
-                'new_filename': 'stub.cpp.cpp',
-                'path': 'res/make'
+                'new_filename': 'stub.cpp.old',
+                'path': 'res/grader/cpp'
             })
             self.assertAPIReturnSuccess(res.text)
-            self.assertTrue(os.path.exists('problem/2/res/make/stub.cpp.cpp'))
-            self.assertTrue(os.path.exists('problem/4/res/check/check.cpp.cpp'))
+            self.assertTrue(os.path.exists('problem/2/res/grader/cpp/stub.cpp.old'))
+            self.assertTrue(os.path.exists('problem/4/res/checker/checker.cpp.cpp'))
 
             def callback():
                 res = admin_session.post('submit', data={
@@ -181,8 +179,10 @@ class ManageProFileManagerTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 9))
             await self.wait_for_judge_finish(callback)
-            chal_states_result = self.get_chal_state(chal_id=9, session=admin_session)
-            self.assertEqual(chal_states_result, [ChalConst.STATE_CE])
+
+            total_result, subtask_results, _ = self.get_chal_results(chal_id=9, session=admin_session)
+            self.assertEqual(total_result.state, ChalConst.STATE_CE)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_SKIPPED] * len(subtask_results))
 
             def callback():
                 res = admin_session.post('submit', data={
@@ -191,23 +191,23 @@ class ManageProFileManagerTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 12))
             await self.wait_for_judge_finish(callback)
-            chal_states_result = self.get_chal_state(chal_id=12, session=admin_session)
-            self.assertEqual(chal_states_result, [ChalConst.STATE_SJE])
+            _, subtask_results, _ = self.get_chal_results(chal_id=12, session=admin_session)
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_JE] * len(subtask_results))
 
             self.assertTable(
                 {
                     'reqtype': 'renamesinglefile',
                     'pro_id': 4,
-                    'old_filename': 'check.cpp',
-                    'new_filename': 'check.cpp.cpp',
-                    'path': 'res/check'
+                    'old_filename': 'checker.cpp',
+                    'new_filename': 'checker.cpp.cpp',
+                    'path': 'res/checker'
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
                     {'old_filename': '../../conf.json', 'new_filename': '../../conf.js', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
-                    {'old_filename': 'check.cpp', 'new_filename': 'check.cpp.cpp', 'equal_value': ('Enoext', 'Old filename not found')}, # file not found
-                    {'old_filename': 'check.cpp.cpp', 'new_filename': 'check.cpp.cpp', 'equal_value': ('Eexist', 'New filename already exists')}, # file already exists
-                    {'path': '/etc/', 'old_filename': 'hostname', 'new_filename': 'chi', 'equal_value': ('Eparam', 'Invalid basepath')}, # path in ['http', 'res/check', 'res/make']
+                    {'old_filename': 'checker.cpp', 'new_filename': 'checker.cpp.cpp', 'equal_value': ('Enoext', 'Old filename not found')}, # file not found
+                    {'old_filename': 'checker.cpp.cpp', 'new_filename': 'checker.cpp.cpp', 'equal_value': ('Eexist', 'New filename already exists')}, # file already exists
+                    {'path': '/etc/', 'old_filename': 'hostname', 'new_filename': 'chi', 'equal_value': ('Eparam', 'Invalid basepath')},
                 ],
                 admin_session
             )
@@ -216,68 +216,67 @@ class ManageProFileManagerTest(AsyncTest):
             res = admin_session.post('manage/pro/filemanager?proid=4', data={
                 'reqtype': 'deletesinglefile',
                 'pro_id': 4,
-                'filename': 'check.cpp.cpp',
-                'path': 'res/check'
+                'filename': 'checker.cpp.cpp',
+                'path': 'res/checker'
             })
             self.assertAPIReturnSuccess(res.text)
-            self.assertFalse(os.path.exists('problem/4/res/check/check.cpp.cpp'))
+            self.assertFalse(os.path.exists('problem/4/res/checker/checker.cpp.cpp'))
             res = admin_session.post('manage/pro/filemanager?proid=2', data={
                 'reqtype': 'deletesinglefile',
                 'pro_id': 2,
-                'filename': 'stub.cpp.cpp',
-                'path': 'res/make'
+                'filename': 'stub.cpp.old',
+                'path': 'res/grader/cpp'
             })
             self.assertAPIReturnSuccess(res.text)
-            self.assertFalse(os.path.exists('problem/2/res/make/stub.cpp.cpp'))
+            self.assertFalse(os.path.exists('problem/2/res/grader/cpp/stub.cpp.old'))
 
             self.assertTable(
                 {
                     'reqtype': 'deletesinglefile',
                     'pro_id': 4,
-                    'filename': 'check.cpp.cpp',
-                    'path': 'res/check'
+                    'filename': 'checker.cpp.cpp',
+                    'path': 'res/checker'
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
-                    {'filename': 'check.cpp', 'equal_value': ('Enoext', 'File not found')}, # file not found, check.cpp was renamed to check.cpp.cpp in the previous code
-                    {'filename': '../../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # file not found, check.cpp was renamed to check.cpp.cpp in the previous code
-                    {'path': '/etc/', 'filename': 'hostname', 'equal_value': ('Eparam', 'Invalid basepath')}, # path in ['http', 'res/check', 'res/make']
+                    {'filename': 'checker.cpp', 'equal_value': ('Enoext', 'File not found')}, # file not found, checker.cpp was renamed to checker.cpp.cpp in the previous code
+                    {'filename': '../../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # file not found, checker.cpp was renamed to checker.cpp.cpp in the previous code
+                    {'path': '/etc/', 'filename': 'hostname', 'equal_value': ('Eparam', 'Invalid basepath')},
                 ],
                 admin_session
             )
 
-            # TODO: 檢查 pro_id=1只有http, pro_id=2有http與make，pro_id=4有http與check
             html = self.get_html('manage/pro/filemanager?proid=1', admin_session)
             dirs = html.select_one('div#dirs').select('div.accordion-item')
             self.assertEqual(len(dirs), 1) # http
 
             html = self.get_html('manage/pro/filemanager?proid=2', admin_session)
             dirs = html.select_one('div#dirs').select('div.accordion-item')
-            self.assertEqual(len(dirs), 2) # http, res/make
+            self.assertEqual(len(dirs), 3) # http, res/grader, res/grader/cpp
 
             html = self.get_html('manage/pro/filemanager?proid=4', admin_session)
 
             dirs = html.select_one('div#dirs').select('div.accordion-item')
-            self.assertEqual(len(dirs), 2) # http, res/check
+            self.assertEqual(len(dirs), 2) # http, res/checker
 
             # TODO: 做一次完整的 manual add problem
 
-            pack_token = await self._upload_file('tests/static_file/toj659/res/make/stub.cpp', admin_session)
+            pack_token = await self._upload_file('tests/static_file/toj659/res/grader/cpp/stub.cpp', admin_session)
             res = admin_session.post('manage/pro/filemanager?proid=2', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': 2,
                 'filename': 'stub.cpp',
-                'path': 'res/make',
+                'path': 'res/grader/cpp',
                 'pack_token': pack_token,
             })
             self.assertAPIReturnSuccess(res.text)
 
-            pack_token = await self._upload_file('tests/static_file/float_checker/res/check/check.cpp', admin_session)
+            pack_token = await self._upload_file('tests/static_file/float_checker/res/checker/checker.cpp', admin_session)
             res = admin_session.post('manage/pro/filemanager?proid=4', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': 4,
-                'filename': 'check.cpp',
-                'path': 'res/check',
+                'filename': 'checker.cpp',
+                'path': 'res/checker',
                 'pack_token': pack_token,
             })
             self.assertAPIReturnSuccess(res.text)

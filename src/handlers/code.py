@@ -1,9 +1,8 @@
-import json
-
 import tornado.escape
 
 from handlers.base import RequestHandler, reqenv
 from services.code import CodeService
+from services.chal import Compiler
 
 
 class CodeHandler(RequestHandler):
@@ -15,23 +14,23 @@ class CodeHandler(RequestHandler):
     async def post(self):
         chal_id = int(self.get_argument('chal_id'))
 
-        err, code, comp_type = await CodeService.inst.get_code(chal_id, self.acct)
+        err, code, compiler_type = await CodeService.inst.get_code(chal_id, self.acct)
         if err:
             return self.error(err)
 
-        if comp_type in ['gcc', 'g++', 'clang', 'clang++']:
-            comp_type = 'cpp'
-        elif comp_type == 'rustc':
-            comp_type = 'rust'
-        elif comp_type in ['python3', 'pypy3']:
-            comp_type = 'python'
-        elif comp_type == 'java':
-            comp_type = 'java'
+        if compiler_type in [Compiler.GCC, Compiler.CLANG, Compiler.GPP, Compiler.CLANGPP]:
+            compiler_type = 'cpp'
+        elif compiler_type == Compiler.RUST:
+            compiler_type = 'rust'
+        elif compiler_type == Compiler.PYTHON3:
+            compiler_type = 'python'
+        elif compiler_type == Compiler.JAVA:
+            compiler_type = 'java'
         else:
-            comp_type = 'cpp'
+            compiler_type = 'cpp'
 
         res = {
-            'comp_type': comp_type,
+            'compiler_type': compiler_type,
             'code': tornado.escape.xhtml_escape(code),
         }
         self.error(('S', res))
