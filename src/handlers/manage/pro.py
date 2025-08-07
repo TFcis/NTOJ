@@ -933,12 +933,13 @@ class ManageProHandler(RequestHandler):
                 self.error(('S', ''))
 
         elif page is None:  # pro-list
-            if reqtype not in ['rechal', 'compiler_type']:
+            if reqtype not in ['rechal', 'rechalall']:
                 return self.error(('Eunk', 'Unknown error'))
 
             is_all_chal = False
             if reqtype == 'rechalall':
                 pwd = self.get_argument('pwd')
+                import config
                 if config.unlock_pwd != base64.b64encode(packb(pwd)):
                     return self.error(('Eacces', 'Wrong password'))
                 is_all_chal = True
