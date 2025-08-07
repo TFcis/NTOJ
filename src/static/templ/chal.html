@@ -34,19 +34,21 @@
         total_table.querySelector('td.memory').innerHTML = memory;
         total_table.querySelector('td.score').innerHTML = rate;
 
-        if (message_type !== {{ MessageType.NONE.value }}) total_result_message.innerHTML = '';
-        if (message_type === {{ MessageType.TEXT.value }}) {
-            let text = document.createTextNode(message);
-            let pre = document.createElement('pre');
-            pre.appendChild(text);
+        if (message_type !== {{ MessageType.NONE.value }}) {
+            total_result_message.innerHTML = '';
+        } else {
+            if (message_type === {{ MessageType.TEXT.value }}) {
+                let text = document.createTextNode(message);
+                let pre = document.createElement('pre');
+                pre.appendChild(text);
+                $(total_result_message_collapse).show();
+            } else if (message_type === {{ MessageType.HTML.value }}) {
+                let div = document.createElement('div');
+                div.innerHTML = message;
+                total_result_message.appendChild(div);
+            }
             $(total_result_message_collapse).show();
-        } else if (message_type === {{ MessageType.HTML.value }}) {
-            let div = document.createElement('div');
-            div.innerHTML = message;
-            total_result_message.appendChild(div);
         }
-
-        $(total_result_message_collapse).show();
     }
 
     var subtask_table = document.getElementById("subtasks");
@@ -396,8 +398,9 @@
 
 {% set message = chal.total_result.message %}
 {% set message_type = chal.total_result.message_type %}
+{% set show_total_message = message != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
 
-<div class="accordion" id="total-result-message-accordion" {% if message == '' or not (user.is_kernel() and chal.acct_id == user.acct_id) %} style="display: none;" {% end %}>
+<div class="accordion" id="total-result-message-accordion" {% if not show_total_message %} style="display: none;" {% end %}>
     <div class="accordion-item">
         <h2 class="accordion-header">
                 <button
@@ -413,7 +416,7 @@
         </h2>
         <div id="collapse_total_result_message" class="accordion-collapse collapse show" data-bs-parent="#testdatas-accordion">
             <div class="accordion-body" id="challengeTotalResultMessage">
-            {% if message != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
+            {% if show_total_message %}
                 {% if message_type == MessageType.TEXT %}
                     <pre>{{message.strip()}}</pre>
                 {% elif message_type == MessageType.HTML %}
