@@ -561,8 +561,7 @@ class ProService:
             await con.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id) VALUES ($1, $2, $3);', insert_subtask_values)
             await con.executemany('INSERT INTO testdata_result (chal_id, pro_id, id) VALUES ($1, $2, $3);', insert_testdata_values)
 
-            await self.rs.delete("rate")
-
+            # NOTE: Remove cache
             res = await con.fetch("SELECT contest_id FROM contest_problem_joints WHERE pro_id = $1;", pro_id)
             for r in res:
                 contest_id = r['contest_id']
@@ -570,6 +569,7 @@ class ProService:
                 key2 = f"pro_id_{pro_id}_contest_id_{contest_id}"
                 await self.rs.hdel("pro_rate", key2)
             await self.rs.delete("rate")
+            await self.rs.hdel("pro_topcoder", str(pro_id))
 
         return None, None
 
