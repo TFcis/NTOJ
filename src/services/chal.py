@@ -638,7 +638,7 @@ class ChalService:
                 "testdatas": t,
                 "dependency_subtasks": list(subtask_config.dependency_subtasks),
             })
-        await self.db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id IN $3;',
+        await self.db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id = ANY($3);',
                               ChalConst.STATE_JUDGE, chal_id, need_judge_testdatas)
 
         testdatas = []
