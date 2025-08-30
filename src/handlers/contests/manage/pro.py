@@ -108,9 +108,12 @@ class ContestManageProHandler(RequestHandler):
 
             # TODO: send notify to user
             async def _rechal(rechals):
+                err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_CONTEST_USER)
+                if err:
+                    return
                 for chal_id, compiler_type in rechals:
                     _, _ = await ChalService.inst.reset_chal(chal_id)
-                    _, _ = await ChalService.inst.emit_chal(chal_id, pro_id, compiler_type, ChalConst.CONTEST_REJUDGE_PRI, skip_nonac=False)
+                    _, _ = await ChalService.inst.emit_chal(chal_id, pro.config, compiler_type, ChalConst.CONTEST_REJUDGE_PRI, skip_nonac=False)
 
             await asyncio.create_task(_rechal(rechals=result))
             self.error(('S', f'Problem(#{pro_id}) is rechallenging.'))
