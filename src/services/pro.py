@@ -627,11 +627,22 @@ class ProService:
                         continue
 
                     limit = Limit(0, 0, 0)
-                    try:
-                        limit.time = max(int(conf_limit["timelimit"]), 0)
-                        limit.memory = max(int(conf_limit["memlimit"]), 0)
-                        limit.output = 65536
-                    except ValueError:
+                    if "timelimit" in conf_limit and "memlimit" in conf_limit:
+                        try:
+                            limit.time = max(int(conf_limit["timelimit"]), 0)
+                            limit.memory = max(int(conf_limit["memlimit"]), 0)
+                            limit.output = 65536
+                        except ValueError:
+                            continue
+
+                    elif "time" in conf_limit and "memory" in conf_limit and "output" in conf_limit:
+                        try:
+                            limit.time = max(int(conf_limit["time"]), 0)
+                            limit.memory = max(int(conf_limit["memory"]), 0)
+                            limit.output = max(int(conf_limit["output"]), 0)
+                        except ValueError:
+                            continue
+                    else:
                         continue
 
                     limits[compiler_type] = limit
