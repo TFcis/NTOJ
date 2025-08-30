@@ -304,12 +304,13 @@
                 </tr>
 
                 {% for compiler in pro.config.allow_compilers %}
-                    {% if str(compiler) in limits %}
+                    {% set compiler_str = str(compiler) %}
+                    {% if compiler_str in limits %}
                     <tr compiler="{{ compiler }}">
                         <td>{{ COMPILER_INFOS[compiler].short_name }}</td>
-                        <td><input type="number" class="form-control time" value="{{ limits[compiler].time }}"></td>
-                        <td><input type="number" class="form-control memory" value="{{ limits[compiler].memory }}"></td>
-                        <td><input type="number" class="form-control output" value="{{ limits[compiler].output }}"></td>
+                        <td><input type="number" class="form-control time" value="{{ limits[compiler_str].time }}"></td>
+                        <td><input type="number" class="form-control memory" value="{{ limits[compiler_str].memory }}"></td>
+                        <td><input type="number" class="form-control output" value="{{ limits[compiler_str].output }}"></td>
                     </tr>
                     {% else %}
                     <tr compiler="{{ compiler }}">
