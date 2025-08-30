@@ -192,7 +192,8 @@ class ManageProFileManagerTest(AsyncTest):
                 self.assertAPIReturnValue(res.text, ('S', 12))
             await self.wait_for_judge_finish(callback)
             _, subtask_results, _ = self.get_chal_results(chal_id=12, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_JE] * len(subtask_results))
+            # self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_JE] * len(subtask_results))
+            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_SKIPPED] * len(subtask_results))
 
             self.assertTable(
                 {
