@@ -124,7 +124,7 @@ class ProsetHandler(RequestHandler):
         elif order == "usercnt":
             prolist = sorted(prolist, key=lambda pro: cmp(pro, 'user_all_chal_cnt'))
         elif order == "useraccnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, 'usr_ac_chal_cnt'))
+            prolist = sorted(prolist, key=lambda pro: cmp(pro, 'user_ac_chal_cnt'))
 
         if order_reverse:
             prolist = reversed(prolist)
