@@ -133,7 +133,10 @@ class SubmitHandler(RequestHandler):
         else:
             return self.error(('Eunk', 'Unknown error'))
 
-        err, _ = await ChalService.inst.emit_chal(chal_id, pro_id, compiler_type, priority, skip_nonac=False)
+        err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
+        if err:
+            return self.error(err)
+        err, _ = await ChalService.inst.emit_chal(chal_id, pro.config, compiler_type, priority, skip_nonac=False)
         if err:
             return self.error(err)
 

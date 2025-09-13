@@ -58,6 +58,28 @@ var index = new function() {
 
         } else {
             page = parts[4];
+            if (parts[parts.length - 1] !== "") {
+                let t = parts[parts.length - 1].match(/(.*)\?([^#]+)/);
+                let flag = false;
+                if (t === null) {
+                    flag = true;
+                    parts.push("");
+                } else {
+                    if (t[1] !== "") {
+                        flag = true;
+                        parts[parts.length - 1] = t[1];
+                        page = t[1];
+                        parts.push(`?${t[2]}`);
+                    }
+                }
+
+                if (flag) {
+                    window.history.pushState(null, document.title, parts.join("/"));
+                    update(false);
+                    return;
+                }
+            }
+
             req = '';
             for (i = 4 ; i < parts.length - 1; i++) {
                 req += '/' + parts[i];

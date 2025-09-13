@@ -11,6 +11,8 @@ from tornado.websocket import websocket_connect
 import config
 from services.log import LogService
 
+update_chal_task_running_cnt = 0
+MAX_UPDATE_CHAL_TASK_CNT = 32
 
 class JudgeServerService:
     def __init__(self, rs, server_name: str, server_url: str, codes_path: str, problems_path: str, judge_id) -> None:
@@ -22,14 +24,29 @@ class JudgeServerService:
         self.problems_path = problems_path
         self.status = True
         self.ws = None
+        self.queue = asyncio.Queue()
+        self.event = asyncio.Event()
 
         self.chal_map = {}
         self.running_chal_cnt = 0
 
         self.main_task = None
+        self.loop_task = None
 
     async def start(self):
         self.main_task = asyncio.create_task(self.connect_server())
+        self.event.set()
+        self.loop_task = asyncio.create_task(self.update_chal_task_loop())
+
+    async def update_chal_task_loop(self):
+        global update_chal_task_running_cnt
+        while await self.event.wait():
+            while update_chal_task_running_cnt < MAX_UPDATE_CHAL_TASK_CNT:
+                task = await self.queue.get()
+                asyncio.create_task(task)
+                update_chal_task_running_cnt += 1
+
+            self.event.clear()
 
     async def connect_server(self):
         try:
@@ -49,7 +66,8 @@ class JudgeServerService:
                 break
 
             try:
-                await self.response_handle(ret)
+                await self.queue.put(self.response_handle(ret))
+                self.event.set()
             except Exception as e:
                 import traceback
                 traceback.print_exception(e)
@@ -108,7 +126,8 @@ class JudgeServerService:
             total_result["time"] = total_result["time"] // 10 ** 6
             total_result["memory"] = total_result["memory"] // 1024
 
-            await ChalService.inst.update_total_result(
+            tasks = []
+            tasks.append(ChalService.inst.update_total_result(
                 chal_id,
                 TotalResult(
                     total_result["status"],
@@ -118,12 +137,12 @@ class JudgeServerService:
                     message,
                     total_result["message_type"],
                 ),
-            )
+            ))
 
             for subtask_id, subtask_result in result["subtask_results"].items():
                 subtask_result["time"] = subtask_result["time"] // 10 ** 6
                 subtask_result["memory"] = subtask_result["memory"] // 1024
-                await ChalService.inst.update_subtask_result(
+                tasks.append(ChalService.inst.update_subtask_result(
                     chal_id,
                     SubtaskResult(
                         int(subtask_id),
@@ -132,12 +151,12 @@ class JudgeServerService:
                         subtask_result["memory"],
                         decimal.Decimal(subtask_result["score"]),
                     ),
-                )
+                ))
 
             for testdata_result in result["testdata_results"].values():
                 testdata_result["time"] = testdata_result["time"] // 10 ** 6
                 testdata_result["memory"] = testdata_result["memory"] // 1024
-                await ChalService.inst.update_testdata_result(
+                tasks.append(ChalService.inst.update_testdata_result(
                     chal_id,
                     TestdataResult(
                         testdata_result["id"],
@@ -147,7 +166,9 @@ class JudgeServerService:
                         testdata_result["message"],
                         MessageType(testdata_result["message_type"]),
                     ),
-                )
+                ))
+
+            await asyncio.gather(*tasks)
 
             self.running_chal_cnt -= 1
             await self.rs.publish(
@@ -173,6 +194,9 @@ class JudgeServerService:
             await self.rs.hdel('pro_topcoder', str(pro_id))
             self.chal_map.pop(res['chal_id'])
 
+        global update_chal_task_running_cnt
+        update_chal_task_running_cnt -= 1
+        self.event.set()
 
     async def disconnect_server(self):
         if not self.status:
@@ -183,7 +207,9 @@ class JudgeServerService:
             self.running_chal_cnt = 0
             self.ws.close()
             self.main_task.cancel()
+            self.loop_task.cancel()
             self.main_task = None
+            self.loop_task = None
         except:
             return ('Ejudge', 'Disconnect judge failed')
 
