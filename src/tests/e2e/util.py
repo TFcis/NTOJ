@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from tornado.websocket import websocket_connect
 from services.chal import Compiler, TotalResult, SubtaskResult, TestdataResult, MessageType
 
-from runtests import testing_loop, db
+from rune2etest import testing_loop, db
 
 
 class AsyncTest(unittest.IsolatedAsyncioTestCase):
