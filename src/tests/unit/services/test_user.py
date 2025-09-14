@@ -137,13 +137,15 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
 
     async def test_update_pw_success(self):
         self.fake_conn.fetch.return_value = [{"password": "aGVsbG8="}]
-        with (
-            patch("base64.b64decode", return_value=b"hashedpw"),
-            patch("bcrypt.hashpw", side_effect=[b"notmatch", b"newhashedpw"]),
-            patch("bcrypt.gensalt", return_value=b"salt"),
-        ):
-            self.fake_conn.execute.return_value = None
-            err, _ = await self.service.update_pw(1, "oldpw", "newpw", True)
+        with patch("base64.b64decode", return_value=b"hashedpw"):
+            with patch("bcrypt.hashpw", return_value=b"notmatch") as hashpw_mock:
+                with patch("bcrypt.gensalt", return_value=b"salt"):
+                    # First call: check old password (should not match)
+                    # Second call: update with new password (should hash new password)
+                    # Patch hashpw for the second call
+                    hashpw_mock.side_effect = [b"notmatch", b"newhashedpw"]
+                    self.fake_conn.execute.return_value = None
+                    err, _ = await self.service.update_pw(1, "oldpw", "newpw", True)
         self.fake_conn.fetch.assert_awaited_once()
         self.fake_conn.execute.assert_awaited_once()
         self.assertIsNone(err)
