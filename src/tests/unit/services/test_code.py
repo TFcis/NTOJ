@@ -78,7 +78,7 @@ class TestCodeService(unittest.IsolatedAsyncioTestCase):
         with patch("services.chal.Compiler", side_effect=lambda x: x):
             err, code, compiler_type = await self.service.get_code(123, acct)
         self.assertIsNone(err)
-        self.assertIn("EROOR", code)
+        self.assertIn("ERROR", code)
         mock_file.assert_called_once()
 
     async def test_get_code_challenge_not_found(self):
