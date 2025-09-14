@@ -309,9 +309,11 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
         with patch("services.user.unpackb", return_value={"time": time.time()}):
             self.fake_rs.exists.return_value = None
             self.fake_conn.fetch.return_value = [{"acct_id": 1, "lastip": "127.0.0.1"}]
-            with patch.object(self.service, "rs", self.fake_rs), \
-                 patch.object(self.service, "db", self.fake_db), \
-                 patch("services.log.LogService.inst.add_log", new_callable=AsyncMock) as mock_add_log:
+            with (
+                patch.object(self.service, "rs", self.fake_rs),
+                patch.object(self.service, "db", self.fake_db),
+                patch("services.log.LogService.inst.add_log", new_callable=AsyncMock) as mock_add_log,
+            ):
                 self.fake_conn.execute.return_value = None
                 self.fake_rs.delete.return_value = None
                 err, acct_id, ip = await self.service.info_sign(req)
