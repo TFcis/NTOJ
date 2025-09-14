@@ -171,9 +171,6 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
 
     async def test_info_sign_expired(self):
         req = DummyReq(id_val="1", cookie_val="sesskey")
-        async def fake_hget(*args, **kwargs):
-            return b"\x81\xa4time\xcb" + b"\x00" * 8
-        self.fake_rs.hget.side_effect = fake_hget
         with patch("services.user.unpackb", return_value={"time": time.time() - 31 * 24 * 60 * 60}):
             err, acct_id, ip = await self.service.info_sign(req)
         self.assertEqual(err, "Esign")

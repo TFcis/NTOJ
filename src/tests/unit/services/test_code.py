@@ -3,6 +3,7 @@ import types
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 
+# TODO: Config should be refactored to be injectable
 mock_config = types.SimpleNamespace(lock_user_list=[], can_see_code_user=[])
 sys.modules["config"] = mock_config
 
