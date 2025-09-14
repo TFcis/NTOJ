@@ -28,7 +28,7 @@ from .rank import ProRankTest, UserRankTest
 from .submit import SubmitTest
 
 
-class E2ETest(AsyncTest):
+class IntegratedTest(AsyncTest):
     async def init(self):
         self.session = requests.Session()
         _, acct_id = await UserService.inst.sign_up('admin@test', 'testtest', 'admin')

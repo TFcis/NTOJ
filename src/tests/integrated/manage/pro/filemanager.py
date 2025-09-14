@@ -8,7 +8,7 @@ import tornado.escape
 import config
 from services.chal import ChalConst, Compiler
 from services.pro import ProConst
-from tests.e2e.util import AsyncTest, AccountContext
+from tests.integrated.util import AsyncTest, AccountContext
 
 
 class ManageProFileManagerTest(AsyncTest):

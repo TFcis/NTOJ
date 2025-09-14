@@ -1,5 +1,5 @@
 from services.user import UserConst
-from tests.e2e.util import AsyncTest, AccountContext
+from tests.integrated.util import AsyncTest, AccountContext
 
 
 class ManageAcctTest(AsyncTest):

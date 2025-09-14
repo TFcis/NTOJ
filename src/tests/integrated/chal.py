@@ -4,7 +4,7 @@ import shutil
 from tornado.websocket import websocket_connect
 
 from services.chal import ChalConst, Compiler, MessageType
-from tests.e2e.util import AsyncTest, AccountContext
+from tests.integrated.util import AsyncTest, AccountContext
 
 
 class ChalTest(AsyncTest):

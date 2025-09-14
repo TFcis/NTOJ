@@ -5,7 +5,7 @@ import hashlib
 
 from tornado.websocket import websocket_connect
 
-from tests.e2e.util import AsyncTest, AccountContext
+from tests.integrated.util import AsyncTest, AccountContext
 
 
 class ManagePackTest(AsyncTest):

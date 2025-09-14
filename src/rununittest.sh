@@ -13,10 +13,10 @@ omit =
     */dist-packages/*
     *.generated.py
     unitmain.py
-    rune2etest.py
+    runintegratedtest.py
     rununittest.py
     server.py
-    */e2e/*
+    */integrated/*
     */unit/*
     upgrade.py
 EOF

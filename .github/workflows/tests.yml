@@ -61,19 +61,19 @@ jobs:
           name: unit-test-coverage-report
           path: src/htmlcov
 
-      - name: Run E2E Test
+      - name: Run Integrated Test
         run: |
           cd src
-          chmod +x rune2etest.sh
-          ./rune2etest.sh
+          chmod +x runintegratedtest.sh
+          ./runintegratedtest.sh
 
       - name: Output judge log
         run: |
           cd $HOME/NTOJ-Judge-Rewrite/src
           cat output.log
 
-      - name: Upload E2E Test Coverage Report
+      - name: Upload Integrated Test Coverage Report
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-test-coverage-report
+          name: integrated-test-coverage-report
           path: src/htmlcov

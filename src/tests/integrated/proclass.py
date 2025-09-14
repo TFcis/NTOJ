@@ -3,7 +3,7 @@ import json
 
 from services.pro import ProClassConst
 
-from tests.e2e.util import AsyncTest, AccountContext
+from tests.integrated.util import AsyncTest, AccountContext
 
 class ProClassTest(AsyncTest):
     async def main(self):
