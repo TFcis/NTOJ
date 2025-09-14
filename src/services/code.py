@@ -51,7 +51,7 @@ class CodeService:
                     code = code_f.read().decode('utf-8')
 
             except FileNotFoundError:
-                code = 'ERROR: The code is lost on server.'
+                code = 'ERROR: The code is lost on the server.'
 
         else:
             return ('Eacces', 'Permission denied'), None, None
