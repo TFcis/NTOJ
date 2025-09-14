@@ -261,9 +261,6 @@ class UserService:
         if motto_len > UserConst.MOTTO_MAX:
             return ('Emottomax', 'Motto too long'), None
 
-        if Compiler(acct.last_compiler) not in Compiler:
-            return ('Eparam', 'Invalid last compiler option'), None
-
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''

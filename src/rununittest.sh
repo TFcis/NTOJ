@@ -12,6 +12,7 @@ omit =
     */site-packages/*
     */dist-packages/*
     *.generated.py
+    unitmain.py
     rune2etest.py
     rununittest.py
     server.py

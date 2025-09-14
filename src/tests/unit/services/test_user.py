@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 from services.user import UserService, Account, UserConst, GUEST_ACCOUNT
 from services.chal import Compiler
+import time
 
 class DummyReq:
     def __init__(self, id_val=None, cookie_val=None, remote_ip="127.0.0.1"):
@@ -50,6 +51,39 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(acct_id)
         self.assertEqual(err[0], "Emailmin")
 
+    async def test_sign_up_mail_too_long(self):
+        mail = "a" * (UserConst.MAIL_MAX + 1)
+        err, acct_id = await self.service.sign_up(mail, "pw123", "tester")
+        self.assertIsNotNone(err)
+        self.assertIsNone(acct_id)
+        self.assertEqual(err[0], "Emailmax")
+
+    async def test_sign_up_pw_too_short(self):
+        err, acct_id = await self.service.sign_up("test@mail.com", "", "tester")
+        self.assertIsNotNone(err)
+        self.assertIsNone(acct_id)
+        self.assertEqual(err[0], "Epwmin")
+
+    async def test_sign_up_pw_too_long(self):
+        pw = "a" * (UserConst.PW_MAX + 1)
+        err, acct_id = await self.service.sign_up("test@mail.com", pw, "tester")
+        self.assertIsNotNone(err)
+        self.assertIsNone(acct_id)
+        self.assertEqual(err[0], "Epwmax")
+
+    async def test_sign_up_name_too_long(self):
+        name = "a" * (UserConst.NAME_MAX + 1)
+        err, acct_id = await self.service.sign_up("test@mail.com", "pw123", name)
+        self.assertIsNotNone(err)
+        self.assertIsNone(acct_id)
+        self.assertEqual(err[0], "Enamemax")
+
+    async def test_sign_up_name_too_short(self):
+        err, acct_id = await self.service.sign_up("test@mail.com", "pw123", "")
+        self.assertIsNotNone(err)
+        self.assertIsNone(acct_id)
+        self.assertEqual(err[0], "Enamemin")
+
     async def test_sign_in_success(self):
         self.fake_conn.fetch.return_value = [{"acct_id": 1, "password": "aGVsbG8="}]
         with patch("base64.b64decode", return_value=b"hashedpw"):
@@ -82,7 +116,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
             cover="",
             motto="",
             lastip="",
-            last_compiler=Compiler.GPP,
+            last_compiler=Compiler.GCC,
             proclass_collection=[],
         )
         self.fake_rs.get.return_value = MagicMock()
@@ -124,6 +158,171 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(err)
         self.assertEqual(err[0], "Epwold")
 
+    async def test_info_sign_success(self):
+        req = DummyReq(id_val="1", cookie_val="sesskey", remote_ip="192.168.1.1")
+        with patch("services.user.unpackb", return_value={"time": time.time()}):
+            self.fake_rs.exists.return_value = True
+            self.fake_conn.fetch.return_value = [{"acct_id": 1, "lastip": "127.0.0.1"}]
+            with patch.object(self.service, "rs", self.fake_rs):
+                err, acct_id, ip = await self.service.info_sign(req)
+        self.assertIsNone(err)
+        self.assertEqual(acct_id, 1)
+        self.assertEqual(ip, "192.168.1.1")
+
+    async def test_info_sign_expired(self):
+        req = DummyReq(id_val="1", cookie_val="sesskey")
+        async def fake_hget(*args, **kwargs):
+            return b"\x81\xa4time\xcb" + b"\x00" * 8
+        self.fake_rs.hget.side_effect = fake_hget
+        with patch("services.user.unpackb", return_value={"time": time.time() - 31 * 24 * 60 * 60}):
+            err, acct_id, ip = await self.service.info_sign(req)
+        self.assertEqual(err, "Esign")
+        self.assertIsNone(acct_id)
+        self.assertEqual(ip, "")
+
+    async def test_info_sign_no_cookie(self):
+        req = DummyReq(id_val=None, cookie_val=None)
+        err, acct_id, ip = await self.service.info_sign(req)
+        self.assertEqual(err, "Esign")
+        self.assertIsNone(acct_id)
+        self.assertEqual(ip, "")
+
+    async def test_update_acct_success(self):
+        acct = Account(
+            acct_id=1,
+            acct_type=UserConst.ACCTTYPE_USER,
+            mail="",
+            name="tester",
+            photo="",
+            cover="",
+            motto="hello",
+            lastip="",
+            last_compiler=Compiler.GCC,
+            proclass_collection=[],
+        )
+        self.fake_conn.fetch.return_value = [{"acct_id": 1}]
+        self.fake_rs.delete.return_value = None
+        err, _ = await self.service.update_acct(acct)
+        self.fake_conn.fetch.assert_awaited_once()
+        self.fake_rs.delete.assert_any_await("account@1")
+        self.fake_rs.delete.assert_any_await("acctlist")
+        self.assertIsNone(err)
+
+    async def test_update_acct_invalid_type(self):
+        acct = Account(
+            acct_id=1,
+            acct_type=99,
+            mail="",
+            name="tester",
+            photo="",
+            cover="",
+            motto="hello",
+            lastip="",
+            last_compiler=Compiler.GCC,
+            proclass_collection=[],
+        )
+        err, _ = await self.service.update_acct(acct)
+        self.assertEqual(err[0], "Eparam")
+
+    async def test_update_acct_name_too_short(self):
+        acct = Account(
+            acct_id=1,
+            acct_type=UserConst.ACCTTYPE_USER,
+            mail="",
+            name="",
+            photo="",
+            cover="",
+            motto="hello",
+            lastip="",
+            last_compiler=Compiler.GCC,
+            proclass_collection=[],
+        )
+        err, _ = await self.service.update_acct(acct)
+        self.assertEqual(err[0], "Enamemin")
+
+    async def test_update_acct_motto_too_long(self):
+        acct = Account(
+            acct_id=1,
+            acct_type=UserConst.ACCTTYPE_USER,
+            mail="",
+            name="tester",
+            photo="",
+            cover="",
+            motto="a" * (UserConst.MOTTO_MAX + 1),
+            lastip="",
+            last_compiler=Compiler.GCC,
+            proclass_collection=[],
+        )
+        err, _ = await self.service.update_acct(acct)
+        self.assertEqual(err[0], "Emottomax")
+
+    async def test_list_acct_success(self):
+        self.fake_rs.hget.return_value = None
+        self.fake_conn.fetch.return_value = [
+            (1, UserConst.ACCTTYPE_USER, "tester", "test@mail.com", "127.0.0.1"),
+            (2, UserConst.ACCTTYPE_USER, "tester2", "test2@mail.com", "127.0.0.2"),
+        ]
+        self.fake_rs.hset.return_value = None
+        err, acctlist = await self.service.list_acct()
+        self.fake_conn.fetch.assert_awaited_once()
+        self.fake_rs.hset.assert_awaited_once()
+        self.assertIsNone(err)
+        self.assertEqual(len(acctlist), 2)
+        self.assertEqual(acctlist[0].name, "tester")
+        self.assertEqual(acctlist[1].name, "tester2")
+
+    async def test_list_acct_from_cache(self):
+        dummy_acctlist = [
+            Account(
+                acct_id=1,
+                acct_type=UserConst.ACCTTYPE_USER,
+                mail="",
+                name="tester",
+                photo="",
+                cover="",
+                motto="",
+                lastip="127.0.0.1",
+                last_compiler=Compiler.GCC,
+                proclass_collection=[],
+            )
+        ]
+        self.fake_rs.hget.return_value = MagicMock()
+        with patch("pickle.loads", return_value=dummy_acctlist):
+            err, acctlist = await self.service.list_acct()
+        self.fake_rs.hget.assert_awaited_once()
+        self.assertIsNone(err)
+        self.assertEqual(len(acctlist), 1)
+        self.assertEqual(acctlist[0].name, "tester")
+
+    async def test_info_sign_db_not_found(self):
+        req = DummyReq(id_val="1", cookie_val="sesskey", remote_ip="192.168.1.1")
+        with patch("services.user.unpackb", return_value={"time": time.time()}):
+            self.fake_rs.exists.return_value = None
+            self.fake_conn.fetch.return_value = []
+            with patch.object(self.service, "rs", self.fake_rs):
+                err, acct_id, ip = await self.service.info_sign(req)
+        self.assertEqual(err, "Esign")
+        self.assertIsNone(acct_id)
+        self.assertEqual(ip, "192.168.1.1")
+
+    async def test_info_sign_db_update_lastip(self):
+        req = DummyReq(id_val="1", cookie_val="sesskey", remote_ip="192.168.1.2")
+        with patch("services.user.unpackb", return_value={"time": time.time()}):
+            self.fake_rs.exists.return_value = None
+            self.fake_conn.fetch.return_value = [{"acct_id": 1, "lastip": "127.0.0.1"}]
+            with patch.object(self.service, "rs", self.fake_rs), \
+                 patch.object(self.service, "db", self.fake_db), \
+                 patch("services.log.LogService.inst.add_log", new_callable=AsyncMock) as mock_add_log:
+                self.fake_conn.execute.return_value = None
+                self.fake_rs.delete.return_value = None
+                err, acct_id, ip = await self.service.info_sign(req)
+        self.fake_conn.execute.assert_awaited_once()
+        self.fake_rs.delete.assert_any_await("account@1")
+        self.fake_rs.delete.assert_any_await("acctlist")
+        mock_add_log.assert_awaited_once()
+        self.assertIsNone(err)
+        self.assertEqual(acct_id, 1)
+        self.assertEqual(ip, "192.168.1.2")
 
 if __name__ == "__main__":
     unittest.main()
