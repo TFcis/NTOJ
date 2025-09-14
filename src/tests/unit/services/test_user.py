@@ -138,7 +138,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
     async def test_update_pw_success(self):
         self.fake_conn.fetch.return_value = [{"password": "aGVsbG8="}]
         with patch("base64.b64decode", return_value=b"hashedpw"):
-            with patch("bcrypt.hashpw", return_value=b"notmatch") as hashpw_mock:
+            with patch("bcrypt.hashpw") as hashpw_mock:
                 with patch("bcrypt.gensalt", return_value=b"salt"):
                     # First call: check old password (should not match)
                     # Second call: update with new password (should hash new password)
