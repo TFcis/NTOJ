@@ -203,7 +203,7 @@
                         <img class="card-photo" width="100" height="100" src="{{ topcoder['photo'] }}" />
                         <div class="card-text-group">
                             <h5 class="card-title"><a href="/oj/acct/{{ topcoder['acct_id'] }}/">{{ topcoder['name'] }}</a></h5>
-                            <p class="card-text">{{ topcoder['motto'][:30] }}</p>
+                            <p class="card-text">{{ topcoder['motto'] }}</p>
                         </div>
                     </div>
                     </div>
@@ -222,6 +222,9 @@
                         .card-text-group {
                             display: flex;
                             flex-direction: column;
+                        }
+                        .card-text {
+                            word-break: break-all;
                         }
                     </style>
                 </div>
