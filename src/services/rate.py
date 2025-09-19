@@ -189,7 +189,7 @@ class RateService:
         Returns:
             Tuple[None, Optional[dict]]: A tuple where the first element is always None (reserved for Error),
             and the second element is either:
-                - A dict containing the topcoder's `acct_id`, `name`, and `motto`, if found.
+                - A dict containing the topcoder's `acct_id`, `name`, `motto` and `photo`, if found.
                 - None, if no valid submission was found.
         """
 
@@ -197,7 +197,7 @@ class RateService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     f'''
-                    SELECT temp2.acct_id, name, motto
+                    SELECT temp2.acct_id, name, motto, photo
                     FROM (
                         SELECT *
                         FROM (
