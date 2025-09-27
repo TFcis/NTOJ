@@ -176,7 +176,7 @@ class IntegratedTest(AsyncTest):
 
                 err, topcoder = await RateService.inst.get_pro_topcoder(1)
                 self.assertIsNone(err)
-                self.assertEqual(topcoder, {'acct_id': 1, 'name': 'admin', 'motto': '', 'photo': ''})
+                self.assertEqual(topcoder, 1)
 
                 err, ratemap = await RateService.inst.map_rate_acct(acct)
                 self.assertEqual(len(ratemap), 1)
