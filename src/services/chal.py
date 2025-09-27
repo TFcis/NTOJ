@@ -318,7 +318,7 @@ class ChalSearchingParamBuilder:
     """
 
     def __init__(self):
-        self.param = ChalSearchingParam([], [], 0, -1, [ProConst.STATUS_ONLINE], 0)
+        self.param = ChalSearchingParam(None, None, 0, -1, [ProConst.STATUS_ONLINE], 0)
 
     def pro(self, pro: list[int] | None):
         """Sets the list of problem IDs to filter."""

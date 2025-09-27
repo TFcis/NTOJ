@@ -1,10 +1,10 @@
 import re
 import os
-import copy
 import json
 
-from services.chal import ChalConst
-from tests.e2e.util import AsyncTest, AccountContext
+from services.pro import ProService, ProConst, Problem, ProblemConfig
+from services.chal import ChalService, ChalConst
+from tests.integrated.util import AsyncTest, AccountContext
 
 class ManageProUpdateTestsTest(AsyncTest):
     async def _upload_file(self, filepath, session):
@@ -15,16 +15,18 @@ class ManageProUpdateTestsTest(AsyncTest):
 
         return pack_token
 
-    def assertTable(self, url: str, default_data: dict, assert_tables: list[dict], session):
-        for table in assert_tables:
-            equal_value = table.pop("equal_value")
+    async def get_pro(self, pro_id: int) -> Problem:
+        err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
+        self.assertIsNone(err)
+        assert pro
+        assert pro.config
+        return pro
 
-            d = copy.copy(default_data)
-            for key, val in table.items():
-                d[key] = val
+    async def get_proconfig(self, pro_id: int) -> ProblemConfig:
+            pro = await self.get_pro(pro_id)
+            assert pro.config
+            return pro.config
 
-            res = session.post(url, data=d)
-            self.assertAPIReturnValue(res.text, equal_value)
 
     async def main(self):
         with AccountContext("admin@test", "testtest") as admin_session:
@@ -73,14 +75,9 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'subtask': 0,
             })
             self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('pro/1', admin_session)
-            scores_table = html.select('table')[1]
-            trs = scores_table.select('tbody > tr')
-            self.assertEqual(trs[0].select('td')[1].text.strip(), '60')
 
-            html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
-            subtasks = html.select_one('div#subtasks').select('div.accordion-item')
-            self.assertEqual(subtasks[0].select_one('button.accordion-button').text.strip(), f'Subtask { 0 + 1 } Rate: { 60 }')
+            config = await self.get_proconfig(1)
+            self.assertEqual(config.subtask_configs[0].rate, 60)
 
             # NOTE: addsubtask
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
@@ -89,14 +86,9 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'rate': 20,
             })
             self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('pro/1', admin_session)
-            scores_table = html.select('table')[1]
-            trs = scores_table.select('tbody > tr')
-            self.assertEqual(trs[2].select('td')[1].text.strip(), '20')
-
-            html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
-            subtasks = html.select_one('div#subtasks').select('div.accordion-item')
-            self.assertEqual(subtasks[2].select_one('button.accordion-button').text.strip(), f'Subtask { 2 + 1 } Rate: { 20 }')
+            config = await self.get_proconfig(1)
+            self.assertEqual(len(config.subtask_configs), 3)
+            self.assertEqual(config.subtask_configs[2].rate, 20)
 
             # NOTE: addsinglefile
             inputfile_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
@@ -109,16 +101,14 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'output_pack_token': outputfile_token,
             })
             self.assertAPIReturnSuccess(res.text)
-            self.assertTrue(os.path.exists('problem/1/res/testdata/3.in'))
-            self.assertTrue(os.path.exists('problem/1/res/testdata/3.out'))
+            config = await self.get_proconfig(1)
+            self.assertEqual(len(config.testdatas), 3)
+            self.assertEqual(config.testdatas[2].inputfile, '3.in')
+            self.assertEqual(config.testdatas[2].outputfile, '3.out')
+            self.assertTrue(os.path.exists(f'problem/1/res/testdata/{config.testdatas[2].inputfile}'))
+            self.assertTrue(os.path.exists(f'problem/1/res/testdata/{config.testdatas[2].outputfile}'))
             self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/res/testdata/3.in').read())
             self.assertEqual(open('tests/static_file/toj3/3.out').read(), open('problem/1/res/testdata/3.out').read())
-            html = self.get_html('manage/pro/updatetestdata?proid=1', admin_session)
-            trs = html.select('tbody > tr')
-            self.assertEqual(len(trs), 3)
-            self.assertEqual(trs[2].attrs['testdata_id'], '2')
-            self.assertEqual(trs[2].select_one('a.input').text.strip(), '3.in')
-            self.assertEqual(trs[2].select_one('a.output').text.strip(), '3.out')
 
             self.assertTable(
                 'manage/pro/updatetestdata',
@@ -145,9 +135,9 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'subtask': 2,
             })
             self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
-            subtasks = html.select_one('div#subtasks').select('div.accordion-item')
-            self.assertEqual(subtasks[2].select_one('#testdatas').attrs['value'].strip(), "0-2")
+            config = await self.get_proconfig(1)
+            self.assertEqual(sorted(t.testdata_id for t in config.subtask_configs[2].testdatas),
+                             [0, 1, 2])
 
             def callback():
                 res = admin_session.post('submit', data={
@@ -156,8 +146,9 @@ class ManageProUpdateTestsTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
-            _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
+            err, chal = await ChalService.inst.get_chal(1, with_result=True)
+            self.assertIsNone(err)
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC] * len(chal.subtask_results))
 
             # NOTE: updatesinglefile
             pack_token = await self._upload_file('tests/static_file/toj3/3.out.incorrect', admin_session)
@@ -169,6 +160,7 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'pack_token': pack_token,
             })
             self.assertAPIReturnSuccess(res.text)
+            self.assertEqual(open('tests/static_file/toj3/3.out.incorrect').read(), open('problem/1/res/testdata/3.out').read())
 
             self.assertTable(
                 'manage/pro/updatetestdata',
@@ -194,8 +186,9 @@ class ManageProUpdateTestsTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
-            _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA])
+            err, chal = await ChalService.inst.get_chal(1, with_result=True)
+            self.assertIsNone(err)
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA])
 
             # NOTE: setdepsubtasks
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
@@ -205,9 +198,8 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'subtask': 2,
             })
             self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
-            subtasks = html.select_one('div#subtasks').select('div.accordion-item')
-            self.assertEqual(subtasks[2].select_one('#depsubtasks').attrs['value'].strip(), "2")
+            config = await self.get_proconfig(1)
+            self.assertIn(1, config.subtask_configs[2].dependency_subtasks)
 
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
                 'reqtype': 'setdepsubtasks',
@@ -229,9 +221,10 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'output_pack_token': outputfile_token,
             })
             self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('manage/pro/updatetestdata?proid=1', admin_session)
-            trs = html.select('tbody > tr')
-            self.assertEqual(len(trs), 4)
+            config = await self.get_proconfig(1)
+            self.assertEqual(len(config.testdatas), 4)
+            self.assertEqual(config.testdatas[3].inputfile, '4.in')
+            self.assertEqual(config.testdatas[3].outputfile, '4.out')
 
             res = admin_session.post('manage/pro/updatetests?proid=1', data={
                 'reqtype': 'settestdata',
@@ -240,9 +233,10 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'subtask': 2,
             })
             self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('manage/pro/updatetests?proid=1', admin_session)
-            subtasks = html.select_one('div#subtasks').select('div.accordion-item')
-            self.assertEqual(subtasks[2].select_one('#testdatas').attrs['value'].strip(), "0-1,3")
+            config = await self.get_proconfig(1)
+            self.assertEqual(len(config.subtask_configs[2].testdatas), 3)
+            self.assertEqual(sorted(t.testdata_id for t in config.subtask_configs[2].testdatas),
+                             [0, 1, 3])
             def callback():
                 res = admin_session.post('submit', data={
                     'reqtype': 'rechal',
@@ -250,8 +244,9 @@ class ManageProUpdateTestsTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
-            _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_AC])
+            err, chal = await ChalService.inst.get_chal(1, with_result=True)
+            self.assertIsNone(err)
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC] * len(chal.subtask_results))
 
             # NOTE: deletesinglefile
             res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
@@ -260,11 +255,13 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'testdata_id': 3,
             })
             self.assertAPIReturnSuccess(res.text)
+            config = await self.get_proconfig(1)
+            self.assertEqual(len(config.testdatas), 3)
+            self.assertEqual(len(config.subtask_configs[2].testdatas), 2)
+            self.assertEqual(sorted(t.testdata_id for t in config.subtask_configs[2].testdatas),
+                             [0, 1])
             self.assertFalse(os.path.exists('problem/1/res/testdata/4.in'))
             self.assertFalse(os.path.exists('problem/1/res/testdata/4.out'))
-            html = self.get_html('manage/pro/updatetestdata?proid=1', admin_session)
-            trs = html.select('tbody > tr')
-            self.assertEqual(len(trs), 3)
 
             self.assertTable(
                 'manage/pro/updatetestdata',
@@ -287,6 +284,10 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'subtask': 2,
             })
             self.assertAPIReturnSuccess(res.text)
+            config = await self.get_proconfig(1)
+            self.assertEqual(len(config.subtask_configs), 2)
+            self.assertNotIn(2, config.subtask_configs)
+
             def callback():
                 res = admin_session.post('submit', data={
                     'reqtype': 'rechal',
@@ -294,5 +295,6 @@ class ManageProUpdateTestsTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 1))
             await self.wait_for_judge_finish(callback)
-            _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC])
+            err, chal = await ChalService.inst.get_chal(1, with_result=True)
+            self.assertIsNone(err)
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC])

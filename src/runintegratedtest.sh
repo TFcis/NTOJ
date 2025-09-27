@@ -36,11 +36,11 @@ omit =
     */site-packages/*
     */dist-packages/*
     *.generated.py
-    rune2etest.py
+    runintegratedtest.py
     rununittest.py
+    rune2etest.py
+    tests/*
     server.py
-    */e2e/*
-    */unit/*
     upgrade.py
 EOF
 
@@ -53,7 +53,7 @@ rm .coverage.*
 rm .coverage
 rm -r ./htmlcov
 
-COVERAGE_PROCESS_START=.coveragerc $HOME/.local/bin/poetry run coverage run --branch --source=./ rune2etest.py
+COVERAGE_PROCESS_START=.coveragerc $HOME/.local/bin/poetry run coverage run --branch --source=./ runintegratedtest.py
 $HOME/.local/bin/poetry run coverage combine
 $HOME/.local/bin/poetry run coverage html
 

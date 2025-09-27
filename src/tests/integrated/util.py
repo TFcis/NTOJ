@@ -1,4 +1,4 @@
-import decimal
+import copy
 import hashlib
 import time
 import asyncio
@@ -8,11 +8,11 @@ import os
 import unittest
 
 import requests
-from bs4 import BeautifulSoup
 from tornado.websocket import websocket_connect
-from services.chal import Compiler, TotalResult, SubtaskResult, TestdataResult, MessageType
 
-from rune2etest import testing_loop, db
+from services.chal import Compiler
+from services.pro import ProConst, ProService
+from runintegratedtest import testing_loop, db
 
 
 class AsyncTest(unittest.IsolatedAsyncioTestCase):
@@ -31,10 +31,10 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
     def __del__(self):
         pass
 
-    def assertAPIReturnValue(self, text: str, structure):
+    def assertAPIReturnValue(self, text: str, structure, msg: str = ''):
         s = json.loads(text)
-        self.assertEqual(s['status'], structure[0])
-        self.assertEqual(s['data'], structure[1])
+        self.assertEqual(s['status'], structure[0], msg)
+        self.assertEqual(s['data'], structure[1], msg)
 
     def assertAPIReturnSuccess(self, text: str, msg=None):
         s = json.loads(text)
@@ -42,66 +42,8 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         if msg and isinstance(msg, str):
             self.assertEqual(s['data'], msg)
 
-    def get_html(self, url, session, full_url=None):
-        if full_url is not None:
-            res = session.get(full_url=full_url)
-        else:
-            res = session.get(url)
-
-        return BeautifulSoup(res.text, "html.parser")
-
     def get_isoformat(self, time: datetime.datetime) -> str:
-        return time.isoformat(timespec="milliseconds") + "Z"
-
-    def get_chal_results(self, chal_id: int, session) -> tuple[TotalResult, dict[int, SubtaskResult], dict[int, TestdataResult]]:
-        html = self.get_html(f"chal/{chal_id}", session)
-
-        tds = html.select("#total > tbody > tr > td")
-        # NOTE: <td class="state state-\d+"></td>
-        total_result_message = html.select_one('#challengeTotalResultMessage')
-        self.assertIsNotNone(total_result_message)
-        message_type = MessageType.NONE
-        message = ""
-        if total_result_message.select_one('pre') is not None:
-            message_type = MessageType.TEXT
-            message = total_result_message.select_one('pre').text.strip()
-        elif total_result_message.select_one('div') is not None:
-            message = total_result_message.select_one('div').decode_contents()
-            message_type = MessageType.HTML
-
-        total_result = TotalResult(int(tds[1].attrs['class'][1].split("-")[1]), int(tds[2].text.strip()),
-                    int(tds[3].text.strip()), decimal.Decimal(tds[4].text.strip()), message, message_type)
-        subtask_results = {}
-        for tr in html.select("#subtasks > tbody > tr"):
-            tds = tr.select('td')
-            id = int(tds[0].text.strip())
-            subtask_results[id] = SubtaskResult(id, int(tds[1].attrs['class'][1].split("-")[1]), int(tds[2].text.strip()),
-                    int(tds[3].text.strip()), decimal.Decimal(tds[4].text.strip()))
-
-        testdata_results = {}
-        for tr in html.select("#testdatas > tbody > tr"):
-            if 'collapse' in tr.attrs['class']:
-                continue
-            tds = tr.select('td')
-            id = int(tds[0].text.strip().removesuffix('(Expand)').strip())
-
-            testdata_result_message = html.select_one(f"#challengeTestdataResultMessage{id - 1}").select_one('.card')
-            message_type = MessageType.NONE
-            message = ""
-            if testdata_result_message.select_one('pre') is not None:
-                message = testdata_result_message.select_one('pre').text.strip()
-                message_type = MessageType.TEXT
-            elif testdata_result_message.select_one('div') is not None:
-                message_type = testdata_result_message.select_one('div').decode_contents()
-                message_type = MessageType.HTML
-
-            testdata_results[id] = TestdataResult(id, int(tds[1].attrs['class'][1].split("-")[1]), int(tds[2].text.strip()),
-                    int(tds[3].text.strip()), message, message_type)
-
-
-        return total_result, subtask_results, testdata_results
-
-
+        return time.isoformat(timespec="microseconds") + "Z"
 
     async def upload_file(self, file, file_size: int, pack_token: str):
         md5 = hashlib.md5()
@@ -159,8 +101,10 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertAPIReturnValue(res.text, ('S', expected_pro_id))
 
-        html = self.get_html("manage/pro", session)
-        self.assertIsNotNone(html.select_one(f'td[proid="{expected_pro_id}"]'))
+        err, pro = await ProService.inst.get_pro(expected_pro_id, ProConst.PRO_STATUS_FULL)
+        self.assertIsNone(err)
+        self.assertEqual(pro.name, name)
+        self.assertEqual(pro.status, status)
 
     def get_upload_token(self, session):
         res = session.post("manage/pack", data={"reqtype": "gettoken"})
@@ -231,6 +175,17 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
 
             if not len(judges_cnt):
                 break
+
+    def assertTable(self, url: str, default_data: dict, assert_tables: list[dict], session):
+        for table in assert_tables:
+            equal_value = table.pop("equal_value")
+
+            d = copy.copy(default_data)
+            for key, val in table.items():
+                d[key] = val
+
+            res = session.post(url, data=d)
+            self.assertAPIReturnValue(res.text, equal_value, f'{table}')
 
 
 class BaseUrlSession(requests.Session):

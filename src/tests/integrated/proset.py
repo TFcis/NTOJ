@@ -1,5 +1,5 @@
 from services.chal import ChalConst
-from tests.e2e.util import AsyncTest, AccountContext
+from tests.integrated.util import AsyncTest, AccountContext
 
 
 # FIXME: chal cnt need recalculate

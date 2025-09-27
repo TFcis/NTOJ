@@ -5,10 +5,11 @@ import hashlib
 
 from tornado.websocket import websocket_connect
 
-from tests.e2e.util import AsyncTest, AccountContext
+from tests.integrated.util import AsyncTest, AccountContext
 
 
 class ManagePackTest(AsyncTest):
+    # TODO: we should test a file larger than 65535 bytes
     async def s(self):
         with AccountContext("admin@test", "testtest") as admin_session:
             pack_token = self.get_upload_token(admin_session)
