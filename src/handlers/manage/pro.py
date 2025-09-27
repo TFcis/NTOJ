@@ -838,9 +838,9 @@ class ManageProHandler(RequestHandler):
                 config.rate_precision = rate_precision
                 await ProService.inst.update_pro_config(pro_id, config)
                 await LogService.inst.add_log(
-                    f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.judge',
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id} judge config", 'manage.pro.update.judge',
                     {
-
+                        # TODO: add missing parameter
                     }
                 )
                 if err:
@@ -920,7 +920,7 @@ class ManageProHandler(RequestHandler):
                 await ProService.inst.update_pro_config(pro_id, pro.config)
 
                 await LogService.inst.add_log(
-                    f"{self.acct.name} has sent a request to update the problem #{pro_id}",
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id} limit config",
                     'manage.pro.update.limit',
                     {
                         'limits': {
