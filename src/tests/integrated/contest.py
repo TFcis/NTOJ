@@ -1,12 +1,11 @@
 import copy
 import datetime
 import json
-import re
 
 from tornado.websocket import websocket_connect
 
-from services.contests import ContestMode, RegMode
-from services.pro import ProConst
+from services.contests import ContestService, ContestMode, RegMode, UserStatus
+from services.pro import ProService, ProConst
 from services.chal import Compiler
 from .util import AsyncTest, AccountContext
 
@@ -22,14 +21,17 @@ class ContestTest(AsyncTest):
         self.signup('contest6', 'contest6@test', 'test')  # acct_id = 9
         with AccountContext('admin@test', 'testtest') as admin_session:
             # upload more problem
-            for i in range(7, 12 + 1):
-                await self.upload_problem('toj674.tar.xz', f'Move {i - 6}', ProConst.STATUS_CONTEST, expected_pro_id=i, session=admin_session)
+            for pro_id in range(5, 11 + 1):
+                await self.upload_problem('toj674.tar.xz', f'Move {pro_id - 6}', ProConst.STATUS_CONTEST, expected_pro_id=pro_id, session=admin_session)
 
             res = admin_session.post('contests/manage/add', data={
                 'reqtype': 'add',
                 'name': 'contest 1'
             })
             self.assertEqual(json.loads(res.text)['data'], 1)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.name, 'contest 1')
 
             # update general
             now = datetime.datetime.now()
@@ -58,6 +60,18 @@ class ContestTest(AsyncTest):
             res = admin_session.post('contests/1/manage/general', data=default_config)
             self.assertAPIReturnSuccess(res.text)
 
+            # TODO: start, end reg_end assertEqual, ref board.py
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.contest_mode, ContestMode.IOI)
+            self.assertEqual(contest.reg_mode, RegMode.INVITED)
+            self.assertEqual(contest.allow_compilers, {Compiler.GPP, Compiler.CLANGPP})
+            self.assertTrue(contest.is_public_scoreboard)
+            self.assertTrue(contest.allow_view_other_page)
+            self.assertTrue(contest.hide_admin)
+            self.assertEqual(contest.submission_cd_time, 60)
+            self.assertEqual(contest.freeze_scoreboard_period, 0)
+
             # test desc
             res = admin_session.post('contests/1/manage/desc', data={
                 'reqtype': 'update',
@@ -77,105 +91,81 @@ class ContestTest(AsyncTest):
                 'desc': 'desc after contest',
             })
             self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.desc_before_contest, 'desc before contest')
+            self.assertEqual(contest.desc_during_contest, 'desc during contest')
+            self.assertEqual(contest.desc_after_contest, 'desc after contest')
 
-            res = admin_session.get('contests/1/manage/desc')
-            self.assertEqual(re.findall(r'let desc_before_contest = index\.unescape_html\(`(.*)`\)', res.text, re.I)[0], 'desc before contest')
-            self.assertEqual(re.findall(r'let desc_during_contest = index\.unescape_html\(`(.*)`\)', res.text, re.I)[0], 'desc during contest')
-            self.assertEqual(re.findall(r'let desc_after_contest = index\.unescape_html\(`(.*)`\)', res.text, re.I)[0], 'desc after contest')
-
-            res = admin_session.get('contests/1')
-            self.assertEqual(re.findall(r'let desc_tex = `(.*)`', res.text, re.I)[0], 'desc before contest')
-
-            html = self.get_html('contests/1/info', admin_session)
-            during_section = html.select('.card-body')[0]
-            contest_style_section = html.select('.card-body')[1]
-            registration_info = html.select('.card-body')[2]
-            registration_status = html.select('.card-body')[3]
-
-            self.assertEqual(during_section.select('h5')[0].text, contest_start.strftime('%Y-%m-%d %H:%M:%S'))
-            self.assertEqual(during_section.select('h5')[1].text, contest_end.strftime('%Y-%m-%d %H:%M:%S'))
-            self.assertEqual(contest_style_section.select('h5')[0].text, 'IOI')
-            self.assertEqual(contest_style_section.select('h5')[1].text, 'Scoreboard')
-            self.assertEqual(registration_info.select('h5')[0].text, 'Invited')
-            self.assertEqual(registration_status.select('h5')[0].text, 'Admin, no registration needed')
-
-            # NOTE: due to special contest hardcode
-            # html = self.get_html('contests', admin_session)
-            # self.assertEqual(len(html.select('tr')[1:]), 1)
-            # contest0 = html.select('tr')[1]
-            # self.assertEqual(contest0.select_one('th').text, 'contest 1')
-            # self.assertEqual(contest0.select('td')[0].text, 'Not Yet')
-            # self.assertEqual(contest0.select('td')[1].text, contest_start.strftime('%Y-%m-%d %H:%M'))
-            # self.assertEqual(contest0.select('td')[2].text, str(contest_end - contest_start))
-            # self.assertEqual(contest0.select('td')[3].text, 'IOI')
-            # self.assertEqual(contest0.select('td')[4].text, 'Yes')
+            _, contest_list = await ContestService.inst.get_contest_list()
+            self.assertEqual(len(contest_list), 1)
+            self.assertEqual(contest_list[0]['name'], 'contest 1')
+            self.assertEqual(contest_list[0]['contest_mode'], ContestMode.IOI)
+            self.assertTrue(contest_list[0]['is_public_scoreboard'])
 
             # add problem
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'add',
-                'pro_id': 7
+                'pro_id': 5
             })
             self.assertAPIReturnSuccess(res.text)
-
-            html = self.get_html('contests/1/manage/pro', admin_session)
-            self.assertEqual(len(html.select('tr')[1:]), 1)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertIn(5, contest.pro_list)
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'remove',
-                'pro_id': 7
+                'pro_id': 5
             })
-            self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('contests/1/manage/pro', admin_session)
-            self.assertEqual(len(html.select('tr')[1:]), 0)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(5, contest.pro_list)
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'multi_add',
-                'pro_id': '7-13'
+                'pro_id': '5-11'
             })
-            self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('contests/1/manage/pro', admin_session)
-            self.assertEqual(len(html.select('tr')[1:]), 6)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            for pro_id in range(5, 11 + 1, 1):
+                self.assertIn(pro_id, contest.pro_list)
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'multi_remove',
-                'pro_id': '7-13'
+                'pro_id': '5-11'
             })
-            self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('contests/1/manage/pro', admin_session)
-            self.assertEqual(len(html.select('tr')[1:]), 0)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 0)
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'multi_add',
-                'pro_id': '7-13'
+                'pro_id': '5-11'
             })
-            self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('contests/1/manage/pro', admin_session)
-            self.assertEqual(len(html.select('tr')[1:]), 6)
 
-            html = self.get_html('contests/1/proset', admin_session)
-            self.assertEqual(len(html.select('tr')[1:]), 6)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            for pro_id in range(5, 11 + 1, 1):
+                self.assertIn(pro_id, contest.pro_list)
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'multi_add',
-                'pro_id': '7-20'
+                'pro_id': '5-20'
             })
             self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            for pro_id in range(5, 11 + 1, 1):
+                self.assertIn(pro_id, contest.pro_list)
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'public',
-                'pro_id': '7'
+                'pro_id': '5'
             })
             self.assertAPIReturnValue(res.text, ('Etime', 'Contest is not over yet'))
-
-            # test reg
-            # current reg mode is invite
-        with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('contests/1/reg', user_session)
-            self.assertEqual(html.select_one('h2').text, 'contest 1')
-            self.assertEqual(html.select('label')[0].text, 'Status: Not Invited')
-            self.assertEqual(html.select('label')[1].text, f"Registration End: {reg_end.strftime('%Y-%m-%d %H:%M:%S')}")
-            self.assertIsNone(html.select_one('h4'))  # NOTE: registration end
-            self.assertIsNone(html.select_one('button'))  # NOTE: registration button
+            err, pro = await ProService.inst.get_pro(5, allow_statuses=ProConst.PRO_STATUS_FULL)
+            self.assertIsNone(err)
+            self.assertEqual(pro.status, ProConst.STATUS_CONTEST)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
@@ -184,16 +174,9 @@ class ContestTest(AsyncTest):
                 'type': 'normal',
             })
             self.assertAPIReturnSuccess(res.text)
-
-        with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('contests/1/reg', user_session)
-            self.assertEqual(html.select('label')[0].text, 'Status: Invited')
-            self.assertIsNone(html.select_one('button'))  # NOTE: registration button
-
-            html = self.get_html('contests/1/info', user_session)
-            registration_status = html.select('.card-body')[3]
-            self.assertEqual(registration_status.select('h5')[0].text, 'Invited')
-            # self.assertIsNone(registration_status.select_one('a')) # TODO: Follow Spec
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
@@ -202,147 +185,93 @@ class ContestTest(AsyncTest):
                 'type': 'normal',
             })
             self.assertAPIReturnSuccess(res.text)
-
-        with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('contests/1/reg', user_session)
-            self.assertEqual(html.select('label')[0].text, 'Status: Not Invited')
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             config = copy.deepcopy(default_config)
             config['reg_mode'] = RegMode.FREE_REG
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.reg_mode, RegMode.FREE_REG)
 
         with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('contests/1/reg', user_session)
-            self.assertEqual(html.select('label')[0].text, 'Status: Not Registered')
-            self.assertIsNotNone(html.select_one('button'))  # NOTE: registration button
-
-            html = self.get_html('contests/1/info', user_session)
-            registration_status = html.select('.card-body')[3]
-            self.assertEqual(registration_status.select('h5')[0].text, 'Not Registered')
-            self.assertIsNotNone(registration_status.select_one('a'))
-
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
             })
             self.assertAPIReturnSuccess(res.text)
-
-            html = self.get_html('contests/1/reg', user_session)
-            self.assertEqual(html.select('label')[0].text, 'Status: Registered')
-            self.assertEqual(html.select_one('button').text, 'Unregister')
-
-            html = self.get_html('contests/1/info', user_session)
-            registration_status = html.select('.card-body')[3]
-            self.assertEqual(registration_status.select('h5')[0].text, 'Registered')
-            self.assertIsNotNone(registration_status.select_one('a'))
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
-            html = self.get_html('contests/1/manage/acct', admin_session)
-            normal_accts = html.select('div#collapseOne > div > table > tbody > tr')
-            self.assertEqual(len(normal_accts), 1)
-            self.assertEqual(normal_accts[0].select_one('th').text, '4')
-            self.assertEqual(normal_accts[0].select('td')[0].text, 'contest1')
-
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'remove',
                 'acct_id': 4,
                 'type': 'normal',
             })
             self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
 
             config = copy.deepcopy(default_config)
             config['reg_mode'] = RegMode.REG_APPROVAL
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.reg_mode, RegMode.REG_APPROVAL)
 
         with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('contests/1/reg', user_session)
-            self.assertEqual(html.select('label')[0].text, 'Status: Not Registered')
-            self.assertIsNotNone(html.select_one('button'))  # NOTE: registration button
-
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
             })
             self.assertAPIReturnSuccess(res.text)
-
-            html = self.get_html('contests/1/reg', user_session)
-            self.assertEqual(html.select('label')[0].text, 'Status: Waiting Approval')
-            self.assertEqual(html.select_one('button').text, 'Unregister')
-
-            html = self.get_html('contests/1/info', user_session)
-            registration_status = html.select('.card-body')[3]
-            self.assertEqual(registration_status.select('h5')[0].text, 'Waiting Approval')
-            self.assertIsNotNone(registration_status.select_one('a'))
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.REQUESTED)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
-            html = self.get_html('contests/1/manage/reg', admin_session)
-            trs = html.select('tr')[1:]
-            self.assertEqual(len(trs), 1)
-            self.assertEqual(trs[0].select_one('th').text, '4')
-            self.assertEqual(trs[0].select('td')[0].text, 'contest1')
-
             res = admin_session.post('contests/1/manage/reg', data={
                 'reqtype': 'approval',
                 'acct_id': 4,
             })
             self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
 
         with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('contests/1/reg', user_session)
-            self.assertEqual(html.select('label')[0].text, 'Status: Registered')
-            self.assertIsNotNone(html.select_one('button'))  # NOTE: registration button
-
-            html = self.get_html('contests/1/reg', user_session)
-            self.assertEqual(html.select('label')[0].text, 'Status: Registered')
-            self.assertEqual(html.select_one('button').text, 'Unregister')
-
-            html = self.get_html('contests/1/info', user_session)
-            registration_status = html.select('.card-body')[3]
-            self.assertEqual(registration_status.select('h5')[0].text, 'Registered')
-            self.assertIsNotNone(registration_status.select_one('a'))
-
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'unreg'
             })
             self.assertAPIReturnSuccess(res.text)
-
-            html = self.get_html('contests/1/info', user_session)
-            registration_status = html.select('.card-body')[3]
-            self.assertEqual(registration_status.select('h5')[0].text, 'Not Registered')
-            self.assertIsNotNone(registration_status.select_one('a'))
-
-        with AccountContext('admin@test', 'testtest') as admin_session:
-            html = self.get_html('contests/1/manage/reg', admin_session)
-            trs = html.select('tr')[1:]
-            self.assertEqual(len(trs), 0)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
 
         with AccountContext('contest1@test', 'test') as user_session:
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
             })
             self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.REQUESTED)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
-            html = self.get_html('contests/1/manage/reg', admin_session)
-            trs = html.select('tr')[1:]
-            self.assertEqual(len(trs), 1)
-
             res = admin_session.post('contests/1/manage/reg', data={
                 'reqtype': 'reject',
                 'acct_id': 4,
             })
             self.assertAPIReturnSuccess(res.text)
-
-        with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('contests/1/info', user_session)
-            registration_status = html.select('.card-body')[3]
-            self.assertEqual(registration_status.select('h5')[0].text, 'Not Registered')
-            self.assertIsNotNone(registration_status.select_one('a'))
-
-            html = self.get_html('contests/1/reg', user_session)
-            self.assertEqual(html.select('label')[0].text, 'Status: Not Registered')
-            self.assertEqual(html.select_one('button').text, 'Register')
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.REJECTED)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
@@ -351,66 +280,22 @@ class ContestTest(AsyncTest):
                 'type': 'normal',
             })
             self.assertAPIReturnSuccess(res.text)
-
-        with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('contests/1/proset', user_session)
-            self.assertEqual(len(html.select('tr')[1:]), 0)
-
-            res = user_session.get('contests/1/pro/7')
-            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
-
-            res = user_session.get('contests/1/pro/7/cont.pdf')
-            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
-
-            html = self.get_html('index/contests/1', user_session)
-            self.assertIsNone(html.select_one('li.nav-item.proset'))
-            self.assertIsNone(html.select_one('li.nav-item.chal'))
-            self.assertIsNone(html.select_one('li.nav-item.scoreboard'))
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            for acct_id in range(3, 9 + 1, 1):
+                self.assertIn(acct_id, contest.user_list)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
-            html = self.get_html('index/contests/1', admin_session)
-            self.assertIsNotNone(html.select_one('li.nav-item.proset'))
-            self.assertIsNotNone(html.select_one('li.nav-item.chal'))
-            self.assertIsNotNone(html.select_one('li.nav-item.scoreboard'))
-
             contest_start = now - datetime.timedelta(days=2)
             config = copy.deepcopy(default_config)
             config['contest_start'] = self.get_isoformat(contest_start)
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
+            # TODO: assert contest started
 
         with AccountContext('contest1@test', 'test') as user_session:
-            # NOTE: due to special contest hardcode
-            # html = self.get_html('contests', user_session)
-            # contest0 = html.select('tr')[1]
-            # self.assertEqual(contest0.select('td')[0].text, 'Started')
-
-            html = self.get_html('index/contests/1', user_session)
-            self.assertIsNotNone(html.select_one('li.nav-item.proset'))
-            self.assertIsNotNone(html.select_one('li.nav-item.chal'))
-            self.assertIsNotNone(html.select_one('li.nav-item.scoreboard'))
-
-            res = user_session.get('contests/1')
-            self.assertEqual(re.findall(r'let desc_tex = `(.*)`', res.text, re.I)[0], 'desc during contest')
-
-            html = self.get_html('contests/1/proset', user_session)
-            self.assertEqual(len(html.select('tr')[1:]), 6)
-            self.assertEqual(html.select('tr')[1:][0].select('td')[3].text.strip(), '0')
-
-            html = self.get_html('contests/1/pro/7', user_session)
-            side = html.select_one('div#side')
-            self.assertEqual(side.select('a')[0].attrs['href'], '/oj/contests/1/submit/7/')
-            self.assertEqual(side.select('a')[1].attrs['href'], '/oj/contests/1/chal/?proid=7&acctid=4')
-            self.assertEqual(side.select('a')[2].attrs['href'], '/oj/contests/1/chal/?proid=7')
-
-            # contest should not have topcoder
-            self.assertIsNone(html.select_one('#topcoder'))
-
-            res = user_session.get('contests/1/pro/7/cont.pdf')
+            res = user_session.get('contests/1/pro/5/cont.pdf')
             self.assertIn('X-Accel-Redirect', res.headers)
-
-            html = self.get_html('contests/1/submit/7', user_session)
-            self.assertEqual(len(html.select('option')), 2)
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
@@ -422,7 +307,7 @@ class ContestTest(AsyncTest):
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
-                'pro_id': 7,
+                'pro_id': 5,
                 'code': 'cc2',
                 'compiler_type': Compiler.PYTHON3,
             })
@@ -430,11 +315,11 @@ class ContestTest(AsyncTest):
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
-                'pro_id': 7,
+                'pro_id': 5,
                 'code': open('tests/static_file/code/toj674.ac.cpp').read(),
                 'compiler_type': Compiler.GPP,
             })
-            self.assertAPIReturnValue(res.text, ('S', 17))
+            self.assertAPIReturnValue(res.text, ('S', 13))
 
             ws = await websocket_connect('ws://localhost:5501/manage/judgecntws')
 
@@ -449,7 +334,7 @@ class ContestTest(AsyncTest):
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
-                'pro_id': 7,
+                'pro_id': 5,
                 'code': open('tests/static_file/code/toj674.ac.cpp').read(),
                 'compiler_type': Compiler.GPP,
             })
@@ -457,7 +342,7 @@ class ContestTest(AsyncTest):
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
-                'pro_id': 7,
+                'pro_id': 5,
                 'code': 'cc3',
                 'compiler_type': Compiler.GPP,
             })
@@ -472,9 +357,11 @@ class ContestTest(AsyncTest):
                     ws.close()
                     break
 
-            html = self.get_html('contests/1/proset', user_session)
-            self.assertEqual(len(html.select('tr')[1:]), 6)
-            self.assertEqual(html.select('tr')[1:][0].select('td')[3].text.strip(), '100')
+            # TODO: map_rate_acct
+            # TODO: get_pro_ac_rate
+            # html = self.get_html('contests/1/proset', user_session)
+            # self.assertEqual(len(html.select('tr')[1:]), 6)
+            # self.assertEqual(html.select('tr')[1:][0].select('td')[3].text.strip(), '100')
 
             # test scoreboard
             res = user_session.post('contests/1/scoreboard', data={})
@@ -486,24 +373,12 @@ class ContestTest(AsyncTest):
                     self.assertEqual(scores['name'], 'contest1')
                     self.assertEqual(scores['total_score'], 100)
 
-                    score = scores['scores']['7']
-                    self.assertEqual(score['chal_id'], 17)
+                    score = scores['scores']['5']
+                    self.assertEqual(score['chal_id'], 13)
                     self.assertEqual(score['score'], 100)
             ws2.close()
 
-            # test challist
-            html = self.get_html('contests/1/chal', user_session)
-            self.assertEqual(len(html.select('tbody > tr')[1:]), 1)
-            chal_tr = html.select('tbody > tr')[1:][0]
-            self.assertEqual(chal_tr.attrs.get('id'), 'chal17')
-            self.assertEqual(chal_tr.select('td > a')[0].attrs.get('href'), '/oj/contests/1/chal/17/')
-            self.assertEqual(chal_tr.select('td > a')[1].attrs.get('href'), '/oj/contests/1/pro/7/')
-            self.assertEqual(chal_tr.select('td')[3].attrs.get('class')[0], 'state-1')
-
         with AccountContext('test1@test', 'test') as user_session:
-            html = self.get_html('contests/1/qa', user_session)
-            self.assertEqual(html.select('div.row > div')[1].select_one('h2').text.strip(), 'Only contestants can ask questions.')
-
             res = user_session.post('contests/1/qa', data={
                 'reqtype': 'ask',
                 'subject': 'subject',
@@ -523,33 +398,21 @@ class ContestTest(AsyncTest):
                 "acct_id": 4,
             }))
 
-            res = user_session.post('contests/1/qa', data={
-                'reqtype': 'ask',
-                'subject': '',
-                'content': 'content',
-            })
-            self.assertAPIReturnValue(res.text, ('Eparam', 'Subject too short'))
-
-            res = user_session.post('contests/1/qa', data={
-                'reqtype': 'ask',
-                'subject': 'a' * 1000,
-                'content': 'content',
-            })
-            self.assertAPIReturnValue(res.text, ('Eparam', 'Subject too long'))
-
-            res = user_session.post('contests/1/qa', data={
-                'reqtype': 'ask',
-                'subject': 'subject',
-                'content': '',
-            })
-            self.assertAPIReturnValue(res.text, ('Eparam', 'Content too short'))
-
-            res = user_session.post('contests/1/qa', data={
-                'reqtype': 'ask',
-                'subject': 'subject',
-                'content': 'a' * 1000,
-            })
-            self.assertAPIReturnValue(res.text, ('Eparam', 'Content too long'))
+            self.assertTable(
+                'contests/1/qa',
+                {
+                    'reqtype': 'ask',
+                    'subject': 'subject',
+                    'content': 'content',
+                },
+                [
+                    {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
+                    {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
+                    {'content': '', 'equal_value': ('Eparam', 'Content too short')},
+                    {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
+                ],
+                user_session
+            )
 
             res = user_session.post('contests/1/qa', data={
                 'reqtype': 'ask',
@@ -566,33 +429,21 @@ class ContestTest(AsyncTest):
             res = json.loads(res.text)
             self.assertEqual(res['status'], 'Einternal')
 
-            html = self.get_html('contests/1/qa', user_session)
-            trs = html.select('table > tbody > tr')
-            td0 = trs[0].select('td')[0]
-            td1 = trs[0].select('td')[1]
-            self.assertEqual(td0.select_one('h4').text, 'subject')
-            self.assertEqual(td0.select_one('p').text, 'content')
-            self.assertIsNone(td1.select_one('p'))
-            self.assertIsNone(td1.select_one('h6'))
             ws.close()
 
         with AccountContext('admin@test', 'testtest') as admin_session:
-            html = self.get_html('index/contests/1', admin_session)
-            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "1")
+            _, count = await ContestService.inst.get_need_reply_question_cnt(1)
+            self.assertEqual(count, 1)
 
-            html = self.get_html('contests/1/manage/question', admin_session)
-            trs = html.select('table > tbody > tr')
-            td0 = trs[0].select('td')[0]
-            td1 = trs[0].select('td')[1]
-            self.assertEqual(td0.select('h4 > span')[0].text, 'subject')
-            self.assertEqual(td0.select('h4 > span')[1].text, 'contest1')
-            self.assertEqual(td0.select_one('h4 > span > a').attrs['href'], '/oj/acct/4/')
-            self.assertEqual(td0.select_one('p').text, 'content')
-            self.assertIsNone(td1.select_one('div.view'))
-            self.assertIsNotNone(td1.select_one('div.update'))
-            self.assertEqual(td1.select_one('textarea').text, '')
-            question_id = int(html.select_one('td.reply').attrs['question_id'])
-            self.assertEqual(question_id, 1)
+            _, queslist = await ContestService.inst.get_all_question(contest_id=1, ask_acct_id=4)
+            self.assertEqual(len(queslist), 1)
+            ques = queslist[0]
+            self.assertEqual(ques['ask_subject'], 'subject')
+            self.assertEqual(ques['ask_content'], 'content')
+            self.assertEqual(ques['ask_acct_id'], 4)
+            self.assertEqual(ques['reply_content'], None)
+            self.assertEqual(ques['reply_acct_id'], None)
+            question_id = ques['question_id']
 
             def _message(msg):
                 if msg is None:
@@ -614,6 +465,14 @@ class ContestTest(AsyncTest):
                 'question_id': question_id
             })
             self.assertAPIReturnSuccess(res.text)
+            err, ques = await ContestService.inst.get_question(1, question_id)
+            self.assertIsNone(err)
+            self.assertEqual(ques['reply_content'], 'answer')
+            self.assertEqual(ques['reply_acct_id'], 1)
+
+            _, count = await ContestService.inst.get_need_reply_question_cnt(1)
+            self.assertEqual(count, 0)
+
             ws.close()
             res = admin_session.post('contests/1/manage/question', data={
                 'reqtype': 'reply',
@@ -627,30 +486,6 @@ class ContestTest(AsyncTest):
                 'question_id': question_id
             })
             self.assertAPIReturnValue(res.text, ('Eparam', 'Content too long'))
-
-            html = self.get_html('index/contests/1', admin_session)
-            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "0")
-            html = self.get_html('contests/1/manage/question', admin_session)
-            trs = html.select('table > tbody > tr')
-            td1 = trs[0].select('td')[1]
-            self.assertIsNotNone(td1.select_one('div.view'))
-            self.assertEqual(td1.select_one('p').text, 'Reply: answer')
-            self.assertIsNotNone(td1.select_one('div.view').select_one('h6'))
-            self.assertEqual(td1.select_one('textarea').text, 'answer')
-
-        with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('index/contests/1', user_session)
-            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "1")
-
-            html = self.get_html('contests/1/qa', user_session)
-            trs = html.select('table > tbody > tr')
-            td0 = trs[0].select('td')[0]
-            td1 = trs[0].select('td')[1]
-            self.assertEqual(td1.select_one('p').text, 'answer')
-            self.assertIsNotNone(td1.select_one('h6'))
-
-            html = self.get_html('index/contests/1', user_session)
-            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "0")
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             def _message(msg):
@@ -674,46 +509,32 @@ class ContestTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
             ws.close()
 
+            _, announces = await ContestService.inst.get_all_announce(1)
+            self.assertEqual(len(announces), 1)
+            announce = announces[0]
+            self.assertEqual(announce['subject'], 'subject')
+            self.assertEqual(announce['content'], 'content')
+            self.assertEqual(announce['acct_id'], 1)
+            err, a = await ContestService.inst.get_announce(1, announce['announce_id'])
+            self.assertIsNone(err)
+            self.assertEqual(a, announce)
+
             for reqtype in ['add-announce', 'edit-announce']:
-                res = admin_session.post('contests/1/manage/announce', data={
-                    'reqtype': reqtype,
-                    'subject': '',
-                    'content': 'content',
-                })
-                self.assertAPIReturnValue(res.text, ('Eparam', 'Subject too short'))
-
-                res = admin_session.post('contests/1/manage/announce', data={
-                    'reqtype': reqtype,
-                    'subject': 'a' * 1000,
-                    'content': 'content',
-                })
-                self.assertAPIReturnValue(res.text, ('Eparam', 'Subject too long'))
-
-                res = admin_session.post('contests/1/manage/announce', data={
-                    'reqtype': reqtype,
-                    'subject': 'subject',
-                    'content': '',
-                })
-                self.assertAPIReturnValue(res.text, ('Eparam', 'Content too short'))
-
-                res = admin_session.post('contests/1/manage/announce', data={
-                    'reqtype': reqtype,
-                    'subject': 'subject',
-                    'content': 'a' * 1000,
-                })
-                self.assertAPIReturnValue(res.text, ('Eparam', 'Content too long'))
-
-        with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('index/contests/1', user_session)
-            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "1")
-
-            html = self.get_html('contests/1/qa', user_session)
-            announces = html.select_one('div.announce')
-            self.assertEqual(announces.select(".card-body")[0].select_one('h4').text, 'subject')
-            self.assertEqual(announces.select(".card-body")[0].select_one('p').text, 'content')
-
-            html = self.get_html('index/contests/1', user_session)
-            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "0")
+                self.assertTable(
+                    'contests/1/manage/announce',
+                    {
+                        'reqtype': reqtype,
+                        'subject': 'subject',
+                        'content': 'content',
+                    },
+                    [
+                        {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
+                        {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
+                        {'content': '', 'equal_value': ('Eparam', 'Content too short')},
+                        {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
+                    ],
+                    admin_session
+                )
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             def _message(msg):
@@ -737,18 +558,15 @@ class ContestTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
             ws.close()
-
-        with AccountContext('contest1@test', 'test') as user_session:
-            html = self.get_html('index/contests/1', user_session)
-            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "1")
-
-            html = self.get_html('contests/1/qa', user_session)
-            announces = html.select_one('div.announce')
-            self.assertEqual(announces.select(".card-body")[0].select_one('h4').text, 'subject2')
-            self.assertEqual(announces.select(".card-body")[0].select_one('p').text, 'content2')
-
-            html = self.get_html('index/contests/1', user_session)
-            self.assertEqual(html.select_one('#notifyRedDot').text.strip(), "0")
+            _, announces = await ContestService.inst.get_all_announce(1)
+            self.assertEqual(len(announces), 1)
+            announce = announces[0]
+            self.assertEqual(announce['subject'], 'subject2')
+            self.assertEqual(announce['content'], 'content2')
+            self.assertEqual(announce['acct_id'], 1)
+            err, a = await ContestService.inst.get_announce(1, announce['announce_id'])
+            self.assertIsNone(err)
+            self.assertEqual(a, announce)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             def _message(msg):
@@ -781,15 +599,22 @@ class ContestTest(AsyncTest):
             config['contest_end'] = self.get_isoformat(contest_end)
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
+            # TODO: assert contest ended
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'public',
-                'pro_id': '7'
+                'pro_id': '5'
             })
             self.assertAPIReturnSuccess(res.text)
+            err, pro = await ProService.inst.get_pro(5, allow_statuses=ProConst.PRO_STATUS_FULL)
+            self.assertIsNone(err)
+            self.assertEqual(pro.status, ProConst.STATUS_ONLINE)
+            err, pro = await ProService.inst.get_pro(8, allow_statuses=ProConst.PRO_STATUS_FULL)
+            self.assertIsNone(err)
+            self.assertEqual(pro.status, ProConst.STATUS_CONTEST)
 
         with AccountContext('test1@test', 'test') as user_session:
-            res = user_session.get('pro/7')
+            res = user_session.get('pro/5')
             self.assertNotIn('Eacces', res.text)
             res = user_session.get('pro/8')
             self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))

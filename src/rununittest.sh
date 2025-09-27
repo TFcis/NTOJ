@@ -12,12 +12,11 @@ omit =
     */site-packages/*
     */dist-packages/*
     *.generated.py
-    unitmain.py
     runintegratedtest.py
     rununittest.py
+    rune2etest.py
+    tests/*
     server.py
-    */integrated/*
-    */unit/*
     upgrade.py
 EOF
 

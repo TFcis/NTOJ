@@ -2,8 +2,8 @@ import os
 import json
 
 from tests.integrated.util import AsyncTest, AccountContext
-from services.pro import ProConst, CheckerType
-from services.chal import Compiler
+from services.pro import ProService, ProConst, CheckerType, Limit
+from services.chal import ChalService, Compiler
 
 
 class ManageProUpdateTest(AsyncTest):
@@ -18,41 +18,13 @@ class ManageProUpdateTest(AsyncTest):
                 'allow_submit': "false",
             })
             self.assertAPIReturnSuccess(res.text)
-            html = self.get_html('manage/pro/update?proid=1', admin_session)
-            self.assertIsNone(html.select_one('input#allow-submit').get('checked'))
-            self.assertEqual(html.select_one('select#status > option[selected]').text, 'Hidden')
-            self.assertEqual(int(html.select_one('select#status > option[selected]').get('value')), ProConst.STATUS_HIDDEN)
-
-            res = admin_session.get('pro/1')
-            self.assertNotIn('Eacces', res.text)
-
-            html = self.get_html('pro/1', admin_session)
-            submit_button = html.select_one('a.btn')
-            self.assertIn('btn-warning', submit_button.get('class'))
-            self.assertEqual(submit_button.text, 'Cannot Submit')
-
-            with AccountContext('test1@test', 'test') as user_session:
-                res = user_session.get('pro/1')
-                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
-
-                html = self.get_html('proset', user_session)
-                trs = html.select('#prolist > tbody > tr')
-                self.assertEqual(trs[0].select('td')[0].text, '2')
-                self.assertEqual(trs[0].select('td')[2].text.strip().replace('\n', ''), '猜數字')
-
-                self.assertEqual(trs[1].select('td')[0].text, '3')
-                self.assertEqual(trs[1].select('td')[2].text.strip().replace('\n', ''), 'Move')
-
-                res = user_session.get('submit/1')
-                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
-
-            # html = self.get_html('proset', admin_session)
-            # trs = html.select('tr')[1:]
-            # self.assertEqual(trs[0].select('td')[0].text, '2')
-            # self.assertEqual(trs[0].select('td')[2].text.strip().replace('\n', ''), '猜數字')
-
-            # self.assertEqual(trs[1].select('td')[0].text, '3')
-            # self.assertEqual(trs[1].select('td')[2].text.strip().replace('\n', ''), 'Move')
+            err, pro = await ProService.inst.get_pro(1, ProConst.PRO_STATUS_FULL)
+            self.assertIsNone(err)
+            assert pro
+            self.assertEqual(pro.name, 'GCDGCD')
+            self.assertEqual(pro.tags, 'GCD')
+            self.assertEqual(pro.status, ProConst.STATUS_HIDDEN)
+            self.assertFalse(pro.allow_submit)
 
             admin_session.post('manage/pro/update', data={
                 'reqtype': 'updategeneral',
@@ -94,15 +66,11 @@ class ManageProUpdateTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
 
-            html = self.get_html('pro/1', admin_session)
-            limit_table = html.select_one('table > tbody')
-            trs = limit_table.select('tr')
-            self.assertEqual(trs[0].select('td')[0].text.strip(), 'default')
-            self.assertEqual(trs[0].select('td')[1].text.strip(), '1000')
-            self.assertEqual(trs[0].select('td')[2].text.strip(), '65536')
-            self.assertEqual(trs[1].select('td')[0].text.strip(), 'python3')
-            self.assertEqual(trs[1].select('td')[1].text.strip(), '1500')
-            self.assertEqual(trs[1].select('td')[2].text.strip(), '65536')
+            err, pro = await ProService.inst.get_pro(1, ProConst.PRO_STATUS_FULL)
+            self.assertIsNone(err)
+            assert pro
+            self.assertEqual(pro.config.limits['default'], Limit(1000, 65536, 65536))
+            self.assertEqual(pro.config.limits[str(Compiler.PYTHON3)], Limit(1500, 65536, 65536))
 
             chal_id = -1
             def callback():
@@ -110,10 +78,11 @@ class ManageProUpdateTest(AsyncTest):
                 chal_id = self.submit_problem(1, open('tests/static_file/code/tle.py').read(), Compiler.PYTHON3, admin_session)
 
             await self.wait_for_judge_finish(callback)
-            html = self.get_html(f'chal/{chal_id}', admin_session)
-            states_trs = html.select('table#subtasks > tbody > tr')
-            self.assertGreaterEqual(int(states_trs[0].select_one('td.time').text), 1000)
-            self.assertGreaterEqual(int(states_trs[1].select_one('td.time').text), 1000)
+            err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
+            for s in chal.subtask_results.values():
+                self.assertGreaterEqual(s.time, 1000)
+            for t in chal.testdata_results.values():
+                self.assertGreaterEqual(t.time, 1000)
 
             # TODO: we should check limits and file
             pack_token = self.get_upload_token(admin_session)

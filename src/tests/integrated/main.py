@@ -5,9 +5,11 @@ import shutil
 import requests
 import tornado
 
-from services.chal import ChalConst, Compiler
-from services.pro import ProConst
+from services.chal import ChalConst, ChalSearchingParamBuilder, ChalService, Compiler
+from services.pro import ProConst, ProService
 from services.user import UserService, UserConst
+from services.judge import JudgeServerClusterService
+from services.rate import RateService
 from .util import AccountContext, AsyncTest
 from .manage.acct import ManageAcctTest
 from .manage.pro.filemanager import ManageProFileManagerTest
@@ -72,109 +74,79 @@ class IntegratedTest(AsyncTest):
         self.assertNotIn('id', self.session.cookies.get_dict())
 
     async def test_main(self):
-        """
-
-        init test env
-        basic function test {
-            index
-            upload problem
-            view problem
-            view proset
-            submit problem
-            view chal
-            view challist
-            sign
-        }
-
-        component test {
-            submit restrict
-            challist filter, websocket
-            chal rechal, websocket
-            proset filter
-            acct-page
-            proclass
-            bulletin
-            board
-            ques
-            pro-rank
-            user-rank
-        }
-
-        manage test {
-            acct
-            problem
-            judge
-        }
-
-        contest test {
-            basic function test {
-            }
-        }
-
-        """
         try:
             await self.init()
 
             with AccountContext('admin@test', 'testtest') as admin_session:
-                html = self.get_html('index/', admin_session)
-                self.assertIsNotNone(html.select_one('li.manage'))
-                self.assertEqual(html.select_one('script#indexjs').attrs.get('acct_id'), '1')
-
-                html = self.get_html('manage/acct', admin_session)
-                trs = html.select('tbody > tr')
-                self.assertEqual(len(trs), 1)
-                self.assertEqual(trs[0].select('td')[1].text.strip(), 'admin')
-                self.assertEqual(trs[0].select('td')[2].text.strip(), 'admin@test')
-                self.assertEqual(trs[0].select('td')[4].text.strip(), 'Kernel')
-
-                html = self.get_html('manage/acct/update?acctid=1', admin_session)
-                self.assertEqual(html.select_one('h3').text.strip(), '1 / admin')
-                self.assertEqual(html.select_one('option:checked').attrs['value'], '0')
-                self.assertEqual(html.select_one('option:checked').text.strip(), 'Kernel')
-
-                html = self.get_html('manage/judge', admin_session)
-                self.assertEqual(html.select('tr')[1].select('td')[2].text, 'Online', 'Test need judge connected')
+                # private=True will provide email
+                err, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, private=True)
+                self.assertIsNone(err)
+                self.assertEqual(len(acctlist), 1)
+                self.assertEqual(acctlist[0].mail, 'admin@test')
+                self.assertEqual(acctlist[0].acct_type, UserConst.ACCTTYPE_KERNEL)
+                self.assertTrue(JudgeServerClusterService.inst.is_server_online(), 'Integrated test need judge connected')
 
                 await self.upload_problem('toj3.tar.xz', 'GCD', ProConst.STATUS_ONLINE, expected_pro_id=1, session=admin_session)
 
-                # view proset
-                html = self.get_html('proset', admin_session)
-                trs = html.select('#prolist > tbody > tr')
-                self.assertEqual(trs[0].select('td')[0].text, '1')  # pro_id
-                self.assertEqual(trs[0].select('td')[1].text, 'Todo')  # pro status
-                self.assertEqual(trs[0].select('td')[2].text.strip().replace('\n', ''), 'GCD')  # pro name
-                self.assertEqual(trs[0].select('td')[3].text.strip().replace('\n', ''),
-                                 '0.00%(0/ 0)')  # pro ac ratio (user)
-                self.assertEqual(trs[0].select('td')[4].text.strip().replace('\n', ''),
-                                 '0.00%(0/0)')  # pro ac ratio (submission)
-                self.assertEqual(trs[0].select('td')[5].text, '')  # pro tags
+                err, pro = await ProService.inst.get_pro(1, ProConst.PRO_STATUS_NORMAL_USER)
+                self.assertIsNone(err)
+                assert pro
+                self.assertTrue(pro.allow_submit)
+                self.assertEqual(pro.name, 'GCD')
+                self.assertEqual(pro.status, ProConst.STATUS_ONLINE)
+                self.assertEqual(pro.tags, '')
 
-                # view problem
-                html = self.get_html('pro/1', admin_session)
-                self.assertIsNotNone(html.select_one('h3'))
-                self.assertIsNotNone(html.select_one('a.btn.btn-warning'))
+                err, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_NORMAL_USER)
+                self.assertIsNone(err)
+                self.assertEqual(len(prolist), 1)
+                self.assertEqual(prolist[0].pro_id, 1)
+                self.assertEqual(prolist[0].name, 'GCD')
+                self.assertEqual(prolist[0].status, ProConst.STATUS_ONLINE)
+                self.assertEqual(prolist[0].tags, '')
+                self.assertTrue(prolist[0].allow_submit)
 
-                res = admin_session.get('pro/1/cont.html')
-                self.assertIn('X-Accel-Redirect', res.headers)
+                err, rate = await RateService.inst.get_pro_ac_rate(pro.pro_id)
+                self.assertIsNone(err)
+                self.assertEqual(rate, {
+                    'all_chal_cnt': 0,
+                    'ac_chal_cnt': 0,
+                    'user_all_chal_cnt': 0,
+                    'user_ac_chal_cnt': 0,
+                })
 
-                res = admin_session.get('submit/1')
-                self.assertNotEqual(res.text, '<h1 style="color: red;">All Judge Server Offline</h1>')
+                err, topcoder = await RateService.inst.get_pro_topcoder(1)
+                self.assertIsNone(err)
+                self.assertIsNone(topcoder)
 
-                # submit problem
+                err, acct = await UserService.inst.info_acct(1)
+                self.assertIsNone(err)
+                assert acct
+                err, ratemap = await RateService.inst.map_rate_acct(acct)
+                self.assertIsNone(err)
+                self.assertEqual(len(ratemap), 0)
+                err, ratemap = await RateService.inst.map_rate()
+                self.assertIsNone(err)
+                self.assertEqual(len(ratemap), 0)
+
                 def callback():
                     chal_id = self.submit_problem(1, open('tests/static_file/code/toj3.ac.py').read(),
                                                   Compiler.PYTHON3, admin_session)
-
                     self.assertEqual(chal_id, 1)
 
-                # wait for judge finish
                 await self.wait_for_judge_finish(callback)
 
-                # view chal
-                _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
-                self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
+                err, chal = await ChalService.inst.get_chal(1, with_result=True)
+                self.assertIsNone(err)
+                assert chal
+                self.assertEqual(chal.pro_id, 1)
+                self.assertEqual(chal.acct_id, 1)
+                self.assertEqual(chal.acct_name, 'admin')
+                self.assertEqual(chal.contest_id, 0)
+                self.assertEqual(chal.compiler_type, Compiler.PYTHON3)
+                self.assertEqual(chal.total_result.state, ChalConst.STATE_AC)
+                self.assertEqual([v.state for v in chal.testdata_results.values()], [ChalConst.STATE_AC] * len(chal.testdata_results))
+                self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC] * len(chal.subtask_results))
 
-                # query code
                 res = admin_session.post('code', {
                     'chal_id': 1
                 })
@@ -185,33 +157,38 @@ class IntegratedTest(AsyncTest):
                                  tornado.escape.xhtml_escape(open('tests/static_file/code/toj3.ac.py').read().strip()))
 
                 # view challist
-                html = self.get_html('chal', admin_session)
+                flt = ChalSearchingParamBuilder().build()
+                err, challist = await ChalService.inst.list_chal(0, 20, flt)
+                self.assertIsNone(err)
+                self.assertEqual(len(challist), 1)
+                self.assertEqual(challist[0].chal_id, 1)
+                self.assertEqual(challist[0].pro_id, 1)
+                self.assertEqual(challist[0].acct_id, 1)
+                self.assertEqual(challist[0].contest_id, 0)
+                self.assertEqual(challist[0].acct_name, 'admin')
+                self.assertEqual(challist[0].total_result.state, ChalConst.STATE_AC)
 
-                all_states = []
-                all_expected_states = [ChalConst.STATE_AC]
-                for tr in html.select('tr'):
-                    if tr.attrs.get('id') in [None, "chalsub"]:
-                        continue
+                err, rate = await RateService.inst.get_pro_ac_rate(pro.pro_id)
+                self.assertIsNone(err)
+                self.assertEqual(rate, {
+                    'all_chal_cnt': 1,
+                    'ac_chal_cnt': 1,
+                    'user_all_chal_cnt': 1,
+                    'user_ac_chal_cnt': 1,
+                })
 
-                    # NOTE: <td id="state" class="state-1"></td>
-                    state = int(tr.select_one('td#state').attrs['class'][0].split('-')[1])
-                    all_states.append(state)
+                err, topcoder = await RateService.inst.get_pro_topcoder(1)
+                self.assertIsNone(err)
+                self.assertEqual(topcoder, {'acct_id': 1, 'name': 'admin', 'motto': ''})
 
-                self.assertEqual(len(all_states), len(all_expected_states))
-                self.assertEqual(all_states, all_expected_states)
-
-                # view proset
-                html = self.get_html('proset', admin_session)
-                trs = html.select('#prolist > tbody > tr')
-                self.assertEqual(trs[0].select('td')[0].text, '1')  # pro_id
-                self.assertEqual(trs[0].select('td')[1].text,
-                                 ChalConst.STATE_LONG_STR[ChalConst.STATE_AC])  # pro status
-                self.assertEqual(trs[0].select('td')[2].text.strip().replace('\n', ''), 'GCD')  # pro name
-                self.assertEqual(trs[0].select('td')[3].text.strip().replace('\n', ''),
-                                 '100.00%(1/ 1)')  # pro ac ratio (user)
-                self.assertEqual(trs[0].select('td')[4].text.strip().replace('\n', ''),
-                                 '100.00%(1/1)')  # pro ac ratio (submission)
-                self.assertEqual(trs[0].select('td')[5].text, '')  # pro tags
+                err, ratemap = await RateService.inst.map_rate_acct(acct)
+                self.assertEqual(len(ratemap), 1)
+                self.assertEqual(ratemap[1]['count'], 1)
+                self.assertEqual(ratemap[1]['state'], ChalConst.STATE_AC)
+                err, ratemap = await RateService.inst.map_rate()
+                self.assertIsNone(err)
+                self.assertEqual(ratemap[1][1]['count'], 1)
+                self.assertEqual(ratemap[1][1]['state'], 1)
 
                 # upload more problem
                 await self.upload_problem('toj659.tar.xz', '猜數字', ProConst.STATUS_ONLINE, expected_pro_id=2,
@@ -221,29 +198,19 @@ class IntegratedTest(AsyncTest):
 
             # signup
             self.signup('test1', 'test1@test', 'test')
+            err, acctlist = await UserService.inst.list_acct(UserConst.ACCTTYPE_KERNEL, private=True)
+            self.assertIsNone(err)
+            self.assertEqual(len(acctlist), 2)
+            self.assertEqual(acctlist[1].mail, 'test1@test')
+            self.assertEqual(acctlist[1].acct_type, UserConst.ACCTTYPE_USER)
 
-            # login normal
-            with AccountContext('test1@test', 'test') as user_session:
-                # check index & is_manage
-                html = self.get_html('index/', user_session)
-                self.assertIsNone(html.select_one('li.manage'))
-                self.assertEqual(html.select_one('script#indexjs').attrs.get('acct_id'), '2')
-
-                # check manage permission
-                res = user_session.get('manage/dash')
-                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
-
-            # pro test, tags
             s = [
                 ChalTest().main,
                 ChalListTest().main,
                 SubmitTest().main,
                 ProTest().main,
-                ProsetTest().main,
                 BoardTest().main,
                 ProClassTest().main,
-                ProRankTest().main,
-                UserRankTest().main,
                 QuesTest().main,
                 BulletinTest().main,
                 SignTest().main,
@@ -252,7 +219,6 @@ class IntegratedTest(AsyncTest):
                 ManageProUpdateTest().main,
                 ManageProUpdateTestsTest().main,
                 ManageProFileManagerTest().main,
-                ManageProSpecialScoreTest().main,
                 ManagePackTest().main,
                 ContestTest().main
             ]

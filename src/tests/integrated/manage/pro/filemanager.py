@@ -1,12 +1,11 @@
 import re
 import os
-import copy
 import json
 
 import tornado.escape
 
 import config
-from services.chal import ChalConst, Compiler
+from services.chal import ChalService, ChalConst, Compiler
 from services.pro import ProConst
 from tests.integrated.util import AsyncTest, AccountContext
 
@@ -19,17 +18,6 @@ class ManageProFileManagerTest(AsyncTest):
             await self.upload_file(file, size, pack_token)
 
         return pack_token
-
-    def assertTable(self, default_data: dict, assert_tables: list[dict], session):
-        for table in assert_tables:
-            equal_value = table.pop("equal_value")
-
-            d = copy.copy(default_data)
-            for key, val in table.items():
-                d[key] = val
-
-            res = session.post('manage/pro/filemanager', data=d)
-            self.assertAPIReturnValue(res.text, equal_value)
 
     async def main(self):
         with AccountContext("admin@test", "testtest") as admin_session:
@@ -45,6 +33,7 @@ class ManageProFileManagerTest(AsyncTest):
                              open('tests/static_file/toj3/http/cont.html').read())
 
             self.assertTable(
+                'manage/pro/filemanager',
                 {
                     'reqtype': 'preview',
                     'pro_id': 1,
@@ -87,6 +76,7 @@ class ManageProFileManagerTest(AsyncTest):
             self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/http/test').read())
 
             self.assertTable(
+                'manage/pro/filemanager',
                 {
                     'reqtype': 'addsinglefile',
                     'pro_id': 1,
@@ -111,8 +101,9 @@ class ManageProFileManagerTest(AsyncTest):
                 chal_id = self.submit_problem(4, open('tests/static_file/code/float_checker_wa.cpp').read(), Compiler.GPP, admin_session)
                 # NOTE: chal_id=12
             await self.wait_for_judge_finish(callback)
-            _, subtask_results, _ = self.get_chal_results(chal_id=chal_id, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_WA] * len(subtask_results))
+            err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
+            self.assertIsNone(err)
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_WA] * len(chal.subtask_results))
 
             # NOTE: updatesinglefile
             pack_token = await self._upload_file('tests/static_file/float_checker/pass_all_checker.cpp', admin_session)
@@ -132,10 +123,12 @@ class ManageProFileManagerTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 12))
             await self.wait_for_judge_finish(callback)
-            _, subtask_results, _ = self.get_chal_results(chal_id=12, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
+            err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
+            self.assertIsNone(err)
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC] * len(chal.subtask_results))
 
             self.assertTable(
+                'manage/pro/filemanager',
                 {
                     'reqtype': 'updatesinglefile',
                     'pro_id': 4,
@@ -180,9 +173,9 @@ class ManageProFileManagerTest(AsyncTest):
                 self.assertAPIReturnValue(res.text, ('S', 9))
             await self.wait_for_judge_finish(callback)
 
-            total_result, subtask_results, _ = self.get_chal_results(chal_id=9, session=admin_session)
-            self.assertEqual(total_result.state, ChalConst.STATE_CE)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_SKIPPED] * len(subtask_results))
+            err, chal = await ChalService.inst.get_chal(9, with_result=True)
+            self.assertEqual(chal.total_result.state, ChalConst.STATE_CE)
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_SKIPPED] * len(chal.subtask_results))
 
             def callback():
                 res = admin_session.post('submit', data={
@@ -191,11 +184,11 @@ class ManageProFileManagerTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 12))
             await self.wait_for_judge_finish(callback)
-            _, subtask_results, _ = self.get_chal_results(chal_id=12, session=admin_session)
-            # self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_JE] * len(subtask_results))
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_SKIPPED] * len(subtask_results))
+            err, chal = await ChalService.inst.get_chal(12, with_result=True)
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_SKIPPED] * len(chal.subtask_results))
 
             self.assertTable(
+                'manage/pro/filemanager',
                 {
                     'reqtype': 'renamesinglefile',
                     'pro_id': 4,
@@ -232,6 +225,7 @@ class ManageProFileManagerTest(AsyncTest):
             self.assertFalse(os.path.exists('problem/2/res/grader/cpp/stub.cpp.old'))
 
             self.assertTable(
+                'manage/pro/filemanager',
                 {
                     'reqtype': 'deletesinglefile',
                     'pro_id': 4,
@@ -246,19 +240,6 @@ class ManageProFileManagerTest(AsyncTest):
                 ],
                 admin_session
             )
-
-            html = self.get_html('manage/pro/filemanager?proid=1', admin_session)
-            dirs = html.select_one('div#dirs').select('div.accordion-item')
-            self.assertEqual(len(dirs), 1) # http
-
-            html = self.get_html('manage/pro/filemanager?proid=2', admin_session)
-            dirs = html.select_one('div#dirs').select('div.accordion-item')
-            self.assertEqual(len(dirs), 3) # http, res/grader, res/grader/cpp
-
-            html = self.get_html('manage/pro/filemanager?proid=4', admin_session)
-
-            dirs = html.select_one('div#dirs').select('div.accordion-item')
-            self.assertEqual(len(dirs), 2) # http, res/checker
 
             # TODO: 做一次完整的 manual add problem
 

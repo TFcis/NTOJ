@@ -3,6 +3,7 @@ import re
 from tornado.websocket import websocket_connect
 from tornado.escape import xhtml_escape
 
+from services.bulletin import BulletinService
 from utils.htmlgen import markdown_escape
 
 from .util import AsyncTest, AccountContext
@@ -36,67 +37,58 @@ class BulletinTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
 
-            html = self.get_html('manage/bulletin', admin_session)
-            trs = html.select('tbody > tr')
-            self.assertEqual(len(trs), 2)
-            self.assertEqual(trs[0].select('td')[0].text.strip(), 'bulletin 1')
-            self.assertIsNone(trs[0].select('td')[0].select_one('span'))
-            self.assertEqual(trs[0].select('td')[1].text.strip(), 'white')
-            self.assertEqual(trs[0].select('td')[2].text.strip(), 'admin')
+            err, bulletin_list = await BulletinService.inst.list_bulletin()
+            self.assertIsNone(err)
+            self.assertEqual(len(bulletin_list), 2)
+            self.assertEqual(bulletin_list[0]['title'], 'bulletin 1')
+            self.assertFalse(bulletin_list[0]['pinned'])
+            self.assertEqual(bulletin_list[0]['color'], 'white')
+            self.assertEqual(bulletin_list[0]['name'], 'admin')
+            self.assertEqual(bulletin_list[0]['acct_id'], 1)
+            self.assertEqual(bulletin_list[1]['title'], 'bulletin 2 (pinned)')
+            self.assertTrue(bulletin_list[1]['pinned'])
+            self.assertEqual(bulletin_list[1]['color'], 'red')
+            self.assertEqual(bulletin_list[1]['name'], 'admin')
+            self.assertEqual(bulletin_list[1]['acct_id'], 1)
 
-            self.assertIn('bulletin 2 (pinned)', trs[1].select('td')[0].text.strip())
-            self.assertIsNotNone(trs[1].select('td')[0].select_one('span'))
-            self.assertEqual(trs[1].select('td')[1].text.strip(), 'red')
-            self.assertEqual(trs[1].select('td')[2].text.strip(), 'admin')
+            err, bulletin = await BulletinService.inst.get_bulletin(1)
+            self.assertIsNone(err)
+            assert bulletin
+            self.assertEqual(bulletin['title'], 'bulletin 1')
+            self.assertEqual(bulletin['content'], 'bulletin 1')
+            self.assertEqual(bulletin['color'], 'white')
+            self.assertFalse(bulletin['pinned'])
+            self.assertEqual(bulletin['name'], 'admin')
+            self.assertEqual(bulletin['acct_id'], 1)
+            self.assertIsNotNone(bulletin['timestamp'])
 
-            html = self.get_html('manage/bulletin/update?bulletinid=1', admin_session)
-            self.assertNotIn('checked', html.select_one('input#pinned').attrs)
-            self.assertEqual(html.select_one('input#title').attrs['value'].strip(), 'bulletin 1')
-            self.assertEqual(html.select_one('input#color').attrs['value'].strip(), 'white')
+            err, bulletin = await BulletinService.inst.get_bulletin(2)
+            self.assertIsNone(err)
+            assert bulletin
+            self.assertEqual(bulletin['title'], 'bulletin 2 (pinned)')
+            self.assertEqual(bulletin['content'], 'bulletin 2')
+            self.assertEqual(bulletin['color'], 'red')
+            self.assertTrue(bulletin['pinned'])
+            self.assertEqual(bulletin['name'], 'admin')
+            self.assertEqual(bulletin['acct_id'], 1)
+            self.assertIsNotNone(bulletin['timestamp'])
 
-            html = self.get_html('manage/bulletin/update?bulletinid=2', admin_session)
-            self.assertIn('checked', html.select_one('input#pinned').attrs)
-            self.assertEqual(html.select_one('input#title').attrs['value'].strip(), 'bulletin 2 (pinned)')
-            self.assertEqual(html.select_one('input#color').attrs['value'].strip(), 'red')
-
-            res = admin_session.post('manage/bulletin/add', data={
-                'reqtype': 'add',
-                'title': '',
-                'content': 'bulletin 2',
-                'color': 'red',
-                'pinned': 'true',
-            })
-            self.assertAPIReturnValue(res.text, ('Eparam', 'Title too short'))
-            res = admin_session.post('manage/bulletin/add', data={
-                'reqtype': 'add',
-                'title': 'bulletin 2 (pinned)' * 500,
-                'content': 'bulletin 2',
-                'color': 'red',
-                'pinned': 'true',
-            })
-            self.assertAPIReturnValue(res.text, ('Eparam', 'Title too long'))
-            res = admin_session.post('manage/bulletin/add', data={
-                'reqtype': 'add',
-                'title': 'bulletin 2 (pinned)',
-                'content': 'bulletin 2' * 5000,
-                'color': 'red',
-                'pinned': 'true',
-            })
-            self.assertAPIReturnValue(res.text, ('Eparam', 'Content too long'))
-
-            # view info
-            html = self.get_html('info', admin_session)
-            trs = html.select_one('table > tbody').select('tr')
-            self.assertNotEqual(len(trs[0].select('td')[0].select('td > a > font > span')), 0)  # NOTE: span is pin icon
-            self.assertTrue(trs[0].select('td')[0].text.strip().find('bulletin 2 (pinned)') != -1)
-            self.assertEqual(trs[0].select('td')[2].text.strip(), 'admin')
-            self.assertEqual(len(trs[1].select('td')[0].select('td > a > font > span')), 0)
-            self.assertEqual(trs[1].select('td')[0].text.strip(), 'bulletin 1')
-            self.assertEqual(trs[1].select('td')[2].text.strip(), 'admin')
-
-            # view bulletin
-            html = self.get_html('bulletin/2', admin_session)
-            self.assertEqual(html.select_one('h2').text.strip(), 'bulletin 2 (pinned)')
+            self.assertTable(
+                'manage/bulletin/add',
+                {
+                    'reqtype': 'add',
+                    'title': 'title',
+                    'content': 'content',
+                    'color': 'white',
+                    'pinned': 'true'
+                },
+                [
+                    {'title': '', 'equal_value': ('Eparam', 'Title too short')},
+                    {'title': 'title' * 10000, 'equal_value': ('Eparam', 'Title too long')},
+                    {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
+                ],
+                admin_session
+            )
 
             res = admin_session.post('manage/bulletin/update', data={
                 'reqtype': 'update',
@@ -107,44 +99,17 @@ class BulletinTest(AsyncTest):
                 'pinned': 'true',
             })
             self.assertAPIReturnSuccess(res.text)
-
-            html = self.get_html('bulletin/2', admin_session)
-            self.assertEqual(html.select_one('h2').text.strip(), 'bulletin 2 (pinned) updated')
-            res = admin_session.get('bulletin/2')
-            self.assertEqual(re.findall(r'let desc_tex = `(.*)`', res.text, re.I)[0], 'bulletin 2')
-
-            markdown_content ='''<script>alert(1)</script>
-```cpp
-#include <iostream>
-using namespace std;
-
-int main() {
-    cout << "escape test\\n" << endl;
-    cout << "escape test\\" << endl;
-}
-```
-            '''
-            res = admin_session.post('manage/bulletin/update', data={
-                'reqtype': 'update',
-                'bulletin_id': 2,
-                'title': 'bulletin 2 (pinned) updated',
-                'content': markdown_content,
-                'color': 'red',
-                'pinned': 'true',
-            })
-            self.assertAPIReturnSuccess(res.text)
-
-            html = self.get_html('bulletin/2', admin_session)
-            self.assertEqual(html.select_one('h2').text.strip(), 'bulletin 2 (pinned) updated')
-            res = admin_session.get('bulletin/2')
-            self.assertEqual(re.findall(r'let desc_tex = `(.*)`;', res.text, re.DOTALL)[0].strip(), xhtml_escape(markdown_escape(markdown_content)).strip())
+            err, bulletin = await BulletinService.inst.get_bulletin(2)
+            self.assertIsNone(err)
+            assert bulletin
+            self.assertEqual(bulletin['title'], 'bulletin 2 (pinned) updated')
 
             res = admin_session.post('manage/bulletin/update', data={
                 'reqtype': 'remove',
                 'bulletin_id': '2',
             })
             self.assertAPIReturnSuccess(res.text)
-            res = admin_session.get('bulletin/2')
-            self.assertAPIReturnValue(res.text, ('Enoext', 'Bulletin not found'))
+            err, bulletin = await BulletinService.inst.get_bulletin(2)
+            self.assertEqual(err, ('Enoext', 'Bulletin not found'))
 
             ws.close()

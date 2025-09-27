@@ -1,9 +1,13 @@
+from decimal import Decimal
 import json
 import shutil
 
 from tornado.websocket import websocket_connect
 
-from services.chal import ChalConst, Compiler, MessageType
+from services.pro import ProConst, ProService
+from services.rate import RateService
+from services.user import UserService
+from services.chal import ChalSearchingParamBuilder, ChalService, ChalConst, Compiler, MessageType, SubtaskResult, TotalResult
 from tests.integrated.util import AsyncTest, AccountContext
 
 
@@ -25,15 +29,19 @@ class ChalTest(AsyncTest):
             res = json.loads(res.text)
             self.assertNotEqual(res['status'], 'Eacces')
             self.assertEqual(res['data']['compiler_type'], 'python')
-            self.assertEqual(res['data']['code'].strip(), 'EROOR: The code is lost on server.')
+            self.assertEqual(res['data']['code'].strip(), 'ERROR: The code is lost on the server.')
 
             res = admin_session.post('submit', data={
                 'reqtype': 'rechal',
                 'chal_id': 1
             })
             self.assertAPIReturnValue(res.text, ('S', 1))
-            _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_ERR] * len(subtask_results))
+            err, chal = await ChalService.inst.get_chal(1, with_result=True)
+            self.assertIsNone(err)
+            self.assertEqual(chal.total_result.state, ChalConst.STATE_ERR)
+            self.assertEqual([v.state for v in chal.testdata_results.values()], [ChalConst.STATE_ERR] * len(chal.testdata_results))
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_ERR] * len(chal.subtask_results))
+
             shutil.move('code/1/main.cpp', 'code/1/main.py')
 
             ws = await websocket_connect('ws://localhost:5501/chalnewstatesub')
@@ -67,20 +75,65 @@ class ChalTest(AsyncTest):
             #         break
             #
             # self.assertTrue(is_state_received)
-            _, subtask_results, _ = self.get_chal_results(chal_id=1, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
+            err, chal = await ChalService.inst.get_chal(1, with_result=True)
+            self.assertIsNone(err)
+            self.assertEqual(chal.total_result.state, ChalConst.STATE_AC)
+            self.assertEqual([v.state for v in chal.testdata_results.values()], [ChalConst.STATE_AC] * len(chal.testdata_results))
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC] * len(chal.subtask_results))
 
             res = admin_session.post('chal/1', data={
                 'reqtype': 'reject',
                 'reason': 'Reject reason'
             })
             self.assertAPIReturnSuccess(res.text)
-            total_result, subtask_results, testdata_results = self.get_chal_results(chal_id=1, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_REJECTED] * len(subtask_results))
-            self.assertEqual([v.state for v in testdata_results.values()], [ChalConst.STATE_REJECTED] * len(testdata_results))
-            self.assertEqual(total_result.state, ChalConst.STATE_REJECTED)
-            self.assertEqual(total_result.message, 'Reject reason')
+            err, chal = await ChalService.inst.get_chal(1, with_result=True)
+            self.assertIsNone(err)
+            self.assertEqual(chal.total_result.state, ChalConst.STATE_REJECTED)
+            self.assertEqual([v.state for v in chal.testdata_results.values()], [ChalConst.STATE_REJECTED] * len(chal.testdata_results))
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_REJECTED] * len(chal.subtask_results))
+            self.assertEqual(chal.total_result.message, 'Reject reason')
 
+            def callback():
+                res = admin_session.post('submit', data={
+                    'reqtype': 'rechal',
+                    'chal_id': 1
+                })
+                self.assertAPIReturnValue(res.text, ('S', 1))
+
+            await self.wait_for_judge_finish(callback)
+
+        await ChalService.inst.db.execute('UPDATE problem SET rate_precision = 3 WHERE pro_id=1;')
+        err, pro = await ProService.inst.get_pro(1, ProConst.PRO_STATUS_FULL)
+        self.assertIsNone(err)
+        self.assertEqual(pro.config.rate_precision, 3)
+        await ChalService.inst.update_total_result(1,
+                                                   TotalResult(ChalConst.STATE_AC, 0, 65536, Decimal("1.110"), "", MessageType.NONE))
+        await ChalService.inst.update_subtask_result(1, SubtaskResult(0, ChalConst.STATE_AC, 0, 65536, Decimal("1.110")))
+        await ChalService.inst.update_subtask_result(1, SubtaskResult(1, ChalConst.STATE_AC, 0, 65536, Decimal("1.110")))
+
+        err, acct = await UserService.inst.info_acct(1)
+        self.assertIsNone(err)
+        assert acct
+
+        err, ratemap = await RateService.inst.map_rate_acct(acct)
+        self.assertEqual(ratemap[1]['rate'], Decimal('1.110'))
+        err, ratemap = await RateService.inst.map_rate()
+        self.assertEqual(ratemap[1][1]['rate'], Decimal('1.110'))
+        err, acctrate = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
+        self.assertEqual(acctrate['rate'], Decimal('2.220'))
+
+        await ChalService.inst.db.execute('UPDATE problem SET rate_precision = 1 WHERE pro_id=1;')
+        err, ratemap = await RateService.inst.map_rate_acct(acct)
+        self.assertEqual(ratemap[1]['rate'], Decimal('1.1'))
+        err, ratemap = await RateService.inst.map_rate()
+        self.assertEqual(ratemap[1][1]['rate'], Decimal('1.1'))
+        err, acctrate = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
+        self.assertEqual(acctrate['rate'], Decimal('2.220'))
+
+        await ChalService.inst.db.execute('UPDATE problem SET rate_precision = 0 WHERE pro_id=1;')
+        err, acctrate = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
+        self.assertEqual(acctrate['rate'], Decimal('2.220'))
+        with AccountContext('admin@test', 'testtest') as admin_session:
             def callback():
                 res = admin_session.post('submit', data={
                     'reqtype': 'rechal',
@@ -151,63 +204,60 @@ class ChalListTest(AsyncTest):
 
             await self.wait_for_judge_finish(callback)
 
-            _, subtask_results, _ = self.get_chal_results(chal_id=3, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_WA] * len(subtask_results))
-
-            total_result, subtask_results, _ = self.get_chal_results(chal_id=4, session=admin_session)
-            self.assertEqual(total_result.state, ChalConst.STATE_CE)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_SKIPPED] * len(subtask_results))
-            self.assertEqual(total_result.message_type, MessageType.TEXT)
-            self.assertTrue(len(total_result.message) > 0)
-            with AccountContext('test1@test', 'test') as user_session:
-                total_result, _, _ = self.get_chal_results(chal_id=4, session=user_session)
-                self.assertEqual(total_result.message_type, MessageType.NONE)
-
-            _, subtask_results, _ = self.get_chal_results(chal_id=5, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_TLE] * len(subtask_results))
-
-            _, subtask_results, _ = self.get_chal_results(chal_id=6, session=admin_session)
-            # self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_MLE] * len(subtask_results))
-
-            _, subtask_results, _ = self.get_chal_results(chal_id=7, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_RE] * len(subtask_results))
-
-            _, subtask_results, _ = self.get_chal_results(chal_id=8, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_RESIG] * len(subtask_results))
-
-            _, subtask_results, _ = self.get_chal_results(chal_id=9, session=admin_session)
-            self.assertEqual([v.state for v in subtask_results.values()], [ChalConst.STATE_AC] * len(subtask_results))
-
-            html = self.get_html('chal', admin_session)
-            all_states = []
             all_expected_states = [
-                ChalConst.STATE_AC, ChalConst.STATE_RESIG, ChalConst.STATE_RE, ChalConst.STATE_MLE, ChalConst.STATE_TLE,
-                ChalConst.STATE_CE, ChalConst.STATE_WA, ChalConst.STATE_AC, ChalConst.STATE_AC
+                # 1, 2, 3, 4, 5
+                ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA, ChalConst.STATE_CE, ChalConst.STATE_TLE,
+                # 6, 7, 8, 9
+                ChalConst.STATE_MLE, ChalConst.STATE_RE, ChalConst.STATE_RESIG, ChalConst.STATE_AC
             ]
-            # all_expected_states = [
-            #     ChalConst.STATE_AC, ChalConst.STATE_RESIG, ChalConst.STATE_RE, ChalConst.STATE_RE, ChalConst.STATE_TLE,
-            #     ChalConst.STATE_CE, ChalConst.STATE_WA, ChalConst.STATE_AC, ChalConst.STATE_AC
-            # ]
-            for tr in html.select('tr'):
-                if tr.attrs.get('id') in [None, "chalsub"]:
-                    continue
 
-                # NOTE: <td id="state" class="state-1"></td>
-                state = int(tr.select_one('td#state').attrs['class'][0].split('-')[1])
-                all_states.append(state)
+            for chal_id, state in enumerate(all_expected_states, start=1):
+                err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
+                self.assertIsNone(err)
+                self.assertEqual(chal.total_result.state, state, msg=f'chal_id: {chal_id}')
 
-            self.assertEqual(len(all_states), len(all_expected_states))
-            self.assertEqual(all_states, all_expected_states)
+            _, chal = await ChalService.inst.get_chal(4, with_result=True)
+            self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_SKIPPED] * len(chal.subtask_results))
+            self.assertEqual(chal.total_result.message_type, MessageType.TEXT)
+            self.assertTrue(len(chal.total_result.message) > 0)
 
-            html = self.get_html('chal?proid=2', admin_session)
-            self.assertEqual(len(html.select('tr')), 2 + 1)
+            flt = ChalSearchingParamBuilder().build()
+            err, challist = await ChalService.inst.list_chal(0, 20, flt)
+            self.assertIsNone(err)
+            self.assertEqual(len(challist), 9)
+            self.assertEqual([v.total_result.state for v in challist], list(reversed(all_expected_states)))
+            err, count = await ChalService.inst.get_chals_count(flt)
+            self.assertIsNone(err)
+            self.assertEqual(count, 9)
 
-            html = self.get_html('chal?acctid=123', admin_session)
-            self.assertEqual(len(html.select('tr')), 2)
+            flt = ChalSearchingParamBuilder().pro([2]).build()
+            err, challist = await ChalService.inst.list_chal(0, 20, flt)
+            self.assertIsNone(err)
+            self.assertEqual(len(challist), 1)
+            err, count = await ChalService.inst.get_chals_count(flt)
+            self.assertIsNone(err)
+            self.assertEqual(count, 1)
 
-            html = self.get_html(f'chal?compiler_type={Compiler.PYTHON3}', admin_session)
-            self.assertEqual(len(html.select('tr')), 2 + 4)
+            flt = ChalSearchingParamBuilder().acct([3227]).build()
+            err, challist = await ChalService.inst.list_chal(0, 20, flt)
+            self.assertIsNone(err)
+            self.assertEqual(len(challist), 0)
+            err, count = await ChalService.inst.get_chals_count(flt)
+            self.assertIsNone(err)
+            self.assertEqual(count, 0)
 
-            html = self.get_html(f'chal?compiler_type={Compiler.PYTHON3}&state={ChalConst.STATE_AC}',
-                                 admin_session)
-            self.assertEqual(len(html.select('tr')), 2 + 2)
+            flt = ChalSearchingParamBuilder().compiler(Compiler.PYTHON3).build()
+            err, challist = await ChalService.inst.list_chal(0, 20, flt)
+            self.assertIsNone(err)
+            self.assertEqual(len(challist), 4)
+            err, count = await ChalService.inst.get_chals_count(flt)
+            self.assertIsNone(err)
+            self.assertEqual(count, 4)
+
+            flt = ChalSearchingParamBuilder().compiler(Compiler.PYTHON3).state(ChalConst.STATE_AC).build()
+            err, challist = await ChalService.inst.list_chal(0, 20, flt)
+            self.assertIsNone(err)
+            self.assertEqual(len(challist), 2)
+            err, count = await ChalService.inst.get_chals_count(flt)
+            self.assertIsNone(err)
+            self.assertEqual(count, 2)
