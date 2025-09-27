@@ -337,12 +337,9 @@ class ProTagsHandler(RequestHandler):
         tags = self.get_argument('tags')
         pro_id = int(self.get_argument('pro_id'))
 
-        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
+        allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
         if self.contest:
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
-        else:
-            if self.acct.is_kernel():
-                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
         err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
