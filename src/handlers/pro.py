@@ -325,9 +325,14 @@ class ProHandler(RequestHandler):
         can_submit = JudgeServerClusterService.inst.is_server_online()
         topcoder = None
         if not self.contest:
-            err, topcoder = await RateService.inst.get_pro_topcoder(pro_id)
+            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
             if err:
                 return self.error(err)
+
+            if topcoder_id:
+                err, topcoder = await UserService.inst.info_acct(topcoder_id)
+                if err:
+                    return self.error(err)
 
         await self.render(
             'pro',
@@ -345,12 +350,9 @@ class ProTagsHandler(RequestHandler):
         tags = self.get_argument('tags')
         pro_id = int(self.get_argument('pro_id'))
 
-        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
+        allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
         if self.contest:
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
-        else:
-            if self.acct.is_kernel():
-                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
         err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
