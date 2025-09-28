@@ -161,7 +161,7 @@
       board.scrollLeft = board_old_scroll_left
     }
   }, 50);
-  var end = new Date('{{end.astimezone(datetime.UTC)}}').getTime();
+  var end = new Date('{{ end }}').getTime();
   var j_contest = $('#contest');
 
   function GetCount() {
