@@ -126,8 +126,7 @@ class JudgeServerService:
             total_result["time"] = total_result["time"] // 10 ** 6
             total_result["memory"] = total_result["memory"] // 1024
 
-            tasks = []
-            tasks.append(ChalService.inst.update_total_result(
+            await ChalService.inst.update_total_result(
                 chal_id,
                 TotalResult(
                     total_result["status"],
@@ -137,12 +136,12 @@ class JudgeServerService:
                     message,
                     total_result["message_type"],
                 ),
-            ))
+            )
 
             for subtask_id, subtask_result in result["subtask_results"].items():
                 subtask_result["time"] = subtask_result["time"] // 10 ** 6
                 subtask_result["memory"] = subtask_result["memory"] // 1024
-                tasks.append(ChalService.inst.update_subtask_result(
+                await ChalService.inst.update_subtask_result(
                     chal_id,
                     SubtaskResult(
                         int(subtask_id),
@@ -151,12 +150,12 @@ class JudgeServerService:
                         subtask_result["memory"],
                         decimal.Decimal(subtask_result["score"]),
                     ),
-                ))
+                )
 
             for testdata_result in result["testdata_results"].values():
                 testdata_result["time"] = testdata_result["time"] // 10 ** 6
                 testdata_result["memory"] = testdata_result["memory"] // 1024
-                tasks.append(ChalService.inst.update_testdata_result(
+                await ChalService.inst.update_testdata_result(
                     chal_id,
                     TestdataResult(
                         testdata_result["id"],
@@ -166,9 +165,7 @@ class JudgeServerService:
                         testdata_result["message"],
                         MessageType(testdata_result["message_type"]),
                     ),
-                ))
-
-            await asyncio.gather(*tasks)
+                )
 
             self.running_chal_cnt -= 1
             await self.rs.publish(

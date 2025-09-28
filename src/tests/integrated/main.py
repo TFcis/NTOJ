@@ -15,7 +15,6 @@ from .manage.acct import ManageAcctTest
 from .manage.pro.filemanager import ManageProFileManagerTest
 from .manage.pro.update import ManageProUpdateTest
 from .manage.pro.updatetests import ManageProUpdateTestsTest
-from .manage.pro.specialscore import ManageProSpecialScoreTest
 from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
@@ -24,9 +23,7 @@ from .bulletin import BulletinTest
 from .chal import ChalTest, ChalListTest
 from .contest import ContestTest
 from .proclass import ProClassTest
-from .proset import ProsetTest
 from .ques import QuesTest
-from .rank import ProRankTest, UserRankTest
 from .submit import SubmitTest
 
 
@@ -179,7 +176,7 @@ class IntegratedTest(AsyncTest):
 
                 err, topcoder = await RateService.inst.get_pro_topcoder(1)
                 self.assertIsNone(err)
-                self.assertEqual(topcoder, {'acct_id': 1, 'name': 'admin', 'motto': ''})
+                self.assertEqual(topcoder, 1)
 
                 err, ratemap = await RateService.inst.map_rate_acct(acct)
                 self.assertEqual(len(ratemap), 1)
