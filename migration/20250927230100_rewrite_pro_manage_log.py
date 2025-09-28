@@ -1,4 +1,3 @@
-import re
 async def dochange(db, _):
     for t in ['judge', 'limit']:
         result = await db.fetch(
