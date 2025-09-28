@@ -120,9 +120,8 @@ sudo systemctl enable --now nginx.service
 INSTALL_DIR_ESCAPE=$(echo ${INSTALL_DIR} | sed 's/[\/\$]/\\\//g')
 sed -i "s/INSTALL_DIR/${INSTALL_DIR_ESCAPE}/" ./ntoj.conf
 sed -i "s/PORT/${PORT}/" ./ntoj.conf
-sudo cp ./ntoj.conf /etc/nginx/conf.d/
+sudo cp ./ntoj.conf /etc/nginx/sites-enabled/ntoj.conf
 sudo sed -i "s/www-data/root/" /etc/nginx/nginx.conf
-sudo rm /etc/nginx/sites-enabled/default
 
 sudo nginx -s reload
 
