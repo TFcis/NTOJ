@@ -1,6 +1,6 @@
 import re
 async def dochange(db, _):
-    for t in ['judge', 'config']:
+    for t in ['judge', 'limit']:
         result = await db.fetch(
             '''
                 SELECT "log"."log_id", "log"."message"
