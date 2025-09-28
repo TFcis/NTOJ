@@ -86,7 +86,7 @@ class ProsetHandler(RequestHandler):
                 pro.tags = ''
 
             _, rate = await RateService.inst.get_pro_ac_rate(pro.pro_id)
-            score_map[pro_id] = {'state': pro_state, 'rate_data': rate}
+            score_map[pro_id] = {'state': pro_state, 'rate_data': rate, 'topcoder': None}
             new_prolist.append(pro)
 
         prolist = new_prolist
@@ -132,6 +132,14 @@ class ProsetHandler(RequestHandler):
         prolist = list(prolist)
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff: pageoff + 40]
+        
+        for pro in prolist:
+            pro_id = pro.pro_id
+            topcoder = None
+            err, topcoder = await RateService.inst.get_pro_topcoder(pro_id)
+            if err:
+                return self.error(err)
+            score_map[pro_id]['topcoder'] = topcoder
 
         await self.render(
             'proset',
@@ -317,14 +325,9 @@ class ProHandler(RequestHandler):
         can_submit = JudgeServerClusterService.inst.is_server_online()
         topcoder = None
         if not self.contest:
-            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
+            err, topcoder = await RateService.inst.get_pro_topcoder(pro_id)
             if err:
                 return self.error(err)
-
-            if topcoder_id:
-                err, topcoder = await UserService.inst.info_acct(topcoder_id)
-                if err:
-                    return self.error(err)
 
         await self.render(
             'pro',
@@ -342,9 +345,12 @@ class ProTagsHandler(RequestHandler):
         tags = self.get_argument('tags')
         pro_id = int(self.get_argument('pro_id'))
 
-        allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
+        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.contest:
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
+        else:
+            if self.acct.is_kernel():
+                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
         err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
