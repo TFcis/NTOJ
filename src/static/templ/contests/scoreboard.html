@@ -53,8 +53,8 @@ font-weight: bolder;
 <script>
     var contest_id = '{{ contest.contest_id }}';
     var post_url = `/oj/be/contests/${contest_id}/scoreboard`;
-    var contest_start = new Date("{{ contest.contest_start.replace(datetime.UTC) }}");
-    var contest_end = new Date("{{ contest.contest_end.replace(datetime.UTC) }}");
+    var contest_start = new Date("{{ contest.contest_start.replace(tzinfo=datetime.UTC) }}");
+    var contest_end = new Date("{{ contest.contest_end.replace(tzinfo=datetime.UTC) }}");
     var contest_length = parseInt((contest_end - contest_start) / 1000);
     var score_color_class_map
         = ["state-0", "state-1", "state-2", "state-3", "state-4", "state-5", "state-6", "state-7", "state-8", "state-9", "state-10"];
