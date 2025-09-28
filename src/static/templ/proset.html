@@ -385,12 +385,12 @@
                     </td>
                     {% set topcoder = score_map[pro_id]['topcoder'] %}
                     {% if topcoder %}
-                        {% if topcoder['photo'] == "" %}
-                            {% set topcoder['photo'] = f"https://www.gravatar.com/avatar/{ topcoder['acct_id'] }?d=identicon&f=y&s=480;" %}
+                        {% if topcoder.photo == "" %}
+                            {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
                         {% end %}
                         <td class="text-center">
-                            <a href="/oj/acct/{{ topcoder['acct_id'] }}/">
-                                <img width="30" height="30" src="{{ topcoder['photo'] }}" />
+                            <a href="/oj/acct/{{ topcoder.acct_id }}/">
+                                <img width="30" height="30" src="{{ topcoder.photo }}" />
                             </a>
                         </td>
                     {% else %}

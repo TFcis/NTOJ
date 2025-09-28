@@ -135,10 +135,17 @@ class ProsetHandler(RequestHandler):
         
         for pro in prolist:
             pro_id = pro.pro_id
+            
             topcoder = None
-            err, topcoder = await RateService.inst.get_pro_topcoder(pro_id)
+            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
             if err:
                 return self.error(err)
+
+            if topcoder_id:
+                err, topcoder = await UserService.inst.info_acct(topcoder_id)
+                if err:
+                    return self.error(err)
+                
             score_map[pro_id]['topcoder'] = topcoder
 
         await self.render(
