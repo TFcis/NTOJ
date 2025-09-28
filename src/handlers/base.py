@@ -5,7 +5,6 @@ import json
 from typing import Any
 
 import asyncpg
-import tornado.gen
 import tornado.template
 import tornado.web
 import tornado.websocket

@@ -10,9 +10,6 @@ from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
 from services.contests import ContestService, ProblemScoreType, UserStatus
 from services.user import UserService
 
-UTC8 = datetime.timezone(datetime.timedelta(hours=8))
-
-
 class _JsonDatetimeEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime.datetime):
@@ -62,7 +59,7 @@ class ContestScoreboardHandler(RequestHandler):
 
         if self.contest.freeze_scoreboard_period != 0 and self.contest.is_running() and not self.contest.is_admin(self.acct):
             if not has_end_time:
-                end_time = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8)))
+                end_time = datetime.datetime.now(datetime.UTC)
 
             total_seconds = int((end_time - self.contest.contest_start).total_seconds())
             minutes = total_seconds // 60
@@ -102,8 +99,7 @@ class ContestScoreboardHandler(RequestHandler):
             else:
                 s[pro_id] = unpackb(scores, strict_map_key=False)
                 for pro_score in s[pro_id].values():
-                    pro_score['timestamp'] = datetime.datetime.fromtimestamp(pro_score['timestamp']).replace(
-                        tzinfo=UTC8)
+                    pro_score['timestamp'] = datetime.datetime.fromtimestamp(pro_score['timestamp'])
                     pro_score['score'] = Decimal(pro_score['score'])
 
             if is_ended:

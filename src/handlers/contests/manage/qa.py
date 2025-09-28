@@ -1,6 +1,7 @@
 import json
 import asyncio
 
+import config
 from services.contests import ContestService
 from services.user import UserService
 from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
@@ -128,7 +129,7 @@ class ContestManageAnnounceHandler(RequestHandler):
                 'type': 'popup-announce',
                 'subject': announce['subject'],
                 'content': announce['content'],
-                'timestamp': announce['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+                'timestamp': announce['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S'),
             }))
             self.error(('S', ''))
 

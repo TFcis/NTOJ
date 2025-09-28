@@ -50,6 +50,10 @@ if [ -z "${SITE_TITLE}" ]; then
     SITE_TITLE="New TNFSH Online Judge"
 fi
 
+if [ -z $TIMEDELTA ]; then
+    TIMEDELTA=8
+fi
+
 if [ ! -d $INSTALL_DIR ]; then
     echo "$INSTALL_DIR does not exist."
     exit
@@ -135,6 +139,8 @@ cd ${INSTALL_DIR}/ntoj/
 COOKIE_SEC=$(head -c 32 /dev/urandom | xxd -ps -c 128)
 UNLOCK_PWD=$($HOME/.local/bin/poetry run python3 ${CURRENT_PWD}/get_unlock_pwd.py <<<${UNLOCK_PASSWORD})
 cat <<EOF | tee ${INSTALL_DIR}/ntoj/config.py >/dev/null
+import datetime
+TIMEZONE   = datetime.timezone(datetime.timedelta(hours=${TIMEDELTA}))
 PORT       = '${PORT}'
 REDIS_DB   = '${REDIS_DB}'
 DBNAME_OJ  = '${DB_NAME}'

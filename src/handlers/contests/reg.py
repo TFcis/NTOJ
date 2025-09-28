@@ -38,7 +38,7 @@ class ContestRegHandler(RequestHandler):
                 if acct_id in self.contest.user_list and self.contest.user_list[acct_id]['status'] == status:
                     return self.error(('Eexist', 'Already registered'))
 
-            if datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) > self.contest.reg_end:
+            if datetime.datetime.now(datetime.UTC) > self.contest.reg_end:
                 return self.error(('Etime', 'Registration time has passed. Please remember to register earlier next time'))
 
             if self.contest.reg_mode is RegMode.INVITED:

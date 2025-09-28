@@ -25,16 +25,16 @@ class BoardTest(AsyncTest):
             self.assertEqual(len(boardlist), 1)
             self.assertEqual(boardlist[0]['name'], 'board1')
             self.assertEqual(boardlist[0]['status'], BoardConst.STATUS_ONLINE)
-            # self.assertEqual(boardlist[0]['start'], (now - datetime.timedelta(days=7)).replace(tzinfo=datetime.timezone.utc))
-            # self.assertEqual(boardlist[0]['end'], (now + datetime.timedelta(days=7)).replace(tzinfo=datetime.timezone.utc))
+            self.assertEqual(boardlist[0]['start'], (now - datetime.timedelta(days=7)).replace(tzinfo=datetime.UTC))
+            self.assertEqual(boardlist[0]['end'], (now + datetime.timedelta(days=7)).replace(tzinfo=datetime.UTC))
 
             err, board = await BoardService.inst.get_board(1)
             self.assertIsNone(err)
             assert board
             self.assertEqual(board['name'], 'board1')
             self.assertEqual(board['status'], BoardConst.STATUS_ONLINE)
-            # self.assertEqual(board['start'], (now - datetime.timedelta(days=7)).replace(tzinfo=datetime.timezone.utc))
-            # self.assertEqual(board['end'], (now + datetime.timedelta(days=7)).replace(tzinfo=datetime.timezone.utc))
+            self.assertEqual(board['start'], (now - datetime.timedelta(days=7)).replace(tzinfo=datetime.UTC))
+            self.assertEqual(board['end'], (now + datetime.timedelta(days=7)).replace(tzinfo=datetime.UTC))
             self.assertEqual(board['pro_list'], [1, 2])
             self.assertEqual(board['acct_list'], [1])
 
@@ -55,8 +55,8 @@ class BoardTest(AsyncTest):
             assert board
             self.assertEqual(board['name'], 'board1')
             self.assertEqual(board['status'], BoardConst.STATUS_HIDDEN)
-            # self.assertEqual(board['start'], (now - datetime.timedelta(days=14)).replace(tzinfo=datetime.timezone.utc))
-            # self.assertEqual(board['end'], (now - datetime.timedelta(days=7)).replace(tzinfo=datetime.timezone.utc))
+            self.assertEqual(board['start'], (now - datetime.timedelta(days=14)).replace(tzinfo=datetime.UTC))
+            self.assertEqual(board['end'], (now - datetime.timedelta(days=7)).replace(tzinfo=datetime.UTC))
             self.assertEqual(board['pro_list'], [1, 2])
             self.assertEqual(board['acct_list'], [1])
 

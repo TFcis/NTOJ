@@ -1,3 +1,4 @@
+{% import datetime %}
 {% import math %}
 {% from services.chal import ChalConst %}
 {% from services.board import BoardConst %}
@@ -160,7 +161,7 @@
       board.scrollLeft = board_old_scroll_left
     }
   }, 50);
-  var end = new Date('{{end}}').getTime();
+  var end = new Date('{{end.astimezone(datetime.UTC)}}').getTime();
   var j_contest = $('#contest');
 
   function GetCount() {

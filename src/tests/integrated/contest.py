@@ -26,6 +26,18 @@ class ContestTest(AsyncTest):
 
             res = admin_session.post('contests/manage/add', data={
                 'reqtype': 'add',
+                'name': ''
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Name too short'))
+
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
+                'name': 'name' * 1000
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Name too long'))
+
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
                 'name': 'contest 1'
             })
             self.assertEqual(json.loads(res.text)['data'], 1)
@@ -60,8 +72,8 @@ class ContestTest(AsyncTest):
             res = admin_session.post('contests/1/manage/general', data=default_config)
             self.assertAPIReturnSuccess(res.text)
 
-            # TODO: start, end reg_end assertEqual, ref board.py
             err, contest = await ContestService.inst.get_contest(1)
+            assert contest
             self.assertIsNone(err)
             self.assertEqual(contest.contest_mode, ContestMode.IOI)
             self.assertEqual(contest.reg_mode, RegMode.INVITED)
@@ -71,6 +83,9 @@ class ContestTest(AsyncTest):
             self.assertTrue(contest.hide_admin)
             self.assertEqual(contest.submission_cd_time, 60)
             self.assertEqual(contest.freeze_scoreboard_period, 0)
+            self.assertEqual(contest.contest_start, contest_start.replace(tzinfo=datetime.UTC))
+            self.assertEqual(contest.contest_end, contest_end.replace(tzinfo=datetime.UTC))
+            self.assertEqual(contest.reg_end, reg_end.replace(tzinfo=datetime.UTC))
 
             # test desc
             res = admin_session.post('contests/1/manage/desc', data={
@@ -291,7 +306,10 @@ class ContestTest(AsyncTest):
             config['contest_start'] = self.get_isoformat(contest_start)
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
-            # TODO: assert contest started
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.contest_start, contest_start.replace(tzinfo=datetime.UTC))
+            self.assertTrue(contest.is_start())
 
         with AccountContext('contest1@test', 'test') as user_session:
             res = user_session.get('contests/1/pro/5/cont.pdf')
@@ -599,7 +617,10 @@ class ContestTest(AsyncTest):
             config['contest_end'] = self.get_isoformat(contest_end)
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
-            # TODO: assert contest ended
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.contest_end, contest_end.replace(tzinfo=datetime.UTC))
+            self.assertTrue(contest.is_end())
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'public',

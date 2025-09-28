@@ -1,3 +1,4 @@
+{% import config %}
 {% from services.chal import ChalConst, MessageType %}
 {% import datetime %}
 <script src="/oj/third/prism.js"></script>
@@ -11,7 +12,6 @@
 }
 </style>
 
-{% set TZ = datetime.timezone(datetime.timedelta(hours=+8)) %}
 <!-- TODO: move timezone to config -->
 <!-- TODO: Testdata Result Message e2etest -->
 
@@ -244,7 +244,7 @@
                 </tr>
                 <tr>
                     <td>Timestamp</td>
-                    <td class="time">{{ chal.timestamp.astimezone(TZ).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td class="time">{{ chal.timestamp.astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
                 </tr>
             </tbody>
         </table>

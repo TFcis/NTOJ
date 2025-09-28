@@ -1,5 +1,3 @@
-import datetime
-
 from handlers.base import RequestHandler, reqenv
 from services.user import Account
 from services.chal import ChalConst
@@ -13,7 +11,6 @@ class ProRankHandler(RequestHandler):
         pageoff = int(self.get_argument('pageoff', default=0))
         pagenum = int(self.get_argument('pagenum', default=20))
 
-        tz = datetime.timezone(datetime.timedelta(hours=+8))
         pro_id = int(pro_id)
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.acct.is_kernel():
@@ -90,7 +87,7 @@ class ProRankHandler(RequestHandler):
                     'time': int(time),
                     'memory': int(memory),
                     'rate': rate,
-                    'timestamp': timestamp.astimezone(tz),
+                    'timestamp': timestamp,
                 }
             )
 

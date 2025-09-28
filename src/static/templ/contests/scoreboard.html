@@ -1,4 +1,6 @@
+{% import datetime %}
 {% from services.contests import ContestMode %}
+{% from utils.htmlgen import pro_idx_to_pro_alphabet %}
 
 <style>
 .rank-gold > td {
@@ -51,8 +53,8 @@ font-weight: bolder;
 <script>
     var contest_id = '{{ contest.contest_id }}';
     var post_url = `/oj/be/contests/${contest_id}/scoreboard`;
-    var contest_start = new Date("{{ contest.contest_start }}");
-    var contest_end = new Date("{{ contest.contest_end }}");
+    var contest_start = new Date("{{ contest.contest_start.replace(datetime.UTC) }}");
+    var contest_end = new Date("{{ contest.contest_end.replace(datetime.UTC) }}");
     var contest_length = parseInt((contest_end - contest_start) / 1000);
     var score_color_class_map
         = ["state-0", "state-1", "state-2", "state-3", "state-4", "state-5", "state-6", "state-7", "state-8", "state-9", "state-10"];
@@ -312,7 +314,7 @@ font-weight: bolder;
                         <th scope="col">Username</th>
                         {% for idx, pro_id in enumerate(contest.pro_list) %}
                         <th scope="col">
-                            <a class="" href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro_id }}/">p{{chr(65+idx)}}</a>
+                            <a class="" href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro_id }}/">{{ pro_idx_to_pro_alphabet(idx) }}</a>
                         </th>
                         {% end %}
                         <th scope="col">Total</th>

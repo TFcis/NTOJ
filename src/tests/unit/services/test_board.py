@@ -42,12 +42,13 @@ class TestBoardService(unittest.IsolatedAsyncioTestCase):
         err, meta = await self.service.get_board(1)
         self.fake_conn.fetchrow.assert_awaited_once()
         self.assertIsNone(err)
+        self.assertIsNotNone(meta)
         self.assertEqual(meta["name"], "BoardA")
         self.assertEqual(meta["status"], BoardConst.STATUS_ONLINE)
         self.assertEqual(meta["pro_list"], [1, 2])
         self.assertEqual(meta["acct_list"], [3, 4])
-        self.assertEqual(meta["start"].tzinfo.utcoffset(meta["start"]), datetime.timedelta(hours=8))
-        self.assertEqual(meta["end"].tzinfo.utcoffset(meta["end"]), datetime.timedelta(hours=8))
+        self.assertEqual(meta["start"], start)
+        self.assertEqual(meta["end"], end)
 
     async def test_get_board_not_found(self):
         self.fake_conn.fetchrow.return_value = None
