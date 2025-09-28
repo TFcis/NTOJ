@@ -9,10 +9,12 @@ from services.pro import ProService, ProConst
 from services.chal import Compiler
 from .util import AsyncTest, AccountContext
 
+def to_utc(d: datetime.datetime) -> datetime.datetime:
+    return d.replace(tzinfo=datetime.UTC)
 
 class ContestTest(AsyncTest):
     async def main(self):
-        # TOOD: add special score test
+        # TODO: add special score test
         self.signup('contest1', 'contest1@test', 'test')  # acct_id = 4
         self.signup('contest2', 'contest2@test', 'test')
         self.signup('contest3', 'contest3@test', 'test')
@@ -83,9 +85,9 @@ class ContestTest(AsyncTest):
             self.assertTrue(contest.hide_admin)
             self.assertEqual(contest.submission_cd_time, 60)
             self.assertEqual(contest.freeze_scoreboard_period, 0)
-            self.assertEqual(contest.contest_start, contest_start.replace(tzinfo=datetime.UTC))
-            self.assertEqual(contest.contest_end, contest_end.replace(tzinfo=datetime.UTC))
-            self.assertEqual(contest.reg_end, reg_end.replace(tzinfo=datetime.UTC))
+            self.assertEqual(contest.contest_start, to_utc(contest_start))
+            self.assertEqual(contest.contest_end, to_utc(contest_end))
+            self.assertEqual(contest.reg_end, to_utc(reg_end))
 
             # test desc
             res = admin_session.post('contests/1/manage/desc', data={
@@ -308,7 +310,7 @@ class ContestTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
             err, contest = await ContestService.inst.get_contest(1)
             self.assertIsNone(err)
-            self.assertEqual(contest.contest_start, contest_start.replace(tzinfo=datetime.UTC))
+            self.assertEqual(contest.contest_start, to_utc(contest_start))
             self.assertTrue(contest.is_start())
 
         with AccountContext('contest1@test', 'test') as user_session:
@@ -619,7 +621,7 @@ class ContestTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
             err, contest = await ContestService.inst.get_contest(1)
             self.assertIsNone(err)
-            self.assertEqual(contest.contest_end, contest_end.replace(tzinfo=datetime.UTC))
+            self.assertEqual(contest.contest_end, to_utc(contest_end))
             self.assertTrue(contest.is_end())
 
             res = admin_session.post('contests/1/manage/pro', data={
