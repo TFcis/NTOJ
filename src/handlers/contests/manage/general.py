@@ -2,9 +2,9 @@ import datetime
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
-from services.chal import ChalConst, Compiler
+from services.chal import Compiler
 from services.user import UserConst
-from services.contests import ContestService, ContestMode, RegMode, UserStatus
+from services.contests import ContestConst, ContestService, ContestMode, RegMode, UserStatus
 
 
 class ContestManageDashHandler(RequestHandler):
@@ -145,6 +145,8 @@ class ContestManageAddHandler(RequestHandler):
 
         if reqtype == "add":
             name = self.get_argument('name')
+            if err := self.len_check(name, ContestConst.NAME_MIN, ContestConst.NAME_MAX, 'Name'):
+                return self.error(err)
 
             _, contest_id = await ContestService.inst.add_default_contest(self.acct, name)
             self.error(('S', contest_id))
@@ -159,7 +161,7 @@ def trantime(time):
     else:
         try:
             time = datetime.datetime.strptime(time, '%Y-%m-%dT%H:%M:%S.%fZ')
-            time = time.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8)))
+            time = time.replace(tzinfo=datetime.timezone.utc)
 
         except ValueError:
             return ('Eparam', 'Invalid time'), None

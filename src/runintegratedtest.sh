@@ -4,6 +4,8 @@ current_pwd=$(pwd)
 
 mkdir -p /tmp/ntoj_test_web/oj/problem
 cat <<EOF >config.py
+import datetime
+TIMEZONE   = datetime.timezone(datetime.timedelta(hours=+8))
 DBNAME_OJ = 'ntoj_unittest_db_name'
 DBUSER_OJ = 'ntoj_unittest_db_user'
 DBPW_OJ = 'ntoj_unittest_db_password'

@@ -1,3 +1,4 @@
+{% import config %}
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
 <style>
@@ -81,7 +82,7 @@
           </a>
         </td>
         <td>
-          <font size=4>{{ bulletin['timestamp'].strftime('%Y-%m-%d') }}</font>
+          <font size=4>{{ bulletin['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d') }}</font>
         </td>
         <td>
           <font size=4>

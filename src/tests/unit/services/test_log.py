@@ -2,7 +2,7 @@ import unittest
 import datetime
 import json
 from unittest.mock import AsyncMock, MagicMock
-from services.log import LogService, tz, _Encoder
+from services.log import LogService, _Encoder
 
 
 class TestLogService(unittest.IsolatedAsyncioTestCase):
@@ -62,9 +62,7 @@ class TestLogService(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(err)
         self.assertEqual(log["log_id"], 789)
         self.assertEqual(log["message"], "Log message")
-        self.assertEqual(
-            log["timestamp"], timestamp.astimezone(tz).isoformat(timespec="seconds")
-        )
+        self.assertEqual(log["timestamp"], timestamp)
         self.assertEqual(json.loads(log["params"])["key"], "value")
 
     async def test_view_log_not_found(self):
@@ -128,7 +126,7 @@ class TestLogService(unittest.IsolatedAsyncioTestCase):
     def test_encoder_datetime(self):
         dt = datetime.datetime(2024, 6, 1, 12, 0, tzinfo=datetime.timezone.utc)
         encoded = json.dumps({"dt": dt}, cls=_Encoder)
-        self.assertIn("+08:00", encoded)
+        self.assertIn("+00:00", encoded)
 
 
 if __name__ == "__main__":

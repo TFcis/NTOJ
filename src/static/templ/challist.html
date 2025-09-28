@@ -1,6 +1,5 @@
-{% import datetime %}
+{% import config %}
 {% from services.chal import ChalConst, COMPILER_INFOS, Compiler %}
-{% set TZ = datetime.timezone(datetime.timedelta(hours=+8)) %}
 
 <link rel="stylesheet" type="text/css" href="/oj/challist.css">
 
@@ -232,7 +231,7 @@
                     <td id="memory">{{ chal.total_result.memory }}</td>
                     <td id="score">{{ chal.total_result.rate }}</td>
                     <td>{{ chal.compiler_type }}</td>
-                    <td class="time">{{ chal.timestamp.astimezone(TZ).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td class="time">{{ chal.timestamp.astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
                 </tr>
             {% end %}
             </tbody>

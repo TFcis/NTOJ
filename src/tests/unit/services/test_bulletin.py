@@ -17,7 +17,6 @@ class TestBulletinService(unittest.IsolatedAsyncioTestCase):
         self.service = BulletinService(self.fake_db, rs=None)
 
     async def test_list_bulletin(self):
-        tz = datetime.timezone(datetime.timedelta(hours=8))
         self.fake_conn.fetch.return_value = [
             (1, "Title1", datetime.datetime(2024, 1, 1, 10, 0), "Red", True, "Alice", 101),
             (2, "Title2", datetime.datetime(2024, 1, 2, 11, 0), "Blue", False, "Bob", 102),
@@ -28,10 +27,8 @@ class TestBulletinService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(res), 2)
         self.assertEqual(res[0]["bulletin_id"], 1)
         self.assertEqual(res[1]["title"], "Title2")
-        self.assertEqual(res[0]["timestamp"].tzinfo.utcoffset(res[0]["timestamp"]), tz.utcoffset(res[0]["timestamp"]))
 
     async def test_get_bulletin_found(self):
-        tz = datetime.timezone(datetime.timedelta(hours=8))
         dt = datetime.datetime(2024, 1, 1, 12, 0)
         self.fake_conn.fetch.return_value = [{
             "title": "TitleA",
@@ -51,7 +48,6 @@ class TestBulletinService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(meta["color"], "Green")
         self.assertTrue(meta["pinned"])
         self.assertEqual(meta["acct_id"], 101)
-        self.assertEqual(meta["timestamp"].tzinfo.utcoffset(meta["timestamp"]), tz.utcoffset(meta["timestamp"]))
 
     async def test_get_bulletin_not_found(self):
         self.fake_conn.fetch.return_value = []

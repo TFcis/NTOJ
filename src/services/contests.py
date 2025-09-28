@@ -29,6 +29,9 @@ class UserStatus(enum.IntEnum):
     APPROVED = 2
     ADMIN = 3
 
+class ContestConst:
+    NAME_MIN = 1
+    NAME_MAX = 50
 
 @dataclass(slots=True, kw_only=True)
 class Contest:
@@ -58,16 +61,13 @@ class Contest:
     freeze_scoreboard_period: int = 0
 
     def is_start(self) -> bool:
-        return datetime.datetime.now().replace(
-            tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) >= self.contest_start
+        return datetime.datetime.now(datetime.UTC) >= self.contest_start
 
     def is_end(self) -> bool:
-        return datetime.datetime.now().replace(
-            tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) >= self.contest_end
+        return datetime.datetime.now(datetime.UTC) >= self.contest_end
 
     def is_running(self) -> bool:
-        return self.contest_start <= datetime.datetime.now().replace(
-            tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) < self.contest_end
+        return self.contest_start <= datetime.datetime.now(datetime.UTC) < self.contest_end
 
     def is_pro(self, pro_id: int) -> bool:
         return pro_id in self.pro_list
@@ -153,9 +153,9 @@ class ContestService:
                 contest = Contest(**result)
                 contest.reg_mode = RegMode(contest.reg_mode)
                 contest.contest_mode = ContestMode(contest.contest_mode)
-                contest.contest_start = contest.contest_start.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
-                contest.contest_end = contest.contest_end.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
-                contest.reg_end = contest.reg_end.astimezone(datetime.timezone(datetime.timedelta(hours=+8)))
+                contest.contest_start = contest.contest_start
+                contest.contest_end = contest.contest_end
+                contest.reg_end = contest.reg_end
 
                 result = await con.fetch('SELECT pro_id, score_type FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
                 for pro_id, score_type in result:
@@ -192,8 +192,8 @@ class ContestService:
                     "contest_id": contest_id,
                     "name": name,
                     "contest_mode": contest_mode,
-                    "contest_start": contest_start.astimezone(datetime.timezone(datetime.timedelta(hours=+8))),
-                    "contest_end": contest_end.astimezone(datetime.timezone(datetime.timedelta(hours=+8))),
+                    "contest_start": contest_start,
+                    "contest_end": contest_end,
                     "is_public_scoreboard": is_public_scoreboard
                 } for contest_id, name, contest_mode, contest_start, contest_end, is_public_scoreboard in result
             ]

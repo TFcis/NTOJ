@@ -100,6 +100,6 @@ class BoardHandler(RequestHandler):
             acct_submit=acct_submit,
             name=meta['name'],
             board_list=board_list,
-            end=str(meta['end']).split('+')[0].replace('-', '/'),
+            end=meta['end'],
             timestamp=int(time.time()),
         )

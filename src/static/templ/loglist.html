@@ -1,4 +1,4 @@
-{% import math %}
+{% import config %}
 
 <script type="text/javascript">
     var j_form = $("#form");
@@ -38,7 +38,7 @@
                 <tr>
                     <td class="id"><a href="/oj/log/{{ log['log_id'] }}/">{{ log['log_id'] }}</a></td>
                     <td>{{ log['message'] }}</td>
-                    <td>{{ log['timestamp'] }}</td>
+                    <td>{{ log['timestamp'].astimezone(config.TIMEZONE) }}</td>
                 </tr>
             {% end %}
             </tbody>

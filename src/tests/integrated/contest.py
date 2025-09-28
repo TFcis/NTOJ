@@ -9,10 +9,12 @@ from services.pro import ProService, ProConst
 from services.chal import Compiler
 from .util import AsyncTest, AccountContext
 
+def to_utc(d: datetime.datetime) -> datetime.datetime:
+    return d.replace(tzinfo=datetime.UTC)
 
 class ContestTest(AsyncTest):
     async def main(self):
-        # TOOD: add special score test
+        # TODO: add special score test
         self.signup('contest1', 'contest1@test', 'test')  # acct_id = 4
         self.signup('contest2', 'contest2@test', 'test')
         self.signup('contest3', 'contest3@test', 'test')
@@ -23,6 +25,18 @@ class ContestTest(AsyncTest):
             # upload more problem
             for pro_id in range(5, 11 + 1):
                 await self.upload_problem('toj674.tar.xz', f'Move {pro_id - 6}', ProConst.STATUS_CONTEST, expected_pro_id=pro_id, session=admin_session)
+
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
+                'name': ''
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Name too short'))
+
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
+                'name': 'name' * 1000
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Name too long'))
 
             res = admin_session.post('contests/manage/add', data={
                 'reqtype': 'add',
@@ -60,8 +74,8 @@ class ContestTest(AsyncTest):
             res = admin_session.post('contests/1/manage/general', data=default_config)
             self.assertAPIReturnSuccess(res.text)
 
-            # TODO: start, end reg_end assertEqual, ref board.py
             err, contest = await ContestService.inst.get_contest(1)
+            assert contest
             self.assertIsNone(err)
             self.assertEqual(contest.contest_mode, ContestMode.IOI)
             self.assertEqual(contest.reg_mode, RegMode.INVITED)
@@ -71,6 +85,9 @@ class ContestTest(AsyncTest):
             self.assertTrue(contest.hide_admin)
             self.assertEqual(contest.submission_cd_time, 60)
             self.assertEqual(contest.freeze_scoreboard_period, 0)
+            self.assertEqual(contest.contest_start, to_utc(contest_start))
+            self.assertEqual(contest.contest_end, to_utc(contest_end))
+            self.assertEqual(contest.reg_end, to_utc(reg_end))
 
             # test desc
             res = admin_session.post('contests/1/manage/desc', data={
@@ -291,7 +308,10 @@ class ContestTest(AsyncTest):
             config['contest_start'] = self.get_isoformat(contest_start)
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
-            # TODO: assert contest started
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.contest_start, to_utc(contest_start))
+            self.assertTrue(contest.is_start())
 
         with AccountContext('contest1@test', 'test') as user_session:
             res = user_session.get('contests/1/pro/5/cont.pdf')
@@ -599,7 +619,10 @@ class ContestTest(AsyncTest):
             config['contest_end'] = self.get_isoformat(contest_end)
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
-            # TODO: assert contest ended
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.contest_end, to_utc(contest_end))
+            self.assertTrue(contest.is_end())
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'public',

@@ -1,3 +1,4 @@
+{% import config %}
 <style type="text/css">
 .rank-gold > td {
   background-color: #cab03b;
@@ -53,7 +54,7 @@
                     <td>{{ chal['rate'] }}</td>
                     <td>{{ chal['time'] }}</td>
                     <td>{{ chal['memory'] }}</td>
-                    <td>{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>{{ chal['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
                     </tr>
                 {% end %}
             </tbody>
