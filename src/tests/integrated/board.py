@@ -3,7 +3,7 @@ import datetime
 from services.board import BoardService, BoardConst
 from .util import AsyncTest, AccountContext
 
-def to_utc(d:datetime.datetime) -> datetime.datetime:
+def to_utc(d: datetime.datetime) -> datetime.datetime:
     return d.replace(tzinfo=datetime.UTC)
 
 class BoardTest(AsyncTest):
