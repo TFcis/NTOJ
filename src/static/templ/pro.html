@@ -198,7 +198,7 @@
                     <div class="card-header">TopCoder</div>
                     <div class="card-body">
                         {% if topcoder.photo == "" %}
-                        {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder['acct_id'] }?d=identicon&f=y&s=480;" %}
+                        {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
                         {% end %}
                         <img class="card-photo" width="100" height="100" src="{{ topcoder.photo }}" />
                         <div class="card-text-group">
