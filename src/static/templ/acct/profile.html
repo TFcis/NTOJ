@@ -12,12 +12,14 @@
       background-color: rgba(32, 32, 32, 0.6);
       position: relative;
       z-index: 100;
+      overflow: hidden;
     }
     #summary > img#photo {
       width: 100%;
       height: auto;
       display: block;
       border-radius: 10px;
+      object-fit: cover;
     }
     #summary > h1 {
       margin-top: 8px;
@@ -128,7 +130,7 @@
                 {% for chunk in prolist %}
                     <tr>
                     {% for cnt, pro in enumerate(chunk, start=1) %}
-                        {% if pro['state'] is None %}
+                        {% if pro['state'] == ChalConst.STATE_NOTSTARTED %}
                             <td class="_state"><a class="_state-4" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
                         {% elif pro['state'] == ChalConst.STATE_AC %}
                             <td class="_state"><a class="_state-1" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>

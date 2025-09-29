@@ -1,3 +1,4 @@
+{% import config %}
 <style type="text/css">
 .rank-gold > td {
   background-color: #cab03b;
@@ -26,6 +27,7 @@
                 <tr>
                     <th>Rank</th>
                     <th>#</th>
+                    <th></th> <!-- for avatar-->
                     <th>Account</th>
                     <th>Score</th>
                     <th>Time(ms)</th>
@@ -49,11 +51,15 @@
                     <tr class="{{ rank_display_class }}">
                     <td>{{ rank }}</td>
                     <td><a href="/oj/chal/{{chal['chal_id']}}/">{{ chal['chal_id']}}</a></td>
+                    {% if chal['photo'] == "" %}
+                        {% set chal['photo'] = f"https://www.gravatar.com/avatar/{ chal['acct_id'] }?d=identicon&f=y&s=480;" %}
+                    {% end %}
+                    <td><img class="img-fluid" width="30" height="30" src="{{ chal['photo'] }}" /></td>
                     <td><a href="/oj/acct/{{chal['acct_id']}}/">{{ chal['acct_name']}}</a></td>
                     <td>{{ chal['rate'] }}</td>
                     <td>{{ chal['time'] }}</td>
-                    <td>{{ round(chal['memory'] / 1024) }}</td>
-                    <td>{{ chal['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>{{ chal['memory'] }}</td>
+                    <td>{{ chal['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
                     </tr>
                 {% end %}
             </tbody>

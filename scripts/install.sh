@@ -50,6 +50,10 @@ if [ -z "${SITE_TITLE}" ]; then
     SITE_TITLE="New TNFSH Online Judge"
 fi
 
+if [ -z $TIMEDELTA ]; then
+    TIMEDELTA=8
+fi
+
 if [ ! -d $INSTALL_DIR ]; then
     echo "$INSTALL_DIR does not exist."
     exit
@@ -120,9 +124,8 @@ sudo systemctl enable --now nginx.service
 INSTALL_DIR_ESCAPE=$(echo ${INSTALL_DIR} | sed 's/[\/\$]/\\\//g')
 sed -i "s/INSTALL_DIR/${INSTALL_DIR_ESCAPE}/" ./ntoj.conf
 sed -i "s/PORT/${PORT}/" ./ntoj.conf
-sudo cp ./ntoj.conf /etc/nginx/conf.d/
+sudo cp ./ntoj.conf /etc/nginx/sites-enabled/ntoj.conf
 sudo sed -i "s/www-data/root/" /etc/nginx/nginx.conf
-sudo rm /etc/nginx/sites-enabled/default
 
 sudo nginx -s reload
 
@@ -136,6 +139,8 @@ cd ${INSTALL_DIR}/ntoj/
 COOKIE_SEC=$(head -c 32 /dev/urandom | xxd -ps -c 128)
 UNLOCK_PWD=$($HOME/.local/bin/poetry run python3 ${CURRENT_PWD}/get_unlock_pwd.py <<<${UNLOCK_PASSWORD})
 cat <<EOF | tee ${INSTALL_DIR}/ntoj/config.py >/dev/null
+import datetime
+TIMEZONE   = datetime.timezone(datetime.timedelta(hours=${TIMEDELTA}))
 PORT       = '${PORT}'
 REDIS_DB   = '${REDIS_DB}'
 DBNAME_OJ  = '${DB_NAME}'

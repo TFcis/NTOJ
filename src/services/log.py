@@ -1,12 +1,10 @@
 import datetime
 import json
 
-tz = datetime.timezone(datetime.timedelta(hours=+8))
-
 class _Encoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime.datetime):
-            return o.astimezone(tz).isoformat(timespec="seconds")
+            return o.isoformat(timespec="seconds")
 
         return super().default(o)
 
@@ -37,7 +35,7 @@ class LogService:
 
     async def view_log(self, log_id: int):
         async with self.db.acquire() as con:
-            res = await con.fetch('SELECT log_id, message, "timestamp", params FROM log WHERE log_id = $1', int(log_id))
+            res = await con.fetch('SELECT log_id, "type", message, "timestamp", params FROM log WHERE log_id = $1', int(log_id))
             if len(res) == 0:
                 return ('Enoext', 'Log not found'), None
             res = res[0]
@@ -48,8 +46,9 @@ class LogService:
 
             return None, {
                 'log_id': res['log_id'],
+                'log_type': res['type'],
                 'message': res['message'],
-                'timestamp': res['timestamp'].astimezone(tz).isoformat(timespec="seconds"),
+                'timestamp': res['timestamp'],
                 'params': params
             }
 
@@ -92,7 +91,7 @@ class LogService:
                     {
                         'log_id': log_id,
                         'message': message,
-                        'timestamp': timestamp.astimezone(tz).isoformat(timespec="seconds"),
+                        'timestamp': timestamp,
                     }
                 )
 

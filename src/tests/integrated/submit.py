@@ -1,5 +1,6 @@
 import json
 from .util import AsyncTest, AccountContext
+from services.user import UserService
 from services.chal import Compiler
 
 
@@ -18,7 +19,7 @@ class SubmitTest(AsyncTest):
             res = user_session.post('submit', data={
                 'reqtype': 'submit',
                 'pro_id': 1,
-                'code': '1110' * 1110 * 1110,
+                'code': open('tests/static_file/code/large.cpp').read(),
                 'compiler_type': Compiler.GPP,
             })
             self.assertAPIReturnValue(res.text, ('Ecodemax', 'Submitted code too long'))
@@ -38,10 +39,9 @@ class SubmitTest(AsyncTest):
                 'compiler_type': Compiler.PYTHON3,
             })
             self.assertAPIReturnValue(res.text, ('S', 10))
-            html = self.get_html('submit/1', user_session)
-            compiler_option = html.select_one('option:checked')
-            self.assertIsNotNone(compiler_option)
-            self.assertEqual(int(compiler_option.attrs['value']), Compiler.PYTHON3)
+            err, acct = await UserService.inst.info_acct(2)
+            self.assertIsNone(err)
+            self.assertEqual(acct.last_compiler, Compiler.PYTHON3)
 
             res = user_session.post('submit', data={
                 'reqtype': 'submit',

@@ -1,10 +1,14 @@
+{% import config %}
 {% import json %}
 
 <label for="" class="form-control">ID</label>
 <p>{{ log['log_id'] }}</p>
 
+<label for="" class="form-control">Log Type</label>
+<p>{{ log['log_type'] }}</p>
+
 <label for="" class="form-control">Timestamp</label>
-<p>{{ log['timestamp'] }}</p>
+<p>{{ log['timestamp'].astimezone(config.TIMEZONE) }}</p>
 
 <label for="" class="form-control">Message</label>
 <p>{{ log['message'] }}</p>

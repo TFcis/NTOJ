@@ -1,5 +1,6 @@
 {% extends 'manage.html' %}
 {% block head %}
+{% import config %}
 <script type="text/javascript">
     function init() {
         $("td.reply").each((_, element) => {
@@ -74,7 +75,7 @@
                                     <span class="float-end"><a href="/oj/acct/{{ question['ask_acct'].acct_id }}/">{{ question['ask_acct'].name }}</a></span>
                                 </h4>
                                 <p class="card-text">{{ question['ask_content'] }}</p>
-                                <h6>Ask Time: {{ question['ask_timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+                                <h6>Ask Time: {{ question['ask_timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</h6>
                             </div>
                         </div>
                     </td>
@@ -107,7 +108,7 @@
                         {% if replied %}
                         <div class="view">
                             <p><strong>Reply: {{ question['reply_content'] }}</strong></p>
-                            <h6>Reply Time: {{ question['reply_timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+                            <h6>Reply Time: {{ question['reply_timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</h6>
                             <button class="btn btn-primary edit">Edit Reply</button>
                         </div>
                         {% end %}

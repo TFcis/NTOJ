@@ -4,6 +4,8 @@ current_pwd=$(pwd)
 
 mkdir -p /tmp/ntoj_test_web/oj/problem
 cat <<EOF >config.py
+import datetime
+TIMEZONE   = datetime.timezone(datetime.timedelta(hours=+8))
 DBNAME_OJ = 'ntoj_unittest_db_name'
 DBUSER_OJ = 'ntoj_unittest_db_user'
 DBPW_OJ = 'ntoj_unittest_db_password'
@@ -36,9 +38,11 @@ omit =
     */site-packages/*
     */dist-packages/*
     *.generated.py
-    runtests.py
+    runintegratedtest.py
+    rununittest.py
+    rune2etest.py
+    tests/*
     server.py
-    */e2e/*
     upgrade.py
 EOF
 
@@ -51,7 +55,7 @@ rm .coverage.*
 rm .coverage
 rm -r ./htmlcov
 
-COVERAGE_PROCESS_START=.coveragerc $HOME/.local/bin/poetry run coverage run --branch --source=./ runtests.py
+COVERAGE_PROCESS_START=.coveragerc $HOME/.local/bin/poetry run coverage run --branch --source=./ runintegratedtest.py
 $HOME/.local/bin/poetry run coverage combine
 $HOME/.local/bin/poetry run coverage html
 

@@ -1,4 +1,4 @@
-from tests.e2e.util import AsyncTest, AccountContext
+from tests.integrated.util import AsyncTest, AccountContext
 from services.pro import ProConst, CheckerType
 
 

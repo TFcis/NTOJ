@@ -5,7 +5,7 @@ import os
 import decimal
 
 from services.judge import JudgeServerClusterService
-from services.pro import ProService, ProConst
+from services.pro import ProService, ProConst, ProblemConfig
 
 class Compiler(enum.IntEnum):
     GCC = 1
@@ -318,7 +318,7 @@ class ChalSearchingParamBuilder:
     """
 
     def __init__(self):
-        self.param = ChalSearchingParam([], [], 0, -1, [ProConst.STATUS_ONLINE], 0)
+        self.param = ChalSearchingParam(None, None, 0, -1, [ProConst.STATUS_ONLINE], 0)
 
     def pro(self, pro: list[int] | None):
         """Sets the list of problem IDs to filter."""
@@ -588,7 +588,7 @@ class ChalService:
         return None, Challenge(chal_id, pro_id, acct_id, contest_id, acct_name, compiler_type,
                                timestamp, total_results, subtask_results, testdata_results)
 
-    async def emit_chal(self, chal_id: int, pro_id: int, compiler_type: Compiler, priority: int, skip_nonac: bool=False) -> tuple[None, None] | ErrorType:
+    async def emit_chal(self, chal_id: int, pro_config: ProblemConfig, compiler_type: Compiler, priority: int, skip_nonac: bool=False) -> tuple[None, None] | ErrorType:
         """
         Create and submit tests for a challenge based on the test metadata configuration,
         then send the challenge to the judging cluster.
@@ -606,12 +606,11 @@ class ChalService:
         assert ChalConst.NORMAL_PRI <= priority <= ChalConst.NORMAL_REJUDGE_PRI
 
         chal_id = int(chal_id)
-        pro_id = int(pro_id)
 
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "acct_id", "contest_id" FROM "challenge"
+                    SELECT "acct_id", "pro_id", "contest_id" FROM "challenge"
                     WHERE "chal_id" = $1;
                 ''',
                 chal_id,
@@ -620,16 +619,15 @@ class ChalService:
             return ('Enoext', 'Challenge not found'), None
         result = result[0]
 
-        acct_id, contest_id = int(result['acct_id']), int(result['contest_id'])
-        _, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
-        limits = pro.config.limits
-        limit = limits.get(compiler_type, limits['default'])
+        acct_id, pro_id, contest_id = int(result['acct_id']), int(result['pro_id']), int(result['contest_id'])
+        limits = pro_config.limits
+        limit = limits.get(str(compiler_type), limits['default'])
         await self.db.execute('UPDATE total_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
         await self.db.execute('UPDATE subtask_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
 
         need_judge_testdatas: set[int] = set()
         subtasks = []
-        for subtask_id, subtask_config in pro.config.subtask_configs.items():
+        for subtask_id, subtask_config in pro_config.subtask_configs.items():
             t = [testdata.testdata_id for testdata in subtask_config.testdatas]
             need_judge_testdatas.update(t)
             subtasks.append({
@@ -643,7 +641,7 @@ class ChalService:
 
         testdatas = []
         for testdata_id in need_judge_testdatas:
-            testdata = pro.config.testdatas[testdata_id]
+            testdata = pro_config.testdatas[testdata_id]
             testdatas.append({
                 "id": testdata.testdata_id,
                 "input": testdata.inputfile,
@@ -654,7 +652,7 @@ class ChalService:
 
         if not os.path.isfile(f"code/{chal_id}/main.{source_ext}"):
             await self.update_total_result(chal_id, TotalResult(ChalConst.STATE_ERR, 0, 0, decimal.Decimal(), "", MessageType.NONE))
-            for subtask_id in pro.config.subtask_configs:
+            for subtask_id in pro_config.subtask_configs:
                 await self.update_subtask_result(chal_id, SubtaskResult(subtask_id, ChalConst.STATE_ERR, 0, 0, decimal.Decimal()))
 
             for testdata_id in need_judge_testdatas:
@@ -681,17 +679,17 @@ class ChalService:
                     'memory': limit.memory * 1024, # NOTE: kib to bytes
                 },
 
-                'has_grader': pro.config.has_grader,
+                'has_grader': pro_config.has_grader,
                 'userprog_compiler': compiler_type,
-                'userprog_compile_args': pro.config.userprog_compile_args,
+                'userprog_compile_args': pro_config.userprog_compile_args,
 
-                'checker_type': pro.config.checker_type,
-                'checker_compiler': pro.config.checker_compiler,
-                'checker_compile_args': pro.config.checker_compile_args,
+                'checker_type': pro_config.checker_type,
+                'checker_compiler': pro_config.checker_compiler,
+                'checker_compile_args': pro_config.checker_compile_args,
 
-                'summary_type': pro.config.summary_type,
-                'summary_compiler': pro.config.summary_compiler,
-                'summary_compile_args': pro.config.summary_compile_args,
+                'summary_type': pro_config.summary_type,
+                'summary_compiler': pro_config.summary_compiler,
+                'summary_compile_args': pro_config.summary_compile_args,
 
                 'priority': priority,
                 'skip_nonac': skip_nonac,

@@ -1,5 +1,6 @@
 {% extends 'manage.html' %}
 {% block head %}
+{% import config %}
 <script type="text/javascript">
     function init() {
         $("#add").on('click', function(e) {
@@ -136,7 +137,7 @@
                             <div class="card-body">
                                 <h4 class="card-title">{{ announce['subject'] }}</h4>
                                 <p class="card-text">{{ announce['content'] }}</p>
-                                <h6>{{ announce['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</h6>
+                                <h6>{{ announce['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</h6>
                             </div>
                         </div>
                         <button class="btn btn-primary edit">Edit</button>

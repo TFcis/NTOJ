@@ -12,7 +12,6 @@ class BulletinService:
         self.db = db
         self.rs = rs
         BulletinService.inst = self
-        self.tz = datetime.timezone(datetime.timedelta(hours=+8))
 
     async def list_bulletin(self):
         async with self.db.acquire() as con:
@@ -30,7 +29,7 @@ class BulletinService:
                 {
                     "bulletin_id": b_id,
                     "title": title,
-                    "timestamp": timestamp.astimezone(self.tz),
+                    "timestamp": timestamp,
                     "color": color,
                     "pinned": pinned,
                     "acct_id": acct_id,
@@ -59,7 +58,7 @@ class BulletinService:
         result = {
             'title': result['title'],
             'content': result['content'],
-            'timestamp': result['timestamp'].astimezone(self.tz),
+            'timestamp': result['timestamp'],
             'name': result['name'],
             'color': result['color'],
             'pinned': result['pinned'],
