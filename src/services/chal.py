@@ -17,6 +17,8 @@ class Compiler(enum.IntEnum):
     JAVA = 7
     ASMC = 8
     ASMCPP = 9
+    ASMAARCH64 = 100
+    ASMRISCV64 = 101
 
 @dataclass(slots=True, frozen=True)
 class CompilerInfo:
@@ -36,6 +38,8 @@ COMPILER_INFOS[Compiler.PYTHON3] = CompilerInfo(Compiler.PYTHON3, "python", "CPy
 COMPILER_INFOS[Compiler.JAVA] = CompilerInfo(Compiler.JAVA, "java", "OpenJDK 17.0.8", "java", "java")
 COMPILER_INFOS[Compiler.ASMC] = CompilerInfo(Compiler.ASMC, "asm", "Gas x86_64 Linux 2.42 w/ libc", "asmc", "s")
 COMPILER_INFOS[Compiler.ASMCPP] = CompilerInfo(Compiler.ASMCPP, "asm", "Gas x86_64 Linux 2.42 w/ libstdc++", "asmcpp", "s")
+COMPILER_INFOS[Compiler.ASMAARCH64] = CompilerInfo(Compiler.ASMAARCH64, "asm-aarch64", "Gas aarch64 Linux 2.42 w/ libc & QEMU", "asm-aarch64", "s")
+COMPILER_INFOS[Compiler.ASMRISCV64] = CompilerInfo(Compiler.ASMRISCV64, "asm-riscv64", "Gas riscv64 Linux 2.42 w/ libc & QEMU", "asm-riscv64", "s")
 
 class ChalConst:
     STATE_AC = 1
