@@ -159,13 +159,15 @@ class ChalHandler(RequestHandler):
                 r.state = ChalConst.STATE_REJECTED
                 await ChalService.inst.update_testdata_result(chal_id, r)
 
+            await self.rs.hdel('pro_topcoder', str(chal.pro_id))
+
             await LogService.inst.add_log(
                 f"{self.acct.name}(#{self.acct.acct_id}) reject chal#{chal_id}.", 'manage.chal.reject',
                 {
                     'reason': reason
                 }
             )
-
+            
             self.error(('S', ''))
 
 
