@@ -21,7 +21,7 @@ import config as TestConfig
 import url as ur
 from services.judge import JudgeServerClusterService
 from services.service import services_init
-from tests.main import test_main
+from tests.integratedmain import test_main
 
 MAX_WAIT_SECONDS_BEFORE_SHUTDOWN = 0
 

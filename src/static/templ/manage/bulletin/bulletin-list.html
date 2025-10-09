@@ -5,6 +5,7 @@
 </script>
 {% end %}
 {% block content %}
+{% import config %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <table class="table">
         <thead>
@@ -36,7 +37,7 @@
                 <td><font size=3>
                     <a href="/oj/acct/{{ bulletin['acct_id'] }}/">{{ bulletin['name'] }}</a>
                 </font></td>
-                <td><font size=3>{{ bulletin['timestamp'].strftime('%Y-%m-%d %H:%M:%S') }}</font></td>
+                <td><font size=3>{{ bulletin['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</font></td>
                 <td>
                     <a class="btn btn-secondary" href="/oj/manage/bulletin/update/?bulletinid={{ bulletin['bulletin_id'] }}">&#x2699</a>
                 </td>

@@ -65,7 +65,7 @@ class ProsetHandler(RequestHandler):
         new_prolist: list[Problem] = []
         for pro in prolist:
             pro_id = pro.pro_id
-            pro_state = acct_states.get(pro.pro_id, {}).get('state')
+            pro_state = acct_states.get(pro_id, {}).get('state')
 
             if show_only_online_pro and pro.status != ProConst.STATUS_ONLINE:
                 continue
@@ -85,7 +85,9 @@ class ProsetHandler(RequestHandler):
             if (self.acct.is_guest()) or (not self.acct.is_kernel() and pro_state != ChalConst.STATE_AC):
                 pro.tags = ''
 
-            _, rate = await RateService.inst.get_pro_ac_rate(pro.pro_id)
+            rate = None
+            if order is not None:
+                _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
             score_map[pro_id] = {'state': pro_state, 'rate_data': rate}
             new_prolist.append(pro)
 
@@ -124,7 +126,7 @@ class ProsetHandler(RequestHandler):
         elif order == "usercnt":
             prolist = sorted(prolist, key=lambda pro: cmp(pro, 'user_all_chal_cnt'))
         elif order == "useraccnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, 'usr_ac_chal_cnt'))
+            prolist = sorted(prolist, key=lambda pro: cmp(pro, 'user_ac_chal_cnt'))
 
         if order_reverse:
             prolist = reversed(prolist)
@@ -132,6 +134,24 @@ class ProsetHandler(RequestHandler):
         prolist = list(prolist)
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff: pageoff + 40]
+
+        for pro in prolist:
+            pro_id = pro.pro_id
+
+            topcoder = None
+            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
+            if err:
+                return self.error(err)
+
+            if topcoder_id:
+                err, topcoder = await UserService.inst.info_acct(topcoder_id)
+                if err:
+                    return self.error(err)
+
+            score_map[pro_id]['topcoder'] = topcoder
+            if order is None:
+                _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
+                score_map[pro_id]['rate_data'] = rate
 
         await self.render(
             'proset',
@@ -317,9 +337,14 @@ class ProHandler(RequestHandler):
         can_submit = JudgeServerClusterService.inst.is_server_online()
         topcoder = None
         if not self.contest:
-            err, topcoder = await RateService.inst.get_pro_topcoder(pro_id)
+            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
             if err:
                 return self.error(err)
+
+            if topcoder_id:
+                err, topcoder = await UserService.inst.info_acct(topcoder_id)
+                if err:
+                    return self.error(err)
 
         await self.render(
             'pro',
@@ -337,12 +362,9 @@ class ProTagsHandler(RequestHandler):
         tags = self.get_argument('tags')
         pro_id = int(self.get_argument('pro_id'))
 
-        allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
+        allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
         if self.contest:
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
-        else:
-            if self.acct.is_kernel():
-                allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
         err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:

@@ -152,7 +152,7 @@
     }
 </script>
 <div class="row">
-    <div id="side" class="col-lg-3 col-12 mt-lg-2">
+    <div id="side" class="col-lg-2 col-12 mt-lg-2">
         <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
         {% if can_submit and pro.allow_submit %}
             {% if contest and not contest.is_end() %}
@@ -197,10 +197,36 @@
                     <div class="card">
                     <div class="card-header">TopCoder</div>
                     <div class="card-body">
-                        <h5 class="card-title"><a href="/oj/acct/{{ topcoder['acct_id'] }}/">{{ topcoder['name'] }}</a></h5>
-                        <p class="card-text">{{ topcoder['motto'] }}</p>
+                        {% if topcoder.photo == "" %}
+                        {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
+                        {% end %}
+                        <img class="card-photo" width="100" height="100" src="{{ topcoder.photo }}" />
+                        <div class="card-text-group">
+                            <h5 class="card-title"><a href="/oj/acct/{{ topcoder.acct_id }}/">{{ topcoder.name }}</a></h5>
+                            <p class="card-text">{{ topcoder.motto }}</p>
+                        </div>
                     </div>
                     </div>
+                    <style>
+                        .card-body {
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                        }
+
+                        .card-photo {
+                            flex-shrink: 0;
+                            border-radius: 4px;
+                        }
+
+                        .card-text-group {
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        .card-text {
+                            word-break: break-all;
+                        }
+                    </style>
                 </div>
             {% else %}
                 <div class="my-lg-1" id="topcoder">
@@ -271,7 +297,7 @@
     </div>
 
     <!-- TODO: Remove fixed height -->
-    <div id="cont" class="col-lg-9 col-12" style="height: 904px;">
+    <div id="cont" class="col-lg-10 col-12" style="height: 904px;">
         <strong>Loading...</strong>
     </div>
 </div>

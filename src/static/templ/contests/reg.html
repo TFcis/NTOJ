@@ -1,3 +1,4 @@
+{% import config %}
 {% from services.contests import RegMode, UserStatus %}
 {% import datetime %}
 
@@ -61,9 +62,9 @@
     <div class="col mt-4">
         <div class="mb-1 text-center">
             <label class="form-label">Status: {{ status }}</label>
-            <label class="form-label">Registration End: {{ contest.reg_end.strftime("%Y-%m-%d %H:%M:%S") }}</label>
+            <label class="form-label">Registration End: {{ contest.reg_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</label>
 
-            {% set now = datetime.datetime.now().replace(tzinfo=datetime.timezone(datetime.timedelta(hours=+8))) %}
+            {% set now = datetime.datetime.now(datetime.UTC) %}
             {% set is_reged = user.acct_id in contest.user_list and contest.user_list[user.acct_id]['status'] in [UserStatus.REQUESTED, UserStatus.APPROVED] %}
 
             {% if now >= contest.reg_end %}

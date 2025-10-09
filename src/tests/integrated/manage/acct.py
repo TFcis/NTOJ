@@ -1,5 +1,5 @@
-from services.user import UserConst
-from tests.e2e.util import AsyncTest, AccountContext
+from services.user import UserService, UserConst
+from tests.integrated.util import AsyncTest, AccountContext
 
 
 class ManageAcctTest(AsyncTest):
@@ -13,7 +13,6 @@ class ManageAcctTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
 
-        with AccountContext('admin2@test', 'testtest') as admin2_session:
-            html = self.get_html('index/', session=admin2_session)
-            self.assertIsNotNone(html.select_one('li.manage'))
-            self.assertEqual(html.select_one('script#indexjs').attrs.get('acct_id'), '3')
+            err, acct = await UserService.inst.info_acct(3)
+            self.assertIsNone(err)
+            self.assertEqual(acct.acct_type, UserConst.ACCTTYPE_KERNEL)

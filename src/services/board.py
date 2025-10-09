@@ -1,5 +1,3 @@
-import datetime
-
 class BoardConst:
     STATUS_ONLINE = 0
     STATUS_HIDDEN = 1
@@ -43,8 +41,8 @@ class BoardService:
             'status': status,
             'pro_list': pro_list,
             'acct_list': acct_list,
-            'start': start.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8))),
-            'end': end.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8))),
+            'start': start,
+            'end': end,
         }
 
         return None, meta

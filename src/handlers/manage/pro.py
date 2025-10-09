@@ -838,9 +838,9 @@ class ManageProHandler(RequestHandler):
                 config.rate_precision = rate_precision
                 await ProService.inst.update_pro_config(pro_id, config)
                 await LogService.inst.add_log(
-                    f"{self.acct.name} has sent a request to update the problem #{pro_id}", 'manage.pro.update.judge',
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id} judge config", 'manage.pro.update.judge',
                     {
-
+                        # TODO: add missing parameter
                     }
                 )
                 if err:
@@ -920,7 +920,7 @@ class ManageProHandler(RequestHandler):
                 await ProService.inst.update_pro_config(pro_id, pro.config)
 
                 await LogService.inst.add_log(
-                    f"{self.acct.name} has sent a request to update the problem #{pro_id}",
+                    f"{self.acct.name} has sent a request to update the problem #{pro_id} limit config",
                     'manage.pro.update.limit',
                     {
                         'limits': {
@@ -977,9 +977,10 @@ class ManageProHandler(RequestHandler):
 
             # TODO: send notify to user
             async def _rechal(rechals):
+                _, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
                 for chal_id, compiler_type in rechals:
                     _, _ = await ChalService.inst.reset_chal(chal_id)
-                    _, _ = await ChalService.inst.emit_chal(chal_id, pro_id, compiler_type, ChalConst.NORMAL_REJUDGE_PRI, skip_nonac=False)
+                    _, _ = await ChalService.inst.emit_chal(chal_id, pro.config, compiler_type, ChalConst.NORMAL_REJUDGE_PRI, skip_nonac=False)
 
             await asyncio.create_task(_rechal(rechals=result))
 

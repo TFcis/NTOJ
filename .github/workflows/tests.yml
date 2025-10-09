@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  e2etest:
+  tests:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
@@ -49,19 +49,31 @@ jobs:
           sudo pip3 install tornado cffi --break-system-packages
           sudo python3 server.py > output.log 2>&1 &
 
-      - name: Run e2e test
+      - name: Run Unit Test
         run: |
           cd src
-          chmod +x runtests.sh
-          ./runtests.sh
+          chmod +x rununittest.sh
+          ./rununittest.sh
+
+      - name: Upload Unit Test Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-coverage-report
+          path: src/htmlcov
+
+      - name: Run Integrated Test
+        run: |
+          cd src
+          chmod +x runintegratedtest.sh
+          ./runintegratedtest.sh
 
       - name: Output judge log
         run: |
           cd $HOME/NTOJ-Judge-Rewrite/src
           cat output.log
 
-      - name: Upload Coverage Report
+      - name: Upload Integrated Test Coverage Report
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
+          name: integrated-test-coverage-report
           path: src/htmlcov

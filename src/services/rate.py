@@ -167,7 +167,7 @@ class RateService:
 
         return None, rate_data
 
-    async def get_pro_topcoder(self, pro_id: int):
+    async def get_pro_topcoder(self, pro_id: int) -> tuple[None, int | None]:
         """
         Get the top coder for a given problem ID based on challenge performance.
 
@@ -187,9 +187,9 @@ class RateService:
             pro_id (int): The problem ID to retrieve topcoder for.
 
         Returns:
-            Tuple[None, Optional[dict]]: A tuple where the first element is always None (reserved for Error),
+            Tuple[None, Optional[int]]: A tuple where the first element is always None (reserved for Error),
             and the second element is either:
-                - A dict containing the topcoder's `acct_id`, `name`, and `motto`, if found.
+                - topcoder account id.
                 - None, if no valid submission was found.
         """
 
@@ -197,7 +197,7 @@ class RateService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     f'''
-                    SELECT temp2.acct_id, name, motto
+                    SELECT temp2.acct_id
                     FROM (
                         SELECT *
                         FROM (
@@ -232,8 +232,7 @@ class RateService:
             if len(result) == 0:
                 topcoder = None
             else:
-                result = result[0]
-                topcoder = {**result}
+                topcoder = result[0]['acct_id']
             await self.rs.hset('pro_topcoder', str(pro_id), packb(topcoder))
             return None, topcoder
         else:
