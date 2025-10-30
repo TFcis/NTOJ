@@ -79,11 +79,11 @@ class ProsetHandler(RequestHandler):
             if search_name and pro.name.lower().find(search_name) == -1:
                 continue
 
-            if search_tags and pro.tags.lower().find(search_tags) == -1:
-                continue
-
             if (self.acct.is_guest()) or (not self.acct.is_kernel() and pro_state != ChalConst.STATE_AC):
                 pro.tags = ''
+            
+            if search_tags and pro.tags.lower().find(search_tags) == -1:
+                continue
 
             rate = None
             if order is not None:
