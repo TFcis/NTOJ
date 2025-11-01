@@ -130,7 +130,7 @@
                 {% for chunk in prolist %}
                     <tr>
                     {% for cnt, pro in enumerate(chunk, start=1) %}
-                        {% if pro['state'] == ChalConst.STATE_NOTSTARTED %}
+                        {% if pro['state'] == ChalConst.STATE_NOTSTARTED or pro['state'] is None %}
                             <td class="_state"><a class="_state-4" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
                         {% elif pro['state'] == ChalConst.STATE_AC %}
                             <td class="_state"><a class="_state-1" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
