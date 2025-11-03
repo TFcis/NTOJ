@@ -6,11 +6,14 @@ cp config-tmp.py config.py
 rm config-tmp.py
 cp config.py scripts/
 
-if PGPASSWORD=${DB_PASSWORD} psql -U ntoj -d ntoj -h db -tAc "SELECT 1 FROM pg_database WHERE datname='ntoj'" | grep -q 1; then
+until pg_isready -h db -p 5432; do
+  echo "Postgres is unavailable - sleeping"
+  sleep 2
+done
+
+if PGPASSWORD=${DB_PASSWORD} psql -U ntoj -d ntoj -h db -tAc "SELECT 1 FROM information_schema.tables WHERE table_name='challenge';" | grep -q 1; then
     echo "exists"
 else
-    PGPASSWORD=${DB_PASSWORD} psql -U ntoj -d ntoj -h db -c 'SELECT db_version FROM '
-
     sed -i "s/db_username/ntoj/g" ./scripts/oj.sql
     sed -i "s/db_name/ntoj/g" ./scripts/oj.sql
 
