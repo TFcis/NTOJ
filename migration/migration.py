@@ -11,9 +11,9 @@ from redis import asyncio as aioredis
 
 async def main():
     db_conn = await asyncpg.connect(
-        database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost'
+        database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host=config.DBHOST_OJ,
     )
-    redis_conn = await aioredis.Redis(host='localhost', port=6379, db=config.REDIS_DB)
+    redis_conn = await aioredis.Redis(host=config.REDIS_HOST, port=6379, db=config.REDIS_DB)
 
     db_version = None
     result = await db_conn.fetch(

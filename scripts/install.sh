@@ -14,8 +14,16 @@ if [ -z $REDIS_DB ]; then
 	REDIS_DB=1
 fi
 
+if [ -z $REDIS_HOST ]; then
+    REDIS_HOST="localhost"
+fi
+
 if [ -z $PORT ]; then
 	PORT=5500
+fi
+
+if [ -z $DBHOST_OJ ]; then
+    DBHOST_OJ="localhost"
 fi
 
 if [ -z $DB_NAME ]; then
@@ -58,6 +66,11 @@ if [ ! -d $INSTALL_DIR ]; then
     echo "$INSTALL_DIR does not exist."
     exit
 fi
+
+if [ -z $BASE_URL ]; then
+    BASE_URL="/"
+fi
+
 
 # Update and upgrade
 sudo apt update -y
@@ -143,6 +156,8 @@ import datetime
 TIMEZONE   = datetime.timezone(datetime.timedelta(hours=${TIMEDELTA}))
 PORT       = '${PORT}'
 REDIS_DB   = '${REDIS_DB}'
+REDIS_DB   = '${REDIS_HOST}'
+DBHOST_OJ  = '${DBHOST_OJ}'
 DBNAME_OJ  = '${DB_NAME}'
 DBUSER_OJ  = '${DB_USERNAME}'
 DBPW_OJ    = '${DB_PASSWORD}'
@@ -151,8 +166,8 @@ SITE_TITLE = '${SITE_TITLE}'
 can_see_code_user = [1]
 unlock_pwd = ${UNLOCK_PWD}
 WEB_PROBLEM_STATIC_FILE_DIRECTORY = '${INSTALL_DIR}/ntoj_web/oj/problem'
-JUDGE_SERVER_LIST = [
-]
+JUDGE_SERVER_LIST = []
+BASE_URL = '${BASE_URL}'
 EOF
 
 # Create default administrator account
