@@ -17,6 +17,16 @@ services:
         ADMIN_NAME: $ADMIN_NAME
         ADMIN_MAIL: $ADMIN_MAIL
         ADMIN_PASSWORD: $ADMIN_PASSWORD
+    develop:
+      watch:
+        - path: ./src/
+          action: sync+restart
+          target: /ntoj/
+          ignore:
+            - tmp/
+            - code/
+            - problem/
+            - tests/
     volumes:
       - /srv/ntoj/static:/ntoj/static
       - /srv/ntoj/problem:/ntoj/problem
