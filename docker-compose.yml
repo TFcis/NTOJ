@@ -78,7 +78,7 @@ services:
     networks:
       - judge_net
 
-    privileged: false
+    privileged: true
     logging: *default-logging
 
 networks:
