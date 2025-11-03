@@ -416,10 +416,6 @@ class ProService:
             os.mkdir(f"problem/{pro_id}/res")
             os.mkdir(f"problem/{pro_id}/http")
             os.mkdir(f"problem/{pro_id}/res/testdata")
-            os.symlink(
-                os.path.abspath(f"problem/{pro_id}/http"),
-                f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
-            )
 
         await self.rs.delete("prolist")
 
@@ -598,10 +594,6 @@ class ProService:
 
             try:
                 os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-                os.symlink(
-                    os.path.abspath(f"problem/{pro_id}/http"),
-                    f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
-                )
 
             except FileExistsError:
                 pass

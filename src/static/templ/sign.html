@@ -1,4 +1,11 @@
-<link rel="stylesheet" type="text/css" href="/oj/sign.css">
+<style>
+h3{color:#fcfaf2}
+#intro{height:691px;background-image:url('{{ url("/src/img/signin.png") }}');background-size:contain;background-repeat:no-repeat}
+#signin{margin-top:64px}
+#signup{margin-top:64px}
+#warning{display:none}#warning img{width:80%;height:auto;margin:0 auto 0 auto}
+#warning div.text{margin-top:16px;margin-left:108px}#warning div.text span{color:#ed784a}
+</style>
 
 <script id="signjs" type="text/javascript">
     function init() {
@@ -31,7 +38,7 @@
             let mail = j_signin.find('input.mail').val();
             let pw = j_signin.find('input.pw').val();
 
-            $.post('/oj/be/sign', {
+            $.post(`{{ url('/be/sign') }}`, {
                 'reqtype': 'signin',
                 'mail': mail,
                 'pw': pw,
@@ -41,7 +48,7 @@
 		            $('#signin div.print').print('Success, reloading...', true);
 
                     if (index.prev_url == null) {
-                        location.href = '/oj/info/';
+                        location.href = `{{ url('/info/') }}`;
                         return;
                     }
                     location.href = index.prev_url;
@@ -81,7 +88,7 @@
 		        return;
 	        }
 
-            $.post('/oj/be/sign', {
+            $.post(`{{ url('/be/sign') }}`, {
                 'reqtype': 'signup',
                 'mail': mail,
                 'pw': pw,
@@ -90,7 +97,7 @@
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Success, reloading...', index.DIALOG_TYPE.success);
-		            index.go('/oj/info/');
+		            index.go(`{{ url('/info/') }}`);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
@@ -147,7 +154,7 @@
         </form>
     </div>
     <div id="warning" class="g-lg-6 g-off-lg-3">
-        <img src="/oj/img/warning2.png"><img>
+        <img src="{{ url('/img/warning2.png') }}"><img>
         <div class="text">
         <span>你想不想要養我.....QAQ...??</span><br><br>
             <button class="btn btn-success confirm" style="margin-left:48px;">是</button>

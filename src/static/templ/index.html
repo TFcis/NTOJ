@@ -6,7 +6,7 @@
 
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
   <meta name="language" content="tw">
-  <link rel="stylesheet" href="/oj/index.css">
+  <link rel="stylesheet" href="{{ url('/src/index.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"
     integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg=="
     crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -18,10 +18,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
     integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="/oj/index.js"></script>
-  <script src="/oj/pack.js"></script>
+  <script src="{{ url('/src/index.js') }}"></script>
+  <script src="{{ url('/src/pack.js') }}"></script>
   <script type="module"> import pdfjsDist from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/+esm' </script>
-  <script src="/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML" async></script>
+  <script src="{{ url('/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML') }}" async></script>
   <script type="text/x-mathjax-config">
     MathJax.Hub.Config({
         jax: ['output/SVG'],
@@ -35,7 +35,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.7/purify.min.js" integrity="sha512-BdRNuI8/lsyxkKQVxK1lVtfZshggfXPAwEP+JAOJEKx6Y8SLfcBSRdaWyXQmMxo+wG180uFqXYGjGRL0mh4/Jw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js" integrity="sha512-iWbxiCA4l1WTD0rRctt/BfDEmDC5PiVqFc6c1Rhj/GKjuj6tqrjrikTw3Sypm/eEgMa7jSOS9ydmDlOtxJKlSQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script id="indexjs" type="text/javascript" acct_id="{{ user.acct_id }}" contest_id="{{ contest_id }}">
+    <script id="indexjs" type="text/javascript" acct_id="{{ user.acct_id }}" contest_id="{{ contest_id }}" base_url="{{ base_url }}">
     $(document).ready(function () {
       index.init();
       var j_index = $('#index-navlist');
@@ -58,7 +58,7 @@
         j_index.find('a.message').hide();
         inform_count = 0;
         on = false;
-        index.go('/oj/info/');
+        index.go(`{{ url('/info/') }}`);
       });
 
     {% if is_in_contest %}
@@ -139,9 +139,9 @@
   <nav class="navbar navbar-expand-lg">
     <div id="index-navlist" class="container-fluid">
       {% if is_in_contest %}
-        <a class="navbar-brand" href="/oj/contests/{{ contest_id }}/info/">NTOJ</a>
+        <a class="navbar-brand" href="{{ url(f'/contests/{ contest_id }/info/') }}">NTOJ</a>
       {% else %}
-        <a class="navbar-brand" href="/oj/info/">NTOJ</a>
+        <a class="navbar-brand" href="{{ url('/info/') }}">NTOJ</a>
       {% end %}
 
       <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
@@ -153,17 +153,17 @@
       <div class="navbar-collapse collapse" id="navbarSupportedContent">
         {% if is_in_contest %}
         <ul class="navbar-nav me-auto">
-          <li class="nav-item info"><a class="nav-link" href="/oj/contests/{{ contest_id  }}/info/">Info</a></li>
+          <li class="nav-item info"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/info/') }}">Info</a></li>
 
           {% if contest_manage or contest.is_start() %}
-            <li class="nav-item proset"><a class="nav-link" href="/oj/contests/{{ contest_id }}/proset/">ProblemSet</a></li>
-            <li class="nav-item chal"><a class="nav-link" href="/oj/contests/{{ contest_id }}/chal/">Challenges</a></li>
-            <li class="nav-item scoreboard"><a class="nav-link" href="/oj/contests/{{ contest_id }}/scoreboard/">Scoreboard</a></li>
+            <li class="nav-item proset"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/proset/') }}">ProblemSet</a></li>
+            <li class="nav-item chal"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/chal/') }}">Challenges</a></li>
+            <li class="nav-item scoreboard"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/scoreboard/') }}">Scoreboard</a></li>
           {% end %}
 
           {% if not contest_manage %}
             <li class="nav-item qa"></li>
-                <a class="nav-link position-relative" href="/oj/contests/{{ contest_id }}/qa/">
+                <a class="nav-link position-relative" href="{{ url(f'/contests/{ contest_id }/qa/') }}">
                     Q & A
                     <span
                         class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -178,7 +178,7 @@
 
           {% if contest_manage %}
             <li class="nav-item manage">
-                <a class="nav-link position-relative" href="/oj/contests/{{ contest_id }}/manage/">
+                <a class="nav-link position-relative" href="{{ url(f'/contests/{ contest_id }/manage/') }}">
                     Manage
                     <span
                         class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -194,41 +194,41 @@
         {% else %}
 
         <ul class="navbar-nav me-auto">
-          <li class="nav-item info"><a class="nav-link" href="/oj/info/">Info</a></li>
-          <li class="nav-item board"><a class="nav-link" href="/oj/board/">Board</a></li>
-          <li class="nav-item chal"><a class="nav-link" href="/oj/chal/">Challenges</a></li>
-          <li class="nav-item proset"><a class="nav-link" href="/oj/proset/">ProblemSet</a></li>
-          <li class="nav-item contests"><a class="nav-link" href="/oj/contests/">Contests</a></li>
-          <li class="nav-item users"><a class="nav-link" href="/oj/users/">Rank</a></li>
+          <li class="nav-item info"><a class="nav-link" href="{{ url('/info/') }}">Info</a></li>
+          <li class="nav-item board"><a class="nav-link" href="{{ url('/board/') }}">Board</a></li>
+          <li class="nav-item chal"><a class="nav-link" href="{{ url('/chal/') }}">Challenges</a></li>
+          <li class="nav-item proset"><a class="nav-link" href="{{ url('/proset/') }}">ProblemSet</a></li>
+          <li class="nav-item contests"><a class="nav-link" href="{{ url('/contests/') }}">Contests</a></li>
+          <li class="nav-item users"><a class="nav-link" href="{{ url('/users/') }}">Rank</a></li>
 
           {% if not user.is_kernel() %}
-          <li class="nav-item question"><a class="nav-link" href="/oj/question/">Question</a></li>
+          <li class="nav-item question"><a class="nav-link" href="{{ url('/question/') }}">Question</a></li>
           {% end %}
 
           {% if user.is_kernel() and ask_cnt > 0 %}
-          <li class="nav-item ask"><a class="nav-link" style="color: #e74c3c;" href="/oj/manage/question/">get {{
+          <li class="nav-item ask"><a class="nav-link" style="color: #e74c3c;" href="{{ url('/manage/question/') }}">get {{
               ask_cnt }} ask</a></li>
           {% end %}
 
           {% if not user.is_kernel() and reply %}
-          <li class="nav-item"><a class="nav-link" style="color: #e74c3c;" href="/oj/question/">get reply</a></li>
+          <li class="nav-item"><a class="nav-link" style="color: #e74c3c;" href="{{ url('/question/') }}">get reply</a></li>
           {% end %}
 
           <li><a class="nav-link" style="display: none;" href="" class="message"></a></li>
           <!-- <li><a class="nav-link" href="http://forum.tfcis.org/forum.php?mod=forumdisplay&fid=40" target="_new">Discuss</a></li> -->
           <li><a class="nav-link" href="https://github.com/TFcis/NTOJ/issues" target="_new">Make A Wish</a></li>
-          <li class="nav-item about"><a class="nav-link" href="/oj/about/">About</a></li>
-          <li class="dev-info"><a class="nav-link" href="/oj/dev-info/">DevInfo</a></li>
+          <li class="nav-item about"><a class="nav-link" href="{{ url('/about/') }}">About</a></li>
+          <li class="dev-info"><a class="nav-link" href="{{ url('/dev-info/') }}">DevInfo</a></li>
           {% if user.is_kernel() %}
-          <li class="nav-item manage"><a class="nav-link" href="/oj/manage/dash/">Manage</a></li>
+          <li class="nav-item manage"><a class="nav-link" href="{{ url('/manage/dash/') }}">Manage</a></li>
           {% end %}
         </ul>
         {% end %}
 
         <ul class="navbar-nav ms-auto">
-          <li class="nav-link sign" style="display: none;"><a href="/oj/sign/">Reg | Log</a></li>
+          <li class="nav-link sign" style="display: none;"><a href="{{ url('/sign/') }}">Reg | Log</a></li>
           <li class="nav-link leave" style="display: none;"><a href="#">Leave</a></li>
-          <a class="nav-link" href="/oj/acct/{{ user.acct_id }}/">{{ user.name }}</a>
+          <a class="nav-link" href="{{ url(f'/acct/{ user.acct_id }/') }}">{{ user.name }}</a>
         </ul>
       </div>
     </div>

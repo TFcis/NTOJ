@@ -9,7 +9,7 @@
 		j_form.find('button.submit').on('click', function(e) {
             var type = j_form.find('#type').val();
 
-            $.post('/oj/be/manage/acct/update', {
+            $.post(`{{ url('/be/manage/acct/update') }}`, {
                 'reqtype': 'update',
                 'acct_id': {{ acct.acct_id }},
                 'acct_type': type,
@@ -25,7 +25,7 @@
 		});
 
 		j_form.find('button.cancel').on('click', function(e) {
-		    index.go('/oj/manage/acct/');
+		    index.go(`{{ url('/manage/acct/') }}`);
 		});
     }
 </script>

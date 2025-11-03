@@ -1,6 +1,6 @@
 {% from services.chal import COMPILER_INFOS %}
 {% from utils.numeric import merge_list_to_str %}
-<link rel="stylesheet" type="text/css" href="/oj/pro.css">
+<link rel="stylesheet" type="text/css" href="{{ url('/src/pro.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf_viewer.min.css" integrity="sha512-8LkkqbXJPviYJENC5Z8qC2uKz27x0tNgrZbzsAzt7zkw0/2lXtSdrslVhfrkcR+6LRmxjZxlqniSyWXimoaH5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script type="text/x-mathjax-config">
     MathJax.Hub.Config({
@@ -13,11 +13,11 @@
     var pdf_url = '';
     var html_url = '';
     {% if contest %}
-        pdf_url = '/oj/contests/{{ contest.contest_id }}/pro/{{ pro.pro_id }}/cont.pdf';
-        html_url = '/oj/contests/{{ contest.contest_id }}/pro/{{ pro.pro_id }}/cont.html'
+        pdf_url = `{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/cont.pdf') }}`;
+        html_url = `{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/cont.html') }}`
     {% else %}
-        pdf_url = '/oj/pro/{{ pro.pro_id }}/cont.pdf';
-        html_url = '/oj/pro/{{ pro.pro_id }}/cont.html';
+        pdf_url = `{{ url(f'/pro/{ pro.pro_id }/cont.pdf') }}`;
+        html_url = `{{ url(f'/pro/{ pro.pro_id }/cont.html') }}`;
     {% end %}
 
     function init() {
@@ -34,7 +34,7 @@
             if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1 || tags.length == 0) {
                 // valid
                 $('#tags-invalid').hide();
-                $.post('/oj/be/set-tags', {
+                $.post(`{{ url('/be/set-tags') }}`, {
                     'pro_id': {{ pro.pro_id }},
                     'tags': tags,
                 }, function() {
@@ -72,6 +72,7 @@
 
         function _load_html() {
             scriptTag = document.createElement('script');
+            // TODO: docker
             scriptTag.src = 'https://toj.tfcis.org/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
             document.head.appendChild(scriptTag);
 
@@ -156,9 +157,9 @@
         <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
         {% if can_submit and pro.allow_submit %}
             {% if contest and not contest.is_end() %}
-                <a class="btn btn-primary btn-lg my-lg-1" href="/oj/contests/{{ contest.contest_id }}/submit/{{ pro.pro_id }}/">Submit</a><br />
+                <a class="btn btn-primary btn-lg my-lg-1" href="{{ url(f'/contests/{ contest.contest_id }/submit/{ pro.pro_id }/') }}">Submit</a><br />
             {% else %}
-                <a class="btn btn-primary btn-lg my-lg-1" href="/oj/submit/{{ pro.pro_id }}/">Submit</a><br />
+                <a class="btn btn-primary btn-lg my-lg-1" href="{{ url(f'/submit/{ pro.pro_id }/') }}">Submit</a><br />
             {% end %}
         {% else %}
             <a class="btn btn-warning btn-lg my-lg-1">Cannot Submit</a><br />
@@ -166,11 +167,11 @@
 
         <div class="my-lg-1">
             {% if contest %}
-                <a class="btn btn-success" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro.pro_id }}&acctid={{ user.acct_id }}">My Status</a>
-                <a class="btn btn-secondary" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro.pro_id }}">Status</a>
+                <a class="btn btn-success" href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }&acctid={ user.acct_id }') }}">My Status</a>
+                <a class="btn btn-secondary" href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }') }}">Status</a>
             {% else %}
-                <a class="btn btn-success" href="/oj/rank/{{ pro.pro_id }}/">&nbsp;Rank&nbsp;</a>
-                <a class="btn btn-secondary" href="/oj/chal/?proid={{ pro.pro_id }}">Status</a>
+                <a class="btn btn-success" href="{{ url(f'/rank/{ pro.pro_id }/') }}">&nbsp;Rank&nbsp;</a>
+                <a class="btn btn-secondary" href="{{ url(f'/chal/?proid={ pro.pro_id }') }}">Status</a>
             {% end %}
 
         </div>
@@ -202,7 +203,7 @@
                         {% end %}
                         <img class="card-photo" width="100" height="100" src="{{ topcoder.photo }}" />
                         <div class="card-text-group">
-                            <h5 class="card-title"><a href="/oj/acct/{{ topcoder.acct_id }}/">{{ topcoder.name }}</a></h5>
+                            <h5 class="card-title"><a href="{{ url(f'/acct/{ topcoder.acct_id }/') }}">{{ topcoder.name }}</a></h5>
                             <p class="card-text">{{ topcoder.motto }}</p>
                         </div>
                     </div>
@@ -291,7 +292,7 @@
                 </tbody>
             </table>
             {% if user.is_kernel() %}
-                <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro.pro_id}}">Manage</a>
+                <a class="btn btn-warning" href="{{ url(f'/manage/pro/update/?proid={ pro.pro_id }') }}">Manage</a>
             {% end %}
         </div>
     </div>

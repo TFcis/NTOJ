@@ -1,3 +1,6 @@
+import os
+import tornado.web
+
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.chal import ChalConst
 from services.judge import JudgeServerClusterService
@@ -81,7 +84,7 @@ class ProsetHandler(RequestHandler):
 
             if (self.acct.is_guest()) or (not self.acct.is_kernel() and pro_state != ChalConst.STATE_AC):
                 pro.tags = ''
-            
+
             if search_tags and pro.tags.lower().find(search_tags) == -1:
                 continue
 
@@ -242,7 +245,7 @@ class ProsetHandler(RequestHandler):
             self.error(('S', ''))
 
 
-class ProStaticHandler(RequestHandler):
+class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
     @reqenv
     async def get(self, pro_id: int, path: str):
         pro_id = int(pro_id)
@@ -277,7 +280,19 @@ class ProStaticHandler(RequestHandler):
             else:
                 self.set_header('Content-Disposition', 'inline')
 
-        self.set_header('X-Accel-Redirect', f'/oj/problem/{pro_id}/{path}')
+        if not self._is_file_access_safe(f'problem/{pro_id}/http/', path):
+            return self.error(PERMISSION_DENIED_ERROR)
+
+        await super().get(f'{pro_id}/http/{path}')
+
+    def _is_file_access_safe(self, basedir, filename):
+        absolute_basepath = os.path.abspath(basedir)
+        absolute_filepath = os.path.abspath(os.path.join(basedir, filename))
+        if os.path.commonpath([absolute_basepath]) != os.path.commonpath([absolute_basepath, absolute_filepath]):
+            return False
+        if os.path.exists(absolute_filepath):
+            return os.path.isfile(absolute_filepath) and not os.path.islink(absolute_filepath)
+        return True
 
 
 class ProHandler(RequestHandler):

@@ -15,7 +15,7 @@
             }
 
             function _update(pack_token) {
-                $.post('/oj/be/manage/pro/add', {
+                $.post(`{{ url('/be/manage/pro/add') }}`, {
                     'reqtype': 'addpro',
                     'name': name,
                     'status': status,
@@ -25,7 +25,7 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
                         index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
-                        index.go(`/oj/manage/pro/update/?proid=${res.data}`);
+                        index.go(`{{ url('/manage/pro/update/?proid=${res.data}') }}`);
                     } else {
                         index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                     }
@@ -56,7 +56,7 @@
 	    });
 
 	    j_form.find('#cancel').on('click', function(e) {
-	        index.go('/oj/manage/pro/');
+	        index.go(`{{ url('/manage/pro/') }}`);
 	    });
 
         j_form.find("#mode").on('change', function(e) {

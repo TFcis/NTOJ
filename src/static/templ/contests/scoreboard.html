@@ -52,7 +52,7 @@ font-weight: bolder;
 
 <script>
     var contest_id = '{{ contest.contest_id }}';
-    var post_url = `/oj/be/contests/${contest_id}/scoreboard`;
+    var post_url = `{{ url('/be/contests/${contest_id}/scoreboard') }}`;
     var contest_start = new Date("{{ contest.contest_start.replace(tzinfo=datetime.UTC) }}");
     var contest_end = new Date("{{ contest.contest_end.replace(tzinfo=datetime.UTC) }}");
     var contest_length = parseInt((contest_end - contest_start) / 1000);
@@ -282,7 +282,7 @@ font-weight: bolder;
 
                     each_problems_score_html += `
                     <td class="${score_color_class_html}">
-                        <p class=""><a href="/oj/contests/${contest_id}/chal/${score.chal_id}/">${score.score}</a></p>
+                        <p class=""><a href="{{ url('/contests/${contest_id}/chal/${score.chal_id}/') }}">${score.score}</a></p>
                         <p class="text-muted">${score.timestamp}</p>
                     </td>
                     `;
@@ -296,7 +296,7 @@ font-weight: bolder;
             each_ranks_html += `
                 <tr>
                     <td>${cur_rank}</td>
-                    <td><a href="/oj/acct/${scores.acct_id}/">${scores.name}</a></td>
+                    <td><a href="{{ url('/acct/${scores.acct_id}/') }}">${scores.name}</a></td>
                     ${each_problems_score_html}
                     <td>
                         <p class="">${scores.total_score}</p>
@@ -314,7 +314,7 @@ font-weight: bolder;
                         <th scope="col">Username</th>
                         {% for idx, pro_id in enumerate(contest.pro_list) %}
                         <th scope="col">
-                            <a class="" href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro_id }}/">{{ pro_idx_to_pro_alphabet(idx) }}</a>
+                            <a class="" href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro_id }/') }}">{{ pro_idx_to_pro_alphabet(idx) }}</a>
                         </th>
                         {% end %}
                         <th scope="col">Total</th>

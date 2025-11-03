@@ -10,13 +10,17 @@ import tornado.web
 import tornado.websocket
 from redis import asyncio as aioredis
 
+import config
 from services.contests import ContestService, Contest
 from services.user import UserService, Account
 import utils.htmlgen
 
+base_url = config.BASE_URL.removesuffix('/')
+
 TEMPLATE_NAMESPACE = {
     'set_page_title': utils.htmlgen.set_page_title,
     'markdown_escape': utils.htmlgen.markdown_escape,
+    'url': lambda path: base_url + path,
 }
 
 class RequestHandler(tornado.web.RequestHandler):
@@ -27,6 +31,7 @@ class RequestHandler(tornado.web.RequestHandler):
 
         self.acct: Account = None
         self.contest: Contest = None
+        self.base_url = base_url
 
         super().__init__(*args, **kwargs)
 
@@ -51,6 +56,7 @@ class RequestHandler(tornado.web.RequestHandler):
                     return json.JSONEncoder.default(self, o)
 
         kwargs['user'] = self.acct
+        kwargs['base_url'] = self.base_url
 
         if self.res_json is True:
             self.finish(json.dumps(kwargs, cls=_encoder))
@@ -124,11 +130,11 @@ def reqenv(func):
 
     return wrap
 
-GOTO_SIGN="""
+GOTO_SIGN=f"""
 <script type="text/javascript" id="contjs">
-function init() {
-    index.go('/oj/sign/');
-}
+function init() {{
+    index.go('{base_url}/sign');
+}}
 </script>
 """
 

@@ -18,7 +18,7 @@
                 return;
             }
 
-            $.post('/oj/be/contests/{{ contest.contest_id }}/qa', {
+            $.post(`{{ url(f'/be/contests/{ contest.contest_id }/qa') }}`, {
                 'reqtype': 'ask',
                 'subject': subject,
                 'content': content,

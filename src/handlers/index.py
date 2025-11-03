@@ -1,5 +1,3 @@
-import msgpack
-
 from handlers.base import RequestHandler, reqenv
 from services.contests import ContestService, UserStatus
 from services.ques import QuestionService
@@ -7,6 +5,10 @@ from services.ques import QuestionService
 class IndexHandler(RequestHandler):
     @reqenv
     async def get(self, page: str):
+        if self.request.headers.get('req-by-frontend'):
+            await self.render('404')
+            return
+
         is_in_contest = False
         contest_manage = False
         contest = None

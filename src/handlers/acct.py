@@ -5,6 +5,7 @@ import hashlib
 
 from msgpack import packb, unpackb
 
+import config
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
 from services.pro import ProClassService, ProClassConst
@@ -14,6 +15,10 @@ from services.chal import ChalConst
 from utils.numeric import parse_str_to_list
 
 PERMISSION_DENIED_ERROR = (('Eacces', 'Permission denied'))
+
+base_url = config.BASE_URL.removesuffix("/")
+if base_url == "":
+    base_url = "/"
 
 class AcctHandler(RequestHandler):
     @reqenv
@@ -304,7 +309,7 @@ class SignHandler(RequestHandler):
                 "user-agent": self.request.headers.get('User-Agent', ''),
             }))
             await self.rs.expire(f'account_session@{acct_id}', 30 * 24 * 60 * 60)
-            self.set_cookie('id', session_key, path='/oj', httponly=True, expires_days=30)
+            self.set_cookie('id', session_key, path=base_url, httponly=True, expires_days=30)
             self.error(('S', ''))
 
         elif reqtype == 'signup':
@@ -323,7 +328,7 @@ class SignHandler(RequestHandler):
                 "user-agent": self.request.headers.get('User-Agent', ''),
             }))
             await self.rs.expire(f'account_session@{acct_id}', 30 * 24 * 60 * 60)
-            self.set_cookie('id', session_key, path='/oj', httponly=True, expires_days=30)
+            self.set_cookie('id', session_key, path=base_url, httponly=True, expires_days=30)
             self.error(('S', ''))
 
         elif reqtype == 'signout':

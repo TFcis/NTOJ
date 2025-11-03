@@ -55,7 +55,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
 
             md5.update(data)
 
-        ws = await websocket_connect("ws://localhost:5501/pack")
+        ws = await websocket_connect("ws://localhost:5501/be/pack")
         await ws.write_message(
             json.dumps(
                 {
@@ -193,7 +193,7 @@ class BaseUrlSession(requests.Session):
         if "full_url" in kwargs:
             url = kwargs.pop("full_url")
         else:
-            url = f"http://localhost:5501/{url}"
+            url = f"http://localhost:5501/be/{url}"
         return super().request(method, url, *args, **kwargs)
 
 

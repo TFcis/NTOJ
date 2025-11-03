@@ -84,7 +84,7 @@
                 chalmeta = judge_form.find('textarea.chalmeta').val();
             }
 
-            $.post('/oj/be/manage/pro/update', {
+            $.post(`{{ url('/be/manage/pro/update') }}`, {
                 'reqtype': 'updatejudge',
                 'pro_id': pro_id,
                 userprog_compile_args: userprog_compile_args,
@@ -114,7 +114,7 @@
 		    let status = general_form.find('select#status').val();
             let allow_submit = general_form.find('input#allow-submit').is(":checked");
 
-            $.post('/oj/be/manage/pro/update', {
+            $.post(`{{ url('/be/manage/pro/update') }}`, {
                 'reqtype': 'updategeneral',
                 'pro_id': pro_id,
                 'name': name,
@@ -134,7 +134,7 @@
 
         general_form.find('button.upload').on('click', function(e) {
             function _update(token) {
-                $.post('/oj/be/manage/pro/update', {
+                $.post(`{{ url('/be/manage/pro/update') }}`, {
                     'reqtype': 'uploadpackage',
                     'pro_id': pro_id,
                     'pack_token': token,
@@ -186,7 +186,7 @@
                 }
             });
 
-			$.post('/oj/be/manage/pro/update', {
+			$.post(`{{ url('/be/manage/pro/update') }}`, {
 			    'reqtype': 'updatelimit',
 			    'pro_id': pro_id,
                 'limits': JSON.stringify(limits),
@@ -202,7 +202,7 @@
 		});
 
         general_form.find('button.rechal').on('click', function (e) {
-			$.post('/oj/be/manage/pro', {
+			$.post(`{{ url('/be/manage/pro') }}`, {
 				'reqtype': 'rechal',
 				'pro_id': pro_id
 			}, function (res) {
@@ -217,7 +217,7 @@
 
 		general_form.find('button.rechalall').on('click', function (e) {
 			let pwd = prompt('server config password');
-			$.post('/oj/be/manage/pro', {
+			$.post(`{{ url('/be/manage/pro') }}`, {
 				'reqtype': 'rechalall',
 				'pro_id': pro_id,
 				'pwd': pwd,
@@ -419,8 +419,8 @@
 		<button type="button" class="btn btn-primary submit">Update</button>
     </form>
 
-	<a class="btn btn-primary" href="/oj/manage/pro/updatetests/?proid={{ pro.pro_id }}">Edit Subtask</a>
-	<a class="btn btn-primary" href="/oj/manage/pro/updatetestdata/?proid={{ pro.pro_id }}">Edit Testdata</a>
-    <a class="btn btn-primary" href="/oj/manage/pro/filemanager/?proid={{ pro.pro_id }}">File Manager</a>
+	<a class="btn btn-primary" href="{{ url(f'/manage/pro/updatetests/?proid={ pro.pro_id }') }}">Edit Subtask</a>
+	<a class="btn btn-primary" href="{{ url(f'/manage/pro/updatetestdata/?proid={ pro.pro_id }') }}">Edit Testdata</a>
+    <a class="btn btn-primary" href="{{ url(f'/manage/pro/filemanager/?proid={ pro.pro_id }') }}">File Manager</a>
 </div>
 {% end %}

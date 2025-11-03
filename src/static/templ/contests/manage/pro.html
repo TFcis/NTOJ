@@ -11,7 +11,7 @@
 				return;
 			}
 
-			$.post('/oj/be/contests/{{ contest.contest_id }}/manage/pro', {
+			$.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
 				reqtype: reqtype,
 				pro_id: pro_id,
 			}, res => {
@@ -41,7 +41,7 @@
         $("button.publicall").on('click', function(e) {
             document.querySelectorAll('button.public').forEach(el => {
                 let pro_id = $(el).attr('pro_id');
-                $.post('/oj/be/contests/{{ contest.contest_id }}/manage/pro', {
+                $.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
                     reqtype: "public",
                     pro_id: pro_id
                 });
@@ -103,7 +103,7 @@
 					<tbody>
 					{% for pro in pro_list %}
 						<tr>
-							<th scope="row"><a href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro.pro_id }}/">{{ pro.pro_id }}</a></th>
+							<th scope="row"><a href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }}</a></th>
 							<td>{{ pro.name }}</td>
 							<td>
 								<button class="btn btn-warning me-2 remove" pro_id="{{ pro.pro_id }}">Remove</button>

@@ -72,7 +72,6 @@ class ManageProFileManagerTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
             self.assertTrue(os.path.exists('problem/1/http/test'))
-            self.assertTrue(os.path.exists(f'{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/1/test'))
             self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/http/test').read())
 
             self.assertTable(

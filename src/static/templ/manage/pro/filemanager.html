@@ -1,8 +1,8 @@
 {% extends '../manage.html' %}
 {% block head %}
-<script src="/oj/third/prism.js"></script>
-<link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
-<link rel="stylesheet" href="/oj/third/prism.css">
+<script src="{{ url('/third/prism.js') }}"></script>
+<link rel="stylesheet" type="text/css" href="{{ url('/src/manage-pro.css') }}">
+<link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
 
 <script type="text/javascript" id="contjs">
 	function init() {
@@ -17,7 +17,7 @@
 				let filename = tr.attr('filename');
 
 				let file_content = '';
-				$.post('/oj/be/manage/pro/filemanager', {
+				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
 					'reqtype': 'preview',
 					'pro_id': pro_id,
                     'filename': filename,
@@ -40,7 +40,7 @@
             let filename = $("#preview-title").attr("filename");
             let path = $("#preview-title").attr("path");
 
-            window.open(`/oj/be/manage/pro/filemanager?proid=${pro_id}&download=1&filename=${filename}&path=${path}`);
+            window.open(`{{ url('/be/manage/pro/filemanager?proid=${pro_id}&download=1&filename=${filename}&path=${path}') }}`);
         });
 
 		document.querySelectorAll('button.rename-single-file').forEach(el => {
@@ -49,7 +49,7 @@
 				let old_filename = $(this).parents('tr').attr('filename');
                 let new_filename = prompt('New filename', old_filename);
 
-				$.post('/oj/be/manage/pro/filemanager', {
+				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
 					'reqtype': 'renamesinglefile',
 					'pro_id': pro_id,
                     'old_filename': old_filename,
@@ -78,7 +78,7 @@
                 let path = $(this).parents('.accordion-collapse').attr('path');
 				let filename = $(this).parents('tr').attr('filename');
 
-				$.post('/oj/be/manage/pro/filemanager', {
+				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
 					'reqtype': 'deletesinglefile',
 					'pro_id': pro_id,
                     'filename': filename,
@@ -116,7 +116,7 @@
         j_add_single_file.find("button.upload").on('click', function(e) {
             let path = j_add_single_file.attr('path');
 			function _update(token, filename) {
-				$.post('/oj/be/manage/pro/filemanager', {
+				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
 					'reqtype': 'addsinglefile',
 					'pack_token': token,
 					'pro_id': pro_id,
@@ -174,7 +174,7 @@
             let path = $(el).parents('.accordion-collapse').attr('path');
 
 			function _update(pack_token, filename) {
-				$.post('/oj/be/manage/pro/filemanager', {
+				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
 					'reqtype': 'updatesinglefile',
 					'pack_token': pack_token,
 					'pro_id': pro_id,

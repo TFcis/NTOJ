@@ -52,12 +52,12 @@ var index = new function() {
         curr_url = parts[0];
 
         parts = curr_url.split('/');
-        if (parts[4] == '') {
+        if (parts[parts.length - 2] == '') {
             page = 'info';
             req = '/info';
 
         } else {
-            page = parts[4];
+            page = parts[parts.length - 2];
             if (parts[parts.length - 1] !== "") {
                 let t = parts[parts.length - 1].match(/(.*)\?([^#]+)/);
                 let flag = false;
@@ -81,7 +81,7 @@ var index = new function() {
             }
 
             req = '';
-            for (i = 4 ; i < parts.length - 1; i++) {
+            for (i = 3 ; i < parts.length - 1; i++) {
                 req += '/' + parts[i];
             }
 
@@ -143,8 +143,14 @@ var index = new function() {
         });
 
         $(window).scrollTop(0);
-        $.get('/oj/be' + req, args, function(res) {
-            cont_defer.resolve(res);
+        $.ajax({
+            url: `${that.base_url}/be${req}`,
+            data: args,
+            method: "GET",
+            headers: {
+                'req-by-frontend': 'true'
+            },
+            success: function(res) { cont_defer.resolve(res); },
         });
     }
 
@@ -200,16 +206,18 @@ var index = new function() {
             update(false);
         });
 
+        acct_id = $('#indexjs').attr('acct_id');
+        contest_id = $('#indexjs').attr('contest_id');
+        that.base_url = $('#indexjs').attr('base_url');
+
         j_navlist.find('li.leave').on('click', function(e) {
-            $.post('/oj/be/sign', {
+            $.post(`${that.base_url}/be/sign`, {
                 'reqtype': 'signout',
             }, function(res) {
-                location.href = '/oj/sign/';
+                location.href = `${that.base_url}/sign/`;
             });
         });
 
-        acct_id = $('#indexjs').attr('acct_id');
-        contest_id = $('#indexjs').attr('contest_id');
         if (acct_id != '0') {
             that.acct_id = parseInt(acct_id);
             j_navlist.find('li.leave').show();
@@ -396,9 +404,9 @@ var index = new function() {
     that.get_ws = function(ws_url) {
         let ws_link = '';
         if (location.protocol !== 'https:') {
-            ws_link = `ws://${location.host}/oj/be/${ws_url}`;
+            ws_link = `ws://${location.host}${that.base_url}/be/${ws_url}`;
         } else {
-            ws_link = `wss://${location.host}/oj/be/${ws_url}`;
+            ws_link = `wss://${location.host}${that.base_url}/be/${ws_url}`;
         }
 	    return new WebSocket(ws_link);
     };

@@ -1,5 +1,5 @@
 {% from services.chal import COMPILER_INFOS %}
-<link rel="stylesheet" type="text/css" href="/oj/submit.css">
+<link rel="stylesheet" type="text/css" href="{{ url('/src/submit.css') }}">
 
 <script type="text/javascript">
     function init() {
@@ -23,9 +23,9 @@
 
             let url = '';
             if (contest_id !== "0") {
-                url = `/oj/be/contests/${contest_id}/submit`;
+                url = `{{ url('/be/contests/${contest_id}/submit') }}`;
             } else {
-                url = '/oj/be/submit';
+                url = `{{ url('/be/submit') }}`;
             }
 
             $.post(url, {
@@ -37,9 +37,9 @@
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     if (contest_id !== "0") {
-                        url = `/oj/contests/${contest_id}/chal/${res.data}/`;
+                        url = `{{ url('/contests/${contest_id}/chal/${res.data}/') }}`;
                     } else {
-                        url = `/oj/chal/${res.data}/`;
+                        url = `{{ url('/chal/${res.data}/') }}`;
                     }
 
                     index.go(url);

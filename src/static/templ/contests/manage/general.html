@@ -82,7 +82,7 @@
                 index.show_notify_dialog("Freeze Scoreboard Period必須是正整數(包含0)", index.DIALOG_TYPE.warning);
                 return;
             }
-            $.post("/oj/be/contests/{{ contest_id }}/manage/general", {
+            $.post(`{{ url(f'/be/contests/{ contest_id }/manage/general') }}`, {
                 reqtype: "update",
                 name: contest_name,
 

@@ -84,7 +84,7 @@
                                 <h5>Not Registered</h5>
                             {% end %}
                             {% if can_reg %}
-                                <a href="/oj/contests/{{ contest.contest_id }}/reg/" class="btn btn-primary">Go to Register</a>
+                                <a href="{{ url(f'/contests/{ contest.contest_id }/reg/') }}" class="btn btn-primary">Go to Register</a>
                             {% end %}
                         {% else %}
                             {% if contest.member_is_status(user, UserStatus.REQUESTED) %}
@@ -95,7 +95,7 @@
                                 <h5>Not Registered</h5>
                             {% end %}
                             {% if can_reg %}
-                                <a href="/oj/contests/{{ contest.contest_id }}/reg/" class="btn btn-primary">Go to Register</a>
+                                <a href="{{ url(f'/contests/{ contest.contest_id }/reg/') }}" class="btn btn-primary">Go to Register</a>
                             {% end %}
                         {% end %}
                     {% end %}

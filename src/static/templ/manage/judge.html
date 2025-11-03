@@ -16,7 +16,7 @@
     }
 
     function connect_sever(idx) {
-        $.post('/oj/be/manage/judge', {
+        $.post(`{{ url('/be/manage/judge') }}`, {
             'reqtype': 'connect',
             'index': idx,
         }, function(res) {
@@ -32,7 +32,7 @@
 
     function disconnect_server(idx) {
         pwd = prompt('Server Config Password');
-        $.post('/oj/be/manage/judge', {
+        $.post(`{{ url('/be/manage/judge') }}`, {
             'reqtype': 'disconnect',
             'index': idx,
             'pwd': pwd,
