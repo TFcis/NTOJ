@@ -74,7 +74,7 @@ services:
       - SYS_ADMIN
       - SYS_CHROOT
       - SYS_RESOURCE
-    cgroup: private
+    cgroup: host
     security_opt:
       - seccomp:unconfined
       - apparmor:unconfined
