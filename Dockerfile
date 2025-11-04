@@ -22,14 +22,15 @@ COPY pyproject.toml .
 
 RUN apt update \
     && apt upgrade -y \
-    && apt install curl dos2unix xxd xz-utils gcc postgresql-client libpq-dev -y \
+    && apt install curl dos2unix xz-utils gcc postgresql-client libpq-dev -y \
     && curl -sSL https://install.python-poetry.org | python3 - \
     && /root/.local/bin/poetry self add poetry-plugin-export \
     && /root/.local/bin/poetry export --without-hashes --output requirements.txt \
     && curl -sSL https://install.python-poetry.org | python3 - --uninstall \
     && pip install -r requirements.txt && rm requirements.txt \
-    && apt autoremove --purge -y gcc libpq-dev \
-    && apt clean -y
+    && apt autoremove --purge -y gcc libpq-dev curl \
+    && apt clean -y \
+    && rm -rf /var/lib/apt/lists/
 
 COPY src /ntoj
 COPY migration /ntoj/migration
@@ -39,6 +40,7 @@ WORKDIR /ntoj
 # TODO: WEB_PROBLEM_STATIC_FILE_DIRECTORY
 
 RUN UNLOCK_PASSWORD_PROCESSED=$(python3 scripts/get_unlock_pwd.py <<<${UNLOCK_PASSWORD}) \
+COOKIE_SEC=$(python3 -c "import sys; print(open('/dev/urandom','rb').read(32).hex())") \
 && rm -rf /ntoj/tests && mv /ntoj/static /ntoj/static-tmp \
 && echo -e "import datetime\n\
 TIMEZONE   = datetime.timezone(datetime.timedelta(hours=${TIMEDELTA}))\n\
@@ -49,7 +51,7 @@ DBNAME_OJ  = 'ntoj'\n\
 DBUSER_OJ  = 'ntoj'\n\
 DBHOST_OJ  = 'db'\n\
 DBPW_OJ    = '${DB_PASSWORD}'\n\
-COOKIE_SEC = '$(head -c 32 /dev/urandom | xxd -ps -c 128)'\n\
+COOKIE_SEC = '${COOKIE_SEC}'\n\
 SITE_TITLE = '${SITE_TITLE}'\n\
 can_see_code_user = [1]\n\
 unlock_pwd = ${UNLOCK_PASSWORD_PROCESSED}\n\
