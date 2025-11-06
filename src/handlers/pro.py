@@ -66,6 +66,7 @@ class ProsetHandler(RequestHandler):
         for pro in prolist:
             pro_id = pro.pro_id
             pro_state = acct_states.get(pro_id, {}).get('state')
+            ac_pro_cnt += pro_state == ChalConst.STATE_AC
 
             if show_only_online_pro and pro.status != ProConst.STATUS_ONLINE:
                 continue
