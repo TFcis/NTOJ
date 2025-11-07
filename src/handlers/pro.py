@@ -324,11 +324,9 @@ class ProHandler(RequestHandler):
                         ON "challenge"."chal_id" = "total_result"."chal_id"
                         AND "challenge"."acct_id" = $1
                         INNER JOIN "problem"
-                        ON "challenge"."pro_id" = $3
-                        WHERE "problem"."status" <= $2 AND "problem"."pro_id" = $3;
+                        ON "challenge"."pro_id" = $2;
                     ''',
                     self.acct.acct_id,
-                    ChalConst.STATE_AC,
                     pro.pro_id
                 )
 
