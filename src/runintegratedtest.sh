@@ -45,7 +45,7 @@ JUDGE_SERVER_LIST = [
 BASE_URL = '/'
 EOF
 else
-    cat <<EOF >config.py
+cat <<EOF >config.py
 import datetime
 TIMEZONE          = datetime.timezone(datetime.timedelta(hours=+8))
 PORT              = 5501
@@ -53,7 +53,7 @@ REDIS_DB          = 2
 REDIS_HOST        = 'cache'
 DBNAME_OJ         = 'ntoj_unittest_db_name'
 DBUSER_OJ         = 'ntoj_unittest_db_user'
-DBHOST_OJ         = 'db'
+DBHOST_OJ         = 'localhost'
 DBPW_OJ           = 'ntoj_unittest_db_password'
 COOKIE_SEC        = 'ntoj-unittest'
 SITE_TITLE        = 'ntoj-unittest'

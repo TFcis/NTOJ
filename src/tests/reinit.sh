@@ -14,7 +14,7 @@ DB_HOST=$2
 DB_USERNAME=$3
 DB_PASSWORD=$4
 
-if [[ -f docker-dev ]]; then
+if [ -f docker-dev ]; then
     PGPASSWORD=${DB_PASSWORD} dropdb -U ${DB_USERNAME} -h db ${DB_NAME}
     PGPASSWORD=ntoj dropuser -U ntoj -h db ${DB_USERNAME}
     PGPASSWORD=ntoj psql -U ntoj -h db <<<"CREATE ROLE ${DB_USERNAME} LOGIN PASSWORD '${DB_PASSWORD}';"
