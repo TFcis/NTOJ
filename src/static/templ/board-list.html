@@ -23,7 +23,7 @@
         {% end %}
 	    <tr>
 			<th scope="row">{{ board['board_id'] }}</th>
-            <td><a href="/oj/board/{{ board['board_id'] }}/">{{ board['name'] }}</a></td>
+            <td><a href="{{ url(f'/board/{ board['board_id'] }/') }}">{{ board['name'] }}</a></td>
             <td>
 				{% set delta = board['end'] - datetime.datetime.now(datetime.UTC) %}
 				{% set deltasecond = delta.days * 24 * 60 * 60 + delta.seconds %}

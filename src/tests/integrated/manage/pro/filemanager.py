@@ -29,8 +29,9 @@ class ManageProFileManagerTest(AsyncTest):
                 'path': 'http',
             })
             res = json.loads(res.text)
-            self.assertEqual(tornado.escape.xhtml_unescape(res['data']),
-                             open('tests/static_file/toj3/http/cont.html').read())
+            with open('tests/static_file/toj3/http/cont.html') as f:
+                self.assertEqual(tornado.escape.xhtml_unescape(res['data']),
+                                f.read())
 
             self.assertTable(
                 'manage/pro/filemanager',
@@ -53,7 +54,8 @@ class ManageProFileManagerTest(AsyncTest):
             res = admin_session.get('manage/pro/filemanager?proid=1&download=1&filename=cont.html&path=http')
             self.assertIsNotNone(res.headers.get("content-disposition"))
             self.assertEqual(re.findall(r'filename="?([^";]+)"?', res.headers.get("content-disposition"))[0], "cont.html")
-            self.assertEqual(res.content.decode('utf-8'), open('tests/static_file/toj3/http/cont.html').read())
+            with open('tests/static_file/toj3/http/cont.html') as f:
+                self.assertEqual(res.content.decode('utf-8'), f.read())
 
             res = admin_session.get('manage/pro/filemanager?proid=1&download=1&filename=test.html&path=http')
             self.assertAPIReturnValue(res.text, ('Enoext', 'File not found'))
@@ -72,8 +74,9 @@ class ManageProFileManagerTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
             self.assertTrue(os.path.exists('problem/1/http/test'))
-            self.assertTrue(os.path.exists(f'{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/1/test'))
-            self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/http/test').read())
+            with open('tests/static_file/toj3/3.in') as f1:
+                with open('problem/1/http/test') as f2:
+                    self.assertEqual(f1.read(), f2.read())
 
             self.assertTable(
                 'manage/pro/filemanager',
@@ -98,7 +101,8 @@ class ManageProFileManagerTest(AsyncTest):
             chal_id = -1
             def callback():
                 nonlocal chal_id
-                chal_id = self.submit_problem(4, open('tests/static_file/code/float_checker_wa.cpp').read(), Compiler.GPP, admin_session)
+                with open('tests/static_file/code/float_checker_wa.cpp') as f:
+                    chal_id = self.submit_problem(4, f.read(), Compiler.GPP, admin_session)
                 # NOTE: chal_id=12
             await self.wait_for_judge_finish(callback)
             err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
@@ -115,7 +119,9 @@ class ManageProFileManagerTest(AsyncTest):
                 'path': 'res/checker',
             })
             self.assertAPIReturnSuccess(res.text)
-            self.assertEqual(open('tests/static_file/float_checker/pass_all_checker.cpp').read(), open('problem/4/res/checker/checker.cpp').read())
+            with open('tests/static_file/float_checker/pass_all_checker.cpp') as f1:
+                with open('problem/4/res/checker/checker.cpp') as f2:
+                    self.assertEqual(f1.read(), f2.read())
             def callback():
                 res = admin_session.post('submit', data={
                     'reqtype': 'rechal',

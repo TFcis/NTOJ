@@ -1,21 +1,64 @@
 #!/bin/bash
 
-current_pwd=$(pwd)
+if [ -f docker-release ]; then
+    echo "Internal Error: "
+    echo "This script should not be run in docker-release environment."
+    exit 1
+fi
 
-mkdir -p /tmp/ntoj_test_web/oj/problem
+current_pwd=$(pwd)
+mv config.py config_dev.py
+
+if [ -f docker-dev ]; then
+    mkdir problem_bak code_bak
+    $(mv problem/* problem_bak)
+    $(mv code/* code_bak)
+else
+    mv problem problem_dev
+    mv code code_dev
+    mkdir problem code
+fi
+
+if [ -f docker-dev ]; then
+    cat <<EOF >config.py
+import datetime
+TIMEZONE          = datetime.timezone(datetime.timedelta(hours=+8))
+PORT              = 5501
+REDIS_DB          = 2
+REDIS_HOST        = 'cache'
+DBNAME_OJ         = 'ntoj_unittest_db_name'
+DBUSER_OJ         = 'ntoj_unittest_db_user'
+DBHOST_OJ         = 'db'
+DBPW_OJ           = 'ntoj_unittest_db_password'
+COOKIE_SEC        = 'ntoj-unittest'
+SITE_TITLE        = 'ntoj-unittest'
+can_see_code_user = [1]
+unlock_pwd        = b'vW50b2otdW5pdHRlc3Qtc2VydmVyLXBhc3N3b3Jk'
+JUDGE_SERVER_LIST = [
+    {
+        'name': 'NTOJ_Judge1',
+        'url': 'ws://judge:2502/judge',
+        'problems_path': '/problem',
+        'codes_path': '/code',
+    },
+]
+BASE_URL = '/'
+EOF
+else
 cat <<EOF >config.py
 import datetime
-TIMEZONE   = datetime.timezone(datetime.timedelta(hours=+8))
-DBNAME_OJ = 'ntoj_unittest_db_name'
-DBUSER_OJ = 'ntoj_unittest_db_user'
-DBPW_OJ = 'ntoj_unittest_db_password'
-REDIS_DB = 2
-PORT = 5501
-COOKIE_SEC = 'ntoj-unittest'
-SITE_TITLE = 'ntoj-unittest'
-lock_user_list = []
+TIMEZONE          = datetime.timezone(datetime.timedelta(hours=+8))
+PORT              = 5501
+REDIS_DB          = 2
+REDIS_HOST        = 'localhost'
+DBNAME_OJ         = 'ntoj_unittest_db_name'
+DBUSER_OJ         = 'ntoj_unittest_db_user'
+DBHOST_OJ         = 'localhost'
+DBPW_OJ           = 'ntoj_unittest_db_password'
+COOKIE_SEC        = 'ntoj-unittest'
+SITE_TITLE        = 'ntoj-unittest'
 can_see_code_user = [1]
-unlock_pwd = b'vW50b2otdW5pdHRlc3Qtc2VydmVyLXBhc3N3b3Jk'
+unlock_pwd        = b'vW50b2otdW5pdHRlc3Qtc2VydmVyLXBhc3N3b3Jk'
 JUDGE_SERVER_LIST = [
     {
         'name': 'NTOJ_Judge1',
@@ -24,9 +67,9 @@ JUDGE_SERVER_LIST = [
         'codes_path': '${current_pwd}/code',
     },
 ]
-
-WEB_PROBLEM_STATIC_FILE_DIRECTORY = '/tmp/ntoj_test_web/oj/problem'
+BASE_URL = '/'
 EOF
+fi
 
 cat <<EOF >.coveragerc
 [run]
@@ -48,7 +91,11 @@ EOF
 
 
 # run migration
-cp config.py ../migration/
+if [ -f docker-dev ]; then
+    cp config.py migration/
+else
+    cp config.py ../migration
+fi
 
 # remove old report record
 rm .coverage.*
@@ -61,9 +108,25 @@ $HOME/.local/bin/poetry run coverage html
 
 # cleanup
 rm config.py
+mv config_dev.py config.py
+
+if [ -f docker-dev ]; then
+    rm -rf problem/* code/*
+    $(mv problem_bak/* problem)
+    $(mv code_bak/* code)
+    rmdir problem_bak code_bak
+else
+    rm -rf problem code
+    mv problem_dev problem
+    mv code_dev code
+fi
+
 rm db-inited
-rm -rf /tmp/ntoj_test_web
-rm ../migration/config.py
+if [ -f docker-dev ]; then
+    rm migration/config.py
+else
+    rm ../migration/config.py
+fi
 
 if [ "$1" == "web" ]; then
     python3 -m http.server 8080

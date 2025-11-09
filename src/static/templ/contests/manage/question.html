@@ -35,7 +35,7 @@
                     }
                 }
 
-                $.post('/oj/be/contests/{{ contest_id }}/manage/question', {
+                $.post(`{{ url(f'/be/contests/{ contest_id }/manage/question') }}`, {
                     reqtype: 'reply',
                     content: answer,
                     question_id: question_id,
@@ -72,7 +72,7 @@
                             <div class="card-body">
                                 <h4 class="card-title">
                                     <span>{{ question['ask_subject'] }}</span>
-                                    <span class="float-end"><a href="/oj/acct/{{ question['ask_acct'].acct_id }}/">{{ question['ask_acct'].name }}</a></span>
+                                    <span class="float-end"><a href="{{ url(f'/acct/{ question['ask_acct'].acct_id }/') }}">{{ question['ask_acct'].name }}</a></span>
                                 </h4>
                                 <p class="card-text">{{ question['ask_content'] }}</p>
                                 <h6>Ask Time: {{ question['ask_timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</h6>

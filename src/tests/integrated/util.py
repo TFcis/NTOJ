@@ -12,15 +12,13 @@ from tornado.websocket import websocket_connect
 
 from services.chal import Compiler
 from services.pro import ProConst, ProService
-from runintegratedtest import testing_loop, db
-
 
 class AsyncTest(unittest.IsolatedAsyncioTestCase):
     def __init__(self, *args, **kwargs):
-        self.db = db
         super().__init__(*args, **kwargs)
 
     def run(self, result=None):
+        testing_loop = asyncio.get_event_loop()
         runner = asyncio.Runner(debug=True, loop_factory=lambda: testing_loop)
         self._asyncioRunner = runner
         try:
@@ -55,7 +53,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
 
             md5.update(data)
 
-        ws = await websocket_connect("ws://localhost:5501/pack")
+        ws = await websocket_connect("ws://localhost:5501/be/pack")
         await ws.write_message(
             json.dumps(
                 {
@@ -133,7 +131,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
     def signup(self, name: str, mail: str, pw: str):
         session = requests.Session()
         res = session.post(
-            "http://localhost:5501/sign",
+            "http://localhost:5501/be/sign",
             data={
                 "reqtype": "signup",
                 "name": name,
@@ -145,7 +143,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("id", session.cookies.get_dict())
 
         res = session.post(
-            "http://localhost:5501/sign",
+            "http://localhost:5501/be/sign",
             data={
                 "reqtype": "signout",
             },
@@ -154,7 +152,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("id", session.cookies.get_dict())
 
     async def wait_for_judge_finish(self, callback):
-        ws = await websocket_connect("ws://localhost:5501/manage/judgecntws")
+        ws = await websocket_connect("ws://localhost:5501/be/manage/judgecntws")
 
         callback()
 
@@ -193,7 +191,7 @@ class BaseUrlSession(requests.Session):
         if "full_url" in kwargs:
             url = kwargs.pop("full_url")
         else:
-            url = f"http://localhost:5501/{url}"
+            url = f"http://localhost:5501/be/{url}"
         return super().request(method, url, *args, **kwargs)
 
 

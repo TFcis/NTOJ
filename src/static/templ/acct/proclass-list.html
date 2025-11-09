@@ -8,7 +8,7 @@
 				<td scope="">Name</td>
                 <td>Type</td>
 				<td>
-                    <a class="btn btn-primary" href="/oj/acct/proclass/{{ user.acct_id }}/?page=add">&#x271a</a>
+                    <a class="btn btn-primary" href="{{ url(f'/acct/proclass/{ user.acct_id }/?page=add') }}">&#x271a</a>
 				</td>
 			</tr>
 		</thead>
@@ -26,7 +26,7 @@
                 {% end %}
                 <td>{{ t }}</td>
                 <td>
-                    <a class="btn btn-secondary" href="/oj/acct/proclass/{{ user.acct_id }}/?page=update&proclassid={{ proclass['proclass_id'] }}">&#x2699</a>
+                    <a class="btn btn-secondary" href="{{ url(f'/acct/proclass/{ user.acct_id }/?page=update&proclassid={ proclass['proclass_id'] }') }}">&#x2699</a>
                 </td>
             </tr>
 		{% end %}

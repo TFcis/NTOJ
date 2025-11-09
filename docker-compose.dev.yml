@@ -1,0 +1,80 @@
+services:
+  backend:
+    build:
+      context: ./
+      target: development
+    command: bash
+    stdin_open: true
+    tty: true
+    develop:
+      watch:
+        - path: ./src/
+          action: sync
+          target: /ntoj/
+          ignore:
+            - tmp/
+            - code/
+            - problem/
+    volumes:
+      - /srv/ntoj/static:/ntoj/static
+      - /srv/ntoj/problem:/ntoj/problem
+      - /srv/ntoj/code:/ntoj/code
+      # - /srv/ntoj/config.py:/ntoj/config.py
+    depends_on:
+      - db
+      - cache
+    networks:
+      - app
+      - judge_net
+    ports:
+      - "5500:5500"
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ntoj
+      POSTGRES_PASSWORD: ntoj
+      POSTGRES_DB: ntoj
+    volumes:
+      - /srv/ntoj/db:/var/lib/postgresql/18/docker
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ntoj -d ntoj"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  cache:
+    image: redis:8-alpine
+    volumes:
+      - /srv/ntoj/cache:/data
+    networks:
+      - app
+
+  judge:
+    build: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git
+    cap_add:
+      - MKNOD
+      - SYS_ADMIN
+      - SYS_CHROOT
+      - SYS_RESOURCE
+    cgroup: host
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+      - label:disable
+    tmpfs:
+      - /dev/shm:rw,exec,size=755,size=4G
+    volumes:
+      - /srv/ntoj/problem:/problem:ro
+      - /srv/ntoj/code:/code:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    networks:
+      - judge_net
+
+    privileged: true
+
+networks:
+  app:
+  judge_net:

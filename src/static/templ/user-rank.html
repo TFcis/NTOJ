@@ -56,7 +56,7 @@
                         {% set acct.photo = f"https://www.gravatar.com/avatar/{ acct.acct_id }?d=identicon&f=y&s=480;" %}
                     {% end %}
                     <td><img class="img-fluid" width="30" height="30" src="{{ acct.photo }}" /></td>
-                    <td><a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.name }}</a></td>
+                    <td><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.name }}</a></td>
                     <td>{{ acct.motto }}</td>
                     <td>{{ acct.rate_data['ac_pro_cnt'] }}</td>
                     <td>
@@ -67,9 +67,9 @@
                     {% end %}
 
                     (
-                    <a style="color: #0F0;" href="/oj/chal/?acctid={{ acct.acct_id }}&state=1">{{ acct.rate_data['ac_cnt'] }}</a>
+                    <a style="color: #0F0;" href="{{ url(f'/chal/?acctid={ acct.acct_id }&state=1') }}">{{ acct.rate_data['ac_cnt'] }}</a>
                     /
-                    <a style="color: #0F0" href="/oj/chal/?acctid={{ acct.acct_id }}">{{ acct.rate_data['all_cnt'] }}</a>
+                    <a style="color: #0F0" href="{{ url(f'/chal/?acctid={ acct.acct_id }') }}">{{ acct.rate_data['all_cnt'] }}</a>
                     )
                     </td>
                 </tr>

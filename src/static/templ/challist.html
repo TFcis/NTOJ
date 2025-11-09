@@ -1,7 +1,7 @@
 {% import config %}
 {% from services.chal import ChalConst, COMPILER_INFOS, Compiler %}
 
-<link rel="stylesheet" type="text/css" href="/oj/challist.css">
+<link rel="stylesheet" type="text/css" href="{{ url('/src/challist.css') }}">
 
 <script type="text/javascript">
     var newchal_ws, newstate_ws;
@@ -126,8 +126,14 @@
                 {% end %}
             ];
             $('#rechalall').on('click', function(e) {
+                {% if chal.contest_id == 0 %}
+                    let url = `{{ url('/be/submit') }}`;
+                {% else %}
+                    let url = `{{ url(f'/be/contests/{ chal.contest_id }/submit') }}`;
+                {% end %}
+
                 chalids.forEach(function(chalid) {
-                    $.post('/oj/be/submit', {
+                    $.post(url, {
                         'reqtype': 'rechal',
                         'chal_id': chalid,
                     });
@@ -218,14 +224,14 @@
             {% for chal in challist %}
                 <tr id="chal{{ chal.chal_id }}">
                     {% if chal.contest_id == 0 %}
-                        <td><a href="/oj/chal/{{ chal.chal_id }}/">{{ chal.chal_id }}</a></td>
-                        <td><a href="/oj/pro/{{ chal.pro_id }}/">{{ chal.pro_id }}</a></td>
+                        <td><a href="{{ url(f'/chal/{ chal.chal_id }/') }}">{{ chal.chal_id }}</a></td>
+                        <td><a href="{{ url(f'/pro/{ chal.pro_id }/') }}">{{ chal.pro_id }}</a></td>
                     {% else %}
-                        <td><a href="/oj/contests/{{ chal.contest_id }}/chal/{{ chal.chal_id }}/">{{ chal.chal_id }}</a></td>
-                        <td><a href="/oj/contests/{{ chal.contest_id }}/pro/{{ chal.pro_id }}/">{{ chal.pro_id }}</a></td>
+                        <td><a href="{{ url(f'/contests/{ chal.contest_id }/chal/{ chal.chal_id }/') }}">{{ chal.chal_id }}</a></td>
+                        <td><a href="{{ url(f'/contests/{ chal.contest_id }/pro/{ chal.pro_id }/') }}">{{ chal.pro_id }}</a></td>
                     {% end %}
 
-                    <td><a href="/oj/acct/{{ chal.acct_id }}/">{{ chal.acct_name }}</a></td>
+                    <td><a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a></td>
                     <td id="state" class="state-{{ chal.total_result.state }}">{{ ChalConst.STATE_LONG_STR[chal.total_result.state] }}</td>
                     <td id="time">{{ chal.total_result.time }}</td>
                     <td id="memory">{{ chal.total_result.memory }}</td>

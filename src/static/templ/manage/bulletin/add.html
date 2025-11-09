@@ -29,7 +29,7 @@
             let color = j_form.find("#color").val();
             let content = content_textarea.value;
 
-            $.post('/oj/be/manage/bulletin/add', {
+            $.post(`{{ url('/be/manage/bulletin/add') }}`, {
                 reqtype: 'add',
                 pinned: pinned,
                 title: title,
@@ -46,7 +46,7 @@
         });
 
         j_form.find("#cancel").on('click', (event) => {
-            index.go("/oj/manage/bulletin/")
+            index.go(`{{ url('/manage/bulletin/') }}`)
         });
     }
 </script>

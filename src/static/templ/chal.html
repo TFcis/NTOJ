@@ -1,7 +1,7 @@
 {% import config %}
 {% from services.chal import ChalConst, MessageType %}
-<script src="/oj/third/prism.js"></script>
-<link rel="stylesheet" href="/oj/third/prism.css">
+<script src="{{ url('/src/third/prism.js') }}"></script>
+<link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
 <style>
 /* from .table-sm */
 @media (max-width: 768px) {
@@ -132,9 +132,9 @@
         $('#rechal').on('click', function(e) {
             let url = '';
             {% if chal.contest_id == 0 %}
-                url = '/oj/be/submit';
+                url = `{{ url('/be/submit') }}`;
             {% else %}
-                url = '/oj/be/contests/{{ chal.contest_id }}/submit';
+                url = `{{ url(f'/be/contests/{ chal.contest_id }/submit') }}`;
             {% end %}
             $.post(url, {
                 'reqtype': 'rechal',
@@ -152,9 +152,9 @@
         $('#reject').on('click', function(e) {
             let url = '';
             {% if chal.contest_id == 0 %}
-                url = `/oj/be/chal/${chal_id}`;
+                url = `{{ url('/be/chal/${chal_id}') }}`;
             {% else %}
-                url = `/oj/be/contests/{{ chal.contest_id }}/chal/${chal_id}`;
+                url = `{{ url(f'/be/contests/{ chal.contest_id }/chal/${chal_id}') }}`;
             {% end %}
             let reason = prompt('Reject Reason: ');
             $.post(url, {
@@ -172,7 +172,7 @@
         {% end %}
 
         let code_txt = '';
-	    $.post('/oj/be/code', {
+	    $.post(`{{ url('/be/code') }}`, {
 	        'chal_id': chal_id,
 	    }, function(res) {
             res = JSON.parse(res);
@@ -187,7 +187,7 @@
 
         {% if user.acct_id == chal.acct_id %}
         $('#report_pro_button').on('click', function(e) {
-            index.go(`/oj/report/?chal_id=${chal_id}`);
+            index.go(`{{ url('/report/?chal_id=${chal_id}') }}`);
         });
 
         {% end %}
@@ -216,11 +216,11 @@
                     <td>Problem</td>
                     {% if chal.contest_id == 0 %}
                     <td>
-                        <a href="/oj/pro/{{ pro.pro_id }}/">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="/oj/chal/?proid={{ pro.pro_id }}">chals</a>)
+                        <a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="{{ url(f'/chal/?proid={ pro.pro_id }') }}">chals</a>)
                     </td>
                     {% else %}
                     <td>
-                        <a href="/oj/contests/{{ chal.contest_id }}/pro/{{ pro.pro_id }}/">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="/oj/contests/{{ chal.contest_id }}/chal/?proid={{ pro.pro_id }}">chals</a>)
+                        <a href="{{ url(f'/contests/{ chal.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="{{ url(f'/contests/{ chal.contest_id }/chal/?proid={ pro.pro_id }') }}">chals</a>)
                     </td>
                     {% end %}
                 </tr>
@@ -232,11 +232,11 @@
                     <td>Account</td>
                     {% if chal.contest_id == 0 %}
                     <td>
-                        <a href="/oj/acct/{{ chal.acct_id }}/">{{ chal.acct_name }}</a> (<a href="/oj/chal/?acctid={{ chal.acct_id }}">chals</a>)
+                        <a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a> (<a href="{{ url(f'/chal/?acctid={ chal.acct_id }') }}">chals</a>)
                     </td>
                     {% else %}
                     <td>
-                        <a href="/oj/acct/{{ chal.acct_id }}/">{{ chal.acct_name }}</a> (<a href="/oj/contests/{{ chal.contest_id }}/chal/?acctid={{ chal.acct_id }}">chals</a>)
+                        <a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a> (<a href="{{ url(f'/contests/{ chal.contest_id }/chal/?acctid={ chal.acct_id }') }}">chals</a>)
                     </td>
                     {% end %}
                 </tr>

@@ -1,8 +1,8 @@
 {% extends '../manage.html' %}
 {% block head %}
-<script src="/oj/third/prism.js"></script>
-<link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
-<link rel="stylesheet" href="/oj/third/prism.css">
+<script src="{{ url('/src/third/prism.js') }}"></script>
+<link rel="stylesheet" type="text/css" href="{{ url('/src/manage-pro.css') }}">
+<link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
 
 <script type="text/javascript" id="contjs">
 	function init() {
@@ -19,7 +19,7 @@
 					return;
 				}
 
-                $.post('/oj/be/manage/pro/updatetests', {
+                $.post(`{{ url('/be/manage/pro/updatetests') }}`, {
 					'reqtype': 'updaterate',
 					'pro_id': pro_id,
 					'subtask': subtask,
@@ -44,7 +44,7 @@
 
         $("button.add-subtask").on('click', function(e) {
             let rate = parseInt(prompt('New subtask rate: '));
-            $.post('/oj/be/manage/pro/updatetests', {
+            $.post(`{{ url('/be/manage/pro/updatetests') }}`, {
                 'reqtype': 'addsubtask',
                 'pro_id': pro_id,
                 'rate': rate,
@@ -68,7 +68,7 @@
         document.querySelectorAll('button.delete-subtask').forEach(el => {
             el.addEventListener('click', function(e) {
                 let subtask = $(this).parents('.accordion-collapse').attr('subtask');
-				$.post('/oj/be/manage/pro/updatetests', {
+				$.post(`{{ url('/be/manage/pro/updatetests') }}`, {
 					'reqtype': 'deletesubtask',
 					'pro_id': pro_id,
                     'subtask': subtask
@@ -99,7 +99,7 @@
                     return;
                 }
 
-				$.post('/oj/be/manage/pro/updatetests', {
+				$.post(`{{ url('/be/manage/pro/updatetests') }}`, {
 					'reqtype': 'settestdata',
 					'pro_id': pro_id,
                     'subtask': subtask,
@@ -131,7 +131,7 @@
                     return;
                 }
 
-				$.post('/oj/be/manage/pro/updatetests', {
+				$.post(`{{ url('/be/manage/pro/updatetests') }}`, {
 					'reqtype': 'setdepsubtasks',
 					'pro_id': pro_id,
                     'subtask': subtask,

@@ -27,7 +27,7 @@ class ManagePackTest(AsyncTest):
                 md5.update(data)
             file.seek(0, 0)
 
-            ws = await websocket_connect("ws://localhost:5501/pack")
+            ws = await websocket_connect("ws://localhost:5501/be/pack")
             await ws.write_message(
                 json.dumps(
                     {
@@ -52,6 +52,7 @@ class ManagePackTest(AsyncTest):
                 if msg is None:
                     break
 
+            file.close()
             ws.close()
             self.assertTrue(os.path.exists(f"tmp/{pack_token}"))
             os.remove(f"tmp/{pack_token}")
@@ -67,7 +68,7 @@ class ManagePackTest(AsyncTest):
             remain = filesize
             md5.update(b'123')
 
-            ws = await websocket_connect("ws://localhost:5501/pack")
+            ws = await websocket_connect("ws://localhost:5501/be/pack")
             await ws.write_message(
                 json.dumps(
                     {
@@ -92,6 +93,7 @@ class ManagePackTest(AsyncTest):
                 if msg is None:
                     break
 
+            file.close()
             ws.close()
             self.assertFalse(os.path.exists(f"tmp/{pack_token}"))
 
@@ -112,7 +114,7 @@ class ManagePackTest(AsyncTest):
                 md5.update(data)
             file.seek(0, 0)
 
-            ws = await websocket_connect("ws://localhost:5501/pack")
+            ws = await websocket_connect("ws://localhost:5501/be/pack")
             await ws.write_message(
                 json.dumps(
                     {
@@ -138,6 +140,7 @@ class ManagePackTest(AsyncTest):
                     break
                 break
 
+            file.close()
             ws.close()
             await asyncio.sleep(1)
             self.assertFalse(os.path.exists(f"tmp/{pack_token}"))

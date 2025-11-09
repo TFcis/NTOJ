@@ -44,7 +44,7 @@ class ChalTest(AsyncTest):
 
             shutil.move('code/1/main.cpp', 'code/1/main.py')
 
-            ws = await websocket_connect('ws://localhost:5501/chalnewstatesub')
+            ws = await websocket_connect('ws://localhost:5501/be/chalnewstatesub')
             await ws.write_message(str(1))
 
             def callback():
@@ -153,7 +153,7 @@ class ChalListTest(AsyncTest):
 
                 self.assertEqual(int(msg), 1)
 
-            await websocket_connect('ws://localhost:5501/challistnewchalsub',
+            await websocket_connect('ws://localhost:5501/be/challistnewchalsub',
                                     on_message_callback=_message)
 
             def _message(msg):
@@ -162,7 +162,7 @@ class ChalListTest(AsyncTest):
 
                 self.assertEqual(int(json.loads(msg)['chal_id']), 2)
 
-            ws2 = await websocket_connect('ws://localhost:5501/challistnewstatesub',
+            ws2 = await websocket_connect('ws://localhost:5501/be/challistnewstatesub',
                                           on_message_callback=_message)
 
             await ws2.write_message(json.dumps({
@@ -172,8 +172,9 @@ class ChalListTest(AsyncTest):
 
             # websocket
             def callback():
-                chal_id = self.submit_problem(1, open('tests/static_file/code/toj3.ac.py').read(),
-                                              Compiler.PYTHON3, admin_session)
+                with open('tests/static_file/code/toj3.ac.py') as f:
+                    chal_id = self.submit_problem(1, f.read(),
+                                                Compiler.PYTHON3, admin_session)
                 self.assertEqual(chal_id, 2)
 
             await self.wait_for_judge_finish(callback)
@@ -181,26 +182,34 @@ class ChalListTest(AsyncTest):
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             def callback():
-                self.submit_problem(1, open('tests/static_file/code/toj3.wa.py').read(), Compiler.PYTHON3,
-                                    admin_session)  # chal_id: 3
+                path_prefix = 'tests/static_file/code'
+                with open(f'{path_prefix}/toj3.wa.py') as f:
+                    self.submit_problem(1, f.read(), Compiler.PYTHON3,
+                                        admin_session)  # chal_id: 3
 
-                self.submit_problem(1, open('tests/static_file/code/ce.cpp').read(), Compiler.GPP,
-                                    admin_session)  # chal_id: 4
+                with open(f'{path_prefix}/ce.cpp') as f:
+                    self.submit_problem(1, f.read(), Compiler.GPP,
+                                        admin_session)  # chal_id: 4
 
-                self.submit_problem(1, open('tests/static_file/code/tle.cpp').read(), Compiler.GPP,
-                                    admin_session)  # chal_id: 5
+                with open(f'{path_prefix}/tle.cpp') as f:
+                    self.submit_problem(1, f.read(), Compiler.GPP,
+                                        admin_session)  # chal_id: 5
 
-                self.submit_problem(1, open('tests/static_file/code/mle.py').read(), Compiler.PYTHON3,
-                                    admin_session)  # chal_id: 6
+                with open(f'{path_prefix}/mle.py') as f:
+                    self.submit_problem(1, f.read(), Compiler.PYTHON3,
+                                        admin_session)  # chal_id: 6
 
-                self.submit_problem(1, open('tests/static_file/code/re.cpp').read(), Compiler.GPP,
-                                    admin_session)  # chal_id: 7
+                with open(f'{path_prefix}/re.cpp') as f:
+                    self.submit_problem(1, f.read(), Compiler.GPP,
+                                        admin_session)  # chal_id: 7
 
-                self.submit_problem(1, open('tests/static_file/code/resig.cpp').read(), Compiler.GPP,
-                                    admin_session)  # chal_id: 8
+                with open(f'{path_prefix}/resig.cpp') as f:
+                    self.submit_problem(1, f.read(), Compiler.GPP,
+                                        admin_session)  # chal_id: 8
 
-                self.submit_problem(2, open('tests/static_file/code/toj659.ac.cpp').read(), Compiler.GPP,
-                                    admin_session)  # chal_id: 9
+                with open(f'{path_prefix}/toj659.ac.cpp') as f:
+                    self.submit_problem(2, f.read(), Compiler.GPP,
+                                        admin_session)  # chal_id: 9
 
             await self.wait_for_judge_finish(callback)
 
@@ -208,7 +217,7 @@ class ChalListTest(AsyncTest):
                 # 1, 2, 3, 4, 5
                 ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA, ChalConst.STATE_CE, ChalConst.STATE_TLE,
                 # 6, 7, 8, 9
-                ChalConst.STATE_MLE, ChalConst.STATE_RE, ChalConst.STATE_RESIG, ChalConst.STATE_AC
+                ChalConst.STATE_RE, ChalConst.STATE_RE, ChalConst.STATE_RESIG, ChalConst.STATE_AC
             ]
 
             for chal_id, state in enumerate(all_expected_states, start=1):

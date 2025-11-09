@@ -16,7 +16,7 @@
 				<td scope="">Name</td>
                 <td>Type</td>
 				<td>
-                    <a class="btn btn-primary" href="/oj/manage/proclass/add/">&#x271a</a>
+                    <a class="btn btn-primary" href="{{ url('/manage/proclass/add/') }}">&#x271a</a>
 				</td>
 			</tr>
 		</thead>
@@ -34,7 +34,7 @@
                 {% end %}
                 <td>{{ t }}</td>
                 <td>
-                    <a class="btn btn-secondary" href="/oj/manage/proclass/update/?proclassid={{ proclass['proclass_id'] }}">&#x2699</a>
+                    <a class="btn btn-secondary" href="{{ url(f'/manage/proclass/update/?proclassid={ proclass['proclass_id'] }') }}">&#x2699</a>
                 </td>
             </tr>
 		{% end %}

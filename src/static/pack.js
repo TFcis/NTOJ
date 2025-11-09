@@ -6,7 +6,8 @@ var pack = new function() {
     that.get_token = function() {
 	    var defer = $.Deferred();
 
-	    $.post('/oj/be/manage/pack', {
+        let base_url = $('#indexjs').attr('base_url');
+	    $.post(`${base_url}/be/manage/pack`, {
 	        'reqtype':'gettoken'
 	    }, function(res) {
             res = JSON.parse(res);
@@ -21,10 +22,11 @@ var pack = new function() {
     };
     that.send = function(pack_token, file) {
         let ws_link = '';
+        let base_url = $('#indexjs').attr('base_url');
         if (location.protocol !== 'https:') {
-            ws_link = `ws://${location.host}/oj/be/pack`;
+            ws_link = `ws://${location.host}${base_url}/be/pack`;
         } else {
-            ws_link = `wss://${location.host}/oj/be/pack`;
+            ws_link = `wss://${location.host}${base_url}/be/pack`;
         }
         var ws = new WebSocket(ws_link);
         var defer = $.Deferred();

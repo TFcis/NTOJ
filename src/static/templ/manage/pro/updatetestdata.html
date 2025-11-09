@@ -1,8 +1,8 @@
 {% extends '../manage.html' %}
 {% block head %}
-<script src="/oj/third/prism.js"></script>
-<link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
-<link rel="stylesheet" href="/oj/third/prism.css">
+<script src="{{ url('/src/third/prism.js') }}"></script>
+<link rel="stylesheet" type="text/css" href="{{ url('/src/manage-pro.css') }}">
+<link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
 
 <script type="text/javascript" id="contjs">
 	function init() {
@@ -23,7 +23,7 @@
 				}
 
 				let file_content = '';
-				$.post('/oj/be/manage/pro/updatetestdata', {
+				$.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
 					'reqtype': 'preview',
 					'pro_id': pro_id,
                     'testdata_id': testdata_id,
@@ -46,14 +46,14 @@
             let testdata_id = $("#preview-title").attr("testdata_id");
             let type = $("#preview-title").attr("testdata_type");
 
-            window.open(`/oj/be/manage/pro/updatetestdata?proid=${pro_id}&download=1&testdata_id=${testdata_id}&type=${type}`);
+            window.open(`{{ url('/be/manage/pro/updatetestdata?proid=${pro_id}&download=1&testdata_id=${testdata_id}&type=${type}') }}`);
         });
 
 		document.querySelectorAll('button.delete-single-file').forEach(el => {
 			el.addEventListener('click', function (e) {
 				let testdata_id = $(this).parents('tr').attr('testdata_id');
 
-				$.post('/oj/be/manage/pro/updatetestdata', {
+				$.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
 					'reqtype': 'deletesinglefile',
 					'pro_id': pro_id,
                     'testdata_id': testdata_id,
@@ -90,7 +90,7 @@
 
         j_add_single_file.find("button.upload").on('click', function(e) {
 			function _update(input_pack_token, output_pack_token, filename) {
-				$.post('/oj/be/manage/pro/updatetestdata', {
+				$.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
 					'reqtype': 'addsinglefile',
 					'input_pack_token': input_pack_token,
 					'output_pack_token': output_pack_token,
@@ -164,7 +164,7 @@
 			let j_input = $(el).siblings('input');
 
             function _update(pack_token, testdata_id, group_idx) {
-				$.post('/oj/be/manage/pro/updatetestdata', {
+				$.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
                     'reqtype': 'updatesinglefile',
 					'pack_token': pack_token,
 					'pro_id': pro_id,

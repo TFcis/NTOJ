@@ -14,8 +14,16 @@ if [ -z $REDIS_DB ]; then
 	REDIS_DB=1
 fi
 
+if [ -z $REDIS_HOST ]; then
+    REDIS_HOST="localhost"
+fi
+
 if [ -z $PORT ]; then
 	PORT=5500
+fi
+
+if [ -z $DBHOST_OJ ]; then
+    DBHOST_OJ="localhost"
 fi
 
 if [ -z $DB_NAME ]; then
@@ -59,16 +67,19 @@ if [ ! -d $INSTALL_DIR ]; then
     exit
 fi
 
+if [ -z $BASE_URL ]; then
+    BASE_URL="/"
+fi
+
+
 # Update and upgrade
 sudo apt update -y
 sudo apt upgrade -y
 
 # Create Directory
 sudo mkdir -p ${INSTALL_DIR}/ntoj
-sudo mkdir -p ${INSTALL_DIR}/ntoj_web/oj/
 
 sudo chown $USER ${INSTALL_DIR}/ntoj
-sudo chown $USER ${INSTALL_DIR}/ntoj_web/oj/
 
 # Create log file and directory
 sudo mkdir -p /var/log/ntoj/
@@ -109,25 +120,11 @@ curl -sSL https://install.python-poetry.org | python3 -
 
 # NTOJ
 cp -r ../src/* ${INSTALL_DIR}/ntoj/
-cp -r ../src/static/* ${INSTALL_DIR}/ntoj_web/oj/
 cp ../pyproject.toml ${INSTALL_DIR}/ntoj/
 CURRENT_PWD=$(pwd)
 cd ${INSTALL_DIR}/ntoj/
 $HOME/.local/bin/poetry install
 cd $CURRENT_PWD
-
-# Install Nginx
-sudo apt -y install nginx
-sudo systemctl enable --now nginx.service
-
-## Replace nginx root directory path
-INSTALL_DIR_ESCAPE=$(echo ${INSTALL_DIR} | sed 's/[\/\$]/\\\//g')
-sed -i "s/INSTALL_DIR/${INSTALL_DIR_ESCAPE}/" ./ntoj.conf
-sed -i "s/PORT/${PORT}/" ./ntoj.conf
-sudo cp ./ntoj.conf /etc/nginx/sites-enabled/ntoj.conf
-sudo sed -i "s/www-data/root/" /etc/nginx/nginx.conf
-
-sudo nginx -s reload
 
 # Install Redis
 sudo apt -y install redis
@@ -143,6 +140,8 @@ import datetime
 TIMEZONE   = datetime.timezone(datetime.timedelta(hours=${TIMEDELTA}))
 PORT       = '${PORT}'
 REDIS_DB   = '${REDIS_DB}'
+REDIS_DB   = '${REDIS_HOST}'
+DBHOST_OJ  = '${DBHOST_OJ}'
 DBNAME_OJ  = '${DB_NAME}'
 DBUSER_OJ  = '${DB_USERNAME}'
 DBPW_OJ    = '${DB_PASSWORD}'
@@ -150,9 +149,8 @@ COOKIE_SEC = '${COOKIE_SEC}'
 SITE_TITLE = '${SITE_TITLE}'
 can_see_code_user = [1]
 unlock_pwd = ${UNLOCK_PWD}
-WEB_PROBLEM_STATIC_FILE_DIRECTORY = '${INSTALL_DIR}/ntoj_web/oj/problem'
-JUDGE_SERVER_LIST = [
-]
+JUDGE_SERVER_LIST = []
+BASE_URL = '${BASE_URL}'
 EOF
 
 # Create default administrator account

@@ -11,7 +11,7 @@
 				return;
 			}
 
-			$.post('/oj/be/contests/{{ contest_id }}/manage/acct', {
+			$.post(`{{ url(f'/be/contests/{ contest_id }/manage/acct') }}`, {
 				reqtype: reqtype,
 				acct_id: acct_id,
 				type: target_type,
@@ -89,7 +89,7 @@
 					<tbody>
 					{% for acct in acct_list %}
 						<tr>
-							<th scope="row"><a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.acct_id }}</a></th>
+							<th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
 							<td>{{ acct.name }}</td>
 							<td>
 								<button class="btn btn-primary me-2 remove normal" acct_id="{{ acct.acct_id }}">Remove</button>
@@ -140,7 +140,7 @@
 					<tbody>
 					{% for acct in admin_list %}
 						<tr>
-							<th scope="row"><a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.acct_id }}</a></th>
+							<th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
 							<td>{{ acct.name }}</td>
 							<td>
 								<button class="btn btn-primary me-2 remove admin" acct_id="{{ acct.acct_id }}">Remove</button>

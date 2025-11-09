@@ -109,18 +109,18 @@
                                 {{ round(((rate['ac_cnt'] / rate['all_cnt']) * 100), 1) }}%
                             {% end %}
                             (
-                            <a style="color: #0F0;" href="/oj/chal/?acctid={{ acct.acct_id }}&state=1">{{ rate['ac_cnt'] }}</a>
+                            <a style="color: #0F0;" href="{{ url(f'/chal/?acctid={ acct.acct_id }&state=1') }}">{{ rate['ac_cnt'] }}</a>
                             /
-                            <a style="color: #0F0;" href="/oj/chal/?acctid={{ acct.acct_id }}">{{ rate['all_cnt'] }}</a>
+                            <a style="color: #0F0;" href="{{ url(f'/chal/?acctid={ acct.acct_id }') }}">{{ rate['all_cnt'] }}</a>
                             )
                         </td>
                     </tr>
                 </tbody>
             </table>
             {% if acct.acct_id == user.acct_id %}
-                <a class="btn btn-primary" href="/oj/acctedit/{{ acct.acct_id }}/">Edit My Account</a>
+                <a class="btn btn-primary" href="{{ url(f'/acctedit/{ acct.acct_id }/') }}">Edit My Account</a>
             {% elif user.is_kernel() %}
-                <a class="btn btn-primary" href="/oj/acctedit/{{ acct.acct_id }}/">Edit Account Password</a>
+                <a class="btn btn-primary" href="{{ url(f'/acctedit/{ acct.acct_id }/') }}">Edit Account Password</a>
             {% end %}
         </form>
     </div>
@@ -131,13 +131,13 @@
                     <tr>
                     {% for cnt, pro in enumerate(chunk, start=1) %}
                         {% if pro['state'] == ChalConst.STATE_NOTSTARTED or pro['state'] is None %}
-                            <td class="_state"><a class="_state-4" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                            <td class="_state"><a class="_state-4" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
                         {% elif pro['state'] == ChalConst.STATE_AC %}
-                            <td class="_state"><a class="_state-1" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                            <td class="_state"><a class="_state-1" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
                         {% elif pro['state'] in [ChalConst.STATE_PC, ChalConst.STATE_WA] and pro['score'] > 0 %}
-                            <td class="_state"><a class="_state-2" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                            <td class="_state"><a class="_state-2" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
                         {% else %}
-                            <td class="_state"><a class="_state-3" href="/oj/pro/{{pro['pro_id']}}/">{{pro['pro_id']}}</a></td>
+                            <td class="_state"><a class="_state-3" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
                         {% end %}
                     {% end %}
                     </tr>

@@ -37,7 +37,8 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'testdata_id': 0,
                 'type': 'output',
             })
-            self.assertEqual(json.loads(res.text)['data'], open('tests/static_file/toj3/res/testdata/1.out').read())
+            with open('tests/static_file/toj3/res/testdata/1.out') as f:
+                self.assertEqual(json.loads(res.text)['data'], f.read())
 
             self.assertTable(
                 'manage/pro/updatetestdata',
@@ -59,7 +60,8 @@ class ManageProUpdateTestsTest(AsyncTest):
             res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=0&type=output')
             self.assertIsNotNone(res.headers.get("content-disposition"))
             self.assertEqual(re.findall(r'filename="?([^";]+)"?', res.headers.get("content-disposition"))[0], "1.out")
-            self.assertEqual(res.content.decode('utf-8'), open('tests/static_file/toj3/res/testdata/1.out').read())
+            with open('tests/static_file/toj3/res/testdata/1.out') as f:
+                self.assertEqual(res.content.decode('utf-8'), f.read())
 
             res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=123&type=output')
             self.assertAPIReturnValue(res.text, ('Enoext', 'Testdata not found'))
@@ -107,8 +109,12 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(config.testdatas[2].outputfile, '3.out')
             self.assertTrue(os.path.exists(f'problem/1/res/testdata/{config.testdatas[2].inputfile}'))
             self.assertTrue(os.path.exists(f'problem/1/res/testdata/{config.testdatas[2].outputfile}'))
-            self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/res/testdata/3.in').read())
-            self.assertEqual(open('tests/static_file/toj3/3.out').read(), open('problem/1/res/testdata/3.out').read())
+            with open('tests/static_file/toj3/3.in') as f1:
+                with open('problem/1/res/testdata/3.in') as f2:
+                    self.assertEqual(f1.read(), f2.read())
+            with open('tests/static_file/toj3/3.out') as f1:
+                with open('problem/1/res/testdata/3.out') as f2:
+                    self.assertEqual(f1.read(), f2.read())
 
             self.assertTable(
                 'manage/pro/updatetestdata',
@@ -160,7 +166,9 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'pack_token': pack_token,
             })
             self.assertAPIReturnSuccess(res.text)
-            self.assertEqual(open('tests/static_file/toj3/3.out.incorrect').read(), open('problem/1/res/testdata/3.out').read())
+            with open('tests/static_file/toj3/3.out.incorrect') as f1:
+                with open('problem/1/res/testdata/3.out') as f2:
+                    self.assertEqual(f1.read(), f2.read())
 
             self.assertTable(
                 'manage/pro/updatetestdata',

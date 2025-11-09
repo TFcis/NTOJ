@@ -5,7 +5,7 @@
 <script>
     function init() {
         $("button.reg").on('click', e => {
-            $.post(`/oj/be/contests/{{ contest.contest_id }}/reg`, {
+            $.post(`{{ url(f'/be/contests/{ contest.contest_id }/reg') }}`, {
                 'reqtype': 'reg',
             }, res => {
                 res = JSON.parse(res);
@@ -19,7 +19,7 @@
         });
 
         $("button.unreg").on('click', e => {
-            $.post(`/oj/be/contests/{{ contest.contest_id }}/reg`, {
+            $.post(`{{ url(f'/be/contests/{ contest.contest_id }/reg') }}`, {
                 'reqtype': 'unreg',
             }, res => {
                 res = JSON.parse(res);

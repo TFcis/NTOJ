@@ -1,4 +1,4 @@
-<link rel="stylesheet" type="text/css" href="/oj/submit.css">
+<link rel="stylesheet" type="text/css" href="{{ url('/src/submit.css') }}">
 
 <script type="text/javascript">
     function init() {
@@ -9,7 +9,7 @@
             let chal_id = "{{ chal_id }}";
             let acct_id = "{{ user.acct_id }}";
 
-            $.post('/oj/be/question', {
+            $.post(`{{ url('/be/question') }}`, {
                 'reqtype': 'ask',
                 'acct_id': acct_id,
                 'qtext':
@@ -22,7 +22,7 @@
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Report Successfully', index.DIALOG_TYPE.success);
-                    setTimeout(() => index.go("/oj/info/"), 2000);
+                    setTimeout(() => index.go(`{{ url('/info/') }}`), 2000);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
@@ -31,7 +31,7 @@
 
         j_submit.find('button.cancel').on('click', function(e) {
             if (index.prev_url == null) {
-                location.href = '/oj/info/';
+                location.href = `{{ url('/info/') }}`;
                 return;
             }
             location.href = index.prev_url;
