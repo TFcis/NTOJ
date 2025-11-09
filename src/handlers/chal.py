@@ -167,7 +167,7 @@ class ChalHandler(RequestHandler):
                     'reason': reason
                 }
             )
-            
+
             self.error(('S', ''))
 
 

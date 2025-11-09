@@ -133,7 +133,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
     def signup(self, name: str, mail: str, pw: str):
         session = requests.Session()
         res = session.post(
-            "http://localhost:5501/sign",
+            "http://localhost:5501/be/sign",
             data={
                 "reqtype": "signup",
                 "name": name,
@@ -145,7 +145,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("id", session.cookies.get_dict())
 
         res = session.post(
-            "http://localhost:5501/sign",
+            "http://localhost:5501/be/sign",
             data={
                 "reqtype": "signout",
             },
@@ -154,7 +154,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("id", session.cookies.get_dict())
 
     async def wait_for_judge_finish(self, callback):
-        ws = await websocket_connect("ws://localhost:5501/manage/judgecntws")
+        ws = await websocket_connect("ws://localhost:5501/be/manage/judgecntws")
 
         callback()
 

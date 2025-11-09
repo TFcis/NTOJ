@@ -52,12 +52,14 @@ var index = new function() {
         curr_url = parts[0];
 
         parts = curr_url.split('/');
-        if (parts[parts.length - 2] == '') {
+        let skip_count = 3 + that.base_url_slash_count;
+        // ["http:", "", "localhost:8080"].length == 3
+        if (parts[skip_count] == '') {
             page = 'info';
             req = '/info';
 
         } else {
-            page = parts[parts.length - 2];
+            page = parts[skip_count];
             if (parts[parts.length - 1] !== "") {
                 let t = parts[parts.length - 1].match(/(.*)\?([^#]+)/);
                 let flag = false;
@@ -81,7 +83,8 @@ var index = new function() {
             }
 
             req = '';
-            for (i = 3 ; i < parts.length - 1; i++) {
+
+            for (i = skip_count; i < parts.length - 1; i++) {
                 req += '/' + parts[i];
             }
 
@@ -209,6 +212,7 @@ var index = new function() {
         acct_id = $('#indexjs').attr('acct_id');
         contest_id = $('#indexjs').attr('contest_id');
         that.base_url = $('#indexjs').attr('base_url');
+        that.base_url_slash_count = that.base_url.split('/').length - 1;
 
         j_navlist.find('li.leave').on('click', function(e) {
             $.post(`${that.base_url}/be/sign`, {

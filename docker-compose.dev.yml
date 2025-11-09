@@ -1,24 +1,20 @@
-x-logging:
-  &default-logging
-  driver: "json-file"
-  options:
-    max-size: "100m"
-    max-file: "2"
-
 services:
   backend:
     build:
       context: ./
-      target: release
-      args:
-        DB_PASSWORD: $DB_PASSWORD
-        UNLOCK_PASSWORD: $UNLOCK_PASSWORD
-        TIMEDELTA: $TIMEDELTA
-        SITE_TITLE: $SITE_TITLE
-        ADMIN_NAME: $ADMIN_NAME
-        ADMIN_MAIL: $ADMIN_MAIL
-        ADMIN_PASSWORD: $ADMIN_PASSWORD
-        BASE_URL: $BASE_URL
+      target: development
+    command: bash
+    stdin_open: true
+    tty: true
+    develop:
+      watch:
+        - path: ./src/
+          action: sync
+          target: /ntoj/
+          ignore:
+            - tmp/
+            - code/
+            - problem/
     volumes:
       - /srv/ntoj/static:/ntoj/static
       - /srv/ntoj/problem:/ntoj/problem
@@ -32,13 +28,12 @@ services:
       - judge_net
     ports:
       - "5500:5500"
-    logging: *default-logging
 
   db:
     image: postgres:18-alpine
     environment:
       POSTGRES_USER: ntoj
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ntoj
       POSTGRES_DB: ntoj
     volumes:
       - /srv/ntoj/db:/var/lib/postgresql/18/docker
@@ -49,7 +44,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    logging: *default-logging
 
   cache:
     image: redis:8-alpine
@@ -57,7 +51,6 @@ services:
       - /srv/ntoj/cache:/data
     networks:
       - app
-    logging: *default-logging
 
   judge:
     build: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git
@@ -81,7 +74,6 @@ services:
       - judge_net
 
     privileged: true
-    logging: *default-logging
 
 networks:
   app:

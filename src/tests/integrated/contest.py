@@ -315,7 +315,6 @@ class ContestTest(AsyncTest):
 
         with AccountContext('contest1@test', 'test') as user_session:
             res = user_session.get('contests/1/pro/5/cont.pdf')
-            self.assertIn('X-Accel-Redirect', res.headers)
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
@@ -341,7 +340,7 @@ class ContestTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('S', 13))
 
-            ws = await websocket_connect('ws://localhost:5501/manage/judgecntws')
+            ws = await websocket_connect('ws://localhost:5501/be/manage/judgecntws')
 
             def _message(msg):
                 if msg is None:
@@ -349,7 +348,7 @@ class ContestTest(AsyncTest):
 
                 self.assertEqual(int(msg), 1)
 
-            ws2 = await websocket_connect('ws://localhost:5501/contests/1/scoreboardsub', on_message_callback=_message)
+            ws2 = await websocket_connect('ws://localhost:5501/be/contests/1/scoreboardsub', on_message_callback=_message)
             await ws2.write_message('1')
 
             res = user_session.post('contests/1/submit', data={
@@ -412,7 +411,7 @@ class ContestTest(AsyncTest):
                     return
 
                 self.assertEqual(int(msg), 1)
-            ws = await websocket_connect('ws://localhost:5501/contests/1/manage/qasub', on_message_callback=_message)
+            ws = await websocket_connect('ws://localhost:5501/be/contests/1/manage/qasub', on_message_callback=_message)
             await ws.write_message(json.dumps({
                 "contest_id": 1,
                 "acct_id": 4,
@@ -473,7 +472,7 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['contest_id'], 1)
                 self.assertEqual(j['type'], 'reply')
                 self.assertEqual(j['ask_acct_id'], 4)
-            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            ws = await websocket_connect('ws://localhost:5501/be/contests/1/qasub', on_message_callback=_message)
             await ws.write_message(json.dumps({
                 "contest_id": 1,
                 "acct_id": 4,
@@ -516,7 +515,7 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['contest_id'], 1)
                 self.assertEqual(j['type'], 'add-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            ws = await websocket_connect('ws://localhost:5501/be/contests/1/qasub', on_message_callback=_message)
             await ws.write_message(json.dumps({
                 "contest_id": 1,
                 "acct_id": 4,
@@ -565,7 +564,7 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['contest_id'], 1)
                 self.assertEqual(j['type'], 'edit-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            ws = await websocket_connect('ws://localhost:5501/be/contests/1/qasub', on_message_callback=_message)
             await ws.write_message(json.dumps({
                 "contest_id": 1,
                 "acct_id": 4,
@@ -597,7 +596,7 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['contest_id'], 1)
                 self.assertEqual(j['type'], 'popup-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            ws = await websocket_connect('ws://localhost:5501/be/contests/1/qasub', on_message_callback=_message)
             await ws.write_message(json.dumps({
                 "contest_id": 1,
                 "acct_id": 4

@@ -11,7 +11,7 @@ from .util import AsyncTest, AccountContext
 
 class SignTest(AsyncTest):
     async def main(self):
-        res = requests.post('http://localhost:5501/sign', data={
+        res = requests.post('http://localhost:5501/be/sign', data={
             'reqtype': 'signin',
             'mail': 'admin@test',
             'pw': 'test',
@@ -19,14 +19,14 @@ class SignTest(AsyncTest):
         self.assertAPIReturnValue(res.text, ('Esign', 'Login failed'))
 
         # signup but failed
-        res = requests.post('http://localhost:5501/sign', data={
+        res = requests.post('http://localhost:5501/be/sign', data={
             'reqtype': 'signup',
             'name': 'test1',
             'mail': 'test1@test',
             'pw': 'test',
         })
         self.assertAPIReturnValue(res.text, ('Eexist', 'Account already exists'))
-        async with self.db.acquire() as con:
+        async with UserService.inst.db.acquire() as con:
             result = await con.fetch("SELECT last_value FROM account_acct_id_seq;")
             self.assertEqual(result[0]['last_value'], 2)
 
@@ -98,7 +98,7 @@ class AcctPageTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text , ('Eacces', 'Permission denied'))
 
-        res = requests.post('http://localhost:5501/sign', data={
+        res = requests.post('http://localhost:5501/be/sign', data={
             'reqtype': 'signin',
             'mail': 'test1@test',
             'pw': 'test',

@@ -21,7 +21,7 @@ def get_contests_url(db, rs, pool):
         (r'/be/contests', ContestListHandler, args),
         (r'/be/contests/\d+', ContestInfoHandler, args),
         (r'/be/contests/\d+/info', ContestInfoHandler, args),
-        (r'/be/contests/\d+/pro/(\d+)/(.*)', ProStaticHandler, args),
+        (r'/be/contests/\d+/pro/(\d+)/(.*)', ProStaticHandler, {'db': db, 'rs': rs, 'path': 'problem'}),
         (r'/be/contests/\d+/pro/(\d+)', ProHandler, args),
         (r'/be/contests/\d+/proset', ContestProsetHandler, args),
         (r'/be/contests/\d+/chal', ChalListHandler, args),

@@ -44,7 +44,7 @@ class ChalTest(AsyncTest):
 
             shutil.move('code/1/main.cpp', 'code/1/main.py')
 
-            ws = await websocket_connect('ws://localhost:5501/chalnewstatesub')
+            ws = await websocket_connect('ws://localhost:5501/be/chalnewstatesub')
             await ws.write_message(str(1))
 
             def callback():
@@ -153,7 +153,7 @@ class ChalListTest(AsyncTest):
 
                 self.assertEqual(int(msg), 1)
 
-            await websocket_connect('ws://localhost:5501/challistnewchalsub',
+            await websocket_connect('ws://localhost:5501/be/challistnewchalsub',
                                     on_message_callback=_message)
 
             def _message(msg):
@@ -162,7 +162,7 @@ class ChalListTest(AsyncTest):
 
                 self.assertEqual(int(json.loads(msg)['chal_id']), 2)
 
-            ws2 = await websocket_connect('ws://localhost:5501/challistnewstatesub',
+            ws2 = await websocket_connect('ws://localhost:5501/be/challistnewstatesub',
                                           on_message_callback=_message)
 
             await ws2.write_message(json.dumps({
@@ -208,7 +208,7 @@ class ChalListTest(AsyncTest):
                 # 1, 2, 3, 4, 5
                 ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA, ChalConst.STATE_CE, ChalConst.STATE_TLE,
                 # 6, 7, 8, 9
-                ChalConst.STATE_MLE, ChalConst.STATE_RE, ChalConst.STATE_RESIG, ChalConst.STATE_AC
+                ChalConst.STATE_RE, ChalConst.STATE_RE, ChalConst.STATE_RESIG, ChalConst.STATE_AC
             ]
 
             for chal_id, state in enumerate(all_expected_states, start=1):

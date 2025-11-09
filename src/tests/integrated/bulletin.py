@@ -19,7 +19,7 @@ class BulletinTest(AsyncTest):
 
                 self.assertEqual(int(msg), 1)
 
-            ws = await websocket_connect('ws://localhost:5501/informsub', on_message_callback=_message)
+            ws = await websocket_connect('ws://localhost:5501/be/informsub', on_message_callback=_message)
             res = admin_session.post('manage/bulletin/add', data={
                 'reqtype': 'add',
                 'title': 'bulletin 1',

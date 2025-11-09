@@ -344,5 +344,5 @@ class SignHandler(RequestHandler):
 
             if (session_key := self.get_cookie('id')) is not None:
                 await self.rs.hdel(f'account_session@{self.acct.acct_id}', session_key)
-            self.clear_cookie('id', path='/oj')
+            self.clear_cookie('id', path=base_url)
             self.error(('S', ''))

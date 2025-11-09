@@ -126,8 +126,14 @@
                 {% end %}
             ];
             $('#rechalall').on('click', function(e) {
+                {% if chal.contest_id == 0 %}
+                    let url = `{{ url('/be/submit') }}`;
+                {% else %}
+                    let url = `{{ url(f'/be/contests/{ chal.contest_id }/submit') }}`;
+                {% end %}
+
                 chalids.forEach(function(chalid) {
-                    $.post(`{{ url('/be/submit') }}`, {
+                    $.post(url, {
                         'reqtype': 'rechal',
                         'chal_id': chalid,
                     });
