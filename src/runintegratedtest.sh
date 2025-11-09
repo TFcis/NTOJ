@@ -50,7 +50,7 @@ import datetime
 TIMEZONE          = datetime.timezone(datetime.timedelta(hours=+8))
 PORT              = 5501
 REDIS_DB          = 2
-REDIS_HOST        = 'cache'
+REDIS_HOST        = 'localhost'
 DBNAME_OJ         = 'ntoj_unittest_db_name'
 DBUSER_OJ         = 'ntoj_unittest_db_user'
 DBHOST_OJ         = 'localhost'

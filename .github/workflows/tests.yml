@@ -20,16 +20,23 @@ jobs:
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
 
-      - name: Install PostgreSQL, Redis, Dos2Unix, CJK Font
+      - name: Add PostgreSQL source
         run: |
           sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | sudo tee /usr/share/keyrings/postgresql.gpg
           echo deb [arch=amd64 signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main | sudo tee /etc/apt/sources.list.d/postgresql.list
           sudo apt update -y
-          sudo apt install -f -y postgresql-16 postgresql-client-16 redis dos2unix fonts-noto-cjk
+
+      - name: Cache and Install PostgreSQL, Redis, Dos2Unix
+        uses: daaku/gh-action-apt-install@v4
+        with:
+          packages: postgresql-16 postgresql-client-16 redis dos2unix
+
+      - name: Start PostgreSQL, Redis
+        run: |
           sudo sed -i 's/peer/trust/g' /etc/postgresql/16/main/pg_hba.conf
           sudo sed -i 's/scram-sha-256/trust/g' /etc/postgresql/16/main/pg_hba.conf
           sudo service postgresql restart
-          sudo service redis-server restart
+          sudo redis-server &
 
       - name: Install Project dependencies and test requirements
         run: |
