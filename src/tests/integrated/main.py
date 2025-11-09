@@ -108,8 +108,9 @@ class IntegratedTest(AsyncTest):
             self.assertEqual(len(ratemap), 0)
 
             def callback():
-                chal_id = self.submit_problem(1, open('tests/static_file/code/toj3.ac.py').read(),
-                                                Compiler.PYTHON3, admin_session)
+                with open('tests/static_file/code/toj3.ac.py') as f:
+                    chal_id = self.submit_problem(1, f.read(),
+                                                    Compiler.PYTHON3, admin_session)
                 self.assertEqual(chal_id, 1)
 
             await self.wait_for_judge_finish(callback)
@@ -132,8 +133,9 @@ class IntegratedTest(AsyncTest):
             res = json.loads(res.text)
             self.assertNotEqual(res['status'], 'Eacces')
             self.assertEqual(res['data']['compiler_type'], 'python')
-            self.assertEqual(res['data']['code'].strip(),
-                                tornado.escape.xhtml_escape(open('tests/static_file/code/toj3.ac.py').read().strip()))
+            with open('tests/static_file/code/toj3.ac.py') as f:
+                self.assertEqual(res['data']['code'].strip(),
+                                    tornado.escape.xhtml_escape(f.read().strip()))
 
             # view challist
             flt = ChalSearchingParamBuilder().build()

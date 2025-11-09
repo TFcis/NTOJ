@@ -75,7 +75,8 @@ class ManageProUpdateTest(AsyncTest):
             chal_id = -1
             def callback():
                 nonlocal chal_id
-                chal_id = self.submit_problem(1, open('tests/static_file/code/tle.py').read(), Compiler.PYTHON3, admin_session)
+                with open('tests/static_file/code/tle.py') as f:
+                    chal_id = self.submit_problem(1, f.read(), Compiler.PYTHON3, admin_session)
 
             await self.wait_for_judge_finish(callback)
             err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)

@@ -52,6 +52,7 @@ class ManagePackTest(AsyncTest):
                 if msg is None:
                     break
 
+            file.close()
             ws.close()
             self.assertTrue(os.path.exists(f"tmp/{pack_token}"))
             os.remove(f"tmp/{pack_token}")
@@ -92,6 +93,7 @@ class ManagePackTest(AsyncTest):
                 if msg is None:
                     break
 
+            file.close()
             ws.close()
             self.assertFalse(os.path.exists(f"tmp/{pack_token}"))
 
@@ -138,6 +140,7 @@ class ManagePackTest(AsyncTest):
                     break
                 break
 
+            file.close()
             ws.close()
             await asyncio.sleep(1)
             self.assertFalse(os.path.exists(f"tmp/{pack_token}"))

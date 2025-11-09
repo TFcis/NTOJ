@@ -113,7 +113,8 @@ if __name__ == "__main__":
                 TestConfig.DBPW_OJ,
             ]
         )
-        open('db-inited', 'w').write('1')
+        with open('db-inited', 'w') as f:
+            f.write('1')
 
     db: asyncpg.Pool = testing_loop.run_until_complete(
         asyncpg.create_pool(

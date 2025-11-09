@@ -332,13 +332,14 @@ class ContestTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('Ecomp', 'The compiler is not allowed'))
 
-            res = user_session.post('contests/1/submit', data={
-                'reqtype': 'submit',
-                'pro_id': 5,
-                'code': open('tests/static_file/code/toj674.ac.cpp').read(),
-                'compiler_type': Compiler.GPP,
-            })
-            self.assertAPIReturnValue(res.text, ('S', 13))
+            with open('tests/static_file/code/toj674.ac.cpp') as f:
+                res = user_session.post('contests/1/submit', data={
+                    'reqtype': 'submit',
+                    'pro_id': 5,
+                    'code': f.read(),
+                    'compiler_type': Compiler.GPP,
+                })
+                self.assertAPIReturnValue(res.text, ('S', 13))
 
             ws = await websocket_connect('ws://localhost:5501/be/manage/judgecntws')
 
@@ -351,13 +352,14 @@ class ContestTest(AsyncTest):
             ws2 = await websocket_connect('ws://localhost:5501/be/contests/1/scoreboardsub', on_message_callback=_message)
             await ws2.write_message('1')
 
-            res = user_session.post('contests/1/submit', data={
-                'reqtype': 'submit',
-                'pro_id': 5,
-                'code': open('tests/static_file/code/toj674.ac.cpp').read(),
-                'compiler_type': Compiler.GPP,
-            })
-            self.assertAPIReturnValue(res.text, ('Esame', 'Do not submit same code'))
+            with open('tests/static_file/code/toj674.ac.cpp') as f:
+                res = user_session.post('contests/1/submit', data={
+                    'reqtype': 'submit',
+                    'pro_id': 5,
+                    'code': f.read(),
+                    'compiler_type': Compiler.GPP,
+                })
+                self.assertAPIReturnValue(res.text, ('Esame', 'Do not submit same code'))
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
