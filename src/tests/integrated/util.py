@@ -12,15 +12,13 @@ from tornado.websocket import websocket_connect
 
 from services.chal import Compiler
 from services.pro import ProConst, ProService
-from runintegratedtest import testing_loop, db
-
 
 class AsyncTest(unittest.IsolatedAsyncioTestCase):
     def __init__(self, *args, **kwargs):
-        self.db = db
         super().__init__(*args, **kwargs)
 
     def run(self, result=None):
+        testing_loop = asyncio.get_event_loop()
         runner = asyncio.Runner(debug=True, loop_factory=lambda: testing_loop)
         self._asyncioRunner = runner
         try:

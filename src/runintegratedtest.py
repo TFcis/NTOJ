@@ -57,84 +57,78 @@ def sig_handler(server, db, rs, pool, cov, sig, frame):
     print("Caught signal: %s" % sig)
     io_loop.add_callback_from_signal(shutdown)
 
-testing_loop = asyncio.get_event_loop()
-if not os.path.exists('db-inited'):
-    subprocess.run(
-        [
-            "/bin/bash",
-            "tests/reinit.sh",
-            TestConfig.DBNAME_OJ,
-            TestConfig.DBUSER_OJ,
-            TestConfig.DBPW_OJ,
-        ]
-    )
-    open('db-inited', 'w').write('1')
 
-db: asyncpg.Pool = testing_loop.run_until_complete(
-    asyncpg.create_pool(
-        database=TestConfig.DBNAME_OJ,
-        user=TestConfig.DBUSER_OJ,
-        password=TestConfig.DBPW_OJ,
-        host="localhost",
-        loop=testing_loop,
-    )
-)
+def m(event):
+    cov = coverage.Coverage(data_file=f".coverage.{os.getpid()}", branch=True)
+    cov.start()
 
-pool = aioredis.ConnectionPool.from_url("redis://localhost", db=TestConfig.REDIS_DB)
-rs = aioredis.Redis.from_pool(pool)
+    httpsock = tornado.netutil.bind_sockets(TestConfig.PORT)
+
+    async def f():
+        return await asyncpg.create_pool(database=TestConfig.DBNAME_OJ, user=TestConfig.DBUSER_OJ, password=TestConfig.DBPW_OJ, host=TestConfig.DBHOST_OJ)
+
+    db2: asyncpg.Pool = tornado.ioloop.IOLoop.current().run_sync(f)
+    pool2 = aioredis.ConnectionPool.from_url(
+        f"redis://{TestConfig.REDIS_HOST}", db=TestConfig.REDIS_DB
+    )
+    rs2 = aioredis.Redis.from_pool(pool2)
+
+    services_init(db2, rs2)
+    app = tornado.web.Application(
+        ur.get_url(db2, rs2, pool2),
+        autoescape="xhtml_escape",
+        cookie_secret=TestConfig.COOKIE_SEC,
+    )
+
+    httpsrv = tornado.httpserver.HTTPServer(app, xheaders=True)
+    httpsrv.add_sockets(httpsock)
+
+    tornado.ioloop.IOLoop.current().run_sync(JudgeServerClusterService.inst.start)
+
+    signal.signal(
+        signal.SIGINT,
+        functools.partial(sig_handler, httpsrv, db2, rs2, pool2, cov),
+    )
+    signal.signal(
+        signal.SIGTERM,
+        functools.partial(sig_handler, httpsrv, db2, rs2, pool2, cov),
+    )
+
+    try:
+        event.set()
+        tornado.ioloop.IOLoop.current().start()
+    except:
+        pass
 
 if __name__ == "__main__":
+    testing_loop = asyncio.new_event_loop()
+    if not os.path.exists('db-inited'):
+        subprocess.run(
+            [
+                "/bin/bash",
+                "tests/reinit.sh",
+                TestConfig.DBNAME_OJ,
+                TestConfig.DBHOST_OJ,
+                TestConfig.DBUSER_OJ,
+                TestConfig.DBPW_OJ,
+            ]
+        )
+        open('db-inited', 'w').write('1')
+
+    db: asyncpg.Pool = testing_loop.run_until_complete(
+        asyncpg.create_pool(
+            database=TestConfig.DBNAME_OJ,
+            user=TestConfig.DBUSER_OJ,
+            password=TestConfig.DBPW_OJ,
+            host=TestConfig.DBHOST_OJ,
+            loop=testing_loop,
+        )
+    )
+
+    pool = aioredis.ConnectionPool.from_url(f"redis://{TestConfig.REDIS_HOST}", db=TestConfig.REDIS_DB)
+    rs = aioredis.Redis.from_pool(pool)
+    testing_loop.run_until_complete(rs.flushall())
     e = multiprocessing.Event()
-
-    def m(event):
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        cov = coverage.Coverage(data_file=f".coverage.{os.getpid()}", branch=True)
-        cov.start()
-
-        httpsock = tornado.netutil.bind_sockets(TestConfig.PORT)
-
-        db2: asyncpg.Pool = asyncio.get_event_loop().run_until_complete(
-            asyncpg.create_pool(
-                database=TestConfig.DBNAME_OJ,
-                user=TestConfig.DBUSER_OJ,
-                password=TestConfig.DBPW_OJ,
-                host="localhost",
-            )
-        )
-
-        pool2 = aioredis.ConnectionPool.from_url(
-            "redis://localhost", db=TestConfig.REDIS_DB
-        )
-        rs2 = aioredis.Redis.from_pool(pool2)
-
-        services_init(db2, rs2)
-        app = tornado.web.Application(
-            ur.get_url(db2, rs2, pool2),
-            autoescape="xhtml_escape",
-            cookie_secret=TestConfig.COOKIE_SEC,
-        )
-
-        httpsrv = tornado.httpserver.HTTPServer(app, xheaders=True)
-        httpsrv.add_sockets(httpsock)
-
-        tornado.ioloop.IOLoop.current().run_sync(JudgeServerClusterService.inst.start)
-
-        signal.signal(
-            signal.SIGINT,
-            functools.partial(sig_handler, httpsrv, db2, rs2, pool2, cov),
-        )
-        signal.signal(
-            signal.SIGTERM,
-            functools.partial(sig_handler, httpsrv, db2, rs2, pool2, cov),
-        )
-
-        try:
-            event.set()
-            tornado.ioloop.IOLoop.current().start()
-        except:
-            pass
-
-    asyncio.get_event_loop().run_until_complete(rs.flushall())
     main_process = multiprocessing.Process(target=m, args=(e,))
     main_process.start()
 
