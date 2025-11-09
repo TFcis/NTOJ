@@ -47,12 +47,18 @@ jobs:
           $HOME/.local/bin/poetry add beautifulsoup4
           $HOME/.local/bin/poetry add requests
 
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+
+
       - name: Deploy NTOJ-Judge
         run: |
           cd $HOME
           git clone https://github.com/tobiichi3227/NTOJ-Judge-Rewrite
           cd NTOJ-Judge-Rewrite/src
           cd default-checker && make -j4 && cd ..
+          cd sandbox && go mod tidy && go build -o sandbox . && cd ..
           sudo pip3 install tornado cffi --break-system-packages
           sudo python3 server.py > output.log 2>&1 &
 
