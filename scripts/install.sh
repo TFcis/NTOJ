@@ -78,10 +78,8 @@ sudo apt upgrade -y
 
 # Create Directory
 sudo mkdir -p ${INSTALL_DIR}/ntoj
-sudo mkdir -p ${INSTALL_DIR}/ntoj_web/oj/
 
 sudo chown $USER ${INSTALL_DIR}/ntoj
-sudo chown $USER ${INSTALL_DIR}/ntoj_web/oj/
 
 # Create log file and directory
 sudo mkdir -p /var/log/ntoj/
@@ -122,25 +120,11 @@ curl -sSL https://install.python-poetry.org | python3 -
 
 # NTOJ
 cp -r ../src/* ${INSTALL_DIR}/ntoj/
-cp -r ../src/static/* ${INSTALL_DIR}/ntoj_web/oj/
 cp ../pyproject.toml ${INSTALL_DIR}/ntoj/
 CURRENT_PWD=$(pwd)
 cd ${INSTALL_DIR}/ntoj/
 $HOME/.local/bin/poetry install
 cd $CURRENT_PWD
-
-# Install Nginx
-sudo apt -y install nginx
-sudo systemctl enable --now nginx.service
-
-## Replace nginx root directory path
-INSTALL_DIR_ESCAPE=$(echo ${INSTALL_DIR} | sed 's/[\/\$]/\\\//g')
-sed -i "s/INSTALL_DIR/${INSTALL_DIR_ESCAPE}/" ./ntoj.conf
-sed -i "s/PORT/${PORT}/" ./ntoj.conf
-sudo cp ./ntoj.conf /etc/nginx/sites-enabled/ntoj.conf
-sudo sed -i "s/www-data/root/" /etc/nginx/nginx.conf
-
-sudo nginx -s reload
 
 # Install Redis
 sudo apt -y install redis
@@ -165,7 +149,6 @@ COOKIE_SEC = '${COOKIE_SEC}'
 SITE_TITLE = '${SITE_TITLE}'
 can_see_code_user = [1]
 unlock_pwd = ${UNLOCK_PWD}
-WEB_PROBLEM_STATIC_FILE_DIRECTORY = '${INSTALL_DIR}/ntoj_web/oj/problem'
 JUDGE_SERVER_LIST = []
 BASE_URL = '${BASE_URL}'
 EOF
