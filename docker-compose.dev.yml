@@ -16,9 +16,9 @@ services:
             - code/
             - problem/
     volumes:
-      - /srv/ntoj/static:/ntoj/static
-      - /srv/ntoj/problem:/ntoj/problem
-      - /srv/ntoj/code:/ntoj/code
+      - /srv/ntoj-dev/static:/ntoj/static
+      - /srv/ntoj-dev/problem:/ntoj/problem
+      - /srv/ntoj-dev/code:/ntoj/code
       # - /srv/ntoj/config.py:/ntoj/config.py
     depends_on:
       - db
@@ -36,7 +36,7 @@ services:
       POSTGRES_PASSWORD: ntoj
       POSTGRES_DB: ntoj
     volumes:
-      - /srv/ntoj/db:/var/lib/postgresql/18/docker
+      - /srv/ntoj-dev/db:/var/lib/postgresql/18/docker
     networks:
       - app
     healthcheck:
@@ -48,7 +48,7 @@ services:
   cache:
     image: redis:8-alpine
     volumes:
-      - /srv/ntoj/cache:/data
+      - /srv/ntoj-dev/cache:/data
     networks:
       - app
 
@@ -67,8 +67,8 @@ services:
     tmpfs:
       - /dev/shm:rw,exec,size=755,size=4G
     volumes:
-      - /srv/ntoj/problem:/problem:ro
-      - /srv/ntoj/code:/code:ro
+      - /srv/ntoj-dev/problem:/problem:ro
+      - /srv/ntoj-dev/code:/code:ro
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
     networks:
       - judge_net
