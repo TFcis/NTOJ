@@ -8,7 +8,7 @@ from msgpack import packb, unpackb
 import config
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
-from services.pro import ProClassService, ProClassConst
+from services.pro import ProClassService, ProClassConst, ProConst
 from services.rate import RateService
 from services.user import UserConst, UserService
 from services.chal import ChalConst
@@ -40,7 +40,7 @@ class AcctHandler(RequestHandler):
                     WHERE "status" <= $1
                     ORDER BY "pro_id" ASC;
                 ''',
-                UserConst.ACCTTYPE_USER,
+                ProConst.STATUS_ONLINE,
             )
 
         err, ratemap = await RateService.inst.map_rate_acct(acct)
@@ -70,7 +70,7 @@ class AcctHandler(RequestHandler):
         acct.photo = re.sub(r'^http://', 'https://', acct.photo)
         acct.cover = re.sub(r'^http://', 'https://', acct.cover)
 
-        await self.render('acct/profile', acct=acct, rate=rate_data, prolist=chunk_list(prolist2, 10))
+        await self.render('acct/profile', acct=acct, rate=rate_data, total_pro_cnt=len(prolist), prolist=chunk_list(prolist2, 10))
 
 
 class AcctConfigHandler(RequestHandler):
