@@ -6,6 +6,11 @@ if [ -f docker-release ]; then
     exit 1
 fi
 
+if [ -d static-tmp ]; then
+    cp -r static-tmp/* static/
+    rm -rf static-tmp/
+fi
+
 current_pwd=$(pwd)
 mv config.py config_dev.py
 

@@ -1,0 +1,132 @@
+name: test-docker
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    env:
+      TEST_SERVICE: backend
+      REPORTS_PATH_IN_CONTAINER: /ntoj/htmlcov
+      REPORTS_DIR_ON_RUNNER: ${{ github.workspace }}/reports
+      POSTGRES_IMAGE: postgres:18-alpine
+      REDIS_IMAGE: redis:8-alpine
+      CACHE_SUFFIX: v1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Restore cached images (tarballs)
+        id: restore-cache
+        uses: actions/cache@v4
+        with:
+          path: cached-images
+          key: ${{ runner.os }}-docker-images-${{ env.CACHE_SUFFIX }}-${{ env.POSTGRES_IMAGE }}-${{ env.REDIS_IMAGE }}
+
+      - name: Load images from cache if present, otherwise pull and save
+        run: |
+          set -euo pipefail
+          mkdir -p cached-images
+
+          echo "POSTGRES=${POSTGRES_IMAGE}"
+          echo "REDIS=${REDIS_IMAGE}"
+
+          if [ -f "cached-images/postgres.tar" ]; then
+            echo "Found cached postgres.tar — loading into docker"
+            docker load -i cached-images/postgres.tar
+          else
+            echo "No cached postgres.tar — pulling ${POSTGRES_IMAGE}"
+            docker pull "${POSTGRES_IMAGE}"
+            echo "Saving ${POSTGRES_IMAGE} to cached-images/postgres.tar"
+            docker save -o cached-images/postgres.tar "${POSTGRES_IMAGE}"
+          fi
+
+          if [ -f "cached-images/redis.tar" ]; then
+            echo "Found cached redis.tar — loading into docker"
+            docker load -i cached-images/redis.tar
+          else
+            echo "No cached redis.tar — pulling ${REDIS_IMAGE}"
+            docker pull "${REDIS_IMAGE}"
+            echo "Saving ${REDIS_IMAGE} to cached-images/redis.tar"
+            docker save -o cached-images/redis.tar "${REDIS_IMAGE}"
+          fi
+
+      - name: Prepare reports dir
+        run: mkdir -p "${REPORTS_DIR_ON_RUNNER}"
+
+      - name: Create CI override to avoid /srv mounts and mount reports
+        run: |
+          cat > docker-compose.ci.yml <<'YAML'
+          version: "3.8"
+          services:
+            backend:
+              build:
+                context: ./
+                target: development
+              volumes:
+                - ./reports:/ntoj/htmlcov/
+                - backend_static:/ntoj/static
+                - backend_problem:/ntoj/problem
+                - backend_code:/ntoj/code
+            db:
+              volumes:
+                - db_data:/var/lib/postgresql/18/docker
+            cache:
+              volumes:
+                - cache_data:/data
+            judge:
+              volumes:
+                - backend_problem:/problem:ro
+                - backend_code:/code:ro
+          volumes:
+            backend_static:
+            backend_problem:
+            backend_code:
+            db_data:
+            cache_data:
+          YAML
+
+      - name: Start compose
+        run: |
+          set -euo pipefail
+          export DOCKER_BUILDKIT=1
+          docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml up -d
+
+      - name: Run integration tests (runintegratedtest.sh)
+        run: |
+          set -o pipefail
+          docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml run --rm -T "$TEST_SERVICE" bash -c "./runintegratedtest.sh"
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-reports
+          path: ${{ env.REPORTS_DIR_ON_RUNNER }}
+
+      - name: Tear down compose
+        if: always()
+        run: |
+          docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml down -v
+
+      - name: Fail job if tests failed
+        if: always()
+        run: |
+          if [ "${{ steps.run-tests.outputs.exit_code }}" != "0" ]; then
+            echo "Integration tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
+            exit ${{ steps.run-tests.outputs.exit_code }}
+          fi
