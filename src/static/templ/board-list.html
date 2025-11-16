@@ -48,6 +48,9 @@
 			{% end %}
 	    </tr>
 	{% end %}
+	{% if len(running) == 0 %}
+		<tr><td colspan="4" class="text-center text-muted">No running boards</td></tr>
+	{% end %}
 	</tbody>
     </table>
 
@@ -62,9 +65,6 @@
 			{% end %}
 	    </tr>
 	</thead>
-	{% if len(running) == 0 %}
-		<tr><td colspan="4" class="text-center text-muted">No running boards</td></tr>
-	{% end %}
 	<tbody>
 	{% for board in over %}
 	    <tr>
