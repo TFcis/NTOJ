@@ -14,9 +14,8 @@
     {% set recent = [] %}
 
     {% for contest in contests %}
-        {% if contest['contest_id'] == 1 %}
-            {% set permanent = permanent + [contest] %}
-        {% elif contest['contest_start'] <= now < contest['contest_end'] %}
+        <!-- permanent contests TODO -->
+        {% if contest['contest_start'] <= now < contest['contest_end'] %}
             {% set active = active + [contest] %}
         {% elif contest['contest_start'] > now %}
             {% set upcoming = upcoming + [contest] %}
