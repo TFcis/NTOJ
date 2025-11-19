@@ -1,122 +1,69 @@
 <script type="text/javascript" id="contjs">
     function init() {}
 </script>
-<div class="col-lg-12 ms-lg-2">
 
+<div class="col-lg-12 ms-lg-2">
     {% import config %}
     {% from services.contests import ContestMode %}
     {% import datetime %}
     {% set now = datetime.datetime.now(datetime.UTC) %}
 
-    <h3>Active Contests</h3>
-    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-        <thead>
-            <tr>
-                <th scope="col">Title</th>
-                <th scope="col">Start Time</th>
-                <th scope="col">Length</th>
-                <th scope="col">Contest Type</th>
-                <th scope="col">Scoreboard</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for contest in contests %}
-                {% if contest['contest_start'] <= now < contest['contest_end'] %}
-                <tr>
-                    <th scope="row"><a href="{{ url(f'/contests/{ contest['contest_id'] }/info/') }}">{{ contest['name'] }}</a></th>
-                    <td>{{ contest['contest_start'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
-                    <td>{{ contest['contest_end'] - contest['contest_start'] }}</td>
-                    <td>{{ ContestMode(int(contest['contest_mode'])).name }}</td>
-                    <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
-                </tr>
-                {% end %}
-            {% end %}
-        </tbody>
-    </table>
+    {% set active = [] %}
+    {% set permanent = [] %}
+    {% set upcoming = [] %}
+    {% set recent = [] %}
 
-    <h3>Permanent Contest</h3>
-    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-        <thead>
-            <tr>
-                <th scope="col">Title</th>
-                <th scope="col">Start Time</th>
-                <th scope="col">Length</th>
-                <th scope="col">Contest Type</th>
-                <th scope="col">Scoreboard</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for contest in contests %}
-                {% if contest['contest_id'] == 1 %}
-                <tr>
-                    <th scope="row"><a href="{{ url(f'/contests/{ contest['contest_id'] }/info/') }}">{{ contest['name'] }}</a></th>
-                    <td>{{ contest['contest_start'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
-                    <td>{{ contest['contest_end'] - contest['contest_start'] }}</td>
-                    <td>{{ ContestMode(int(contest['contest_mode'])).name }}</td>
-                    <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
-                </tr>
-                {% end %}
-            {% end %}
-        </tbody>
-    </table>
+    {% for contest in contests %}
+        <!-- permanent contests TODO -->
+        {% if contest['contest_start'] <= now < contest['contest_end'] %}
+            {% set active = active + [contest] %}
+        {% elif contest['contest_start'] > now %}
+            {% set upcoming = upcoming + [contest] %}
+        {% elif contest['contest_end'] < now %}
+            {% set recent = recent + [contest] %}
+        {% end %}
+    {% end %}
 
-    <h3>Upcoming Contests</h3>
-    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-        <thead>
-            <tr>
-                <th scope="col">Title</th>
-                <th scope="col">Start Time</th>
-                <th scope="col">Length</th>
-                <th scope="col">Contest Type</th>
-                <th scope="col">Scoreboard</th>
-                {% if user.is_kernel() %}
-                <th scope="col">
-                    <a class="btn btn-primary" href="{{ url('/contests/manage/add/') }}">&#x271a;</a>
-                </th>
-                {% end %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for contest in contests %}
-                {% if contest['contest_start'] > now %}
-                <tr>
-                    <th scope="row"><a href="{{ url(f'/contests/{ contest['contest_id'] }/info/') }}">{{ contest['name'] }}</a></th>
-                    <td>{{ contest['contest_start'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
-                    <td>{{ contest['contest_end'] - contest['contest_start'] }}</td>
-                    <td>{{ ContestMode(int(contest['contest_mode'])).name }}</td>
-                    <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
-                    {% if user.is_kernel() %}
-                    <td></td>
-                    {% end %}
-                </tr>
-                {% end %}
-            {% end %}
-        </tbody>
-    </table>
+    {% set active = sorted(active, key=lambda d: [d['contest_end'], d['contest_start']]) %}
+    {% set upcoming = sorted(upcoming, key=lambda d: [d['contest_start'], d['contest_end']]) %}
+    {% set recent = sorted(recent, key=lambda d: [d['contest_start'], d['contest_end']], reverse=True) %}
 
-    <h3>Recent Contests</h3>
-    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+    {% set contest_category = [[active, "active"], 
+                            [permanent, "permanent"], 
+                            [upcoming, "upcoming"],
+                            [recent, "recent"]] %}
+    
+    {% for [contest_list, contest_name] in contest_category %}
+        <h4 class="mt-3 d-inline-block">{{ contest_name.capitalize() }} Contests</h4>
+        {% if contest_name == "upcoming" %}
+            <a class="btn btn-primary d-inline-block" href="{{ url('/contests/manage/add/') }}">&#x271a;</a>
+        {% end %}
+        <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
         <thead>
             <tr>
                 <th scope="col">Title</th>
                 <th scope="col">Start Time</th>
+                <th scope="col">End Time</th>
                 <th scope="col">Length</th>
                 <th scope="col">Contest Type</th>
                 <th scope="col">Scoreboard</th>
             </tr>
         </thead>
         <tbody>
-            {% for contest in contests %}
-                {% if now >= contest['contest_end'] %}
+            {% for contest in contest_list %}
                 <tr>
                     <th scope="row"><a href="{{ url(f'/contests/{ contest['contest_id'] }/info/') }}">{{ contest['name'] }}</a></th>
                     <td>{{ contest['contest_start'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
+                    <td>{{ contest['contest_end'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
                     <td>{{ contest['contest_end'] - contest['contest_start'] }}</td>
                     <td>{{ ContestMode(int(contest['contest_mode'])).name }}</td>
                     <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
                 </tr>
-                {% end %}
             {% end %}
         </tbody>
-    </table>
+        {% if len(contest_list) == 0 %}
+            <tr><td colspan="6" class="text-center text-muted">No {{ contest_name }} contests</td></tr>
+        {% end %}
+        </table>
+    {% end %}
 </div>
