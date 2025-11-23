@@ -11,11 +11,8 @@ from services.pro import ProType
 
 
 class BatchCodeHandler(RequestHandler):
-    """Handler for Batch problem code display."""
-
     @reqenv
     async def get(self):
-        """Display Batch problem submission code."""
         try:
             chal_id = int(self.get_argument('chal_id'))
 
@@ -42,7 +39,6 @@ class BatchCodeHandler(RequestHandler):
 
     @reqenv
     async def post(self):
-        """Return code content for Batch problem (for AJAX requests)."""
         chal_id = int(self.get_argument('chal_id'))
 
         err, code, compiler_type = await CodeService.inst.get_code(chal_id, self.acct)

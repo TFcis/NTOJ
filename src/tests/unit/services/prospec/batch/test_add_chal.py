@@ -3,7 +3,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from services.pro import CheckerType, SummaryType, ProblemConfig, Limit, SubtaskConfig, Testdata
 from services.prospec.batch import BatchProblemSpec, BatchConfig

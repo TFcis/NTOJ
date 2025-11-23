@@ -2,7 +2,7 @@
 import json
 
 from tests.integrated.util import AsyncTest, AccountContext
-from services.pro import ProService, ProConst, CheckerType, SummaryType, ProType
+from services.pro import ProService, ProConst, CheckerType, SummaryType
 from services.chal import Compiler
 
 

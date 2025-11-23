@@ -601,7 +601,6 @@ class ChalService:
 
         acct_id, pro_id, contest_id = int(result['acct_id']), int(result['pro_id']), int(result['contest_id'])
 
-        # TODO: Dispatch to ProSpec
         # TODO: Support different problem types, for now only Batch
         if problem_type == ProType.BATCH:
             spec = batch_spec

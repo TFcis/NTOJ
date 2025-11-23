@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from collections import defaultdict
 
 from handlers.base import RequestHandler, reqenv, require_permission

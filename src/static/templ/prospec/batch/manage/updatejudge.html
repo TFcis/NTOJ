@@ -12,11 +12,9 @@
         judge_form.find('select#checkerType').on('change', function(e) {
             let checker_type = $(this).val();
             if (checker_type == "{{ CheckerType.IOREDIR }}") {
-                judge_form.find("label#chalmetaLabel").show();
-                judge_form.find("textarea#chalmeta").show();
+                judge_form.find("div#chalmetaLabel").show();
             } else {
-                judge_form.find("label#chalmetaLabel").hide();
-                judge_form.find("textarea#chalmeta").hide();
+                judge_form.find("div#chalmetaLabel").hide();
             }
 
             const need_build_checkers = {% raw [v.value for v in CheckerType.need_build_checkers()] %};
@@ -96,6 +94,11 @@
         // Trigger initial state
         judge_form.find('select#checkerType').trigger('change');
         judge_form.find('select#summaryType').trigger('change');
+
+        // Update precision display when range changes
+        $('#score-precision').on('input', function() {
+            $('#precision-value').text($(this).val());
+        });
     }
 </script>
 {% end %}
@@ -272,66 +275,4 @@
         </div>
     </form>
 </div>
-
-<script>
-    // Update precision display when range changes
-    $('#score-precision').on('input', function() {
-        $('#precision-value').text($(this).val());
-    });
-</script>
 {% end %}
-
-        <input type="text" name="checker_compile_args" id="checker_compile_args"
-               value="{{ pro.config.spec_config.checker_compile_args }}" class="form-control">
-    </div>
-
-    <div class="form-group">
-        <label for="summary_type">Summary Type:</label>
-        <select name="summary_type" id="summary_type" class="form-control" required>
-            {% for summary_type, summary_name in summary_types.items() %}
-                <option value="{{ summary_type }}"
-                        {% if summary_type == pro.config.spec_config.summary_type %}selected{% end %}>
-                    {{ summary_name }}
-                </option>
-            {% end %}
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label for="summary_compiler">Summary Compiler:</label>
-        <select name="summary_compiler" id="summary_compiler" class="form-control">
-            <option value="">None</option>
-            {# Add compiler options #}
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label for="summary_compile_args">Summary Compile Args:</label>
-        <input type="text" name="summary_compile_args" id="summary_compile_args"
-               value="{{ pro.config.spec_config.summary_compile_args }}" class="form-control">
-    </div>
-
-    <div class="form-group">
-        <label>Allow Compilers:</label>
-        {# Add compiler checkboxes based on allow_compilers #}
-    </div>
-
-    <div class="form-group" id="chalmeta_group" style="display:none;">
-        <label for="chalmeta">Challenge Metadata (IORedir):</label>
-        <textarea name="chalmeta" id="chalmeta" class="form-control" rows="5">{{ pro.config.spec_config.chalmeta }}</textarea>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Update Judge Config</button>
-</form>
-
-<script>
-// Show/hide chalmeta field based on checker type
-document.getElementById('checker_type').addEventListener('change', function() {
-    const chalmetaGroup = document.getElementById('chalmeta_group');
-    if (this.value == '8') {  // CheckerType.IOREDIR
-        chalmetaGroup.style.display = 'block';
-    } else {
-        chalmetaGroup.style.display = 'none';
-    }
-});
-</script>

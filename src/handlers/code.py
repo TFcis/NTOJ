@@ -2,24 +2,15 @@
 Unified code display handler.
 Dispatches to problem type-specific handlers.
 """
-import tornado.escape
 
 from handlers.base import RequestHandler, reqenv
-from services.code import CodeService
-from services.chal import Compiler, ChalService
+from services.chal import ChalService
 from services.pro import ProService, ProType, ProConst
 
 
 class CodeHandler(RequestHandler):
-    """Unified code display handler - dispatches to type-specific handlers."""
-
-    @reqenv
-    async def get(self):
-        self.error(('Eacces', 'Permission denied'))
-
     @reqenv
     async def post(self):
-        """Handle code display request - dispatch to type-specific handler."""
         chal_id = int(self.get_argument('chal_id'))
 
         # Get challenge to determine problem type

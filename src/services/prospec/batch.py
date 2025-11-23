@@ -1,7 +1,6 @@
 import decimal
-import json
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any
 
 from services.pro import BaseConfig, CheckerType, SummaryType, ProblemConfig

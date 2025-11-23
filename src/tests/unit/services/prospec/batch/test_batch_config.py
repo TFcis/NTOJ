@@ -1,6 +1,5 @@
 """Unit tests for BatchConfig dataclass."""
 import unittest
-from dataclasses import FrozenInstanceError
 
 from services.pro import CheckerType, SummaryType
 from services.prospec.batch import BatchConfig

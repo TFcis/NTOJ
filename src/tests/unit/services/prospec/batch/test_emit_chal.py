@@ -1,8 +1,6 @@
 """Unit tests for BatchProblemSpec.emit_chal() method."""
-import decimal
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch, call
-import os
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from services.pro import CheckerType, SummaryType, ProblemConfig, Limit, SubtaskConfig, Testdata
 from services.prospec.batch import BatchProblemSpec, BatchConfig
