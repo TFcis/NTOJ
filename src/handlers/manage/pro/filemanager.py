@@ -14,6 +14,8 @@ PERMISSION_DENIED_ERROR = ('Eacces', 'Permission denied')
 ALLOW_STATUSES = [ProConst.STATUS_ONLINE, ProConst.STATUS_CONTEST, ProConst.STATUS_HIDDEN]
 
 
+# TODO: res/checker and res/grader is batch specific
+# TODO: We should refactor this as a common filemanger, problem type only need specific what folder path is used
 class ManageProFilemanagerHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
