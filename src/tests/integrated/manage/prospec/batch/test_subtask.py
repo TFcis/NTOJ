@@ -1,3 +1,4 @@
+"""Integration tests for Batch problem subtask and testdata configuration."""
 import re
 import os
 import json
@@ -6,7 +7,10 @@ from services.pro import ProService, ProConst, Problem, ProblemConfig
 from services.chal import ChalService, ChalConst
 from tests.integrated.util import AsyncTest, AccountContext
 
-class ManageProUpdateTestsTest(AsyncTest):
+
+class BatchSubtaskTest(AsyncTest):
+    """Test Batch problem subtask and testdata management."""
+
     async def _upload_file(self, filepath, session):
         pack_token = self.get_upload_token(session)
         with open(filepath, 'rb') as file:
@@ -70,7 +74,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid testdata file type'))
 
             # NOTE: updaterate
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'updaterate',
                 'pro_id': 1,
                 'rate': 60,
@@ -82,7 +86,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(config.subtask_configs[0].rate, 60)
 
             # NOTE: addsubtask
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'addsubtask',
                 'pro_id': 1,
                 'rate': 20,
@@ -134,7 +138,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             )
 
             # NOTE: settestdata (add testdata to range)
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'settestdata',
                 'pro_id': 1,
                 'testdatas': '0-2',
@@ -199,7 +203,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA])
 
             # NOTE: setdepsubtasks
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'setdepsubtasks',
                 'pro_id': 1,
                 'dep_subtasks': '2', # NOTE: user input subtask id start from 1
@@ -209,7 +213,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             config = await self.get_proconfig(1)
             self.assertIn(1, config.subtask_configs[2].dependency_subtasks)
 
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'setdepsubtasks',
                 'pro_id': 1,
                 'dep_subtasks': '3', # NOTE: user input subtask id start from 1
@@ -234,7 +238,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(config.testdatas[3].inputfile, '4.in')
             self.assertEqual(config.testdatas[3].outputfile, '4.out')
 
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'settestdata',
                 'pro_id': 1,
                 'testdatas': '0-1, 3',
@@ -286,7 +290,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             )
 
             # NOTE: deletesubtask
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'deletesubtask',
                 'pro_id': 1,
                 'subtask': 2,

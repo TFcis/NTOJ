@@ -92,6 +92,7 @@ omit =
     tests/*
     server.py
     upgrade.py
+    config_dev.py
 EOF
 
 
