@@ -5,7 +5,7 @@ from handlers.manage.contest import ManageContestHandler
 from handlers.manage.dash import ManageDashHandler
 from handlers.manage.judge import JudgeChalCntSub, ManageJudgeHandler
 from handlers.manage.pack import ManagePackHandler
-from handlers.manage.pro import ManageProHandler
+from handlers.manage.pro.url import get_manage_pro_url
 from handlers.manage.proclass import ManageProClassHandler
 from handlers.manage.question import ManageQuestionHandler
 
@@ -18,12 +18,13 @@ def get_manage_url(db, rs, pool):
 
     sub_args = {'pool': pool}
 
+    # Get pro management URLs with args applied
+    pro_urls = [(pattern, handler, args) for pattern, handler in get_manage_pro_url()]
+
     return [
         ('/be/manage/dash', ManageDashHandler, args),
         ('/be/manage/acct', ManageAcctHandler, args),
         ('/be/manage/acct/(.+)', ManageAcctHandler, args),
-        ('/be/manage/pro', ManageProHandler, args),
-        ('/be/manage/pro/(.+)', ManageProHandler, args),
         ('/be/manage/board', ManageBoardHandler, args),
         ('/be/manage/board/(.+)', ManageBoardHandler, args),
         ('/be/manage/contest', ManageContestHandler, args),
@@ -36,4 +37,4 @@ def get_manage_url(db, rs, pool):
         ('/be/manage/judge', ManageJudgeHandler, args),
         ('/be/manage/judgecntws', JudgeChalCntSub, sub_args),
         ('/be/manage/pack', ManagePackHandler, args),
-    ]
+    ] + pro_urls

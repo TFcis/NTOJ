@@ -32,6 +32,12 @@ class SummaryType(enum.IntEnum):
     OVERWRITE = 2
     CUSTOM = 3
 
+class ProType(enum.IntEnum):
+    BATCH = 1
+    COMMUNICATION = 2
+    TWOSTEP = 3
+    OUTPUTONLY = 4
+
 class ProConst:
     """
     Constants used in problem management for status codes, checker types,
@@ -115,16 +121,14 @@ class Limit:
         assert self.output >= 0
 
 @dataclass(slots=True)
+class BaseConfig:
+    """Base class for all problem type configs, used for type checking only."""
+    pass
+
+@dataclass(slots=True)
 class ProblemConfig:
     """
-    - has_grader (bool): Whether the problem uses a Makefile-based compilation.
-    See: https://wiki.tfcis.org/TOJ#Makefile%E9%A1%8C%E7%9B%AE_(%E7%B7%A8%E8%AD%AF%E4%BA%92%E5%8B%95%E9%A1%8C)
-
-    - chalmeta (str): For IORedir Problem
-    See: https://wiki.tfcis.org/TOJ#IORedir
-
-    - checker_type (int): One of the values defined in ProConst.CHECKER_TYPE, indicating
-    the type of checker (e.g., diff, float-diff, ioredir).
+    Common problem configuration shared across all problem types.
 
     - limits (dict[str, Limit]): Per-language time and memory limits.
         - Keys are compiler types (e.g., "gcc", "clang", "default").
@@ -138,25 +142,21 @@ class ProblemConfig:
 
     - testdatas (dict[int, Testdata]): Configuration for each testdata. Each key is
     a testdata id.
+
+    - spec_config (BaseConfig): Problem type-specific configuration (BatchConfig, etc.)
     """
-    chalmeta: str
     limits: dict[str, Limit]
-    userprog_compile_args: str
-    checker_type: CheckerType
-    checker_compiler: int | None
-    checker_compile_args: str
-    summary_type: SummaryType
-    summary_compiler: int | None
-    summary_compile_args: str
-    has_grader: bool
-    allow_compilers: set[int]
     subtask_configs: dict[int, SubtaskConfig]
     testdatas: dict[int, Testdata]
     rate_precision: int
+    spec_config: BaseConfig
 
     def __post_init__(self):
-        assert 'default' in self.limits
-        assert ProConst.RATE_PRECISION_MIN <= self.rate_precision <= ProConst.RATE_PRECISION_MAX
+        # Only validate if limits is populated (allows empty dict during construction)
+        if self.limits:
+            assert 'default' in self.limits
+        if self.rate_precision != 0:  # Allow 0 as placeholder during construction
+            assert ProConst.RATE_PRECISION_MIN <= self.rate_precision <= ProConst.RATE_PRECISION_MAX
 
     def get_effective_testdatas(self) -> list[Testdata]:
         s = set()
@@ -174,6 +174,7 @@ class Problem:
     status: int
     tags: str
     allow_submit: bool
+    problem_type: int  # ProType enum value
     config: ProblemConfig | None
 
     def __post_init__(self):
@@ -187,6 +188,7 @@ class ProService:
 
     async def get_pro(self, pro_id: int, allow_statuses: list[int]) -> tuple[None, Problem] | ErrorType:
         from services.chal import Compiler
+        from services.prospec.batch import batch_spec
         """
         Fetch problem configuration and metadata by ID, ensuring it's in the allowed status.
 
@@ -207,10 +209,7 @@ class ProService:
             result = await con.fetch(
                 """
                     SELECT "name", "status", "tags", "allow_submit",
-                    "allow_compilers", "userprog_compile_args",
-                    "checker_type", "checker_compiler", "checker_compile_args",
-                    "summary_type", "summary_compiler", "summary_compile_args",
-                    "has_grader", "chalmeta", "limits", "rate_precision"
+                    "problem_type", "config", "limits", "rate_precision"
                     FROM "problem" WHERE "pro_id" = $1;
                 """,
                 pro_id,
@@ -219,62 +218,37 @@ class ProService:
                 return ("Enoext", "Problem not found"), None
             result = result[0]
 
-            (
-                name,
-                status,
-                tags,
-                allow_submit,
-                allow_compilers,
-                userprog_compile_args,
-                checker_type,
-                checker_compiler,
-                checker_compile_args,
-                summary_type,
-                summary_compiler,
-                summary_compile_args,
-                has_grader,
-                rate_precision,
-                limits,
-                chalmeta,
-            ) = (
-                result["name"],
-                result["status"],
-                result["tags"],
-                result["allow_submit"],
-                result["allow_compilers"],
-                result["userprog_compile_args"],
-                result["checker_type"],
-                result["checker_compiler"],
-                result["checker_compile_args"],
-                result["summary_type"],
-                result["summary_compiler"],
-                result["summary_compile_args"],
-                result["has_grader"],
-                result["rate_precision"],
-                json.loads(result["limits"]),
-                json.loads(result["chalmeta"]),
-            )
+            name = result["name"]
+            status = result["status"]
+            tags = result["tags"]
+            allow_submit = result["allow_submit"]
+            problem_type = result["problem_type"]
+            config_json = json.loads(result["config"])
+            limits = json.loads(result["limits"])
+            rate_precision = result["rate_precision"]
+
             if tags is None:
                 tags = ""
-
-            if checker_compiler:
-                checker_compiler = Compiler(checker_compiler)
-            if summary_compiler:
-                summary_compiler = Compiler(summary_compiler)
 
             if status not in allow_statuses:
                 return ("Eacces", "Permission denied"), None
 
+            # Get testdata with new files structure
             result = await con.fetch(
                 """
-                    SELECT "id", "inputfile", "outputfile"
+                    SELECT "id", "files"
                     FROM "testdata" WHERE "pro_id" = $1;
                 """,
                 pro_id,
             )
             testdatas: dict[int, Testdata] = {}
-            for id, inputfile, outputfile in result:
-                testdatas[id] = Testdata(id, inputfile, outputfile)
+
+            # TODO: Support different problem types, for now only Batch
+            if problem_type == ProType.BATCH:
+                spec = batch_spec
+                for id, files_json in result:
+                    files = spec.parse_testdata_files(json.loads(files_json))
+                    testdatas[id] = Testdata(id, files['input'], files['output'])
 
             result = await con.fetch(
                 """
@@ -292,27 +266,26 @@ class ProService:
                     rate,
                 )
 
-        proconfig = ProblemConfig(
-            chalmeta=chalmeta,
-            limits={
-                compiler: Limit(**limit)
-                for compiler, limit in limits.items()
-            },
-            userprog_compile_args=userprog_compile_args,
-            checker_type=checker_type,
-            checker_compiler=checker_compiler,
-            checker_compile_args=checker_compile_args,
-            summary_type=summary_type,
-            summary_compiler=summary_compiler,
-            summary_compile_args=summary_compile_args,
-            subtask_configs=subtask_configs,
-            testdatas=testdatas,
-            rate_precision=rate_precision,
-            has_grader=has_grader,
-            allow_compilers=set(map(Compiler, allow_compilers)),
-        )
+        # Parse config using ProSpec
+        # TODO: Support different problem types, for now only Batch
+        proconfig: ProblemConfig | None = None
+        if problem_type == ProType.BATCH:
+            spec = batch_spec
+            spec_config = spec.from_json(config_json)
 
-        return None, Problem(pro_id, name, status, tags, allow_submit, proconfig)
+            # Build common ProblemConfig
+            proconfig = ProblemConfig(
+                limits={
+                    compiler: Limit(**limit)
+                    for compiler, limit in limits.items()
+                },
+                subtask_configs=subtask_configs,
+                testdatas=testdatas,
+                rate_precision=rate_precision,
+                spec_config=spec_config,
+            )
+
+        return None, Problem(pro_id, name, status, tags, allow_submit, problem_type, proconfig)
 
     async def get_pro_config(self, pro_id: int):
         # TODO: get_pro_config
@@ -344,7 +317,7 @@ class ProService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     f"""
-                        SELECT p.pro_id, p.name, p.status, p.tags, p.allow_submit
+                        SELECT p.pro_id, p.name, p.status, p.tags, p.allow_submit, p.problem_type
                         FROM "problem" p
                         WHERE p."status" IN ({",".join(map(str, allow_pro_statuses))})
                         ORDER BY pro_id ASC;
@@ -352,7 +325,7 @@ class ProService:
                 )
 
             prolist = []
-            for pro_id, name, status, tags, allow_submit in result:
+            for pro_id, name, status, tags, allow_submit, problem_type in result:
                 if tags is None:
                     tags = ""
 
@@ -363,6 +336,7 @@ class ProService:
                         "status": status,
                         "tags": tags,
                         "allow_submit": allow_submit,
+                        "problem_type": problem_type,
                     }
                 )
 
@@ -461,12 +435,13 @@ class ProService:
 
         return None, None
 
-    async def update_pro_config(self, pro_id: int, config: ProblemConfig):
+    async def update_pro_config(self, pro_id: int, problem_type: ProType, config: ProblemConfig):
         """
-        Update the test configuration (testm_conf) for a given problem.
+        Update the test configuration for a given problem.
 
         Args:
             pro_id (int): The ID of the problem to update.
+            problem_type (ProType): The type of the problem.
             config (ProblemConfig): The problem configuration.
 
         Returns:
@@ -477,6 +452,7 @@ class ProService:
             the `NotStart` state, due to test configuration changes.
             - Related Redis cache (`rate`, `pro_rate`) will be invalidated.
         """
+        from services.prospec.batch import batch_spec
 
         insert_subtask_config_values = []
         insert_testdatas_values = []
@@ -489,10 +465,17 @@ class ProService:
                 )
             )
 
-        for testdata in config.testdatas.values():
-            insert_testdatas_values.append(
-                (pro_id, testdata.testdata_id, testdata.inputfile, testdata.outputfile)
-            )
+        # TODO: Support different problem types, for now only Batch
+        if problem_type == ProType.BATCH:
+            spec = batch_spec
+            for testdata in config.testdatas.values():
+                files_json = spec.build_testdata_files(
+                    input=testdata.inputfile,
+                    output=testdata.outputfile
+                )
+                insert_testdatas_values.append(
+                    (pro_id, testdata.testdata_id, json.dumps(files_json))
+                )
 
         async with self.db.acquire() as con:
             await con.execute(
@@ -501,27 +484,29 @@ class ProService:
             await con.execute(
                 'DELETE FROM "testdata" WHERE "pro_id" = $1;', int(pro_id)
             )
-            await con.execute(
-                '''
-                UPDATE problem SET allow_compilers = $1, has_grader = $2, chalmeta = $3,
-                limits = $4, rate_precision = $5, userprog_compile_args = $6,
-                checker_type = $7, checker_compiler = $8, checker_compile_args = $9,
-                summary_type = $10, summary_compiler = $11, summary_compile_args = $12
-                WHERE pro_id = $13;
-                ''',
-                config.allow_compilers,
-                config.has_grader,
-                json.dumps(config.chalmeta),
-                json.dumps({
-                    comp: asdict(limit)
-                    for comp, limit in config.limits.items()
-                }),
-                config.rate_precision,
-                config.userprog_compile_args,
-                config.checker_type, config.checker_compiler, config.checker_compile_args,
-                config.summary_type, config.summary_compiler, config.summary_compile_args,
-                pro_id,
-            )
+
+            # Update problem config using ProSpec
+            # TODO: Support different problem types, for now only Batch
+            if problem_type == ProType.BATCH:
+                from services.prospec.batch import BatchConfig
+                spec = batch_spec
+                # Type assertion: we know spec_config is BatchConfig for BATCH type
+                assert isinstance(config.spec_config, BatchConfig)
+                config_json = spec.to_json(config.spec_config)
+
+                await con.execute(
+                    '''
+                    UPDATE problem SET config = $1, limits = $2, rate_precision = $3
+                    WHERE pro_id = $4;
+                    ''',
+                    json.dumps(config_json),
+                    json.dumps({
+                        comp: asdict(limit)
+                        for comp, limit in config.limits.items()
+                    }),
+                    config.rate_precision,
+                    pro_id,
+                )
 
             await con.executemany(
                 """INSERT INTO "subtask_config"
@@ -532,8 +517,8 @@ class ProService:
 
             await con.executemany(
                 """
-                    INSERT INTO "testdata" ("pro_id", "id", "inputfile", "outputfile")
-                    VALUES ($1, $2, $3, $4);
+                    INSERT INTO "testdata" ("pro_id", "id", "files")
+                    VALUES ($1, $2, $3);
                 """,
                 insert_testdatas_values,
             )
@@ -585,6 +570,7 @@ class ProService:
         """
 
         from services.chal import Compiler, ChalConst
+        from services.prospec.batch import BatchConfig
 
         failed = True
         try:
@@ -679,14 +665,31 @@ class ProService:
 
 
             if has_grader:
-                allow_compilers = {Compiler.CLANGPP, Compiler.GPP}
+                allow_compilers = {int(Compiler.CLANGPP), int(Compiler.GPP)}
             else:
-                allow_compilers = {v for v in Compiler}
+                allow_compilers = {int(v) for v in Compiler}
             checker_type = ProConst.OLD_STR_2_CHECKER_TYPE[conf["check"]]
-            proconfig = ProblemConfig(chalmeta, limits, "",
-                                      checker_type, Compiler.GPP, "",
-                                      SummaryType.GROUPMIN, Compiler.GPP, "",
-                                      has_grader, allow_compilers, subtask_configs, testdatas, rate_precision=0)
+
+            batch_config = BatchConfig(
+                chalmeta=chalmeta,
+                userprog_compile_args="",
+                checker_type=checker_type,
+                checker_compiler=int(Compiler.GPP),
+                checker_compile_args="",
+                summary_type=SummaryType.GROUPMIN,
+                summary_compiler=int(Compiler.GPP),
+                summary_compile_args="",
+                has_grader=has_grader,
+                allow_compilers=allow_compilers,
+            )
+
+            proconfig = ProblemConfig(
+                limits=limits,
+                subtask_configs=subtask_configs,
+                testdatas=testdatas,
+                rate_precision=0,
+                spec_config=batch_config,
+            )
             failed = False
 
         finally:
@@ -695,7 +698,7 @@ class ProService:
                 shutil.rmtree(f"problem/{pro_id}")
             await PackService.inst.clear(pack_token)
 
-        await self.update_pro_config(pro_id, proconfig)
+        await self.update_pro_config(pro_id, ProType.BATCH, proconfig)
         await self.rs.delete("prolist")
 
         return None, None
