@@ -429,6 +429,79 @@ class BatchProblemSpec(ProSpec):
 
         return None, None
 
+    def get_allowed_file_paths(self, config: BatchConfig, pro_id: int) -> list[str]:
+        """Get allowed file paths for Batch problem type."""
+        from services.chal import COMPILER_INFOS
+
+        allowed_paths = ['http', 'res/checker', 'res/grader']
+
+        if config.has_grader:
+            used_grader = set()
+            for compiler in config.allow_compilers:
+                grader_name = COMPILER_INFOS[compiler].grader_name
+                if grader_name in used_grader:
+                    continue
+                grader_path = os.path.join("problem", str(pro_id), "res", "grader", grader_name)
+                if not os.path.exists(grader_path):
+                    continue
+                allowed_paths.append(f'res/grader/{grader_name}')
+                used_grader.add(grader_name)
+
+        return allowed_paths
+
+    def get_file_structure(self, config: BatchConfig, pro_id: int) -> list[dict[str, Any]]:
+        """Get the file structure for Batch problem type."""
+        from services.chal import COMPILER_INFOS
+        from services.filemanager import FileManager
+        from natsort import natsorted
+        from services.pro import CheckerType
+
+        dirs = []
+
+        if config.has_grader:
+            used_grader = set()
+
+            for compiler in config.allow_compilers:
+                grader_name = COMPILER_INFOS[compiler].grader_name
+                if grader_name in used_grader:
+                    continue
+
+                grader_path = os.path.join("problem", str(pro_id), "res", "grader", grader_name)
+                if not os.path.exists(grader_path):
+                    continue
+
+                grader_file_mgr = FileManager(grader_path)
+                files = list(natsorted(grader_file_mgr.listdir(only_files=True)))
+                dirs.append({
+                    'path': f'res/grader/{grader_name}',
+                    'files': files,
+                })
+                used_grader.add(grader_name)
+
+            grader_base_mgr = FileManager(f"problem/{pro_id}/res/grader")
+            files = list(natsorted(grader_base_mgr.listdir(only_files=True)))
+            dirs.append({
+                'path': 'res/grader',
+                'files': files,
+            })
+
+        if config.checker_type in CheckerType.need_build_checkers():
+            checker_file_mgr = FileManager(f'problem/{pro_id}/res/checker')
+            files = list(natsorted(checker_file_mgr.listdir(only_files=True)))
+            dirs.append({
+                'path': 'res/checker',
+                'files': files,
+            })
+
+        http_file_mgr = FileManager(f'problem/{pro_id}/http')
+        files = list(natsorted(http_file_mgr.listdir(only_files=True)))
+        dirs.append({
+            'path': 'http',
+            'files': files,
+        })
+
+        return dirs
+
 
 # Singleton instance
 batch_spec = BatchProblemSpec()

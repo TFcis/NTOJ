@@ -146,3 +146,31 @@ class ProSpec(ABC):
             (None, None) on success, or (error_tuple, None) on failure
         """
         ...
+
+    @abstractmethod
+    def get_allowed_file_paths(self, config, pro_id: int) -> list[str]:
+        """
+        Get allowed file paths for this problem type.
+
+        Args:
+            config: Problem type-specific config object
+            pro_id: Problem ID
+
+        Returns:
+            List of allowed file paths relative to problem directory
+        """
+        ...
+
+    @abstractmethod
+    def get_file_structure(self, config, pro_id: int) -> list[dict[str, Any]]:
+        """
+        Get the file structure for this problem type.
+
+        Args:
+            config: Problem type-specific config object
+            pro_id: Problem ID
+
+        Returns:
+            List of directory information with paths and files
+        """
+        ...
