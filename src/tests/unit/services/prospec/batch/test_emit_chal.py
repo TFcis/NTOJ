@@ -2,8 +2,8 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.pro import CheckerType, SummaryType, ProblemConfig, Limit, SubtaskConfig, Testdata
-from services.prospec.batch import BatchProblemSpec, BatchConfig
+from services.pro import CheckerType, SummaryType, ProblemConfig, Limit, SubtaskConfig
+from services.prospec.batch import BatchProblemSpec, BatchConfig, BatchTestdata
 from services.chal import Compiler, ChalConst
 
 
@@ -40,8 +40,8 @@ class TestBatchProblemSpecEmitChal(unittest.IsolatedAsyncioTestCase):
                 1: SubtaskConfig(
                     subtask_id=1,
                     testdatas=[
-                        Testdata(testdata_id=1, inputfile='1.in', outputfile='1.out'),
-                        Testdata(testdata_id=2, inputfile='2.in', outputfile='2.out'),
+                        BatchTestdata(testdata_id=1, inputfile='1.in', outputfile='1.out'),
+                        BatchTestdata(testdata_id=2, inputfile='2.in', outputfile='2.out'),
                     ],
                     dependency_subtasks=set(),
                     rate=50,
@@ -49,16 +49,16 @@ class TestBatchProblemSpecEmitChal(unittest.IsolatedAsyncioTestCase):
                 2: SubtaskConfig(
                     subtask_id=2,
                     testdatas=[
-                        Testdata(testdata_id=3, inputfile='3.in', outputfile='3.out'),
+                        BatchTestdata(testdata_id=3, inputfile='3.in', outputfile='3.out'),
                     ],
                     dependency_subtasks={1},
                     rate=50,
                 ),
             },
             testdatas={
-                1: Testdata(testdata_id=1, inputfile='1.in', outputfile='1.out'),
-                2: Testdata(testdata_id=2, inputfile='2.in', outputfile='2.out'),
-                3: Testdata(testdata_id=3, inputfile='3.in', outputfile='3.out'),
+                1: BatchTestdata(testdata_id=1, inputfile='1.in', outputfile='1.out'),
+                2: BatchTestdata(testdata_id=2, inputfile='2.in', outputfile='2.out'),
+                3: BatchTestdata(testdata_id=3, inputfile='3.in', outputfile='3.out'),
             },
             rate_precision=2,
             spec_config=self.batch_config,
