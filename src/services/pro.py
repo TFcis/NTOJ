@@ -92,19 +92,17 @@ class ProConst:
     PRO_STATUS_CONTEST_USER = [STATUS_ONLINE, STATUS_CONTEST]
     PRO_STATUS_FULL = [STATUS_ONLINE, STATUS_CONTEST, STATUS_HIDDEN]
 
-
-
+# TODO: Move this to prospec
 @dataclass(slots=True)
-class Testdata:
+class BaseTestdata:
+    """Base class for all problem type testdata, used for type checking only."""
     testdata_id: int
-    inputfile: str
-    outputfile: str
 
 
 @dataclass(slots=True)
 class SubtaskConfig:
     subtask_id: int
-    testdatas: list[Testdata]
+    testdatas: list[BaseTestdata]
     dependency_subtasks: set[int]
     rate: int
 
@@ -120,10 +118,12 @@ class Limit:
         assert self.memory >= 0
         assert self.output >= 0
 
+# TODO: Move this to prospec
 @dataclass(slots=True)
 class BaseConfig:
     """Base class for all problem type configs, used for type checking only."""
     pass
+
 
 @dataclass(slots=True)
 class ProblemConfig:
@@ -147,7 +147,7 @@ class ProblemConfig:
     """
     limits: dict[str, Limit]
     subtask_configs: dict[int, SubtaskConfig]
-    testdatas: dict[int, Testdata]
+    testdatas: dict[int, BaseTestdata]
     rate_precision: int
     spec_config: BaseConfig
 
@@ -158,7 +158,7 @@ class ProblemConfig:
         if self.rate_precision != 0:  # Allow 0 as placeholder during construction
             assert ProConst.RATE_PRECISION_MIN <= self.rate_precision <= ProConst.RATE_PRECISION_MAX
 
-    def get_effective_testdatas(self) -> list[Testdata]:
+    def get_effective_testdatas(self) -> list[BaseTestdata]:
         s = set()
         for cfg in self.subtask_configs.values():
             for t in cfg.testdatas:
@@ -241,14 +241,13 @@ class ProService:
                 """,
                 pro_id,
             )
-            testdatas: dict[int, Testdata] = {}
+            testdatas: dict[int, BaseTestdata] = {}
 
             # TODO: Support different problem types, for now only Batch
             if problem_type == ProType.BATCH:
                 spec = batch_spec
                 for id, files_json in result:
-                    files = spec.parse_testdata_files(json.loads(files_json))
-                    testdatas[id] = Testdata(id, files['input'], files['output'])
+                    testdatas[id] = spec.parse_testdata_files(id, json.loads(files_json))
 
             result = await con.fetch(
                 """
@@ -469,10 +468,7 @@ class ProService:
         if problem_type == ProType.BATCH:
             spec = batch_spec
             for testdata in config.testdatas.values():
-                files_json = spec.build_testdata_files(
-                    input=testdata.inputfile,
-                    output=testdata.outputfile
-                )
+                files_json = spec.build_testdata_files(testdata)
                 insert_testdatas_values.append(
                     (pro_id, testdata.testdata_id, json.dumps(files_json))
                 )

@@ -3,7 +3,7 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from services.pro import BaseConfig, CheckerType, SummaryType, ProblemConfig
+from services.pro import BaseConfig, BaseTestdata, CheckerType, SummaryType, ProblemConfig
 from services.prospec.base import ProSpec
 
 
@@ -31,6 +31,11 @@ class BatchConfig(BaseConfig):
     summary_compile_args: str
     has_grader: bool
     allow_compilers: set[int]
+
+@dataclass(slots=True)
+class BatchTestdata(BaseTestdata):
+    inputfile: str
+    outputfile: str
 
 
 class BatchProblemSpec(ProSpec):
@@ -124,9 +129,11 @@ class BatchProblemSpec(ProSpec):
         await db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id = ANY($3);',
                         ChalConst.STATE_JUDGE, chal_id, list(need_judge_testdatas))
 
+        assert isinstance(config.spec_config, BatchConfig)
         testdatas = []
         for testdata_id in need_judge_testdatas:
             testdata = config.testdatas[testdata_id]
+            assert isinstance(testdata, BatchTestdata)
             testdatas.append({
                 "id": testdata.testdata_id,
                 "input": testdata.inputfile,
@@ -252,18 +259,20 @@ class BatchProblemSpec(ProSpec):
 
         return None, chal_id
 
-    def parse_testdata_files(self, files_json: dict[str, Any]) -> dict[str, str]:
+    def parse_testdata_files(self, testdata_id: int, files_json: dict[str, Any]) -> BatchTestdata:
         """Parse Batch testdata files JSON."""
-        return {
-            'input': files_json.get('input', ''),
-            'output': files_json.get('output', ''),
-        }
+        return BatchTestdata(
+            testdata_id=testdata_id,
+            inputfile=files_json.get('input', ''),
+            outputfile=files_json.get('output', ''),
+        )
 
-    def build_testdata_files(self, **files) -> dict[str, Any]:
+    def build_testdata_files(self, testdata: BaseTestdata) -> dict[str, Any]:
+        assert isinstance(testdata, BatchTestdata)
         """Build Batch testdata files JSON."""
         return {
-            'input': files.get('input', ''),
-            'output': files.get('output', ''),
+            'input': testdata.inputfile,
+            'output': testdata.outputfile,
         }
 
     async def unpack_pro(

@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from services.pro import BaseTestdata
+
 
 class ProSpec(ABC):
     """Abstract base class for problem type specifications."""
@@ -96,25 +98,27 @@ class ProSpec(ABC):
         ...
 
     @abstractmethod
-    def parse_testdata_files(self, files_json: dict[str, Any]) -> dict[str, str]:
+    def parse_testdata_files(self, testdata_id: int, files_json: dict[str, Any]) -> BaseTestdata:
         """
         Parse testdata files JSON into a dictionary.
 
         Args:
+            testdata_id: Testdata ID
             files_json: JSON data from testdata.files column
 
         Returns:
-            Dictionary mapping file type to file path
+            Problem type-specific testdata object (e.g., BatchTestdata) inheriting from BaseTestdata
         """
         ...
 
     @abstractmethod
-    def build_testdata_files(self, **files) -> dict[str, Any]:
+    def build_testdata_files(self, testdata: BaseTestdata) -> dict[str, Any]:
         """
         Build testdata files JSON from individual file paths.
 
         Args:
-            **files: Keyword arguments for file paths
+            testdata: Problem type-specific testdata object (e.g., BatchTestdata)
+
 
         Returns:
             JSON-serializable dictionary

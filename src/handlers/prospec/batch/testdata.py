@@ -8,9 +8,11 @@ from dataclasses import asdict
 
 from handlers.base import RequestHandler, reqenv, require_permission
 from services.log import LogService
-from services.pro import ProService, ProConst, Testdata
+from services.pro import ProService, ProConst
+from services.prospec.batch import BatchTestdata
 from services.user import UserConst
 from services.pack import PackService
+from services.filemanager import FileManager
 
 PERMISSION_DENIED_ERROR = ('Eacces', 'Permission denied')
 ALLOW_STATUSES = [ProConst.STATUS_ONLINE, ProConst.STATUS_CONTEST, ProConst.STATUS_HIDDEN]
@@ -125,50 +127,34 @@ class BatchTestdataHandler(RequestHandler):
             testdata_type = self.get_argument('type')
             pack_token = self.get_argument('pack_token')
 
-            failed = True
-            try:
-                testdatas = pro.config.testdatas
-                if testdata_id not in testdatas:
-                    return self.error(('Enoext', 'Testdata not found'))
+            testdatas = pro.config.testdatas
+            if testdata_id not in testdatas:
+                await PackService.inst.clear(pack_token)
+                return self.error(('Enoext', 'Testdata not found'))
 
-                if testdata_type not in ['output', 'input']:
-                    return self.error(('Eparam', 'Invalid testdata file type'))
+            testdata = testdatas[testdata_id]
+            assert isinstance(testdata, BatchTestdata)
 
-                if testdata_type == 'input':
-                    filename = testdatas[testdata_id].inputfile
-                else:
-                    filename = testdatas[testdata_id].outputfile
+            if testdata_type not in ['output', 'input']:
+                await PackService.inst.clear(pack_token)
+                return self.error(('Eparam', 'Invalid testdata file type'))
 
-                basepath = f'problem/{pro_id}/res/testdata'
-                filepath = f'{basepath}/{filename}'
+            if testdata_type == 'input':
+                filename = testdata.inputfile
+            else:
+                filename = testdata.outputfile
 
-                if not self._is_file_access_safe(basepath, filename):
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to update testdata {testdata_id} with {testdata_type} type for problem #{pro_id}, but it was suspicious',
-                        'manage.pro.update.testdata.updatesinglefile.failed',
-                        {
-                            'testdata': testdatas[testdata_id]
-                        }
-                    )
-                    return self.error(PERMISSION_DENIED_ERROR)
-
-                if not os.path.exists(filepath):
-                    await LogService.inst.add_log(
-                        f'{self.acct.name} tried to update testdata {testdata_id} with {testdata_type} type for problem #{pro_id} but not found',
-                        'manage.pro.update.testdata.updatesinglefile.failed',
-                        {
-                            'testdata': testdatas[testdata_id]
-                        }
-                    )
-                    return self.error(('Enoext', 'Testdata file not found'))
-                failed = False
-
-            finally:
-                # NOTE: Like golang defer
-                if failed:
-                    await PackService.inst.clear(pack_token)
-
-            _ = await PackService.inst.direct_copy(pack_token, filepath)
+            file_mgr = FileManager(f'problem/{pro_id}/res/testdata')
+            err, _ = await file_mgr.update_from_pack(filename, pack_token)
+            if err:
+                await LogService.inst.add_log(
+                    f'{self.acct.name} tried to update testdata {testdata_id} with {testdata_type} type for problem #{pro_id}, failed with {err[0]}',
+                    'manage.pro.update.testdata.updatesinglefile.failed',
+                    {
+                        'testdata': testdatas[testdata_id]
+                    }
+                )
+                return self.error(err)
 
             await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
             await LogService.inst.add_log(
@@ -189,33 +175,30 @@ class BatchTestdataHandler(RequestHandler):
             except ValueError:
                 new_testdata_id = 0
 
-            basepath = f'problem/{pro_id}/res/testdata'
-            inputfile_path = f'{basepath}/{filename}.in'
-            outputfile_path = f'{basepath}/{filename}.out'
+            file_mgr = FileManager(f'problem/{pro_id}/res/testdata')
 
-            if not self._is_file_access_safe(
-                basepath, f'{filename}.in'
-            ) or not self._is_file_access_safe(basepath, f'{filename}.out'):
-                await PackService.inst.clear(input_pack_token)
+            # Try to add input file
+            err, _ = await file_mgr.copy_from_pack(f'{filename}.in', input_pack_token)
+            if err:
                 await PackService.inst.clear(output_pack_token)
                 await LogService.inst.add_log(
-                    f'{self.acct.name} tried to add a single file:{filename} for problem #{pro_id}, but it was suspicious',
+                    f'{self.acct.name} tried to add input file:{filename}.in for problem #{pro_id}, failed with {err[0]}',
                     'manage.pro.update.testdata.addsinglefile.failed'
                 )
-                return self.error(PERMISSION_DENIED_ERROR)
+                return self.error(err)
 
-            if os.path.exists(inputfile_path) or os.path.exists(outputfile_path):
-                await PackService.inst.clear(input_pack_token)
-                await PackService.inst.clear(output_pack_token)
+            # Try to add output file
+            err, _ = await file_mgr.copy_from_pack(f'{filename}.out', output_pack_token)
+            if err:
+                # Clean up input file if output file fails
+                file_mgr.delete(f'{filename}.in')
                 await LogService.inst.add_log(
-                    f'{self.acct.name} tried to add single file:{filename} for problem #{pro_id} but {filename} already exists',
+                    f'{self.acct.name} tried to add output file:{filename}.out for problem #{pro_id}, failed with {err[0]}',
                     'manage.pro.update.testdata.addsinglefile.failed'
                 )
-                return self.error(('Eexist', 'File already exists'))
+                return self.error(err)
 
-            _ = await PackService.inst.direct_copy(input_pack_token, inputfile_path)
-            _ = await PackService.inst.direct_copy(output_pack_token, outputfile_path)
-            testdatas[new_testdata_id] = Testdata(new_testdata_id, f'{filename}.in', f'{filename}.out')
+            testdatas[new_testdata_id] = BatchTestdata(new_testdata_id, f'{filename}.in', f'{filename}.out')
             await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
 
             await LogService.inst.add_log(
@@ -227,27 +210,29 @@ class BatchTestdataHandler(RequestHandler):
 
         elif reqtype == 'deletesinglefile':
             testdata_id = int(self.get_argument('testdata_id'))
-            testdatas: dict[int, dict] = pro.config.testdatas
+            testdatas = pro.config.testdatas
 
             if testdata_id not in testdatas:
                 return self.error(('Enoext', 'Testdata not found'))
 
-            inputfile = testdatas[testdata_id].inputfile
-            outputfile = testdatas[testdata_id].outputfile
+            testdata = testdatas[testdata_id]
+            assert isinstance(testdata, BatchTestdata)
+            inputfile = testdata.inputfile
+            outputfile = testdata.outputfile
 
-            basepath = f'problem/{pro_id}/res/testdata'
-            if not os.path.exists(f'{basepath}/{inputfile}') or not os.path.exists(f'{basepath}/{outputfile}'):
+            file_mgr = FileManager(f'problem/{pro_id}/res/testdata')
+
+            # Try to delete both files
+            err, _ = file_mgr.multiple_delete([inputfile, outputfile])
+            if err:
                 await LogService.inst.add_log(
-                    f'{self.acct.name} tried to delete testdata {testdata_id} for problem #{pro_id} but not found',
+                    f'{self.acct.name} tried to delete testdata {testdata_id} for problem #{pro_id}, failed with {err[0]}',
                     'manage.pro.update.testdata.deletesinglefile.failed',
                     {
                         'testdata': testdatas[testdata_id]
                     }
                 )
-                return self.error(('Enoext', 'Testdata file not found'))
-
-            os.remove(f'{basepath}/{inputfile}')
-            os.remove(f'{basepath}/{outputfile}')
+                return self.error(err)
 
             for subtask_config in pro.config.subtask_configs.values():
                 try:
@@ -267,12 +252,3 @@ class BatchTestdataHandler(RequestHandler):
             )
 
             self.error(('S', ''))
-
-    def _is_file_access_safe(self, basedir, filename):
-        absolute_basepath = os.path.abspath(basedir)
-        absolute_filepath = os.path.abspath(os.path.join(basedir, filename))
-        if os.path.commonpath([absolute_basepath]) != os.path.commonpath([absolute_basepath, absolute_filepath]):
-            return False
-        if os.path.exists(absolute_filepath):
-            return os.path.isfile(absolute_filepath) and not os.path.islink(absolute_filepath)
-        return True
