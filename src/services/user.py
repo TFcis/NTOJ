@@ -291,7 +291,7 @@ class UserService:
 
         return None, None
 
-    async def update_pw(self, acct_id, old, pw, isadmin):
+    async def update_pw(self, acct_id, old, pw, isadmin: bool):
         pw_len = len(pw)
         if pw_len < UserConst.PW_MIN:
             return ('Epwmin', 'Password too short'), None
@@ -305,15 +305,20 @@ class UserService:
                 return ('Enoext', 'Account not found'), None
             result = result[0]
 
-            hpw = base64.b64decode(result['password'].encode('utf-8'))
-            # NOTE: old != current password
-            if (bcrypt.hashpw(old.encode('utf-8'), hpw) != hpw) and not isadmin:
-                return ('Epwold', 'New password same as old password'), None
+            current_hashed_pw = base64.b64decode(result['password'].encode('utf-8'))
+            # Verify old password matches (unless admin is forcing password reset)
+            if not isadmin:
+                if not old or bcrypt.hashpw(old.encode('utf-8'), current_hashed_pw) != current_hashed_pw:
+                    return ('Epwold', 'Old password is incorrect'), None
 
-            hpw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
+            # Check if new password is same as current password
+            if bcrypt.hashpw(pw.encode('utf-8'), current_hashed_pw) == current_hashed_pw:
+                return ('Epwsame', 'New password cannot be the same as current password'), None
+
+            new_hashed_pw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
             await con.execute(
                 'UPDATE "account" SET "password" = $1 WHERE "acct_id" = $2',
-                base64.b64encode(hpw).decode('utf-8'),
+                base64.b64encode(new_hashed_pw).decode('utf-8'),
                 acct_id,
             )
 

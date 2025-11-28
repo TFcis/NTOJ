@@ -124,7 +124,8 @@ class AcctConfigHandler(RequestHandler):
             if not (self.acct.acct_id == target_acct_id or self.acct.is_kernel()):
                 return self.error(PERMISSION_DENIED_ERROR)
 
-            err, _ = await UserService.inst.update_pw(target_acct_id, old, pw, self.acct.is_kernel())
+            isadmin = self.acct.is_kernel() and (self.acct.acct_id != target_acct_id)
+            err, _ = await UserService.inst.update_pw(target_acct_id, old, pw, isadmin)
             if err:
                 return self.error(err)
 
