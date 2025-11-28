@@ -7,22 +7,47 @@
         let pro_id = "{{ pro.pro_id }}";
         let limits_form = $('#limits');
 
-        // TODO: 如果有一個值設定，其他的沒有設定，那其他的用 default
-        // 像是 Python 通常只會設定時間或是記憶體
         limits_form.find('button.submit').on('click', function(e) {
             let limits = {};
-            limits_form.find("tbody > tr").each(function() {
+            let default_limit = null;
+
+            // First pass: get default limit
+            limits_form.find("tbody > tr[compiler='default']").each(function() {
+                let j_tr = $(this);
+                let time = j_tr.find("input.time").val();
+                let memory = j_tr.find("input.memory").val();
+                let output = j_tr.find("input.output").val();
+
+                if (time !== "" && memory !== "" && output !== "") {
+                    default_limit = {
+                        time: time,
+                        memory: memory,
+                        output: output,
+                    };
+                    limits['default'] = default_limit;
+                }
+            });
+
+            if (!default_limit) {
+                index.show_notify_dialog('Default limit must be set', index.DIALOG_TYPE.error);
+                return;
+            }
+
+            // Second pass: process compiler-specific limits with default fallback
+            limits_form.find("tbody > tr[compiler][compiler!='default']").each(function() {
                 let j_tr = $(this);
                 let lang = j_tr.attr('compiler');
                 let time = j_tr.find("input.time").val();
                 let memory = j_tr.find("input.memory").val();
                 let output = j_tr.find("input.output").val();
 
-                if (time !== "" && memory !== "" && output !== "") {
+                // If any value is set, use it; otherwise fall back to default
+                // Only add to limits if at least one value is specified
+                if (time !== "" || memory !== "" || output !== "") {
                     limits[lang] = {
-                        time: time,
-                        memory: memory,
-                        output: output,
+                        time: time !== "" ? time : default_limit.time,
+                        memory: memory !== "" ? memory : default_limit.memory,
+                        output: output !== "" ? output : default_limit.output,
                     };
                 }
             });
