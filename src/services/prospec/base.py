@@ -120,3 +120,25 @@ class ProSpec(ABC):
             JSON-serializable dictionary
         """
         ...
+
+    @abstractmethod
+    async def unpack_pro(
+        self,
+        db,
+        rs,
+        pro_id: int,
+        pack_token: str,
+    ) -> tuple[None, None] | tuple[tuple[str, str], None]:
+        """
+        Unpack and apply a packed problem archive for this problem type.
+
+        Args:
+            db: Database connection pool
+            rs: Redis connection
+            pro_id: The ID of the problem to unpack into
+            pack_token: Token for identifying the uploaded archive
+
+        Returns:
+            (None, None) on success, or (error_tuple, None) on failure
+        """
+        ...

@@ -554,154 +554,30 @@ class ProService:
 
         return None, None
 
-    async def unpack_pro(self, pro_id: int, pack_token: str):
+    async def unpack_pro(self, pro_id: int, pack_token: str, problem_type: ProType = ProType.BATCH):
         """
-        Unpack and apply a packed problem archive.
-        If failed, this function will call PackService.inst.clear() to clear tmp file and clear problem/{pro_id}.
+        Unpack and apply a packed problem archive by delegating to ProSpec.
 
         Args:
             pro_id (int): The ID of the problem to unpack into.
             pack_token (str): Token for identifying the uploaded archive.
+            problem_type (ProType): Type of the problem (default: BATCH).
 
         Returns:
             Tuple[Optional[Tuple[str, str]], None]:
                 - Error code and message if unpacking or config fails.
                 - None if successful.
         """
+        from services.prospec.batch import batch_spec
 
-        from services.chal import Compiler, ChalConst
-        from services.prospec.batch import BatchConfig
+        # TODO: Support different problem types
+        if problem_type == ProType.BATCH:
+            spec = batch_spec
+        else:
+            return ('Enotsupport', 'Problem type not yet supported'), None
 
-        failed = True
-        try:
-            err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
-            if err:
-                return err, None
-
-            try:
-                os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-
-            except FileExistsError:
-                pass
-
-            try:
-                with open(f"problem/{pro_id}/conf.json") as conf_f:
-                    conf = json.load(conf_f)
-            except json.decoder.JSONDecodeError:
-                return ("Econf", "Problem config json syntax error"), None
-
-            has_grader = False
-            if "compile" in conf:
-                has_grader = conf["compile"] == "makefile"
-            elif "has_grader" in conf:
-                has_grader = conf["has_grader"]
-
-            if "limit" in conf:
-                limits = {}
-                for compiler_type, conf_limit in conf["limit"].items():
-                    if compiler_type in ChalConst.OLD_STR_2_COMPILER:
-                        compiler_type = ChalConst.OLD_STR_2_COMPILER[compiler_type]
-                    elif compiler_type != "default":
-                        continue
-
-                    limit = Limit(0, 0, 0)
-                    if "timelimit" in conf_limit and "memlimit" in conf_limit:
-                        try:
-                            limit.time = max(int(conf_limit["timelimit"]), 0)
-                            limit.memory = max(int(conf_limit["memlimit"]), 0)
-                            limit.output = 65536
-                        except ValueError:
-                            continue
-
-                    elif "time" in conf_limit and "memory" in conf_limit and "output" in conf_limit:
-                        try:
-                            limit.time = max(int(conf_limit["time"]), 0)
-                            limit.memory = max(int(conf_limit["memory"]), 0)
-                            limit.output = max(int(conf_limit["output"]), 0)
-                        except ValueError:
-                            continue
-                    else:
-                        continue
-
-                    limits[compiler_type] = limit
-
-                if "default" not in limits:
-                    return ("Econf", "Problem limit config require default value"), None
-
-            elif "timelimit" in conf and "memlimit" in conf:
-                try:
-                    limits = {
-                        "default": Limit(int(conf["timelimit"]), int(conf["memlimit"]), 65536)
-                    }
-                except ValueError:
-                    return ("Econf", "Problem limit config have invalid value"), None
-            else:
-                return (
-                    "Econf",
-                    "Problem config require limit or timelimit/memlimit",
-                ), None
-
-            chalmeta = conf["metadata"]  # INFO: ioredir data
-
-            subtask_configs: dict[int, SubtaskConfig] = {}
-            testdatas: dict[int, Testdata] = {}
-            testdata_name_2_id: dict[str, int] = {}
-            testdata_id_counter = 0
-            for test_idx, test_conf in enumerate(conf["test"]):
-                for t in test_conf["data"]:
-                    if t not in testdata_name_2_id:
-                        t = os.path.basename(str(t))
-                        testdata_name_2_id[t] = testdata_id_counter
-                        testdatas[testdata_id_counter] = Testdata(testdata_id_counter, f"{t}.in", f"{t}.out")
-                        testdata_id_counter += 1
-
-                subtask_configs[test_idx] = SubtaskConfig(test_idx, [], set(), int(test_conf["weight"]))
-
-
-            for test_idx, test_conf in enumerate(conf["test"]):
-                for t in test_conf["data"]:
-                    t = os.path.basename(str(t))
-                    subtask_configs[test_idx].testdatas.append(testdatas[testdata_name_2_id[t]])
-
-
-            if has_grader:
-                allow_compilers = {int(Compiler.CLANGPP), int(Compiler.GPP)}
-            else:
-                allow_compilers = {int(v) for v in Compiler}
-            checker_type = ProConst.OLD_STR_2_CHECKER_TYPE[conf["check"]]
-
-            batch_config = BatchConfig(
-                chalmeta=chalmeta,
-                userprog_compile_args="",
-                checker_type=checker_type,
-                checker_compiler=int(Compiler.GPP),
-                checker_compile_args="",
-                summary_type=SummaryType.GROUPMIN,
-                summary_compiler=int(Compiler.GPP),
-                summary_compile_args="",
-                has_grader=has_grader,
-                allow_compilers=allow_compilers,
-            )
-
-            proconfig = ProblemConfig(
-                limits=limits,
-                subtask_configs=subtask_configs,
-                testdatas=testdatas,
-                rate_precision=0,
-                spec_config=batch_config,
-            )
-            failed = False
-
-        finally:
-            # NOTE: Like golang defer
-            if failed and os.path.exists(f"problem/{pro_id}"):
-                shutil.rmtree(f"problem/{pro_id}")
-            await PackService.inst.clear(pack_token)
-
-        await self.update_pro_config(pro_id, ProType.BATCH, proconfig)
-        await self.rs.delete("prolist")
-
-        return None, None
+        # Delegate to ProSpec implementation
+        return await spec.unpack_pro(self.db, self.rs, pro_id, pack_token)
 
 
 class ProClassConst:
