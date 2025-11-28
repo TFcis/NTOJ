@@ -43,7 +43,7 @@ class ManageProFileManagerTest(AsyncTest):
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
-                    {'filename': '../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'filename': '../conf.json', 'equal_value': ('Eacces', 'Access denied: invalid file path')}, # illegal filepath access
                     {'filename': 'cont.html.html', 'equal_value': ('Enoext', 'File not found')}, # file not found
                     {'path': '/etc/', 'filename': 'passwd-', 'equal_value': ('Eparam', 'Invalid basepath')},
                 ],
@@ -89,7 +89,7 @@ class ManageProFileManagerTest(AsyncTest):
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
-                    {'filename': '../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'filename': '../conf.json', 'equal_value': ('Eacces', 'Access denied: invalid file path')}, # illegal filepath access
                     {'filename': 'test', 'equal_value': ('Eexist', 'File already exists')}, # file already exists
                     {'path': '/etc/', 'filename': 'passwd-', 'equal_value': ('Eparam', 'Invalid basepath')},
                 ],
@@ -144,7 +144,7 @@ class ManageProFileManagerTest(AsyncTest):
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
-                    {'filename': '../check.cpp', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'filename': '../check.cpp', 'equal_value': ('Eacces', 'Access denied: invalid file path')}, # illegal filepath access
                     {'filename': 'abc.cpp', 'equal_value': ('Enoext', 'File not found')}, # file not found
                     {'path': '/etc/', 'filename': 'group-', 'equal_value': ('Eparam', 'Invalid basepath')},
                 ],
@@ -204,7 +204,7 @@ class ManageProFileManagerTest(AsyncTest):
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
-                    {'old_filename': '../../conf.json', 'new_filename': '../../conf.js', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'old_filename': '../../conf.json', 'new_filename': '../../conf.js', 'equal_value': ('Eacces', 'Access denied: invalid file path')}, # illegal filepath access
                     {'old_filename': 'checker.cpp', 'new_filename': 'checker.cpp.cpp', 'equal_value': ('Enoext', 'Old filename not found')}, # file not found
                     {'old_filename': 'checker.cpp.cpp', 'new_filename': 'checker.cpp.cpp', 'equal_value': ('Eexist', 'New filename already exists')}, # file already exists
                     {'path': '/etc/', 'old_filename': 'hostname', 'new_filename': 'chi', 'equal_value': ('Eparam', 'Invalid basepath')},
@@ -241,7 +241,7 @@ class ManageProFileManagerTest(AsyncTest):
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found
                     {'filename': 'checker.cpp', 'equal_value': ('Enoext', 'File not found')}, # file not found, checker.cpp was renamed to checker.cpp.cpp in the previous code
-                    {'filename': '../../conf.json', 'equal_value': ('Eacces', 'Permission denied')}, # file not found, checker.cpp was renamed to checker.cpp.cpp in the previous code
+                    {'filename': '../../conf.json', 'equal_value': ('Eacces', 'Access denied: invalid file path')}, # file not found, checker.cpp was renamed to checker.cpp.cpp in the previous code
                     {'path': '/etc/', 'filename': 'hostname', 'equal_value': ('Eparam', 'Invalid basepath')},
                 ],
                 admin_session

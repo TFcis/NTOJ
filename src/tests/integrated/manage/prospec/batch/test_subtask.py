@@ -131,7 +131,7 @@ class BatchSubtaskTest(AsyncTest):
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
-                    {'filename': '../etc', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'filename': '../etc', 'equal_value': ('Eacces', 'Access denied: invalid file path')}, # illegal filepath access
                     {'filename': '3', 'equal_value': ('Eexist', 'File already exists')} # file already exists
                 ],
                 admin_session
