@@ -310,7 +310,8 @@ class BatchProblemSpec(ProSpec):
             try:
                 os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
             except FileExistsError:
-                pass
+                # NOTE: Problem already exists
+                ...
 
             try:
                 with open(f"problem/{pro_id}/conf.json") as conf_f:

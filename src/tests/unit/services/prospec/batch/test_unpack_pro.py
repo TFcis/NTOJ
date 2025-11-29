@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.pro import ProType, Limit, SubtaskConfig, ProblemConfig, CheckerType, SummaryType
-from services.prospec.batch import BatchProblemSpec, BatchConfig, BatchTestdata
+from services.pro import ProblemConfig
+from services.prospec.batch import BatchProblemSpec, BatchConfig
 from services.chal import Compiler
 
 
@@ -54,7 +54,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
             ]
         }
 
-        pro_dir = self._create_test_package(self.pro_id, config_data)
+        self._create_test_package(self.pro_id, config_data)
 
         # Mock PackService
         mock_pack_service.inst = MagicMock()
@@ -128,7 +128,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
             ]
         }
 
-        pro_dir = self._create_test_package(self.pro_id, config_data)
+        self._create_test_package(self.pro_id, config_data)
 
         mock_pack_service.inst = MagicMock()
         mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))
@@ -186,7 +186,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
             ]
         }
 
-        pro_dir = self._create_test_package(self.pro_id, config_data)
+        self._create_test_package(self.pro_id, config_data)
 
         mock_pack_service.inst = MagicMock()
         mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))
@@ -238,7 +238,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
             ]
         }
 
-        pro_dir = self._create_test_package(self.pro_id, config_data)
+        self._create_test_package(self.pro_id, config_data)
 
         mock_pack_service.inst = MagicMock()
         mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))
@@ -309,7 +309,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
             ]
         }
 
-        pro_dir = self._create_test_package(self.pro_id, config_data)
+        self._create_test_package(self.pro_id, config_data)
 
         mock_pack_service.inst = MagicMock()
         mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))

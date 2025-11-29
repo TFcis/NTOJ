@@ -66,7 +66,7 @@ class BatchTestdataHandler(RequestHandler):
                         else:
                             self.finish()
                             return
-                except:
+                except Exception:
                     self.error(('Eunk', 'Unknown error'))
             return
 
