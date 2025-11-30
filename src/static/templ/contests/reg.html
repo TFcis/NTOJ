@@ -65,7 +65,7 @@
             <label class="form-label">Registration End: {{ contest.reg_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</label>
 
             {% set now = datetime.datetime.now(datetime.UTC) %}
-            {% set is_reged = user.acct_id in contest.user_list and contest.user_list[user.acct_id]['status'] in [UserStatus.REQUESTED, UserStatus.APPROVED] %}
+            {% set is_reged = user.acct_id in contest.user_list and contest.user_list[user.acct_id]['status'] in (UserStatus.REQUESTED, UserStatus.APPROVED) %}
 
             {% if now >= contest.reg_end %}
                 <h4 class="form-label">Registration Ended</h4>

@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 import datetime
 import enum
-import os
 import decimal
+from typing import Sequence
 
-from services.judge import JudgeServerClusterService
 from services.pro import ProService, ProConst, ProblemConfig
 
 class Compiler(enum.IntEnum):
@@ -233,7 +232,7 @@ class ChalSearchingParam:
             - Otherwise, matches the exact compiler number.
             - Valid values are defined in `services.chal.Compiler`.
 
-        allow_pro_statuses (list[int] | None): A list of allowed problem statuses to include.
+        allow_pro_statuses (Sequence[int] | None): A list of allowed problem statuses to include.
             - If None or empty: defaults to `[ProConst.STATUS_ONLINE]` only.
             - Otherwise: filters by `problem.status IN (...)`.
             - Valid values are defined in the range `ProConst.STATUS_ONLINE` to `ProConst.STATUS_HIDDEN`.
@@ -247,7 +246,7 @@ class ChalSearchingParam:
     acct: list[int] | None
     state: int | None
     compiler: int | Compiler
-    allow_pro_statuses: list[int] | None
+    allow_pro_statuses: Sequence[int] | None
     contest: int = 0
 
     def get_sql_query_str(self):
@@ -283,7 +282,7 @@ class ChalSearchingParam:
             query.append(' AND "challenge"."contest_id"=0 ')
 
         if not self.allow_pro_statuses:
-            query.append(f' AND "problem"."status" IN ({",".join(map(str, [ProConst.STATUS_ONLINE]))}) ')
+            query.append(f' AND "problem"."status" IN ({",".join(map(str, (ProConst.PRO_STATUS_NORMAL_USER,)))}) ')
         else:
             query.append(f' AND "problem"."status" IN ({",".join(map(str, self.allow_pro_statuses))}) ')
 
@@ -318,7 +317,7 @@ class ChalSearchingParamBuilder:
     """
 
     def __init__(self):
-        self.param = ChalSearchingParam(None, None, 0, -1, [ProConst.STATUS_ONLINE], 0)
+        self.param = ChalSearchingParam(None, None, 0, -1, ProConst.PRO_STATUS_NORMAL_USER, 0)
 
     def pro(self, pro: list[int] | None):
         """Sets the list of problem IDs to filter."""
@@ -350,12 +349,12 @@ class ChalSearchingParamBuilder:
             self.param.contest = contest
         return self
 
-    def pro_statuses(self, pro_statuses: list[int]):
+    def pro_statuses(self, pro_statuses: Sequence[int]):
         """
         Sets the allowed problem statuses for filtering.
 
         Args:
-            pro_statuses (list[int]): List of `ProConst.STATUS_*` values to include.
+            pro_statuses (Sequence[int]): List of `ProConst.STATUS_*` values to include.
 
         Raises:
             AssertionError: If any status is outside the valid range
@@ -657,8 +656,6 @@ class ChalService:
 
         Args:
             chal_id (int): The ID of the challenge to retrieve.
-            allow_pro_statuses (list[int]): List of allowed problem status codes to filter by.
-                Each status should be between `ProConst.STATUS_ONLINE` and `ProConst.STATUS_HIDDEN`.
 
         Returns:
             tuple[Optional[tuple[str, str]], Optional[Challenge]]:

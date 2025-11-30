@@ -16,7 +16,7 @@ class ManageBulletinHandler(RequestHandler):
             await self.render('manage/bulletin/bulletin-list', page='bulletin', bulletin_list=bulletin_list)
 
         elif page == "update":
-            bulletin_id = int(self.get_argument('bulletinid'))
+            bulletin_id = int(self.get_argument('bulletin_id'))
             _, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
 
             await self.render('manage/bulletin/update', page='bulletin', bulletin_id=bulletin_id, bulletin=bulletin)
@@ -32,7 +32,6 @@ class ManageBulletinHandler(RequestHandler):
 
     @bulletin_dispatcher.action('add')
     async def add_bulletin(self):
-        """新增公告"""
         title = self.get_argument('title')
         content = self.get_argument('content')
         pinned = self.get_argument('pinned')
@@ -66,7 +65,6 @@ class ManageBulletinHandler(RequestHandler):
 
     @bulletin_dispatcher.action('update')
     async def update_bulletin(self):
-        """更新公告"""
         title = self.get_argument('title')
         content = self.get_argument('content')
         pinned = self.get_argument('pinned')
@@ -103,7 +101,6 @@ class ManageBulletinHandler(RequestHandler):
 
     @bulletin_dispatcher.action('remove')
     async def remove_bulletin(self):
-        """刪除公告"""
         bulletin_id = int(self.get_argument('bulletin_id'))
         await LogService.inst.add_log(
             f"{self.acct.name} removed a line on bulletin which id is #{bulletin_id}.", 'manage.inform.remove'
