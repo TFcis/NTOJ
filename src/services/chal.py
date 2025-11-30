@@ -697,6 +697,33 @@ class ChalService:
         return None, TotalResult(result['state'], result['time'], result['memory'], result['rate'], result['message'], result['message_type'])
 
 
+    async def check_acct_pro_state(self, acct_id: int, pro_id: int) -> tuple[None, int | None]:
+        """Check the best challenge state of a user on a specific problem.
+
+        Args:
+            acct_id: User ID
+            pro_id: Problem ID
+
+        Returns:
+            tuple: (err, state) where err is None on success, and state is the best challenge state or None if no challenge exists.
+        """
+        async with self.db.acquire() as con:
+            result = await con.fetchrow(
+                '''
+                    SELECT MIN("total_result"."state") AS "state"
+                    FROM "challenge"
+                    INNER JOIN "total_result"
+                    ON "challenge"."chal_id" = "total_result"."chal_id"
+                    AND "challenge"."acct_id" = $1
+                    INNER JOIN "problem"
+                    ON "challenge"."pro_id" = $2;
+                ''',
+                acct_id,
+                pro_id
+            )
+
+        return None, result['state'] if result else None
+
     async def get_chals_count(self, flt: ChalSearchingParam):
         """
         Get the total count of challenges matching a filter.
