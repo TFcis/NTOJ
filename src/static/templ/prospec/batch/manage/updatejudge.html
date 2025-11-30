@@ -1,0 +1,278 @@
+{% extends '../../../manage/manage.html' %}
+{% block head %}
+{% from services.pro import ProConst, CheckerType, SummaryType %}
+{% from services.chal import Compiler, COMPILER_INFOS %}
+{% import json %}
+
+<script type="text/javascript" id="contjs" async>
+    function init() {
+        let pro_id = "{{ pro.pro_id }}";
+        let judge_form = $('#judge');
+
+        judge_form.find('select#checkerType').on('change', function(e) {
+            let checker_type = $(this).val();
+            if (checker_type == "{{ CheckerType.IOREDIR }}") {
+                judge_form.find("div#chalmetaLabel").show();
+            } else {
+                judge_form.find("div#chalmetaLabel").hide();
+            }
+
+            const need_build_checkers = {% raw [v.value for v in CheckerType.need_build_checkers()] %};
+            if (need_build_checkers.find(ele => ele == checker_type)) {
+                judge_form.find("#checkerCompileArgs").show();
+                judge_form.find("#checkerCompiler").show();
+                judge_form.find("#checkerCompileArgsLabel").show();
+                judge_form.find("#checkerCompilerLabel").show();
+            } else {
+                judge_form.find("#checkerCompileArgs").hide();
+                judge_form.find("#checkerCompiler").hide();
+                judge_form.find("#checkerCompileArgsLabel").hide();
+                judge_form.find("#checkerCompilerLabel").hide();
+            }
+        });
+
+        judge_form.find('select#summaryType').on('change', function(e) {
+            let summary_type = $(this).val();
+            if (summary_type == "{{ SummaryType.CUSTOM }}") {
+                judge_form.find("#summaryCompileArgs").show();
+                judge_form.find("#summaryCompiler").show();
+                judge_form.find("#summaryCompileArgsLabel").show();
+                judge_form.find("#summaryCompilerLabel").show();
+            } else {
+                judge_form.find("#summaryCompileArgs").hide();
+                judge_form.find("#summaryCompiler").hide();
+                judge_form.find("#summaryCompileArgsLabel").hide();
+                judge_form.find("#summaryCompilerLabel").hide();
+            }
+        });
+
+        judge_form.find('button.submit').on('click', function(e) {
+            let userprog_compile_args = judge_form.find('#userprogCompileArgs').val();
+            let rate_precision = judge_form.find('input#score-precision').val();
+            let checker_type = judge_form.find('select#checkerType').val();
+            let checker_compiler = judge_form.find('#checkerCompiler').val();
+            let checker_compile_args = judge_form.find('#checkerCompileArgs').val();
+            let summary_type = judge_form.find('select#summaryType').val();
+            let summary_compiler = judge_form.find('#summaryCompiler').val();
+            let summary_compile_args = judge_form.find('#summaryCompileArgs').val();
+            let has_grader = judge_form.find('input#has-grader').is(':checked');
+            let allow_compilers = [];
+            judge_form[0].querySelectorAll('.compilers').forEach(el => {
+                if ($(el).is(":checked")) {
+                    allow_compilers.push($(el).val());
+                }
+            });
+            let chalmeta = '';
+            if (checker_type == "{{ CheckerType.IOREDIR }}") {
+                chalmeta = judge_form.find('textarea#chalmeta').val();
+            }
+
+            $.post(`{{ url('/be/manage/pro/updatejudge') }}`, {
+                'pro_id': pro_id,
+                userprog_compile_args: userprog_compile_args,
+                rate_precision: rate_precision,
+                checker_type: checker_type,
+                checker_compiler: checker_compiler,
+                checker_compile_args: checker_compile_args,
+                summary_type: summary_type,
+                summary_compiler: summary_compiler,
+                summary_compile_args: summary_compile_args,
+                has_grader: has_grader,
+                allow_compilers: allow_compilers,
+                chalmeta: chalmeta,
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        });
+
+        // Trigger initial state
+        judge_form.find('select#checkerType').trigger('change');
+        judge_form.find('select#summaryType').trigger('change');
+
+        // Update precision display when range changes
+        $('#score-precision').on('input', function() {
+            $('#precision-value').text($(this).val());
+        });
+    }
+</script>
+{% end %}
+
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h3><i class="bi bi-gear"></i> Batch Problem Judge Configuration - {{ pro.name }}</h3>
+
+    <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle"></i>
+        Configure judge settings for this Batch-type problem. These settings affect how submissions are compiled and evaluated.
+    </div>
+
+    <form id="judge">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-code-square"></i> Compiler Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Allow Compilers</label>
+                    <div class="row">
+                        {% for compiler in Compiler %}
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input compilers" type="checkbox"
+                                           id="inlineCheckbox{{ compiler }}" value="{{ compiler }}"
+                                           {% if compiler in pro.config.spec_config.allow_compilers %} checked {% end %}>
+                                    <label class="form-check-label" for="inlineCheckbox{{ compiler }}">
+                                        {{ COMPILER_INFOS[compiler].version_name }}
+                                    </label>
+                                </div>
+                            </div>
+                        {% end %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="has-grader" class="form-label fw-bold">
+                        <input type="checkbox" id="has-grader" class="form-check-input me-2"
+                               {% if pro.config.spec_config.has_grader %} checked {% end %}>
+                        Enable Grader (Makefile)
+                    </label>
+                    <div class="form-text">Enable if this problem uses a custom grader/library</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="userprogCompileArgs" class="form-label fw-bold">User Program Additional Compile Args</label>
+                    <input id="userprogCompileArgs" type="text" class="form-control"
+                           placeholder="-O2 -std=c++17"
+                           value="{{ pro.config.spec_config.userprog_compile_args }}">
+                    <div class="form-text">Additional arguments passed to the compiler when compiling user code</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-check-circle"></i> Checker Configuration</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="checkerType" class="form-label fw-bold">Checker Type</label>
+                    <select id="checkerType" class="form-select">
+                        {% for checker_type in CheckerType %}
+                            <option value="{{ checker_type }}"
+                                    {% if pro.config.spec_config.checker_type == checker_type %} selected {% end %}>
+                                {{ ProConst.CHECKER_TYPE_2_STR[checker_type] }}
+                            </option>
+                        {% end %}
+                    </select>
+                    <div class="form-text">Select how submissions are verified against expected output</div>
+                </div>
+
+                {% set need_build_checker = pro.config.spec_config.checker_type in CheckerType.need_build_checkers() %}
+                <div id="checkerCompilerLabel" class="mb-3" {% if not need_build_checker %} style="display: none;" {% end %}>
+                    <label for="checkerCompiler" class="form-label fw-bold">Checker Compiler</label>
+                    <select id="checkerCompiler" class="form-select">
+                        {% for compiler in Compiler %}
+                            <option value="{{ compiler }}"
+                                    {% if pro.config.spec_config.checker_compiler == compiler %} selected {% end %}>
+                                {{ COMPILER_INFOS[compiler].version_name }}
+                            </option>
+                        {% end %}
+                    </select>
+                </div>
+
+                <div id="checkerCompileArgsLabel" class="mb-3" {% if not need_build_checker %} style="display: none;" {% end %}>
+                    <label for="checkerCompileArgs" class="form-label fw-bold">Checker Additional Compile Args</label>
+                    <input id="checkerCompileArgs" type="text" class="form-control"
+                           placeholder="-O2 -std=c++17"
+                           value="{{ pro.config.spec_config.checker_compile_args }}">
+                </div>
+
+                <div id="chalmetaLabel" class="mb-3" {% if pro.config.spec_config.checker_type != CheckerType.IOREDIR %} style="display: none;" {% end %}>
+                    <label for="chalmeta" class="form-label fw-bold">IORedir Settings (JSON)</label>
+                    <textarea rows="10" id="chalmeta" class="form-control font-monospace">{{ json.dumps(pro.config.spec_config.chalmeta, indent=4) if pro.config.spec_config.chalmeta else '{}' }}</textarea>
+                    <div class="form-text">Advanced: JSON configuration for IO redirection</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Summary Configuration</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="summaryType" class="form-label fw-bold">Summary Type</label>
+                    <select id="summaryType" class="form-select">
+                        {% for summary_type in SummaryType %}
+                            <option value="{{ summary_type }}"
+                                    {% if pro.config.spec_config.summary_type == summary_type %} selected {% end %}>
+                                {{ ProConst.SUMMARY_TYPE_2_STR[summary_type] }}
+                            </option>
+                        {% end %}
+                    </select>
+                    <div class="form-text">Select the type of summary generation for submissions</div>
+                </div>
+
+                {% set need_build_summary = pro.config.spec_config.summary_type == SummaryType.CUSTOM %}
+                <div id="summaryCompilerLabel" class="mb-3" {% if not need_build_summary %} style="display: none;" {% end %}>
+                    <label for="summaryCompiler" class="form-label fw-bold">Summary Compiler</label>
+                    <select id="summaryCompiler" class="form-select">
+                        {% for compiler in Compiler %}
+                            <option value="{{ compiler }}"
+                                    {% if pro.config.spec_config.summary_compiler == compiler %} selected {% end %}>
+                                {{ COMPILER_INFOS[compiler].version_name }}
+                            </option>
+                        {% end %}
+                    </select>
+                </div>
+
+                <div id="summaryCompileArgsLabel" class="mb-3" {% if not need_build_summary %} style="display: none;" {% end %}>
+                    <label for="summaryCompileArgs" class="form-label fw-bold">Summary Additional Compile Args</label>
+                    <input id="summaryCompileArgs" type="text" class="form-control"
+                           placeholder="-O2 -std=c++17"
+                           value="{{ pro.config.spec_config.summary_compile_args }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-star"></i> Scoring Configuration</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="score-precision" class="form-label fw-bold">
+                        Score Precision: <span id="precision-value">{{ pro.config.rate_precision }}</span> decimal places
+                    </label>
+                    <input type="range" id="score-precision" class="form-range"
+                           min="0" max="3" step="1" value="{{ pro.config.rate_precision }}">
+                    <div class="form-text">Number of decimal places to display in scores (0-3)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 d-md-flex justify-content-md-between mb-3">
+            <button type="button" class="btn btn-primary btn-lg submit">
+                <i class="bi bi-save"></i> Update Judge Configuration
+            </button>
+            <div>
+                <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatesubtask/?proid={ pro.pro_id }') }}">
+                    <i class="bi bi-list-check"></i> Edit Subtasks
+                </a>
+                <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatetestdata/?proid={ pro.pro_id }') }}">
+                    <i class="bi bi-file-earmark-binary"></i> Edit Testdata
+                </a>
+                <a class="btn btn-secondary" href="{{ url(f'/manage/pro/filemanager/?proid={ pro.pro_id }') }}">
+                    <i class="bi bi-folder"></i> File Manager
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+{% end %}

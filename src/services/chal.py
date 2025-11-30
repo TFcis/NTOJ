@@ -378,7 +378,7 @@ class ChalService:
 
         ChalService.inst = self
 
-    async def add_chal(self, pro_id: int, acct_id: int, contest_id: int, compiler_type: Compiler, code: str) -> tuple[None, int] | ErrorType:
+    async def add_chal(self, pro_id: int, acct_id: int, contest_id: int, compiler_type: Compiler, code: str, problem_type: int) -> tuple[None, int] | ErrorType:
         """
         Add a new challenge entry and save the submitted source code.
 
@@ -388,55 +388,31 @@ class ChalService:
             contest_id (int): Contest ID.
             compiler_type (Compiler): Compiler type.
             code (str): Source code content as string.
+            problem_type (int): Problem type (from ProType enum).
 
         Returns:
             tuple[Optional[tuple[str, str]], Optional[int]]:
                 On success, (None, chal_id).
                 On failure, (error_code, None).
         """
+        from services.pro import ProType
+        from services.prospec.batch import batch_spec
 
         pro_id = int(pro_id)
         acct_id = int(acct_id)
 
         _, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    INSERT INTO "challenge" ("pro_id", "acct_id", "compiler_type", "contest_id")
-                    VALUES ($1, $2, $3, $4) RETURNING "chal_id";
-                ''',
-                pro_id,
-                acct_id,
-                compiler_type,
-                contest_id,
+        # Dispatch to ProSpec
+        # TODO: Support different problem types, for now only Batch
+        if problem_type == ProType.BATCH:
+            spec = batch_spec
+            return await spec.add_chal(
+                self.db, self.rs, pro_id, acct_id, contest_id,
+                compiler_type, code, pro.config
             )
-            if len(result) != 1:
-                return ('Eunk', 'Unknown error'), None
-            result = result[0]
-            chal_id = result['chal_id']
 
-            need_judge_testdatas = set()
-            insert_subtask_values = []
-            for subtask_id, subtask in pro.config.subtask_configs.items():
-                insert_subtask_values.append((chal_id, pro_id, subtask_id))
-                need_judge_testdatas.update(testdata.testdata_id for testdata in subtask.testdatas)
-
-            insert_testdata_values = []
-            for testdata_id in need_judge_testdatas:
-                insert_testdata_values.append((chal_id, pro_id, testdata_id))
-
-            await con.execute('INSERT INTO total_result (chal_id) VALUES ($1)', chal_id)
-            await con.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id) VALUES ($1, $2, $3);', insert_subtask_values)
-            await con.executemany('INSERT INTO testdata_result (chal_id, pro_id, id) VALUES ($1, $2, $3);', insert_testdata_values)
-
-        source_ext = COMPILER_INFOS[compiler_type].source_ext
-
-        os.mkdir(f'code/{chal_id}')
-        with open(f"code/{chal_id}/main.{source_ext}", 'wb') as code_f:
-            code_f.write(code.encode('utf-8'))
-
-        return None, chal_id
+        return ('Eunk', 'Unsupported problem type'), None
 
     async def reset_chal(self, chal_id: int) -> tuple[None, None]:
         # TODO: docstring
@@ -588,21 +564,25 @@ class ChalService:
         return None, Challenge(chal_id, pro_id, acct_id, contest_id, acct_name, compiler_type,
                                timestamp, total_results, subtask_results, testdata_results)
 
-    async def emit_chal(self, chal_id: int, pro_config: ProblemConfig, compiler_type: Compiler, priority: int, skip_nonac: bool=False) -> tuple[None, None] | ErrorType:
+    async def emit_chal(self, chal_id: int, pro_config: ProblemConfig, compiler_type: Compiler, priority: int, problem_type: int, skip_nonac: bool=False) -> tuple[None, None] | ErrorType:
         """
         Create and submit tests for a challenge based on the test metadata configuration,
         then send the challenge to the judging cluster.
 
         Args:
             chal_id (int): Challenge ID.
-            pro_id (int): Problem ID.
+            pro_config (ProblemConfig): Problem configuration.
             compiler_type (Compiler): Compiler type.
             priority (int): Priority level (within ChalConst.NORMAL_PRI and ChalConst.NORMAL_REJUDGE_PRI).
+            problem_type (int): Problem type (from ProType enum).
             skip_nonac (bool): Skip the remaining testdata in the task if any of the testdata got non-AC or PC
 
         Returns:
             tuple[None, None]: Always returns (None, None) on completion.
         """
+        from services.pro import ProType
+        from services.prospec.batch import batch_spec
+
         assert ChalConst.NORMAL_PRI <= priority <= ChalConst.NORMAL_REJUDGE_PRI
 
         chal_id = int(chal_id)
@@ -620,87 +600,16 @@ class ChalService:
         result = result[0]
 
         acct_id, pro_id, contest_id = int(result['acct_id']), int(result['pro_id']), int(result['contest_id'])
-        limits = pro_config.limits
-        limit = limits.get(str(compiler_type), limits['default'])
-        await self.db.execute('UPDATE total_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
-        await self.db.execute('UPDATE subtask_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
 
-        need_judge_testdatas: set[int] = set()
-        subtasks = []
-        for subtask_id, subtask_config in pro_config.subtask_configs.items():
-            t = [testdata.testdata_id for testdata in subtask_config.testdatas]
-            need_judge_testdatas.update(t)
-            subtasks.append({
-                "id": subtask_id,
-                "score": subtask_config.rate,
-                "testdatas": t,
-                "dependency_subtasks": list(subtask_config.dependency_subtasks),
-            })
-        await self.db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id = ANY($3);',
-                              ChalConst.STATE_JUDGE, chal_id, need_judge_testdatas)
+        # TODO: Support different problem types, for now only Batch
+        if problem_type == ProType.BATCH:
+            spec = batch_spec
+            return await spec.emit_chal(
+                self.db, self.rs, chal_id, pro_id, acct_id, contest_id,
+                compiler_type, pro_config, priority, skip_nonac
+            )
 
-        testdatas = []
-        for testdata_id in need_judge_testdatas:
-            testdata = pro_config.testdatas[testdata_id]
-            testdatas.append({
-                "id": testdata.testdata_id,
-                "input": testdata.inputfile,
-                "output": testdata.outputfile,
-            })
-
-        source_ext = COMPILER_INFOS[compiler_type].source_ext
-
-        if not os.path.isfile(f"code/{chal_id}/main.{source_ext}"):
-            await self.update_total_result(chal_id, TotalResult(ChalConst.STATE_ERR, 0, 0, decimal.Decimal(), "", MessageType.NONE))
-            for subtask_id in pro_config.subtask_configs:
-                await self.update_subtask_result(chal_id, SubtaskResult(subtask_id, ChalConst.STATE_ERR, 0, 0, decimal.Decimal()))
-
-            for testdata_id in need_judge_testdatas:
-                await self.update_testdata_result(chal_id, TestdataResult(testdata_id, ChalConst.STATE_ERR, 0, 0, "", MessageType.NONE))
-
-            return None, None
-
-        await JudgeServerClusterService.inst.send(
-            {
-                'acct_id': acct_id,
-                'pro_id': pro_id,
-                'contest_id': contest_id,
-                'chal_id': chal_id,
-
-                'res_path': f'{pro_id}/res',
-                'code_path': f'{chal_id}/main.{source_ext}',
-
-                'subtasks': subtasks,
-                'testdatas': testdatas,
-
-                'limit': {
-                    'output': limit.output * 1024, # NOTE: kib to bytes
-                    'time': limit.time * 10 ** 6, # NOTE: ms to ns
-                    'memory': limit.memory * 1024, # NOTE: kib to bytes
-                },
-
-                'has_grader': pro_config.has_grader,
-                'userprog_compiler': compiler_type,
-                'userprog_compile_args': pro_config.userprog_compile_args,
-
-                'checker_type': pro_config.checker_type,
-                'checker_compiler': pro_config.checker_compiler,
-                'checker_compile_args': pro_config.checker_compile_args,
-
-                'summary_type': pro_config.summary_type,
-                'summary_compiler': pro_config.summary_compiler,
-                'summary_compile_args': pro_config.summary_compile_args,
-
-                'priority': priority,
-                'skip_nonac': skip_nonac,
-            },
-            pro_id,
-            contest_id,
-        )
-
-        await self.rs.hdel('rate', str(acct_id))
-
-        return None, None
+        return ('Eunk', 'Unsupported problem type'), None
 
     async def list_chal(self, off: int, num: int, flt: ChalSearchingParam) -> tuple[None, list[Challenge]]:
         """

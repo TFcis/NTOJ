@@ -12,8 +12,9 @@ from services.rate import RateService
 from .util import AccountContext, AsyncTest
 from .manage.acct import ManageAcctTest
 from .manage.pro.filemanager import ManageProFileManagerTest
-from .manage.pro.update import ManageProUpdateTest
-from .manage.pro.updatetests import ManageProUpdateTestsTest
+from .manage.prospec.batch.test_update import BatchUpdateTest
+from .manage.prospec.batch.test_judge import BatchJudgeTest
+from .manage.prospec.batch.test_subtask import BatchSubtaskTest
 from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
@@ -197,8 +198,9 @@ class IntegratedTest(AsyncTest):
             SignTest().main,
             AcctPageTest().main,
             ManageAcctTest().main,
-            ManageProUpdateTest().main,
-            ManageProUpdateTestsTest().main,
+            BatchUpdateTest().main,
+            BatchJudgeTest().main,
+            BatchSubtaskTest().main,
             ManageProFileManagerTest().main,
             ManagePackTest().main,
             ContestTest().main

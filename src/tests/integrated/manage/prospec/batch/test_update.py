@@ -1,14 +1,18 @@
+"""Integration tests for Batch problem general and limit configuration."""
 import os
 import json
 
 from tests.integrated.util import AsyncTest, AccountContext
-from services.pro import ProService, ProConst, CheckerType, Limit
+from services.pro import ProService, ProConst, CheckerType, SummaryType, Limit, ProType
 from services.chal import ChalService, Compiler
 
 
-class ManageProUpdateTest(AsyncTest):
+class BatchUpdateTest(AsyncTest):
+    """Test Batch problem update (general settings and limits)."""
+
     async def main(self):
         with AccountContext("admin@test", "testtest") as admin_session:
+            # Test updategeneral
             res = admin_session.post('manage/pro/update', data={
                 'reqtype': 'updategeneral',
                 'pro_id': 1,
@@ -35,7 +39,8 @@ class ManageProUpdateTest(AsyncTest):
                 'allow_submit': 'true',
             })
 
-            res = admin_session.post('manage/pro/update', data={
+            # Test updatelimit - missing default
+            res = admin_session.post('manage/pro/updatelimit', data={
                 'reqtype': 'updatelimit',
                 'pro_id': 1,
                 'limits': json.dumps({
@@ -43,7 +48,8 @@ class ManageProUpdateTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('Eparam', 'Missing default limit config'))
 
-            res = admin_session.post('manage/pro/update', data={
+            # Test updatelimit - success
+            res = admin_session.post('manage/pro/updatelimit', data={
                 'reqtype': 'updatelimit',
                 'pro_id': 1,
                 'limits': json.dumps({
@@ -72,6 +78,7 @@ class ManageProUpdateTest(AsyncTest):
             self.assertEqual(pro.config.limits['default'], Limit(1000, 65536, 65536))
             self.assertEqual(pro.config.limits[str(Compiler.PYTHON3)], Limit(1500, 65536, 65536))
 
+            # Test that limits are actually enforced
             chal_id = -1
             def callback():
                 nonlocal chal_id
@@ -85,7 +92,7 @@ class ManageProUpdateTest(AsyncTest):
             for t in chal.testdata_results.values():
                 self.assertGreaterEqual(t.time, 1000)
 
-            # TODO: we should check limits and file
+            # Test uploadpackage
             pack_token = self.get_upload_token(admin_session)
             file = open('tests/static_file/toj3.tar.xz', 'rb')
             await self.upload_file(file, os.path.getsize('tests/static_file/toj3.tar.xz'), pack_token)

@@ -53,6 +53,7 @@ class TestLogService(unittest.IsolatedAsyncioTestCase):
                 "message": "Log message",
                 "timestamp": timestamp,
                 "params": '{"key": "value"}',
+                'type': 'mock'
             }
         ]
 
@@ -64,6 +65,7 @@ class TestLogService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(log["message"], "Log message")
         self.assertEqual(log["timestamp"], timestamp)
         self.assertEqual(json.loads(log["params"])["key"], "value")
+        self.assertEqual(log["log_type"], "mock")
 
     async def test_view_log_not_found(self):
         self.fake_conn.fetch.return_value = []

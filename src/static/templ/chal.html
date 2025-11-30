@@ -426,9 +426,24 @@
     </div>
 </div>
 
-<pre id="code" class="line-numbers"
-    data-language=""
-    data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!">
-    <code class=""></code>
-</pre>
+{# Include problem type-specific code display template #}
+{% from services.pro import ProType %}
+{% if pro.problem_type == ProType.BATCH %}
+    {% include 'prospec/batch/code.html' %}
+{% elif pro.problem_type == ProType.COMMUNICATION %}
+    {# Future: Communication code display #}
+    <div class="alert alert-warning">Communication problem code display not yet implemented</div>
+{% elif pro.problem_type == ProType.TWOSTEP %}
+    {# Future: TwoStep code display (two code sections) #}
+    <div class="alert alert-warning">TwoStep problem code display not yet implemented</div>
+{% elif pro.problem_type == ProType.OUTPUTONLY %}
+    {# Future: OutputOnly code display (uploaded files) #}
+    <div class="alert alert-warning">OutputOnly problem code display not yet implemented</div>
+{% else %}
+    <pre id="code" class="line-numbers"
+        data-language=""
+        data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!">
+        <code class=""></code>
+    </pre>
+{% end %}
 
