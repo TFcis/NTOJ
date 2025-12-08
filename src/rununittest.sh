@@ -14,7 +14,6 @@ omit =
     *.generated.py
     runintegratedtest.py
     rununittest.py
-    rune2etest.py
     tests/*
     server.py
     upgrade.py

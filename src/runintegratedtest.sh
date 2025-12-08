@@ -88,13 +88,11 @@ omit =
     *.generated.py
     runintegratedtest.py
     rununittest.py
-    rune2etest.py
     tests/*
     server.py
     upgrade.py
     config_dev.py
 EOF
-
 
 # run migration
 if [ -f docker-dev ]; then

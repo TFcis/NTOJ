@@ -82,7 +82,7 @@ ARG BASE_URL
 
 RUN UNLOCK_PASSWORD_PROCESSED=$(echo "${UNLOCK_PASSWORD}" | python3 scripts/get_unlock_pwd.py) \
 && COOKIE_SEC=$(python3 -c "import sys; print(open('/dev/urandom','rb').read(32).hex())") \
-&& rm -rf tests && rm rune2etest.py rune2etest.sh \
+&& rm -rf tests \
 && rm runintegratedtest.sh runintegratedtest.py \
 && rm rununittest.sh rununittest.py upgrade.py \
 && mv /ntoj/static /ntoj/static-tmp \
