@@ -248,7 +248,7 @@ class UserService:
         return None, acct
 
     async def update_acct(self, acct: Account):
-        if acct.acct_type not in [UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER]:
+        if acct.acct_type not in (UserConst.ACCTTYPE_KERNEL, UserConst.ACCTTYPE_USER):
             return ('Eparam', 'Invalid account type'), None
         name_len = len(acct.name)
         if name_len < UserConst.NAME_MIN:

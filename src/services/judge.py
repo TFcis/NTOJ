@@ -119,9 +119,9 @@ class JudgeServerService:
             result = res["result"]
             total_result = result["total_result"]
             message = ""
-            if total_result["status"] in [ChalConst.STATE_CE, ChalConst.STATE_CLE]:
+            if total_result["status"] in (ChalConst.STATE_CE, ChalConst.STATE_CLE):
                 message = total_result["ce_message"]
-            elif total_result["status"] in [ChalConst.STATE_ERR, ChalConst.STATE_JE]:
+            elif total_result["status"] in (ChalConst.STATE_ERR, ChalConst.STATE_JE):
                 message = total_result["ie_message"]
             total_result["time"] = total_result["time"] // 10 ** 6
             total_result["memory"] = total_result["memory"] // 1024

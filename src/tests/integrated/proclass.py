@@ -40,7 +40,7 @@ class ProClassTest(AsyncTest):
             self.assertNotEqual(proclass_list, [])
 
             with AccountContext('test1@test', 'test') as user_session:
-                for proclass_type in ['official', 'shared', 'own', 'collection']:
+                for proclass_type in ('official', 'shared', 'own', 'collection'):
                     res = user_session.post('proset', data={
                         'reqtype': 'listproclass',
                         'proclass_type': proclass_type

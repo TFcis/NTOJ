@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 from dataclasses import asdict, dataclass
+from typing import Sequence
 
 import config
 from msgpack import packb, unpackb
@@ -87,10 +88,10 @@ class ProConst:
     }
 
     # NOTE: collection for problem status
-    PRO_STATUS_NORMAL_USER = [STATUS_ONLINE]
-    PRO_STATUS_KERNEL_USER = [STATUS_ONLINE, STATUS_HIDDEN]
-    PRO_STATUS_CONTEST_USER = [STATUS_ONLINE, STATUS_CONTEST]
-    PRO_STATUS_FULL = [STATUS_ONLINE, STATUS_CONTEST, STATUS_HIDDEN]
+    PRO_STATUS_NORMAL_USER = (STATUS_ONLINE, )
+    PRO_STATUS_KERNEL_USER = (STATUS_ONLINE, STATUS_HIDDEN)
+    PRO_STATUS_CONTEST_USER = (STATUS_ONLINE, STATUS_CONTEST)
+    PRO_STATUS_FULL = (STATUS_ONLINE, STATUS_CONTEST, STATUS_HIDDEN)
 
 # TODO: Move this to prospec
 @dataclass(slots=True)
@@ -186,7 +187,7 @@ class ProService:
         self.rs = rs
         ProService.inst = self
 
-    async def get_pro(self, pro_id: int, allow_statuses: list[int]) -> tuple[None, Problem] | ErrorType:
+    async def get_pro(self, pro_id: int, allow_statuses: Sequence[int]) -> tuple[None, Problem] | ErrorType:
         from services.chal import Compiler
         from services.prospec.batch import batch_spec
         """
@@ -194,7 +195,7 @@ class ProService:
 
         Args:
             pro_id (int): The ID of the problem to fetch.
-            allow_statuses (list[int]): Allowed problem statuses for access.
+            allow_statuses (Sequence[int]): Allowed problem statuses for access.
 
         Returns:
             Tuple[Optional[Tuple[str, str]], Optional[Problem]]:
@@ -290,12 +291,12 @@ class ProService:
         # TODO: get_pro_config
         pass
 
-    async def list_pro(self, allow_pro_statuses: list[int]) -> tuple[None, list[Problem]]:
+    async def list_pro(self, allow_pro_statuses: Sequence[int]) -> tuple[None, list[Problem]]:
         """
         List problems with statuses in `allow_pro_statuses`, with Redis caching.
 
         Args:
-            allow_pro_statuses (list[int]): List of allowed statuses.
+            allow_pro_statuses (Sequence[int]): List of allowed statuses.
 
         Returns:
             Tuple[None, list[dict]]:

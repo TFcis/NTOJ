@@ -378,6 +378,58 @@ class ContestService:
         res = await self.db.fetch('SELECT COUNT(*) FROM contest_question WHERE contest_id = $1 AND reply_acct_id IS NULL;', contest_id)
         return None, res[0]['count']
 
+    async def get_unread_notification_cnt(self, contest_id: int, acct_id: int):
+        """Get unread notification count for user
+
+        Args:
+            contest_id: Contest ID
+            acct_id: User ID
+
+        Returns:
+            tuple: (err, cnt) Unread notification count
+        """
+        new_cnt = await self.db.fetch('''
+        SELECT
+            (SELECT COUNT(*) FROM contest_announcement WHERE contest_id = $1) +
+            (SELECT COUNT(*) FROM contest_question WHERE contest_id = $1 AND ask_acct_id = $2 AND reply_acct_id IS NOT NULL)
+        AS total_count;
+        ''', contest_id, acct_id)
+        new_cnt = new_cnt[0]['total_count']
+
+        old_cnt = await self.db.fetch('SELECT notification_read_count FROM contest_users WHERE contest_id = $1 AND acct_id = $2',
+                                      contest_id, acct_id)
+        old_cnt = old_cnt[0]['notification_read_count']
+
+        return None, max(new_cnt - old_cnt, 0)
+
+    async def mark_notifications_as_read(self, contest_id: int, acct_id: int):
+        """Mark notifications as read
+
+        Args:
+            contest_id: Contest ID
+            acct_id: User ID
+
+        Returns:
+            tuple: (err, None)
+        """
+        await self.db.execute(
+            '''
+            UPDATE contest_users
+            SET notification_read_count = sub.total_count
+            FROM (
+                SELECT
+                    (SELECT COUNT(*) FROM contest_announcement WHERE contest_id = $1) +
+                    (SELECT COUNT(*) FROM contest_question WHERE contest_id = $1 AND ask_acct_id = $2 AND reply_acct_id IS NOT NULL)
+                    AS total_count
+            ) AS sub
+            WHERE contest_users.contest_id = $1
+            AND contest_users.acct_id = $2;
+            ''',
+            contest_id, acct_id
+        )
+
+        return None, None
+
 
     async def get_ioi2013_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
         _, contest = await self.get_contest(contest_id)

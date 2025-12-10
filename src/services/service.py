@@ -10,6 +10,7 @@ from .log import LogService
 from .pack import PackService
 from .pro import ProClassService, ProService
 from .ques import QuestionService
+from .rank import RankService
 from .rate import RateService
 from .user import UserService
 
@@ -31,4 +32,5 @@ def services_init(db, rs):
     Service.Code = CodeService(db, rs)
     Service.Log = LogService(db, rs)
     Service.Rate = RateService(db, rs)
+    Service.Rank = RankService(db, rs)
     Service.Judge = JudgeServerClusterService(rs, config.JUDGE_SERVER_LIST)

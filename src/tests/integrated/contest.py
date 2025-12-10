@@ -540,22 +540,37 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(a, announce)
 
-            for reqtype in ['add-announce', 'edit-announce']:
-                self.assertTable(
-                    'contests/1/manage/announce',
-                    {
-                        'reqtype': reqtype,
-                        'subject': 'subject',
-                        'content': 'content',
-                    },
-                    [
-                        {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
-                        {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
-                        {'content': '', 'equal_value': ('Eparam', 'Content too short')},
-                        {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
-                    ],
-                    admin_session
-                )
+            self.assertTable(
+                'contests/1/manage/announce',
+                {
+                    'reqtype': 'add-announce',
+                    'subject': 'subject',
+                    'content': 'content',
+                },
+                [
+                    {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
+                    {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
+                    {'content': '', 'equal_value': ('Eparam', 'Content too short')},
+                    {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
+                ],
+                admin_session
+            )
+            self.assertTable(
+                'contests/1/manage/announce',
+                {
+                    'reqtype': 'edit-announce',
+                    'announce_id': announce['announce_id'],
+                    'subject': 'subject',
+                    'content': 'content',
+                },
+                [
+                    {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
+                    {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
+                    {'content': '', 'equal_value': ('Eparam', 'Content too short')},
+                    {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
+                ],
+                admin_session
+            )
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             def _message(msg):
