@@ -2,6 +2,8 @@ from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_perm
 from services.log import LogService
 from services.user import UserConst, UserService
 
+from ipaddress import IPv4Address
+
 
 acct_dispatcher = ActionDispatcher()
 
@@ -56,6 +58,12 @@ class ManageAcctHandler(RequestHandler):
             f"{self.acct.name}(#{self.acct.acct_id}) had been send a request to update the account {acct.name}(#{acct.acct_id})",
             "manage.acct.update",
         )
+
+        # Check IP validity
+        try:
+            IPv4Address(acct_specific_ip)
+        except Exception:
+            return self.error(("Einval", "The specific IP address is invalid"))
 
         acct.acct_type = acct_type
         acct.specific_ip = acct_specific_ip
