@@ -118,10 +118,10 @@ class ManageInfoHandler(RequestHandler):
         info["python"] = {"version": sys.version, "executable": sys.executable}
 
         try:
-            import tomli
+            import tomllib
 
-            with open("/ntoj/pyproject.toml", "rb") as f:
-                pyproject = tomli.load(f)
+            with open("./pyproject.toml", "rb") as f:
+                pyproject = tomllib.load(f)
                 deps = (
                     pyproject.get("tool", {}).get("poetry", {}).get("dependencies", {})
                 )
@@ -139,13 +139,7 @@ class ManageInfoHandler(RequestHandler):
         }
 
         try:
-            uptime_seconds = (
-                subprocess.check_output(
-                    ["cat", "/proc/uptime"], stderr=subprocess.DEVNULL
-                )
-                .decode()
-                .split()[0]
-            )
+            uptime_seconds = int(time.time() - psutil.boot_time())
             uptime = str(datetime.timedelta(seconds=int(float(uptime_seconds))))
             info["os"]["uptime"] = uptime
         except Exception:
@@ -165,16 +159,19 @@ class ManageInfoHandler(RequestHandler):
             info["env"] = "unknown"
 
         try:
-            df_output = subprocess.check_output(
-                ["df", "-h"], stderr=subprocess.DEVNULL
-            ).decode()
-            info["disk"] = df_output
+            disk = psutil.disk_usage("/")
+            info["disk"] = {
+                "total": disk.total,
+                "used": disk.used,
+                "free": disk.free,
+                "percent": disk.percent,
+            }
         except Exception:
             info["disk"] = "N/A"
 
         try:
             info["resources"] = {
-                "cpu_percent": psutil.cpu_percent(interval=1),
+                "cpu_percent": psutil.cpu_percent(interval=None),
                 "cpu_count": psutil.cpu_count(),
                 "memory": {
                     "total": psutil.virtual_memory().total,
@@ -191,8 +188,11 @@ class ManageInfoHandler(RequestHandler):
     @info_dispatcher.action("vacuum")
     async def vacuum_database(self):
         try:
-            async with self.db.acquire() as con:
+            con = self.db.acquire()
+            try:
                 await con.execute("VACUUM ANALYZE")
+            finally:
+                await con.release()
 
             return self.error(("S", ""))
         except Exception as e:
