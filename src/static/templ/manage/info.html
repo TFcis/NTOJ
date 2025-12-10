@@ -1,0 +1,307 @@
+{% extends 'manage.html' %}
+{% block head %}
+<style>
+.info-section {
+    margin-bottom: 30px;
+}
+.info-section h4 {
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+.info-table {
+    width: 100%;
+}
+.info-table td:first-child {
+    font-weight: bold;
+    width: 200px;
+    padding: 8px;
+}
+.info-table td:last-child {
+    padding: 8px;
+}
+/* pre {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+} */
+.memory-bar {
+    width: 100%;
+    height: 20px;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.memory-bar-fill {
+    height: 100%;
+    background-color: #007bff;
+    transition: width 0.3s ease;
+}
+</style>
+
+<script type="text/javascript">
+function init() {
+}
+
+function vacuumDatabase() {
+    if (!confirm('Make sure to run VACUUM on the database? This may take some time.')) {
+        return;
+    }
+
+    $('#vacuum-btn').prop('disabled', true).text('Running VACUUM...');
+
+    $.post('{{ url("/be/manage/info") }}', {
+        'reqtype': 'vacuum'
+    }, function(res) {
+        res = JSON.parse(res);
+        if (res.status == 'S') {
+            index.show_notify_dialog('Database VACUUM completed', index.DIALOG_TYPE.success);
+        } else {
+            index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+        }
+        $('#vacuum-btn').prop('disabled', false).text('Run VACUUM');
+    }).fail(function() {
+        index.show_notify_dialog('VACUUM Failed', index.DIALOG_TYPE.error);
+        $('#vacuum-btn').prop('disabled', false).text('Run VACUUM');
+    });
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+</script>
+{% end %}
+
+{% block content %}
+<div class="col-lg-10 mt-lg-2">
+    <h3>System Information</h3>
+
+        <div class="info-section">
+            <h4>Git Information</h4>
+            {% if 'error' in info.get('git', {}) %}
+            <p class="text-danger">{{ info['git']['error'] }}</p>
+            {% else %}
+            <table class="info-table">
+                <tr>
+                    <td>Branch</td>
+                    <td><code>{{ info['git']['branch'] }}</code></td>
+                </tr>
+                <tr>
+                    <td>Commit Hash</td>
+                    <td><code>{{ info['git']['hash'] }}</code> ({{ info['git']['full_hash'] }})</td>
+                </tr>
+            </table>
+            {% end %}
+        </div>
+
+        <div class="info-section">
+            <h4>Database Information</h4>
+            {% if 'error' in info.get('db', {}) %}
+            <p class="text-danger">{{ info['db']['error'] }}</p>
+            {% else %}
+            <table class="info-table">
+                <tr>
+                    <td>PostgreSQL Version</td>
+                    <td>{{ info['db']['version'] }}</td>
+                </tr>
+                <tr>
+                    <td>Database Size</td>
+                    <td>{{ info['db']['size'] }}</td>
+                </tr>
+                <tr>
+                    <td>Connections</td>
+                    <td>{{ info['db']['connections'] }}</td>
+                </tr>
+                <tr>
+                    <td>Database Maintenance</td>
+                    <td>
+                        <button id="vacuum-btn" class="btn btn-warning btn-sm" onclick="vacuumDatabase()">
+                            Run VACUUM
+                        </button>
+                    </td>
+                </tr>
+            </table>
+            {% end %}
+        </div>
+
+        <div class="info-section">
+            <h4>Redis Information</h4>
+            {% if 'error' in info.get('redis', {}) %}
+            <p class="text-danger">{{ info['redis']['error'] }}</p>
+            {% else %}
+            <table class="info-table">
+                <tr>
+                    <td>Redis Version</td>
+                    <td>{{ info['redis']['version'] }}</td>
+                </tr>
+                <tr>
+                    <td>Connected Clients</td>
+                    <td>{{ info['redis']['connected_clients'] }}</td>
+                </tr>
+            </table>
+            {% end %}
+        </div>
+
+        <div class="info-section">
+            <h4>Path and Storage Information</h4>
+            <table class="info-table">
+                <tr>
+                    <td>Installation Path</td>
+                    <td><code>{{ info['path']['installation'] }}</code></td>
+                </tr>
+                <tr>
+                    <td>Code Path</td>
+                    <td><code>{{ info['path']['code'] }}</code> ({{ info['path']['code_size'] }})</td>
+                </tr>
+                <tr>
+                    <td>Problem Path</td>
+                    <td><code>{{ info['path']['problem'] }}</code> ({{ info['path']['problem_size'] }})</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="info-section">
+            <h4>System Configuration</h4>
+            <table class="info-table">
+                <tr>
+                    <td>Site Title</td>
+                    <td>{{ info['config']['site_title'] }}</td>
+                </tr>
+                <tr>
+                    <td>Base URL</td>
+                    <td><code>{{ info['config']['base_url'] }}</code></td>
+                </tr>
+                <tr>
+                    <td>Port</td>
+                    <td>{{ info['config']['port'] }}</td>
+                </tr>
+                <tr>
+                    <td>Timezone</td>
+                    <td>{{ info['config']['timezone'] }}</td>
+                </tr>
+                <tr>
+                    <td>Can See Code User</td>
+                    <td>
+                        {% if info['config']['can_see_code_user'] %}
+                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 8px;">
+                            <ul style="margin: 0; padding-left: 20px;">
+                                {% for acct in info['config']['can_see_code_user'] %}
+                                <li><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.name }}</a></li>
+                                {% end %}
+                            </ul>
+                        </div>
+                        {% else %}
+                        <em>None</em>
+                        {% end %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="info-section">
+            <h4>Python Information</h4>
+            <table class="info-table">
+                <tr>
+                    <td>Python Version</td>
+                    <td><pre>{{ info['python']['version'] }}</pre></td>
+                </tr>
+                <tr>
+                    <td>Executable Path</td>
+                    <td><code>{{ info['python']['executable'] }}</code></td>
+                </tr>
+                {% if info['python']['dependencies'] != 'N/A' %}
+                <tr>
+                    <td>Package Dependencies</td>
+                    <td>
+                        <pre>{% for name, version in info['python']['dependencies'].items() %}{{ name }}: {{ version }}
+{% end %}</pre>
+                    </td>
+                </tr>
+                {% end %}
+            </table>
+        </div>
+
+        <div class="info-section">
+            <h4>Operating System Information</h4>
+            <table class="info-table">
+                <tr>
+                    <td>System</td>
+                    <td>{{ info['os']['system'] }} {{ info['os']['release'] }}</td>
+                </tr>
+                <tr>
+                    <td>Architecture</td>
+                    <td>{{ info['os']['machine'] }}</td>
+                </tr>
+                <tr>
+                    <td>System Version</td>
+                    <td>{{ info['os']['version'] }}</td>
+                </tr>
+                <tr>
+                    <td>Uptime</td>
+                    <td>{{ info['os']['uptime'] }}</td>
+                </tr>
+                <tr>
+                    <td>System Running Time</td>
+                    <td>{{ info['os']['running_time'] }}</td>
+                </tr>
+                <tr>
+                    <td>Environment Type</td>
+                    <td><strong>{{ info['env'] }}</strong></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="info-section">
+            <h4>Disk Usage</h4>
+            <pre>{{ info['disk'] }}</pre>
+        </div>
+
+        <div class="info-section">
+            <h4>System Resources</h4>
+            {% if 'error' in info.get('resources', {}) %}
+            <p class="text-danger">{{ info['resources']['error'] }}</p>
+            {% else %}
+            <table class="info-table">
+                <tr>
+                    <td>CPU Cores</td>
+                    <td>{{ info['resources']['cpu_count'] }}</td>
+                </tr>
+                <tr>
+                    <td>CPU Usage</td>
+                    <td>{{ info['resources']['cpu_percent'] }}%</td>
+                </tr>
+                <tr>
+                    <td>Memory Total</td>
+                    <td id="mem-total"></td>
+                </tr>
+                <tr>
+                    <td>Memory Usage</td>
+                    <td>
+                        <div class="memory-bar">
+                            <div class="memory-bar-fill" style="width: {{ info['resources']['memory']['percent'] }}%"></div>
+                        </div>
+                        <span id="mem-used"></span> / <span id="mem-total-2"></span> ({{ info['resources']['memory']['percent'] }}%)
+                    </td>
+                </tr>
+            </table>
+
+            <script>
+            (function() {
+                const total = {{ info['resources']['memory']['total'] }};
+                const used = {{ info['resources']['memory']['used'] }};
+                const available = {{ info['resources']['memory']['available'] }};
+
+                $('#mem-total').text(formatBytes(total));
+                $('#mem-total-2').text(formatBytes(total));
+                $('#mem-used').text(formatBytes(used));
+            })();
+            </script>
+            {% end %}
+        </div>
+</div>
+{% end %}

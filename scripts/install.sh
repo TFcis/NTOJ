@@ -88,7 +88,7 @@ sudo chown $USER /var/log/ntoj/
 sudo chown $USER /var/log/ntoj/access.log
 
 # Install PostgreSQL
-sudo apt install -y wget gpg
+sudo apt install -y wget gpg git
 sudo wget -O- https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | sudo tee /usr/share/keyrings/postgresql.gpg
 echo deb [arch=amd64 signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main | sudo tee /etc/apt/sources.list.d/postgresql.list
 sudo apt update -y
@@ -125,6 +125,8 @@ CURRENT_PWD=$(pwd)
 cd ${INSTALL_DIR}/ntoj/
 $HOME/.local/bin/poetry install
 cd $CURRENT_PWD
+git rev-parse HEAD > ${INSTALL_DIR}/ntoj/version.txt
+git branch --show-current >> ${INSTALL_DIR}/ntoj/version.txt
 
 # Install Redis
 sudo apt -y install redis
@@ -152,6 +154,7 @@ unlock_pwd = ${UNLOCK_PWD}
 JUDGE_SERVER_LIST = []
 BASE_URL = '${BASE_URL}'
 EOF
+echo "" > ${INSTALL_DIR}/ntoj/installation-script
 
 # Create default administrator account
 cp ${INSTALL_DIR}/ntoj/config.py ${CURRENT_PWD}/config.py

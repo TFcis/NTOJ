@@ -4,6 +4,7 @@ from handlers.manage.bulletin import ManageBulletinHandler
 from handlers.manage.contest import ManageContestHandler
 from handlers.manage.dash import ManageDashHandler
 from handlers.manage.judge import JudgeChalCntSub, ManageJudgeHandler
+from handlers.manage.info import ManageInfoHandler
 from handlers.manage.pack import ManagePackHandler
 from handlers.manage.pro.url import get_manage_pro_url
 from handlers.manage.proclass import ManageProClassHandler
@@ -37,4 +38,5 @@ def get_manage_url(db, rs, pool):
         ('/be/manage/judge', ManageJudgeHandler, args),
         ('/be/manage/judgecntws', JudgeChalCntSub, sub_args),
         ('/be/manage/pack', ManagePackHandler, args),
+        ("/be/manage/info", ManageInfoHandler, args),
     ] + pro_urls
