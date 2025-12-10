@@ -8,7 +8,7 @@ import time
 import psutil
 
 import config
-from handlers.base import ActionDispatcher, RequestHandler, UnifiedWebSocketHandler, reqenv, require_permission
+from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from services.user import UserConst, UserService
 
 info_dispatcher = ActionDispatcher()
