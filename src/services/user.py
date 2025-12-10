@@ -74,11 +74,11 @@ class UserService:
         self.rs = rs
         UserService.inst = self
 
-    async def sign_in(self, mail, pw):
+    async def sign_in(self, mail, pw, ip = ''):
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "acct_id","password" FROM "account"
+                    SELECT "acct_id","password","specific_ip" FROM "account"
                     WHERE "mail" = $1;
                 ''',
                 mail,
@@ -88,6 +88,10 @@ class UserService:
 
         acct_id = result[0]['acct_id']
         hpw = result[0]['password']
+        specific_ip = result[0]['specific_ip']
+
+        if specific_ip and ip and specific_ip != ip:
+            return ('Esignip', 'Login failed'), None
 
         hpw = base64.b64decode(hpw.encode('utf-8'))
         if bcrypt.hashpw(pw.encode('utf-8'), hpw) == hpw:
