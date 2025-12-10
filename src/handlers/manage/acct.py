@@ -42,6 +42,7 @@ class ManageAcctHandler(RequestHandler):
     async def update_acct(self):
         acct_id = int(self.get_argument("acct_id"))
         acct_type = int(self.get_argument("acct_type"))
+        acct_specific_ip = self.get_argument('specific_ip', default='').strip()
         err, acct = await UserService.inst.info_acct(acct_id)
 
         if err:
@@ -57,6 +58,7 @@ class ManageAcctHandler(RequestHandler):
         )
 
         acct.acct_type = acct_type
+        acct.specific_ip = acct_specific_ip
         err, _ = await UserService.inst.update_acct(acct)
         if err:
             return self.error(err)

@@ -219,7 +219,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "last_compiler", "motto", "proclass_collection"
+                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "last_compiler", "motto", "proclass_collection", "specific_ip"
                         FROM "account" WHERE "acct_id" = $1;
                     ''',
                     acct_id,
@@ -240,7 +240,7 @@ class UserService:
                 last_compiler=result['last_compiler'],
                 lastip=result['lastip'],
                 proclass_collection=result['proclass_collection'],
-                specific_ip='',
+                specific_ip=result['specific_ip'] if result['specific_ip'] else '',
             )
             b_acct = pickle.dumps(acct)
 
@@ -272,7 +272,8 @@ class UserService:
                         "acct_type" = $1, "name" = $2,
                         "photo" = $3, "cover" = $4,
                         "last_compiler" = $5,
-                        "motto" = $6, "proclass_collection" = $7
+                        "motto" = $6, "proclass_collection" = $7,
+                        "specific_ip" = $9
                     WHERE
                         "acct_id" = $8 RETURNING "acct_id";
                 ''',
@@ -284,6 +285,7 @@ class UserService:
                 acct.motto,
                 acct.proclass_collection,
                 acct.acct_id,
+                acct.specific_ip,
             )
             if len(result) != 1:
                 return ('Enoext', 'Account not found'), None
@@ -338,7 +340,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "acct_id", "acct_type", "name", "mail", "lastip"
+                        SELECT "acct_id", "acct_type", "name", "mail", "lastip", "specific_ip"
                         FROM "account" WHERE "acct_type" >= $1
                         ORDER BY "acct_id" ASC;
                     ''',
@@ -346,7 +348,7 @@ class UserService:
                 )
 
             acctlist = []
-            for acct_id, acct_type, name, mail, lastip in result:
+            for acct_id, acct_type, name, mail, lastip, specific_ip in result:
                 acct = Account(
                     acct_id=acct_id,
                     acct_type=acct_type,
@@ -358,7 +360,7 @@ class UserService:
                     last_compiler='',
                     lastip=lastip,
                     proclass_collection=[],
-                    specific_ip='',
+                    specific_ip=specific_ip if specific_ip else '',
                 )
 
                 if private:
