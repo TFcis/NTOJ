@@ -20,6 +20,7 @@ RUN apt update \
 COPY src /ntoj
 COPY migration /ntoj/migration
 COPY scripts /ntoj/scripts
+COPY .git /ntoj/.git
 
 RUN UNLOCK_PASSWORD_PROCESSED=$(echo "UNLOCK_PASSWORD" | poetry run python3 scripts/get_unlock_pwd.py) \
 COOKIE_SEC=$(python3 -c "import sys; print(open('/dev/urandom','rb').read(32).hex())") \
@@ -47,7 +48,8 @@ ADMIN_PASSWORD=admin1234"\
 > scripts/.env \
 && echo "" > docker-dev \
 && git rev-parse HEAD > version.txt \
-&& git branch --show-current >> version.txt
+&& git branch --show-current >> version.txt \
+&& rm -rf .git
 
 EXPOSE 5500
 CMD bash
