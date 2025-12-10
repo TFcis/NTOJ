@@ -41,6 +41,7 @@ class Account:
     lastip: str
     last_compiler: Compiler
     proclass_collection: list[int]
+    specific_ip: str
 
     def is_kernel(self):
         return self.acct_type == UserConst.ACCTTYPE_KERNEL
@@ -50,7 +51,7 @@ class Account:
 
 
 GUEST_ACCOUNT = Account(
-    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', last_compiler=Compiler.GPP, motto='', proclass_collection=[]
+    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', last_compiler=Compiler.GPP, motto='', proclass_collection=[], specific_ip=''
 )
 
 
@@ -239,6 +240,7 @@ class UserService:
                 last_compiler=result['last_compiler'],
                 lastip=result['lastip'],
                 proclass_collection=result['proclass_collection'],
+                specific_ip='',
             )
             b_acct = pickle.dumps(acct)
 
@@ -356,6 +358,7 @@ class UserService:
                     last_compiler='',
                     lastip=lastip,
                     proclass_collection=[],
+                    specific_ip='',
                 )
 
                 if private:

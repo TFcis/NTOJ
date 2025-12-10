@@ -118,6 +118,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
             lastip="",
             last_compiler=Compiler.GCC,
             proclass_collection=[],
+            specific_ip="",
         )
         self.fake_rs.get.return_value = MagicMock()
         with patch("pickle.loads", return_value=dummy_acct):
@@ -198,6 +199,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
             lastip="",
             last_compiler=Compiler.GCC,
             proclass_collection=[],
+            specific_ip="",
         )
         self.fake_conn.fetch.return_value = [{"acct_id": 1}]
         self.fake_rs.delete.return_value = None
@@ -219,6 +221,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
             lastip="",
             last_compiler=Compiler.GCC,
             proclass_collection=[],
+            specific_ip="",
         )
         err, _ = await self.service.update_acct(acct)
         self.assertEqual(err[0], "Eparam")
@@ -235,6 +238,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
             lastip="",
             last_compiler=Compiler.GCC,
             proclass_collection=[],
+            specific_ip="",
         )
         err, _ = await self.service.update_acct(acct)
         self.assertEqual(err[0], "Enamemin")
@@ -251,6 +255,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
             lastip="",
             last_compiler=Compiler.GCC,
             proclass_collection=[],
+            specific_ip="",
         )
         err, _ = await self.service.update_acct(acct)
         self.assertEqual(err[0], "Emottomax")
@@ -283,6 +288,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
                 lastip="127.0.0.1",
                 last_compiler=Compiler.GCC,
                 proclass_collection=[],
+                specific_ip="",
             )
         ]
         self.fake_rs.hget.return_value = MagicMock()
