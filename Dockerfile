@@ -10,7 +10,7 @@ ENV PATH="/root/.local/bin:$PATH"
 COPY pyproject.toml .
 RUN apt update \
     && apt upgrade -y \
-    && apt install curl dos2unix xz-utils gcc postgresql-client libpq-dev -y \
+    && apt install git curl dos2unix xz-utils gcc postgresql-client libpq-dev -y \
     && curl -sSL https://install.python-poetry.org | python3 - \
     && poetry install && poetry add coverage requests \
     && apt autoremove --purge -y gcc libpq-dev curl \
@@ -20,6 +20,8 @@ RUN apt update \
 COPY src /ntoj
 COPY migration /ntoj/migration
 COPY scripts /ntoj/scripts
+COPY .git /ntoj/.git
+COPY pyproject.toml /ntoj/pyproject.toml
 
 RUN UNLOCK_PASSWORD_PROCESSED=$(echo "UNLOCK_PASSWORD" | poetry run python3 scripts/get_unlock_pwd.py) \
 COOKIE_SEC=$(python3 -c "import sys; print(open('/dev/urandom','rb').read(32).hex())") \
@@ -45,7 +47,10 @@ ADMIN_NAME=admin\n\
 ADMIN_MAIL=admin@admin\n\
 ADMIN_PASSWORD=admin1234"\
 > scripts/.env \
-&& echo "" > docker-dev
+&& echo "" > docker-dev \
+&& git rev-parse HEAD > version.txt \
+&& git branch --show-current >> version.txt \
+&& rm -rf .git
 
 EXPOSE 5500
 CMD bash
@@ -54,18 +59,24 @@ CMD bash
 
 FROM python:3.14-alpine AS builder
 COPY pyproject.toml .
+COPY .git/HEAD .git/HEAD
+COPY .git/refs .git/refs
 
-RUN apk add --no-cache curl gcc musl-dev libpq-dev build-base python3-dev \
+RUN apk add --no-cache curl gcc musl-dev libpq-dev build-base python3-dev git \
     && curl -sSL https://install.python-poetry.org | python3 - \
     && /root/.local/bin/poetry self add poetry-plugin-export \
     && /root/.local/bin/poetry export --without-hashes --output requirements.txt \
     && curl -sSL https://install.python-poetry.org | python3 - --uninstall \
-    && pip install --user -r requirements.txt
+    && pip install --user -r requirements.txt \
+    && git rev-parse HEAD > version.txt \
+    && git branch --show-current >> version.txt
 
 FROM python:3.14-alpine AS release
 COPY --from=builder /root/.local /root/.local
+COPY --from=builder /ntoj/version.txt /ntoj/version.txt
 RUN apk add --no-cache postgresql17-client dos2unix tar xz
 
+COPY pyproject.toml /ntoj/pyproject.toml
 COPY src /ntoj
 COPY migration /ntoj/migration
 COPY scripts /ntoj/scripts
