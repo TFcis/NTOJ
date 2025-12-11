@@ -15,6 +15,7 @@
                 <th>Name</th>
                 <th>Mail</th>
                 <th>Last IP</th>
+                <th>Specific IP</th>
                 <th>Level</th>
                 <th></th>
             </tr>
@@ -26,6 +27,7 @@
                 <td><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.name }}</a></td>
                 <td>{{ acct.mail }}</td>
                 <td>{{ acct.lastip }}</td>
+                <td>{{ acct.specific_ip}}</td>
                 <td>
                     {% if acct.is_kernel() %}
                         Kernel

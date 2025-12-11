@@ -5,14 +5,22 @@
 <script type="text/javascript" id="contjs">
     function init() {
 		var j_form = $('#form');
+        const ip_re = /^(((?!25?[6-9])[12]\d|[1-9])?\d\.?\b){4}$/;
 
 		j_form.find('button.submit').on('click', function(e) {
             var type = j_form.find('#type').val();
+            const ip = j_form.find('#ip').val().trim();
+
+            if(ip.length > 0 && !ip_re.test(ip)) {
+                index.show_notify_dialog('Specific IP format error, please input correct IP address.', index.DIALOG_TYPE.error);
+                return;
+            }
 
             $.post(`{{ url('/be/manage/acct/update') }}`, {
                 'reqtype': 'update',
                 'acct_id': {{ acct.acct_id }},
                 'acct_type': type,
+                'specific_ip': ip,
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
@@ -41,6 +49,11 @@
                 <option value="{{ UserConst.ACCTTYPE_KERNEL }}" {% if acct.is_kernel() %} selected {% end %}>Kernel</option>
 				<option value="{{ UserConst.ACCTTYPE_USER }}" {% if not acct.is_kernel() %} selected {% end %}>User</option>
 			</select>
+		</div>
+
+		<div class="mb-3">
+			<label>Specific IP</label>
+            <input class="form-control" id="ip" type="text" value="{{ acct.specific_ip }}">
 		</div>
 
 		<button type="button" class="btn btn-primary submit">Update</button>

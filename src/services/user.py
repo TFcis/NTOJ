@@ -41,6 +41,7 @@ class Account:
     lastip: str
     last_compiler: Compiler
     proclass_collection: list[int]
+    specific_ip: str
 
     def is_kernel(self):
         return self.acct_type == UserConst.ACCTTYPE_KERNEL
@@ -50,7 +51,7 @@ class Account:
 
 
 GUEST_ACCOUNT = Account(
-    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', last_compiler=Compiler.GPP, motto='', proclass_collection=[]
+    acct_id=0, acct_type=UserConst.ACCTTYPE_GUEST, name='', mail='', photo='', cover='', lastip='', last_compiler=Compiler.GPP, motto='', proclass_collection=[], specific_ip=''
 )
 
 
@@ -73,11 +74,11 @@ class UserService:
         self.rs = rs
         UserService.inst = self
 
-    async def sign_in(self, mail, pw):
+    async def sign_in(self, mail, pw, ip = ''):
         async with self.db.acquire() as con:
             result = await con.fetch(
                 '''
-                    SELECT "acct_id","password" FROM "account"
+                    SELECT "acct_id","password","specific_ip" FROM "account"
                     WHERE "mail" = $1;
                 ''',
                 mail,
@@ -87,6 +88,10 @@ class UserService:
 
         acct_id = result[0]['acct_id']
         hpw = result[0]['password']
+        specific_ip = result[0]['specific_ip']
+
+        if specific_ip and ip and specific_ip != ip:
+            return ('Esignip', 'Login failed'), None
 
         hpw = base64.b64decode(hpw.encode('utf-8'))
         if bcrypt.hashpw(pw.encode('utf-8'), hpw) == hpw:
@@ -218,7 +223,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "last_compiler", "motto", "proclass_collection"
+                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "last_compiler", "motto", "proclass_collection", "specific_ip"
                         FROM "account" WHERE "acct_id" = $1;
                     ''',
                     acct_id,
@@ -239,6 +244,7 @@ class UserService:
                 last_compiler=result['last_compiler'],
                 lastip=result['lastip'],
                 proclass_collection=result['proclass_collection'],
+                specific_ip=result['specific_ip'] if result['specific_ip'] else '',
             )
             b_acct = pickle.dumps(acct)
 
@@ -270,7 +276,8 @@ class UserService:
                         "acct_type" = $1, "name" = $2,
                         "photo" = $3, "cover" = $4,
                         "last_compiler" = $5,
-                        "motto" = $6, "proclass_collection" = $7
+                        "motto" = $6, "proclass_collection" = $7,
+                        "specific_ip" = $9
                     WHERE
                         "acct_id" = $8 RETURNING "acct_id";
                 ''',
@@ -282,6 +289,7 @@ class UserService:
                 acct.motto,
                 acct.proclass_collection,
                 acct.acct_id,
+                acct.specific_ip,
             )
             if len(result) != 1:
                 return ('Enoext', 'Account not found'), None
@@ -336,7 +344,7 @@ class UserService:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
-                        SELECT "acct_id", "acct_type", "name", "mail", "lastip"
+                        SELECT "acct_id", "acct_type", "name", "mail", "lastip", "specific_ip"
                         FROM "account" WHERE "acct_type" >= $1
                         ORDER BY "acct_id" ASC;
                     ''',
@@ -344,7 +352,7 @@ class UserService:
                 )
 
             acctlist = []
-            for acct_id, acct_type, name, mail, lastip in result:
+            for acct_id, acct_type, name, mail, lastip, specific_ip in result:
                 acct = Account(
                     acct_id=acct_id,
                     acct_type=acct_type,
@@ -356,6 +364,7 @@ class UserService:
                     last_compiler='',
                     lastip=lastip,
                     proclass_collection=[],
+                    specific_ip=specific_ip if specific_ip else '',
                 )
 
                 if private:
