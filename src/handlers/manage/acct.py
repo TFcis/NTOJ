@@ -62,7 +62,7 @@ class ManageAcctHandler(RequestHandler):
         # Check IP validity
         try:
             IPv4Address(acct_specific_ip)
-        except Exception:
+        except ipaddress.AddressValueError:
             return self.error(("Einval", "The specific IP address is invalid"))
 
         acct.acct_type = acct_type
