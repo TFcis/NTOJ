@@ -61,7 +61,7 @@ FROM python:3.14-alpine AS builder
 COPY pyproject.toml .
 COPY .git .
 
-RUN apk add --no-cache curl gcc musl-dev libpq-dev build-base python3-dev git \
+RUN apk add --no-cache curl gcc musl-dev libpq-dev build-base python3-dev linux-headers git \
     && curl -sSL https://install.python-poetry.org | python3 - \
     && /root/.local/bin/poetry self add poetry-plugin-export \
     && /root/.local/bin/poetry export --without-hashes --output requirements.txt \
