@@ -178,6 +178,10 @@ function formatBytes(bytes) {
                     <td>{{ info['config']['timezone'] }}</td>
                 </tr>
                 <tr>
+                    <td>Active WebSocket Connections</td>
+                    <td>{{ info['active_websocket_connections'] }}</td>
+                </tr>
+                <tr>
                     <td>Can See Code User</td>
                     <td>
                         {% if info['config']['can_see_code_user'] %}

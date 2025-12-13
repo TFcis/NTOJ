@@ -7,15 +7,13 @@ from handlers.contests.manage.general import (
 )
 from handlers.contests.manage.pro import ContestManageProHandler
 from handlers.contests.manage.reg import ContestManageRegHandler
-from handlers.contests.manage.qa import ContestManageQuestionHandler, ContestManageAnnounceHandler, ContestManageQANewQuesHandler
+from handlers.contests.manage.qa import ContestManageQuestionHandler, ContestManageAnnounceHandler
 
 def get_contests_manage_url(db, rs, pool):
     args = {
         'db': db,
         'rs': rs,
     }
-
-    sub_args = {'pool': pool}
 
     return [
         (r'/be/contests/manage/add', ContestManageAddHandler, args),
@@ -28,5 +26,4 @@ def get_contests_manage_url(db, rs, pool):
         (r'/be/contests/\d+/manage/reg', ContestManageRegHandler, args),
         (r'/be/contests/\d+/manage/question', ContestManageQuestionHandler, args),
         (r'/be/contests/\d+/manage/announce', ContestManageAnnounceHandler, args),
-        (r'/be/contests/\d+/manage/qasub', ContestManageQANewQuesHandler, sub_args),
     ]

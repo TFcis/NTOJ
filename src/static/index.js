@@ -13,8 +13,31 @@ var index = new function() {
     var that = this;
     var curr_url = null;
 
+    /**
+     * @var {number|null} that.acct_id - current account id, null if not logged in
+     */
     that.acct_id = null;
+    that.base_url = null;
     that.prev_url = null;
+
+    /**
+     * @var {WebSocket|null} that.ws - current WebSocket connection, null if none, if contest_id set, it will connect to contest ws, otherwise normal ws
+     */
+    that.ws = null;
+
+    /**
+     * @var {Map<string, function>} that.ws_callback_map - map of websocket message type to callback function
+     */
+    that.ws_callback_map = new Map();
+
+    /**
+     * @var {Array<string>} that.ws_pending_registers - pending register types waiting for WebSocket to open
+     */
+    that.ws_pending_registers = [];
+    /**
+     * @var {Array<{type: string, data: any}>} that.ws_pending_messages - pending messages waiting for WebSocket to open
+     */
+    that.ws_pending_messages = [];
 
     /*
 	Reload new page
@@ -222,6 +245,8 @@ var index = new function() {
             });
         });
 
+        that.ws = that.ws_init('ws');
+
         if (acct_id != '0') {
             that.acct_id = parseInt(acct_id);
             j_navlist.find('li.leave').show();
@@ -405,15 +430,99 @@ var index = new function() {
         }, 3000));
     };
 
-    that.get_ws = function(ws_url) {
+    that.ws_init = function(ws_url) {
         let ws_link = '';
         if (location.protocol !== 'https:') {
             ws_link = `ws://${location.host}${that.base_url}/be/${ws_url}`;
         } else {
             ws_link = `wss://${location.host}${that.base_url}/be/${ws_url}`;
         }
-	    return new WebSocket(ws_link);
-    };
+        let ws = new WebSocket(ws_link);
+
+        ws.onopen = function() {
+            console.log('WebSocket connected');
+            // Send all pending register messages
+            for (let type of that.ws_pending_registers) {
+                console.log(`Registering pending callback: ${type}`);
+                ws.send(JSON.stringify({'type': 'register', 'data': type}));
+            }
+            that.ws_pending_registers = [];
+            // Send all pending messages
+            for (let msg of that.ws_pending_messages) {
+                try {
+                    ws.send(JSON.stringify(msg));
+                } catch (e) {
+                    console.error('Failed to send pending ws message', e);
+                }
+            }
+            that.ws_pending_messages = [];
+        };
+
+        ws.onmessage = function(event) {
+            let data = JSON.parse(event.data);
+            if (data.type == "ping") {
+                ws.send(JSON.stringify({'type': 'pong', 'data': ''}));
+            } else if (that.ws_callback_map.has(data.type)) {
+                that.ws_callback_map.get(data.type)(data.data);
+            } else {
+                console.warn(`no callback registered for ws message type ${data.type}`);
+            }
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = function() {
+            console.log('WebSocket closed');
+        };
+
+        return ws;
+    }
+
+    /**
+     *
+     * @param {string} type
+     * @param {Function} callback
+     */
+    that.register_ws_callback = function(type, callback) {
+        if (that.ws == null) {
+            console.error('ws is null, cannot register callback');
+            return;
+        }
+        if (that.ws_callback_map.has(type)) {
+            console.warn(`ws callback for type ${type} already registered, overwriting`);
+        }
+        that.ws_callback_map.set(type, callback);
+
+        // If WebSocket is already open, send register immediately
+        if (that.ws.readyState === WebSocket.OPEN) {
+            that.ws.send(JSON.stringify({'type': 'register', 'data': type}));
+        } else {
+            // Otherwise, add to pending list
+            console.log(`WebSocket not ready, queuing register for: ${type}`);
+            that.ws_pending_registers.push(type);
+        }
+    }
+
+    /**
+     *
+     * @param {string} type
+     * @param {object} data
+     */
+    that.ws_send = function(type, data) {
+        if (that.ws == null) {
+            // Socket not initialized yet: queue message
+            that.ws_pending_messages.push({'type': type, 'data': data});
+            return;
+        }
+        if (that.ws.readyState === WebSocket.OPEN) {
+            that.ws.send(JSON.stringify({'type': type, 'data': data}));
+        } else {
+            // WebSocket not open (yet or reconnecting); queue the message
+            that.ws_pending_messages.push({'type': type, 'data': data});
+        }
+    }
 
     that.unescape_html = function(html) {
         const parser = new DOMParser();

@@ -1,14 +1,12 @@
 import tornado.web
 
 from handlers.acct import AcctConfigHandler, AcctHandler, AcctProClassHandler, SignHandler
+from handlers.base import UnifiedWebSocketHandler
 from handlers.board import BoardHandler
-from handlers.bulletin import BulletinHandler, BulletinSub
+from handlers.bulletin import BulletinHandler
 from handlers.chal import (
     ChalHandler,
     ChalListHandler,
-    ChalListNewChalHandler,
-    ChalListNewStateHandler,
-    ChalNewStateHandler,
 )
 from handlers.code import CodeHandler
 from handlers.contests.url import get_contests_url
@@ -34,7 +32,10 @@ def get_url(db, rs, pool):
         'rs': rs,
     }
 
-    sub_args = {'pool': pool}
+    unified_ws_args = {
+        'db': db,
+        'pool': pool,
+    }
 
     return [
         (r'/be/info', BulletinHandler, args),
@@ -53,9 +54,7 @@ def get_url(db, rs, pool):
         (r'/be/submit', SubmitHandler, args),
         (r'/be/chal/(\d+)', ChalHandler, args),
         (r'/be/chal', ChalListHandler, args),
-        (r'/be/challistnewchalsub', ChalListNewChalHandler, sub_args),
-        (r'/be/challistnewstatesub', ChalListNewStateHandler, sub_args),
-        (r'/be/chalnewstatesub', ChalNewStateHandler, sub_args),
+        (r'/be/ws', UnifiedWebSocketHandler, unified_ws_args),
         (r'/be/pack', PackHandler, args),
         (r'/be/about', AbouotHandler, args),
         (r'/be/question', QuestionHandler, args),
@@ -65,7 +64,6 @@ def get_url(db, rs, pool):
         (r'/be/rank/(\d+)', ProRankHandler, args),
         (r'/be/users', UserRankHandler, args),
         (r'/be/code', CodeHandler, args),
-        (r'/be/informsub', BulletinSub, sub_args),
         (r'/be/dev-info', DevInfoHandler, args),
         (r'/be/report', ReportHandler, args),
 

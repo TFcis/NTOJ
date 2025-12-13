@@ -115,15 +115,14 @@
     function init() {
         const chal_id = "{{ chal.chal_id }}";
         const contest_id = "{{ chal.contest_id }}";
-        ws = index.get_ws("chalnewstatesub");
-        ws.onopen = function(e) {
-            ws.send(chal_id);
-        };
 
-        ws.onmessage = function(e) {
-            var chal_state_data = JSON.parse(e['data']);
+        index.register_ws_callback('chalstatesub', function(data) {
+            var chal_state_data = JSON.parse(data);
             update_state_data(chal_state_data);
-        };
+        });
+
+        // Initialize with chal_id
+        index.ws_send('chalstatesub_init', chal_id);
 
         {% if rechal == True %}
         $('#rechal').on('click', function(e) {
@@ -149,9 +148,9 @@
         $('#reject').on('click', function(e) {
             let url = '';
             {% if chal.contest_id == 0 %}
-                url = `{{ url('/be/chal/${chal_id}') }}`;
+                url = `{{ url('/be/chal/{ chal.chal_id }') }}`;
             {% else %}
-                url = `{{ url(f'/be/contests/{ chal.contest_id }/chal/${chal_id}') }}`;
+                url = `{{ url(f'/be/contests/{ chal.contest_id }/chal/{ chal.chal_id }') }}`;
             {% end %}
             let reason = prompt('Reject Reason: ');
             $.post(url, {
@@ -191,7 +190,7 @@
     }
 
     function destroy() {
-        ws.close();
+        index.ws_send('unregister', 'chalstatesub');
     }
 </script>
 

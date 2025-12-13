@@ -1,16 +1,84 @@
 import json
-import asyncio
 
 import config
 from services.contests import ContestService
 from services.user import UserService
-from handlers.base import RequestHandler, WebSocketSubHandler, reqenv, ActionDispatcher
+from handlers.base import RequestHandler, UnifiedWebSocketHandler, reqenv, ActionDispatcher
 from handlers.contests.base import contest_require_permission
 
 SUBJECT_MIN = 1
 SUBJECT_MAX = 50
 CONTENT_MIN = 1
 CONTENT_MAX = 256
+
+
+class ContestManageQACallback:
+    """Callback for contest management new question notifications
+
+    Manages per-connection state for filtering contest-specific new question notifications.
+    Only used by contest administrators.
+    """
+
+    def __init__(self):
+        # Store connection-specific state: {conn: {'contest_id': int}}
+        self.conn_state = {}
+
+    async def register(self, conn):
+        """Called when a connection subscribes to contestnewquessub"""
+        # Initialize connection state with no contest_id
+        self.conn_state[conn] = {'contest_id': None}
+
+    async def message(self, conn, data):
+        """Called when a message is received on contestnewquessub channel
+
+        Args:
+            conn: WebSocket connection instance
+            data: Contest ID as string
+
+        Returns:
+            str: Contest ID if it matches the subscribed contest
+            None: Skip this connection if contest_id doesn't match
+        """
+        try:
+            state = self.conn_state.get(conn)
+            if not state or state['contest_id'] is None:
+                return None
+
+            # Check if message contest_id matches subscribed contest
+            contest_id = int(data)
+            if contest_id == state['contest_id']:
+                return str(contest_id)  # Forward message to this connection
+
+            return None  # Skip this connection
+        except Exception as e:
+            return None
+
+    async def unregister(self, conn):
+        """Called when a connection unsubscribes or closes"""
+        self.conn_state.pop(conn, None)
+
+    async def handle_custom_message(self, conn, msg_type, msg_data):
+        """Handle custom initialization message
+
+        Expects a plain integer string as the contest_id
+        """
+        if msg_type == 'contestnewquessub_init':
+            try:
+                contest_id = int(msg_data)
+                state = self.conn_state.get(conn)
+                if state:
+                    state['contest_id'] = contest_id
+                return True  # Handled
+            except Exception as e:
+                return True  # Handled (but failed)
+
+        return False  # Not handled by this callback
+
+
+# Create and register callback instance
+_contest_manage_qa_callback = ContestManageQACallback()
+UnifiedWebSocketHandler.register_channel_callback("contestnewquessub", _contest_manage_qa_callback)
+
 
 contest_manage_question_dispatcher = ActionDispatcher()
 
@@ -103,7 +171,6 @@ class ContestManageQuestionHandler(RequestHandler):
         return await contest_manage_question_dispatcher.dispatch(self, reqtype)
 
 
-# Create dispatcher for announce handler
 contest_manage_announce_dispatcher = ActionDispatcher()
 
 
@@ -198,23 +265,3 @@ class ContestManageAnnounceHandler(RequestHandler):
     async def post(self):
         reqtype = self.get_argument("reqtype")
         return await contest_manage_announce_dispatcher.dispatch(self, reqtype)
-
-
-class ContestManageQANewQuesHandler(WebSocketSubHandler):
-    async def listen_newques(self):
-        async for msg in self.p.listen():
-            if msg["type"] != "message":
-                continue
-
-            if int(msg["data"]) == self.contest_id:
-                await self.write_message(str(int(msg["data"])))
-
-    async def open(self):
-        self.contest_id = -1
-        await self.p.subscribe("contestnewquessub")
-
-        self.task = asyncio.tasks.Task(self.listen_newques())
-
-    async def on_message(self, msg):
-        if self.contest_id == -1 and msg.isdigit():
-            self.contest_id = int(msg)

@@ -40,20 +40,18 @@
       index.init();
       var j_index = $('#index-navlist');
 
-      var msg_ws = index.get_ws("informsub");
-
       var inform_count = 0;
       var on = false;
-      msg_ws.onopen = function (e) {
-      };
 
-      msg_ws.onmessage = function (e) {
+      // Register bulletin update callback
+      index.register_ws_callback('bulletinsub', function(data) {
         inform_count += 1;
         j_index.find('a.message').text('公告 *' + inform_count);
         j_index.find('a.message').show();
         on = true;
         setInterval(function () {if (on == true) {j_index.find('a.message').fadeOut(500).fadeIn(500);} }, 1000);
-      };
+      });
+
       j_index.find('a.message').on('click', function (e) {
         j_index.find('a.message').hide();
         inform_count = 0;
@@ -93,35 +91,38 @@
         {% end %}
 
         {% if contest.is_admin(user) %}
-            let ws = index.get_ws("contests/{{ contest.contest_id }}/manage/qasub");
-            let contest_ask_cnt = parseInt("{{ contest_ask_cnt }}");
-            ws.onopen = (e) => {
-                ws.send("{{ contest.contest_id }}");
-            };
-            ws.onmessage = (e) => {
-                contest_ask_cnt += 1;
-                $("#notifyRedDot").text(contest_ask_cnt);
-                $("#notifyRedDot").show();
-            };
+          // Subscribe to admin-only new-question notifications using unified WS API
+          let contest_ask_cnt = parseInt("{{ contest_ask_cnt }}");
+          index.register_ws_callback('contestnewquessub', function(data) {
+            // data is a plain string with contest_id; just increment the counter
+            contest_ask_cnt += 1;
+            $("#notifyRedDot").text(contest_ask_cnt);
+            $("#notifyRedDot").show();
+          });
+          // Initialize channel with contest id
+          index.ws_send('contestnewquessub_init', "{{ contest.contest_id }}");
         {% elif contest.is_start() %}
-            let ws = index.get_ws("contests/{{ contest.contest_id }}/qasub");
             let contest_notification_cnt = parseInt("{{ contest_notification_cnt }}");
-            ws.onopen = (e) => {
-                ws.send(JSON.stringify({
-                    contest_id: "{{ contest.contest_id }}",
-                    acct_id: "{{ user.acct_id }}",
-                }));
-            };
-            ws.onmessage = (e) => {
-                e = JSON.parse(e.data);
+            index.register_ws_callback('contestnewqasub', function(data) {
+              // server publishes JSON string for contestnewqasub; parse it
+              try {
+                let e = JSON.parse(data);
                 if (e.type == 'popup-announce') {
-                    index.show_notify_dialog(e.content, index.DIALOG_TYPE.info, e.subject);
+                  index.show_notify_dialog(e.content, index.DIALOG_TYPE.info, e.subject);
                 } else {
-                    contest_notification_cnt += 1;
-                    $("#notifyRedDot").text(contest_notification_cnt);
-                    $("#notifyRedDot").show();
+                  contest_notification_cnt += 1;
+                  $("#notifyRedDot").text(contest_notification_cnt);
+                  $("#notifyRedDot").show();
                 }
-            };
+              } catch (err) {
+                console.warn('malformed contestnewqasub payload', data);
+              }
+            });
+            // Initialize channel with contest id + acct_id
+            index.ws_send('contestnewqasub_init', JSON.stringify({
+              contest_id: "{{ contest.contest_id }}",
+              acct_id: "{{ user.acct_id }}",
+            }));
         {% end %}
     {% end %}
 
@@ -214,7 +215,7 @@
           <li class="nav-item"><a class="nav-link" style="color: #e74c3c;" href="{{ url('/question/') }}">get reply</a></li>
           {% end %}
 
-          <li><a class="nav-link" style="display: none;" href="" class="message"></a></li>
+          <li><a class="nav-link message" style="display: none;" href=""></a></li>
           <!-- <li><a class="nav-link" href="http://forum.tfcis.org/forum.php?mod=forumdisplay&fid=40" target="_new">Discuss</a></li> -->
           <li><a class="nav-link" href="https://github.com/TFcis/NTOJ/issues" target="_new">Make A Wish</a></li>
           <li class="nav-item about"><a class="nav-link" href="{{ url('/about/') }}">About</a></li>

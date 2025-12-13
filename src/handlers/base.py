@@ -137,29 +137,338 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
         super().__init__(*args, **kwargs)
 
+class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
+    """Unified WebSocket handler with shared Redis pubsub connection
 
-class WebSocketSubHandler(tornado.websocket.WebSocketHandler):
+    This handler replaces multiple individual WebSocket handlers with a single
+    unified handler that uses type-based message routing. All connections share
+    a single Redis pubsub connection to reduce resource usage.
+
+    Features:
+    - Shared Redis pubsub connection (1 connection for all WebSocket connections)
+    - Type-based message routing with register/unregister mechanism
+    - Ping-pong health check (30s interval, 60s timeout)
+    - Proper connection pool management
+    - Error isolation (one connection failure doesn't affect others)
+    """
+
+    # Shared Redis pubsub connection (class-level)
+    _PING_INTERVAL = 30  # seconds
+    _PING_TIMEOUT = 60  # seconds
+    _PING_DATA = {"type": "ping", "data": ""}
+    _LOGOUT_EVENT_CHANNEL = "logout_acct_sub"
+    _MAX_RETRY_DELAY = 60
+    _shared_pubsub: aioredis.client.PubSub = None
+    _pubsub_lock = asyncio.Lock()
+    _pubsub_task: asyncio.Task = None
+    _redis_pool = None
+
+    # Connection pool tracking
+    active_connections: set = set()  # All active WebSocket connections
+
+    # Subscription tracking: connection -> set of subscribed types
+    subscriptions: dict = {}
+
+    # Message type callbacks: channel -> callback class instance
+    # Callback class should have: register(), message(data), unregister() methods
+    _channel_callbacks: dict = {}
+
     def __init__(self, *args, **kwargs):
+        self.db: asyncpg.Pool = kwargs.pop("db")
         pool = kwargs.pop("pool")
+        if UnifiedWebSocketHandler._redis_pool is None:
+            UnifiedWebSocketHandler._redis_pool = pool
+
         self.rs: aioredis.Redis = aioredis.Redis(connection_pool=pool)
-        self.p = self.rs.pubsub()
-        self.task: asyncio.Task = None
+        self.acct_id: int = 0
+        self.session_id = None
+
+        self.last_pong = 0.0
+        self.last_ping = 0.0
+        self.ping_callback = None
 
         super().__init__(*args, **kwargs)
-        self.settings["websocket_ping_interval"] = 10
 
     def check_origin(self, _: str) -> bool:
         return True
 
-    async def cleanup(self):
-        await self.p.unsubscribe()
-        if self.task:
-            self.task.cancel()
+    @classmethod
+    async def get_shared_pubsub(cls):
+        """Get or create the shared Redis pubsub connection"""
+        async with cls._pubsub_lock:
+            if cls._shared_pubsub is None:
+                rs = aioredis.Redis(connection_pool=cls._redis_pool)
+                cls._shared_pubsub = rs.pubsub()
 
-        await self.p.aclose()
-        await self.rs.aclose()
+                # Subscribe to all registered channels
+                if cls._channel_callbacks:
+                    await cls._shared_pubsub.subscribe(*cls._channel_callbacks.keys())
+                    await cls._shared_pubsub.subscribe(cls._LOGOUT_EVENT_CHANNEL)
+
+                # Start listener task
+                cls._pubsub_task = asyncio.create_task(cls._listen_redis_messages())
+
+        return cls._shared_pubsub
+
+    @classmethod
+    async def _resubscribe_all_channels(cls):
+        """Resubscribe to all registered channels after reconnection"""
+        if cls._shared_pubsub and cls._channel_callbacks:
+            await cls._shared_pubsub.subscribe(*cls._channel_callbacks.keys())
+            # Ensure logout channel is subscribed too
+            await cls._shared_pubsub.subscribe(cls._LOGOUT_EVENT_CHANNEL)
+
+    @classmethod
+    def register_channel_callback(cls, channel: str, callback_class):
+        """Register a callback class for a specific channel
+
+        Args:
+            channel: The Redis channel name
+            callback_class: A class that implements the callback interface:
+                - channel_name (class attribute): The Redis channel name
+                - register(conn): Called when client registers to this channel
+                - message(conn, data): Called when message received, returns formatted data or None
+                - unregister(conn): Called when client unregisters from this channel
+
+        Example:
+            class MyChannelCallback:
+                def __init__(self):
+                    self.conn_state = {}
+
+                async def register(self, conn):
+                    self.conn_state[conn] = {}
+                    # Initialize connection-specific state
+
+                async def message(self, conn, data):
+                    # Process message with connection state
+                    if should_skip(conn, data):
+                        return None
+                    return format_data(data)
+
+                async def unregister(self, conn):
+                    # Cleanup connection state
+                    self.conn_state.pop(conn, None)
+
+            UnifiedWebSocketHandler.register_channel_callback("my_channel", MyChannelCallback())
+        """
+        cls._channel_callbacks[channel] = callback_class
+
+    @classmethod
+    async def _listen_redis_messages(cls):
+        """Listen to Redis messages and distribute to subscribed connections
+
+        This runs as a single background task that receives all Redis pubsub
+        messages and distributes them to the appropriate WebSocket connections
+        based on their subscriptions.
+        """
+        retry_delay = 1
+
+        while True:
+            try:
+                if cls._shared_pubsub is None:
+                    await cls.get_shared_pubsub()
+                    await cls._resubscribe_all_channels()
+                    retry_delay = 1
+
+                async for msg in cls._shared_pubsub.listen():
+                    if msg["type"] != "message":
+                        continue
+
+                    channel = (
+                        msg["channel"].decode()
+                        if isinstance(msg["channel"], bytes)
+                        else msg["channel"]
+                    )
+                    data = (
+                        msg["data"].decode()
+                        if isinstance(msg["data"], bytes)
+                        else msg["data"]
+                    )
+
+                    if channel == cls._LOGOUT_EVENT_CHANNEL:
+                        # data is expected to be a session key (cookie id).
+                        # Find all connections that match this session_id and close them.
+                        session_key = data
+                        close_failed = []
+                        # Build set of candidate connections: subscriptions + active
+                        candidates = set(list(cls.subscriptions.keys()))
+                        candidates.update(cls.active_connections)
+
+                        for conn in list(candidates):
+                            try:
+                                if getattr(conn, "session_id", None) == session_key:
+                                    try:
+                                        conn.close(code=4000, reason="Logout")
+                                    except Exception:
+                                        # fallback to cleanup if close fails
+                                        close_failed.append(conn)
+                            except Exception as e:
+                                pass
+
+                        for conn in close_failed:
+                            try:
+                                await conn.cleanup()
+                            except Exception as e:
+                                pass
+
+                        continue
+
+                    failed_conns = []
+                    for conn, types in list(cls.subscriptions.items()):
+                        if channel in types:
+                            try:
+                                if channel in cls._channel_callbacks:
+                                    callback = cls._channel_callbacks[channel]
+                                    formatted_data = await callback.message(conn, data)
+                                    if formatted_data is None:
+                                        continue  # Callback decided to skip this connection
+
+                                    await conn.write_message(
+                                        json.dumps(
+                                            {"type": channel, "data": formatted_data}
+                                        )
+                                    )
+                                else:
+                                    # No callback, send raw data
+                                    await conn.write_message(
+                                        json.dumps({"type": channel, "data": data})
+                                    )
+                            except Exception as e:
+                                failed_conns.append(conn)
+
+                    for conn in failed_conns:
+                        try:
+                            await conn.cleanup()
+                        except Exception as e:
+                            pass
+
+            except Exception as e:
+                cls._shared_pubsub = None
+
+                # Exponential backoff
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, self._MAX_RETRY_DELAY)
+
+    async def open(self):
+        """Called when WebSocket connection is opened"""
+        # Ensure shared pubsub is initialized
+        await self.get_shared_pubsub()
+
+        self.acct_id = self.get_secure_cookie("id")
+        self.session_id = self.get_cookie("id")
+
+        self.start_ping()
+
+    def start_ping(self):
+        """Start ping-pong health check mechanism"""
+        now = tornado.ioloop.IOLoop.current().time()
+        self.last_pong = now
+        self.last_ping = now
+        self.ping_callback = tornado.ioloop.PeriodicCallback(
+            self.periodic_ping,
+            self._PING_INTERVAL * 1000,  # 30 seconds
+        )
+        self.ping_callback.start()
+
+    def periodic_ping(self):
+        """Send periodic ping and check for timeout"""
+        now = tornado.ioloop.IOLoop.current().time()
+
+        if self.last_pong > 0 and (now - self.last_pong) > self._PING_TIMEOUT:
+            try:
+                self.close(code=1000, reason="Ping timeout")
+            except Exception as e:
+                pass
+            return
+
+        try:
+            self.write_message(json.dumps(self._PING_DATA))
+            self.last_ping = now
+        except Exception as e:
+            try:
+                self.close()
+            except:
+                pass
+
+    async def on_message(self, message):
+        """Handle incoming WebSocket messages
+
+        Message format: {"type": "...", "data": "..."}
+
+        Supported message types:
+        - pong: Response to ping (health check)
+        - register: Subscribe to a message type
+        - unregister: Unsubscribe from a message type
+        """
+
+        try:
+            msg = json.loads(message)
+            msg_type = msg.get("type")
+            msg_data = msg.get("data")
+
+            if msg_type == "pong":
+                self.last_pong = tornado.ioloop.IOLoop.current().time()
+                return
+
+            elif msg_type == "register":
+                channel = msg_data
+
+                self.subscriptions.setdefault(self, set()).add(channel)
+
+                self.active_connections.add(self)
+
+                if channel in self._channel_callbacks:
+                    await self._channel_callbacks[channel].register(self)
+
+            elif msg_type == "unregister":
+                channel = msg_data
+                if self in self.subscriptions:
+                    self.subscriptions[self].discard(channel)
+
+                    if channel in self._channel_callbacks:
+                        await self._channel_callbacks[channel].unregister(self)
+
+            else:
+                # Handle custom message types
+                # Check all registered callbacks for custom message handlers
+                handled = False
+                for channel, callback in self._channel_callbacks.items():
+                    if hasattr(callback, "handle_custom_message"):
+                        # Let callback decide if it handles this message type
+                        result = await callback.handle_custom_message(
+                            self, msg_type, msg_data
+                        )
+                        if (
+                            result is not False
+                        ):  # callback can return False to indicate "not handled"
+                            handled = True
+                            break
+
+                if not handled:
+                    pass
+
+        except json.JSONDecodeError as e:
+            pass
+        except Exception as e:
+            pass
+
+    async def cleanup(self):
+        """Clean up connection resources"""
+
+        try:
+            if self.ping_callback:
+                self.ping_callback.stop()
+
+            if self in self.subscriptions:
+                del self.subscriptions[self]
+
+            self.active_connections.discard(self)
+
+        except Exception as e:
+            pass
 
     def on_close(self) -> None:
+        """Called when WebSocket connection is closed"""
         asyncio.create_task(self.cleanup())
 
 

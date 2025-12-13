@@ -7,13 +7,33 @@ import config
 from handlers.base import (
     ActionDispatcher,
     RequestHandler,
-    WebSocketSubHandler,
+    UnifiedWebSocketHandler,
     reqenv,
     require_permission,
 )
 from services.judge import JudgeServerClusterService
 from services.log import LogService
 from services.user import UserConst
+
+
+class JudgeCntCallback:
+    """Judge server challenge count update callback - simple message forwarding"""
+
+    async def register(self, conn):
+        """Registering does not require special handling"""
+        pass
+
+    async def message(self, conn, data):
+        """Directly forward the message"""
+        return data
+
+    async def unregister(self, conn):
+        """Unsubscribing does not require special handling"""
+        pass
+
+
+_judge_cnt_callback = JudgeCntCallback()
+UnifiedWebSocketHandler.register_channel_callback("judgechalcnt_sub", _judge_cnt_callback)
 
 
 judge_dispatcher = ActionDispatcher()
@@ -80,17 +100,3 @@ class ManageJudgeHandler(RequestHandler):
         )
 
         self.error(("S", ""))
-
-
-class JudgeChalCntSub(WebSocketSubHandler):
-    async def listen_newchal(self):
-        async for msg in self.p.listen():
-            if msg["type"] != "message":
-                continue
-
-            await self.write_message(msg["data"].decode("utf-8"))
-
-    async def open(self):
-        await self.p.subscribe("judgechalcnt_sub")
-
-        self.task = asyncio.tasks.Task(self.listen_newchal())

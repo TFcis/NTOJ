@@ -140,28 +140,22 @@ font-weight: bolder;
             update_scoreboard(timestamp);
         });
 
-        ws = index.get_ws(`contests/${contest_id}/scoreboardsub`);
-        ws.onopen = (e) => {
-            ws.send(contest_id);
+        index.register_ws_callback('contestnewchalsub', function(data) {
+            if (data == contest_id) {
+                refresh_scoreboard(-1);
+            }
+        });
 
+        // Initialize with contest_id and setup connection indicator
+        index.ws_send('contestnewchalsub_init', contest_id);
+
+        // Update connection indicator when WebSocket opens
+        if (index.ws && index.ws.readyState === WebSocket.OPEN) {
             let indicator = $("#connectIndicator");
             indicator.removeClass('bg-danger');
             indicator.addClass('bg-success');
             indicator.text("Online");
-        };
-
-        ws.onmessage = (e) => {
-            if (e.data == contest_id) {
-                refresh_scoreboard(-1);
-            }
-        };
-
-        ws.onclose = (e) => {
-            let indicator = $("#connectIndicator");
-            indicator.addClass('bg-danger');
-            indicator.removeClass('bg-success');
-            indicator.text("Offline");
-        };
+        }
 
         let cur_date = new Date();
         slider.attr('max', contest_length);
@@ -202,6 +196,9 @@ font-weight: bolder;
         timer_id = setInterval(timer, 1);
     }
 
+    function destroy() {
+        index.ws_send('unregister', 'contestnewchalsub');
+    }
 
     /**
      * @argument timestamp { number|string }
