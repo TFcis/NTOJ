@@ -148,7 +148,7 @@
         $('#reject').on('click', function(e) {
             let url = '';
             {% if chal.contest_id == 0 %}
-                url = `{{ url('/be/chal/{ chal.chal_id }') }}`;
+                url = `{{ url(f'/be/chal/{ chal.chal_id }') }}`;
             {% else %}
                 url = `{{ url(f'/be/contests/{ chal.contest_id }/chal/{ chal.chal_id }') }}`;
             {% end %}

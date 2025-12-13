@@ -80,7 +80,7 @@
                 });
                 // Send contest_id after registration (for backward compatibility with old handler)
                 if (index.ws && index.ws.readyState === WebSocket.OPEN) {
-                    index.ws_send('contest_subscribe', '{{ contest.contest_id }}');
+                    index.ws_send('contestnewchalsub_init', '{{ contest.contest_id }}');
                 }
             {% else %}
                 // Normal challenge list

@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from tornado.websocket import websocket_connect
@@ -50,9 +51,11 @@ class BulletinTest(AsyncTest):
             self.assertTrue(bulletin_list[1]['pinned'])
             self.assertEqual(bulletin_list[1]['color'], 'red')
 
-            # Verify WebSocket received bulletin update
-            import asyncio
-            await asyncio.sleep(0.1)
+            # Wait up to 2 seconds for a message to be received
+            for _ in range(20):
+                if received_messages:
+                    break
+                await asyncio.sleep(0.1)
             self.assertGreater(len(received_messages), 0)
             ws.close()
             self.assertEqual(bulletin_list[1]['name'], 'admin')

@@ -169,9 +169,14 @@ class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
     # Subscription tracking: connection -> set of subscribed types
     subscriptions: dict = {}
 
+    # Locks to protect subscription and connection collections
+    _subscriptions_lock = asyncio.Lock()
+    _connections_lock = asyncio.Lock()
+
     # Message type callbacks: channel -> callback class instance
     # Callback class should have: register(), message(data), unregister() methods
     _channel_callbacks: dict = {}
+    _channel_callbacks_lock = asyncio.Lock()
 
     def __init__(self, *args, **kwargs):
         self.db: asyncpg.Pool = kwargs.pop("db")
@@ -200,10 +205,12 @@ class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
                 rs = aioredis.Redis(connection_pool=cls._redis_pool)
                 cls._shared_pubsub = rs.pubsub()
 
-                # Subscribe to all registered channels
-                if cls._channel_callbacks:
-                    await cls._shared_pubsub.subscribe(*cls._channel_callbacks.keys())
-                    await cls._shared_pubsub.subscribe(cls._LOGOUT_EVENT_CHANNEL)
+                # Subscribe to all registered channels using a snapshot
+                async with cls._channel_callbacks_lock:
+                    channels = list(cls._channel_callbacks.keys())
+                if channels:
+                    await cls._shared_pubsub.subscribe(*channels)
+                await cls._shared_pubsub.subscribe(cls._LOGOUT_EVENT_CHANNEL)
 
                 # Start listener task
                 cls._pubsub_task = asyncio.create_task(cls._listen_redis_messages())
@@ -213,8 +220,11 @@ class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
     @classmethod
     async def _resubscribe_all_channels(cls):
         """Resubscribe to all registered channels after reconnection"""
-        if cls._shared_pubsub and cls._channel_callbacks:
-            await cls._shared_pubsub.subscribe(*cls._channel_callbacks.keys())
+        if cls._shared_pubsub:
+            async with cls._channel_callbacks_lock:
+                channels = list(cls._channel_callbacks.keys())
+            if channels:
+                await cls._shared_pubsub.subscribe(*channels)
             # Ensure logout channel is subscribed too
             await cls._shared_pubsub.subscribe(cls._LOGOUT_EVENT_CHANNEL)
 
@@ -251,7 +261,53 @@ class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
 
             UnifiedWebSocketHandler.register_channel_callback("my_channel", MyChannelCallback())
         """
-        cls._channel_callbacks[channel] = callback_class
+        # Register synchronously (typically called at import time). However, if the
+        # shared pubsub is already running, schedule a background coroutine to
+        # subscribe this channel in the shared pubsub. We still protect the
+        # callback dict with a lock for safety when concurrent modifications may
+        # occur (rare at runtime).
+        # Helper: async registration method (safe for runtime registration)
+        async def _register_async():
+            async with cls._channel_callbacks_lock:
+                cls._channel_callbacks[channel] = callback_class
+            if cls._shared_pubsub is not None:
+                # shared pubsub exists and is likely subscribed; subscribe new channel
+                await cls._shared_pubsub.subscribe(channel)
+        # Perform sync registration first (fast and works during import)
+        # and rely on async task to perform subscribe when loop is available
+        async def _sync_register():
+            async with cls._channel_callbacks_lock:
+                cls._channel_callbacks[channel] = callback_class
+
+        loop = None
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            # No loop available; just set value without lock (import time)
+            cls._channel_callbacks[channel] = callback_class
+            return
+
+        if loop.is_running():
+            # schedule asynchronous subscription/register to avoid blocking
+            asyncio.create_task(_register_async())
+        else:
+            # not running: we can create loop and run now
+            loop.run_until_complete(_register_async())
+        # Now schedule asynchronous subscribe task if loop is running
+        # Done: registration scheduling performed above
+
+    @classmethod
+    async def register_channel_callback_async(cls, channel: str, callback_class):
+        """Async-friendly registration API: sets callback and subscribes
+
+        This can be awaited at runtime to ensure subscribe happens before
+        continuing. Works both when `UnifiedWebSocketHandler` _shared_pubsub
+        is not initialized yet or is already active.
+        """
+        async with cls._channel_callbacks_lock:
+            cls._channel_callbacks[channel] = callback_class
+        if cls._shared_pubsub is not None:
+            await cls._shared_pubsub.subscribe(channel)
 
     @classmethod
     async def _listen_redis_messages(cls):
@@ -291,8 +347,12 @@ class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
                         session_key = data
                         close_failed = []
                         # Build set of candidate connections: subscriptions + active
-                        candidates = set(list(cls.subscriptions.keys()))
-                        candidates.update(cls.active_connections)
+                        async with cls._subscriptions_lock:
+                            subs_keys = list(cls.subscriptions.keys())
+                        async with cls._connections_lock:
+                            active_keys = list(cls.active_connections)
+                        candidates = set(subs_keys)
+                        candidates.update(active_keys)
 
                         for conn in list(candidates):
                             try:
@@ -314,27 +374,35 @@ class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
                         continue
 
                     failed_conns = []
-                    for conn, types in list(cls.subscriptions.items()):
-                        if channel in types:
-                            try:
-                                if channel in cls._channel_callbacks:
-                                    callback = cls._channel_callbacks[channel]
-                                    formatted_data = await callback.message(conn, data)
-                                    if formatted_data is None:
-                                        continue  # Callback decided to skip this connection
+                    # Take a snapshot of current subscriptions to avoid races
+                    async with cls._subscriptions_lock:
+                        snapshot = list(cls.subscriptions.items())
+                    for conn, types in snapshot:
+                        if not types:
+                            continue
+                        if channel not in types:
+                            continue
 
-                                    await conn.write_message(
-                                        json.dumps(
-                                            {"type": channel, "data": formatted_data}
-                                        )
-                                    )
-                                else:
-                                    # No callback, send raw data
-                                    await conn.write_message(
-                                        json.dumps({"type": channel, "data": data})
-                                    )
-                            except Exception as e:
-                                failed_conns.append(conn)
+                        try:
+                            # obtain callback instance under lock to avoid race
+                            async with cls._channel_callbacks_lock:
+                                callback = cls._channel_callbacks.get(channel)
+                            if callback is None:
+                                # no callback found, send raw data
+                                await conn.write_message(
+                                    json.dumps({"type": channel, "data": data})
+                                )
+                                continue
+
+                            formatted_data = await callback.message(conn, data)
+                            if formatted_data is None:
+                                continue  # Callback decided to skip this connection
+
+                            await conn.write_message(
+                                json.dumps({"type": channel, "data": formatted_data})
+                            )
+                        except Exception as e:
+                            failed_conns.append(conn)
 
                     for conn in failed_conns:
                         try:
@@ -347,14 +415,15 @@ class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
 
                 # Exponential backoff
                 await asyncio.sleep(retry_delay)
-                retry_delay = min(retry_delay * 2, self._MAX_RETRY_DELAY)
+                retry_delay = min(retry_delay * 2, cls._MAX_RETRY_DELAY)
 
     async def open(self):
         """Called when WebSocket connection is opened"""
         # Ensure shared pubsub is initialized
         await self.get_shared_pubsub()
 
-        self.acct_id = self.get_secure_cookie("id")
+        acct_id_cookie = self.get_secure_cookie("id")
+        self.acct_id = int(acct_id_cookie) if acct_id_cookie is not None else 0
         self.session_id = self.get_cookie("id")
 
         self.start_ping()
@@ -410,29 +479,40 @@ class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
                 self.last_pong = tornado.ioloop.IOLoop.current().time()
                 return
 
+
             elif msg_type == "register":
                 channel = msg_data
+                # Make subscription/active connection modifications safe
+                async with self.__class__._subscriptions_lock:
+                    self.__class__.subscriptions.setdefault(self, set()).add(channel)
+                async with self.__class__._connections_lock:
+                    self.__class__.active_connections.add(self)
 
-                self.subscriptions.setdefault(self, set()).add(channel)
-
-                self.active_connections.add(self)
-
-                if channel in self._channel_callbacks:
-                    await self._channel_callbacks[channel].register(self)
+                # Protect callback access with a lock
+                async with self.__class__._channel_callbacks_lock:
+                    callback = self.__class__._channel_callbacks.get(channel)
+                if callback is not None:
+                    await callback.register(self)
 
             elif msg_type == "unregister":
                 channel = msg_data
-                if self in self.subscriptions:
-                    self.subscriptions[self].discard(channel)
+                async with self.__class__._subscriptions_lock:
+                    if self in self.__class__.subscriptions:
+                        self.__class__.subscriptions[self].discard(channel)
 
-                    if channel in self._channel_callbacks:
-                        await self._channel_callbacks[channel].unregister(self)
+                    async with self.__class__._channel_callbacks_lock:
+                        callback = self.__class__._channel_callbacks.get(channel)
+                    if callback is not None:
+                        await callback.unregister(self)
 
             else:
                 # Handle custom message types
                 # Check all registered callbacks for custom message handlers
                 handled = False
-                for channel, callback in self._channel_callbacks.items():
+                # iterate channel callbacks with a snapshot under lock
+                async with self.__class__._channel_callbacks_lock:
+                    callback_items = list(self._channel_callbacks.items())
+                for channel, callback in callback_items:
                     if hasattr(callback, "handle_custom_message"):
                         # Let callback decide if it handles this message type
                         result = await callback.handle_custom_message(
@@ -459,10 +539,11 @@ class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
             if self.ping_callback:
                 self.ping_callback.stop()
 
-            if self in self.subscriptions:
-                del self.subscriptions[self]
-
-            self.active_connections.discard(self)
+            async with self.__class__._subscriptions_lock:
+                if self in self.__class__.subscriptions:
+                    del self.__class__.subscriptions[self]
+            async with self.__class__._connections_lock:
+                self.__class__.active_connections.discard(self)
 
         except Exception as e:
             pass

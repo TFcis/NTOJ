@@ -182,7 +182,7 @@ class AcctConfigHandler(RequestHandler):
 
         # publish all session keys to logout channel so websocket connections close
         for session_key in await self.rs.hgetall(f"account_session@{target_acct_id}"):
-            await self.rs.publish(UnifiedWebSocketHandler._LOGOUT_EVENT_CHANNEL, session_key)
+            await self.rs.publish(UnifiedWebSocketHandler._LOGOUT_EVENT_CHANNEL, session_key.decode())
         await self.rs.delete(f"account_session@{target_acct_id}")
         self.clear_cookie("id")
         return self.error(("S", ""))

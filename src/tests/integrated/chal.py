@@ -1,3 +1,4 @@
+import asyncio
 from decimal import Decimal
 import json
 import shutil
@@ -190,7 +191,6 @@ class ChalListTest(AsyncTest):
             def _message(msg):
                 if msg is None:
                     return
-                import json
                 data = json.loads(msg)
                 if data.get('type') == 'challist_sub':
                     self.assertEqual(int(data['data']), 1)
@@ -202,7 +202,6 @@ class ChalListTest(AsyncTest):
             def _message2(msg):
                 if msg is None:
                     return
-                import json
                 data = json.loads(msg)
                 if data.get('type') == 'challiststatesub':
                     msg_data = json.loads(data['data'])
@@ -295,7 +294,7 @@ class ChalListTest(AsyncTest):
                 payload = json.loads(data['data'])
                 if 'total_result' in payload:
                     tr = payload['total_result']
-                    self.assertTrue(len(tr.get('ce_message', '')) > 0)
+                    self.assertGreater(len(tr.get('ce_message', '')), 0)
                     self.assertNotEqual(tr.get('message_type'), MessageType.NONE.value)
                     got_message = True
                     return
@@ -310,7 +309,6 @@ class ChalListTest(AsyncTest):
 
             await self.wait_for_judge_finish(callback3)
             ws_admin.close()
-            import asyncio
             await asyncio.sleep(1) # HACK: workaround to ensure message is processed
             self.assertTrue(got_message)
 

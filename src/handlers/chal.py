@@ -136,7 +136,7 @@ class ChalListStateCallback:
 
             elif contest.is_end():
                 if viewer.acct_id == chal.acct_id:
-                    return data
+                    return await gen()
                 if not contest.is_admin(acct_id=chal.acct_id) and contest.is_public_scoreboard:
                     return await gen()
                 return None
@@ -185,7 +185,6 @@ class ChalListStateCallback:
             try:
                 init_data = json.loads(msg_data)
                 chalids = init_data.get("chalids", [])
-                print(chalids)
 
                 await self.init(conn, chalids)
                 return True  # Handled
