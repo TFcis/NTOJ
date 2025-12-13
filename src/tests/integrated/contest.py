@@ -341,16 +341,19 @@ class ContestTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', 13))
 
-            ws = await websocket_connect('ws://localhost:5501/be/manage/judgecntws')
+            ws = await websocket_connect('ws://localhost:5501/be/ws')
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'judgechalcnt_sub'}))
 
             def _message(msg):
                 if msg is None:
                     return
+                data = json.loads(msg)
+                if data.get('type') == 'contestnewchalsub':
+                    self.assertEqual(int(data['data']), 1)
 
-                self.assertEqual(int(msg), 1)
-
-            ws2 = await websocket_connect('ws://localhost:5501/be/contests/1/scoreboardsub', on_message_callback=_message)
-            await ws2.write_message('1')
+            ws2 = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            await ws2.write_message(json.dumps({'type': 'register', 'data': 'contestnewchalsub'}))
+            await ws2.write_message(json.dumps({'type': 'contestnewchalsub_init', 'data': '1'}))
 
             with open('tests/static_file/code/toj674.ac.cpp') as f:
                 res = user_session.post('contests/1/submit', data={
@@ -374,9 +377,12 @@ class ContestTest(AsyncTest):
                 if msg is None:
                     break
 
-                if json.loads(msg)['chal_cnt'] == 0:
-                    ws.close()
-                    break
+                data = json.loads(msg)
+                if data.get('type') == 'judgechalcnt_sub':
+                    judge_data = json.loads(data['data'])
+                    if judge_data['chal_cnt'] == 0:
+                        ws.close()
+                        break
 
             # TODO: map_rate_acct
             # TODO: get_pro_ac_rate
@@ -411,12 +417,14 @@ class ContestTest(AsyncTest):
             def _message(msg):
                 if msg is None:
                     return
-
-                self.assertEqual(int(msg), 1)
-            ws = await websocket_connect('ws://localhost:5501/be/contests/1/manage/qasub', on_message_callback=_message)
+                data = json.loads(msg)
+                if data.get('type') == 'contestnewquessub':
+                    self.assertEqual(int(data['data']), 1)
+            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewquessub'}))
             await ws.write_message(json.dumps({
-                "contest_id": 1,
-                "acct_id": 4,
+                'type': 'contestnewquessub_init',
+                'data': '1'
             }))
 
             self.assertTable(
@@ -470,14 +478,20 @@ class ContestTest(AsyncTest):
                 if msg is None:
                     return
 
-                j = json.loads(msg)
-                self.assertEqual(j['contest_id'], 1)
-                self.assertEqual(j['type'], 'reply')
-                self.assertEqual(j['ask_acct_id'], 4)
-            ws = await websocket_connect('ws://localhost:5501/be/contests/1/qasub', on_message_callback=_message)
+                data = json.loads(msg)
+                if data.get('type') == 'contestnewqasub':
+                    j = json.loads(data['data'])
+                    self.assertEqual(j['contest_id'], 1)
+                    self.assertEqual(j['type'], 'reply')
+                    self.assertEqual(j['ask_acct_id'], 4)
+            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
             await ws.write_message(json.dumps({
-                "contest_id": 1,
-                "acct_id": 4,
+                'type': 'contestnewqasub_init',
+                'data': json.dumps({
+                    "contest_id": 1,
+                    "acct_id": 4,
+                })
             }))
 
             res = admin_session.post('contests/1/manage/question', data={
@@ -513,14 +527,20 @@ class ContestTest(AsyncTest):
                 if msg is None:
                     return
 
-                j = json.loads(msg)
-                self.assertEqual(j['contest_id'], 1)
-                self.assertEqual(j['type'], 'add-announce')
+                data = json.loads(msg)
+                if data.get('type') == 'contestnewqasub':
+                    j = json.loads(data['data'])
+                    self.assertEqual(j['contest_id'], 1)
+                    self.assertEqual(j['type'], 'add-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/be/contests/1/qasub', on_message_callback=_message)
+            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
             await ws.write_message(json.dumps({
-                "contest_id": 1,
-                "acct_id": 4,
+                'type': 'contestnewqasub_init',
+                'data': json.dumps({
+                    "contest_id": 1,
+                    "acct_id": 4,
+                })
             }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'add-announce',
@@ -577,14 +597,20 @@ class ContestTest(AsyncTest):
                 if msg is None:
                     return
 
-                j = json.loads(msg)
-                self.assertEqual(j['contest_id'], 1)
-                self.assertEqual(j['type'], 'edit-announce')
+                data = json.loads(msg)
+                if data.get('type') == 'contestnewqasub':
+                    j = json.loads(data['data'])
+                    self.assertEqual(j['contest_id'], 1)
+                    self.assertEqual(j['type'], 'edit-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/be/contests/1/qasub', on_message_callback=_message)
+            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
             await ws.write_message(json.dumps({
-                "contest_id": 1,
-                "acct_id": 4,
+                'type': 'contestnewqasub_init',
+                'data': json.dumps({
+                    "contest_id": 1,
+                    "acct_id": 4,
+                })
             }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'edit-announce',
@@ -613,11 +639,9 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['contest_id'], 1)
                 self.assertEqual(j['type'], 'popup-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/be/contests/1/qasub', on_message_callback=_message)
-            await ws.write_message(json.dumps({
-                "contest_id": 1,
-                "acct_id": 4
-            }))
+            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
+            await ws.write_message(json.dumps({'type': 'contestnewqasub_init', 'data': json.dumps({"contest_id": 1, "acct_id": 4})}))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'popup-announce',
                 'announce_id': 1,
