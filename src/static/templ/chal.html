@@ -30,14 +30,13 @@
         total_table.querySelector('td.memory').innerHTML = memory;
         total_table.querySelector('td.score').innerHTML = rate;
 
+        total_result_message.innerHTML = '';
         if (message_type !== {{ MessageType.NONE.value }}) {
-            total_result_message.innerHTML = '';
-        } else {
             if (message_type === {{ MessageType.TEXT.value }}) {
                 let text = document.createTextNode(message);
                 let pre = document.createElement('pre');
                 pre.appendChild(text);
-                $(total_result_message_collapse).show();
+                total_result_message.appendChild(pre);
             } else if (message_type === {{ MessageType.HTML.value }}) {
                 let div = document.createElement('div');
                 div.innerHTML = message;
