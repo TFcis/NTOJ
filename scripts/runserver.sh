@@ -7,7 +7,7 @@ then
     cp config.py migration/
     cd migration
 
-    if [ -f docker-release ]; then
+    if [ -f ../docker-release ]; then
         python3 migration.py
         cd ..
         rm -rf migration
