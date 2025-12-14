@@ -276,6 +276,7 @@ class TestFileManagerAsync(unittest.IsolatedAsyncioTestCase):
         """Test copying from pack when direct_copy returns error."""
         mock_pack_service.inst = MagicMock()
         mock_pack_service.inst.direct_copy = AsyncMock(return_value=(('Eunk', 'Unknown error'), None))
+        mock_pack_service.inst.clear = AsyncMock()
 
         err, _ = await self.file_mgr.copy_from_pack('new_file.txt', 'token123')
         self.assertIsNotNone(err)
