@@ -80,9 +80,10 @@ class ContestQACallback:
                 acct_id = int(init_data.get('acct_id'))
 
                 state = self.conn_state.get(conn)
-                if state:
-                    state['contest_id'] = contest_id
-                    state['acct_id'] = acct_id
+                if not state:
+                    return True
+                state['contest_id'] = contest_id
+                state['acct_id'] = acct_id
                 return True  # Handled
             except Exception as e:
                 return True  # Handled (but failed)

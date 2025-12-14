@@ -309,7 +309,7 @@ class ChalListTest(AsyncTest):
 
             await self.wait_for_judge_finish(callback3)
             ws_admin.close()
-            await asyncio.sleep(1) # HACK: workaround to ensure message is processed
+            await asyncio.sleep(2) # HACK: workaround to ensure message is processed
             self.assertTrue(got_message)
 
             flt = ChalSearchingParamBuilder().build()

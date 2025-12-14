@@ -31,7 +31,8 @@ class ManageInfoHandler(RequestHandler):
     async def _get_system_info(self):
         info = {}
 
-        info['active_websocket_connections'] = len(UnifiedWebSocketHandler.active_connections)
+        async with UnifiedWebSocketHandler._connections_lock:
+            info['active_websocket_connections'] = len(UnifiedWebSocketHandler.active_connections)
 
         try:
             with open("./version.txt", "r") as f:
