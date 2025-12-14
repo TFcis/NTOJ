@@ -121,5 +121,3 @@ class BulletinTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
             err, bulletin = await BulletinService.inst.get_bulletin(2)
             self.assertEqual(err, ('Enoext', 'Bulletin not found'))
-
-            ws.close()
