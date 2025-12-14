@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 import functools
 import signal
@@ -10,10 +11,7 @@ import asyncpg
 import coverage
 import tornado.httpserver
 import tornado.ioloop
-import tornado.log
 import tornado.netutil
-import tornado.options
-import tornado.process
 import tornado.web
 from redis import asyncio as aioredis
 
@@ -133,8 +131,21 @@ if __name__ == "__main__":
     main_process = multiprocessing.Process(target=m, args=(e,))
     main_process.start()
 
+    rc = 0
     while e.wait():
         services_init(db, rs)
-        test_main(testing_loop)
+        try:
+            result = test_main(testing_loop)
+            if result is None:
+                rc = 1
+            elif hasattr(result, "wasSuccessful") and not result.wasSuccessful():
+                rc = 1
+        except BaseException as exc:
+            print("Exception while running tests:", exc)
+            rc = 1
         main_process.terminate()
+        # Wait for server to finish saving coverage and shutting down
+        main_process.join(timeout=10)
         break
+
+    sys.exit(rc)
