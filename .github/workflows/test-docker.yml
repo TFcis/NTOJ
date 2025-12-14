@@ -11,6 +11,50 @@ permissions:
   contents: read
 
 jobs:
+  unit:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.14
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3
+
+      - name: Install Project dependencies
+        run: |
+          $HOME/.local/bin/poetry lock
+          $HOME/.local/bin/poetry install
+          $HOME/.local/bin/poetry add --dev coverage
+
+      - name: Run Unit Test
+        id: run-tests
+        run: |
+          cd src
+          chmod +x rununittest.sh
+          set +e
+          ./rununittest.sh
+          rc=$?
+          set -e
+          echo "exit_code=$rc" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-reports
+          path: src/htmlcov
+
+      - name: Fail job if tests failed
+        if: steps.run-tests.outputs.exit_code != '0'
+        run: |
+          echo "Unit tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
+          exit 1
+
   integration:
     name: Integration tests
     runs-on: ubuntu-latest
@@ -105,10 +149,13 @@ jobs:
           docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml up -d
 
       - name: Run integration tests (runintegratedtest.sh)
+        id: run-tests
         run: |
           set -o pipefail
+          set +e
           docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml run --rm -T "$TEST_SERVICE" bash -c "./runintegratedtest.sh"
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+          rc=$?
+          echo "exit_code=$rc" >> $GITHUB_OUTPUT
         continue-on-error: true
 
       - name: Upload test reports
@@ -124,9 +171,114 @@ jobs:
           docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml down -v
 
       - name: Fail job if tests failed
+        if: steps.run-tests.outputs.exit_code != '0'
+        run: |
+          echo "Integration tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
+          exit 1
+
+  release-build:
+    name: Release Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env for release build
+        run: |
+          cat > .env <<'ENV'
+          DB_PASSWORD=ntoj_test_password
+          UNLOCK_PASSWORD=ntoj-test-unlock
+          TIMEDELTA=8
+          SITE_TITLE=ntoj-test
+          ADMIN_NAME=admin
+          ADMIN_MAIL=admin@example.com
+          ADMIN_PASSWORD=admin
+          BASE_URL=/
+          ENV
+
+      - name: Ensure reports dir
+        run: mkdir -p reports
+
+      - name: Create CI override compose file
+        run: |
+          cat > docker-compose.ci.yml <<'YAML'
+          version: "3.8"
+          services:
+            backend:
+              volumes:
+                - ./reports:/ntoj/htmlcov/
+                - backend_static:/ntoj/static
+                - backend_problem:/ntoj/problem
+                - backend_code:/ntoj/code
+            db:
+              volumes:
+                - db_data:/var/lib/postgresql/18/docker
+            cache:
+              volumes:
+                - cache_data:/data
+          volumes:
+            backend_static:
+            backend_problem:
+            backend_code:
+            db_data:
+            cache_data:
+          YAML
+
+      - name: Build and start release compose
+        id: release-up
+        run: |
+          set -euo pipefail
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          # Build and start
+          set +e
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+          rc=$?
+          set -e
+          echo "exit_code=$rc" >> $GITHUB_OUTPUT
+
+      - name: Collect backend logs
         if: always()
         run: |
-          if [ "${{ steps.run-tests.outputs.exit_code }}" != "0" ]; then
-            echo "Integration tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
-            exit ${{ steps.run-tests.outputs.exit_code }}
-          fi
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          mkdir -p reports
+          docker compose logs --no-color backend > reports/backend.log || true
+
+      - name: Wait and verify backend container
+        if: steps.release-up.outputs.exit_code == '0'
+        run: |
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          # Wait for backend container to show Up status
+          for i in {1..20}; do
+            status=$(docker compose ps backend --format "{{.State}}" || true)
+            echo "backend state: $status"
+            if [[ "$status" == "running" || "$status" == "Up" || "$status" == *"Up"* ]]; then
+              echo "backend is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "backend did not reach running state"
+          docker compose logs --no-color backend || true
+          exit 1
+
+      - name: Upload release logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-logs
+          path: reports
+
+      - name: Tear down release compose
+        if: always()
+        run: |
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+
+      - name: Fail job if build failed
+        if: steps.release-up.outputs.exit_code != '0'
+        run: |
+          echo "Release build failed (docker compose up exit code: ${{ steps.release-up.outputs.exit_code }})"
+          exit 1

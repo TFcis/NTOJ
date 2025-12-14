@@ -274,7 +274,7 @@ class ChalListNewStateHandler(WebSocketSubHandler):
 
     async def open(self):
         self.chalids: set[int] = None
-        self.allow_pro_statuses = ProConst.STATUS_ONLINE
+        self.allow_pro_statuses = [ProConst.STATUS_ONLINE]
 
         await self.p.subscribe("challiststatesub")
 

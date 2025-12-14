@@ -107,6 +107,7 @@ rm .coverage
 rm -r ./htmlcov
 
 COVERAGE_PROCESS_START=.coveragerc $HOME/.local/bin/poetry run coverage run --branch --source=./ runintegratedtest.py
+rc=$?
 $HOME/.local/bin/poetry run coverage combine
 $HOME/.local/bin/poetry run coverage html
 
@@ -135,3 +136,5 @@ fi
 if [ "$1" == "web" ]; then
     python3 -m http.server 8080
 fi
+
+exit $rc

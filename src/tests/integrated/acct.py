@@ -11,13 +11,6 @@ from .util import AsyncTest, AccountContext
 
 class SignTest(AsyncTest):
     async def main(self):
-        res = requests.post('http://localhost:5501/be/sign', data={
-            'reqtype': 'signin',
-            'mail': 'admin@test',
-            'pw': 'test',
-        })
-        self.assertAPIReturnValue(res.text, ('Esign', 'Login failed'))
-
         # signup but failed
         res = requests.post('http://localhost:5501/be/sign', data={
             'reqtype': 'signup',
@@ -29,6 +22,34 @@ class SignTest(AsyncTest):
         async with UserService.inst.db.acquire() as con:
             result = await con.fetch("SELECT last_value FROM account_acct_id_seq;")
             self.assertEqual(result[0]['last_value'], 2)
+
+        # signin block by wrong password
+        res = requests.post('http://localhost:5501/be/sign', data={
+            'reqtype': 'signin',
+            'mail': 'admin@test',
+            'pw': 'test',
+        })
+        self.assertAPIReturnValue(res.text, ('Esign', 'Login failed'))
+
+        # signin block by ip
+        err, acct = await UserService.inst.info_acct(1)
+        self.assertIsNone(err)
+        assert acct
+        acct.specific_ip = '192.168.11.10'
+        await UserService.inst.update_acct(acct)
+
+        res = requests.post('http://localhost:5501/be/sign', data={
+            'reqtype': 'signin',
+            'mail': 'admin@test',
+            'pw': 'testtest',
+        })
+        self.assertAPIReturnValue(res.text, ('Esignip', 'Login failed'))
+
+        err, acct = await UserService.inst.info_acct(1)
+        self.assertIsNone(err)
+        assert acct
+        acct.specific_ip = ''
+        await UserService.inst.update_acct(acct)
 
 
 class AcctPageTest(AsyncTest):
