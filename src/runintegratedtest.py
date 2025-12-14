@@ -8,6 +8,7 @@ import time
 import subprocess
 import multiprocessing
 
+import dowhen
 import asyncpg
 import coverage
 import tornado.httpserver
@@ -15,6 +16,7 @@ import tornado.ioloop
 import tornado.netutil
 import tornado.web
 from redis import asyncio as aioredis
+from tornado.web import create_signed_value
 
 import config as TestConfig
 import url as ur
@@ -100,6 +102,18 @@ def m(event):
         pass
 
 if __name__ == "__main__":
+    """
+    NOTE:
+    Because tornado.create_signed_value uses int(clock()) as the timestamp,
+    it causes the signed values to be identical within the same second.
+    This leads to errors in AccountContext session operations.
+    To avoid this, AccountContext forces a one-second wait to ensure the timestamps are different, which makes the test execution slower.
+
+    To address this, we introduced the dowhen package and changed the timestamp from int(clock()) to clock(),
+    so that AccountContext no longer needs to wait for a second, thus speeding up the test process.
+    """
+    dowhen.do("timestamp = utf8(str(clock()))").when(create_signed_value, "timestamp = utf8(str(int(clock())))")
+
     testing_loop = asyncio.new_event_loop()
     if not os.path.exists('db-inited'):
         subprocess.run(
