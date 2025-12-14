@@ -197,6 +197,12 @@ class BaseUrlSession(requests.Session):
             url = kwargs.pop("full_url")
         else:
             url = f"http://localhost:5501/be/{url}"
+
+        # Disable keep-alive to prevent response mixing between rapid requests
+        kwargs.setdefault('headers', {})
+        if isinstance(kwargs['headers'], dict):
+            kwargs['headers']['Connection'] = 'close'
+
         return super().request(method, url, *args, **kwargs)
 
 
