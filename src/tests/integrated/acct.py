@@ -157,6 +157,7 @@ class AcctPageTest(AsyncTest):
 
                 # read_message should return None after the server closes the connection
                 msg = await ws.read_message()
+                ws.close()
                 self.assertIsNone(msg)
 
         # # TODO: session

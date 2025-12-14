@@ -179,6 +179,8 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
             if not len(judges_cnt):
                 break
 
+        ws.close()
+
     def assertTable(self, url: str, default_data: dict, assert_tables: list[dict], session):
         for table in assert_tables:
             equal_value = table.pop("equal_value")
