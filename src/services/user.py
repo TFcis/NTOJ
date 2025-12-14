@@ -172,7 +172,8 @@ class UserService:
         session_data['ip'] = ip
 
 
-        if (await self.rs.exists(f'account@{acct_id}')) is None:
+        acct_cache = await self.rs.get(f'account@{acct_id}')
+        if acct_cache is None:
             async with self.db.acquire() as con:
                 result = await con.fetch('SELECT "acct_id","lastip" FROM "account" WHERE "acct_id" = $1;', acct_id)
 
@@ -190,8 +191,7 @@ class UserService:
 
         else:
             try:
-                acct2 = await self.rs.get(f'account@{acct_id}')
-                acct2 = pickle.loads(acct2)
+                acct2 = pickle.loads(acct_cache)
                 lastip = acct2.lastip
 
                 if lastip != ip and ip != '':

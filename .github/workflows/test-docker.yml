@@ -50,12 +50,10 @@ jobs:
           path: src/htmlcov
 
       - name: Fail job if tests failed
-        if: always()
+        if: steps.run-tests.outputs.exit_code != '0'
         run: |
-          if [ "${{ steps.run-tests.outputs.exit_code }}" != "0" ]; then
-            echo "Integration tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
-            exit ${{ steps.run-tests.outputs.exit_code }}
-          fi
+          echo "Unit tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
+          exit 1
 
   integration:
     name: Integration tests
@@ -173,12 +171,10 @@ jobs:
           docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml down -v
 
       - name: Fail job if tests failed
-        if: always()
+        if: steps.run-tests.outputs.exit_code != '0'
         run: |
-          if [ "${{ steps.run-tests.outputs.exit_code }}" != "0" ]; then
-            echo "Integration tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
-            exit ${{ steps.run-tests.outputs.exit_code }}
-          fi
+          echo "Integration tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
+          exit 1
 
   release-build:
     name: Release Build
@@ -280,3 +276,9 @@ jobs:
         run: |
           export COMPOSE_PROJECT_NAME=ntoj_release_test
           docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+
+      - name: Fail job if build failed
+        if: steps.release-up.outputs.exit_code != '0'
+        run: |
+          echo "Release build failed (docker compose up exit code: ${{ steps.release-up.outputs.exit_code }})"
+          exit 1

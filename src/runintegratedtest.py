@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 import asyncio
 import functools
 import signal
@@ -138,10 +139,11 @@ if __name__ == "__main__":
             result = test_main(testing_loop)
             if result is None:
                 rc = 1
-            elif hasattr(result, "wasSuccessful") and not result.wasSuccessful():
+            elif not result.wasSuccessful():
                 rc = 1
-        except BaseException as exc:
+        except Exception as exc:
             print("Exception while running tests:", exc)
+            traceback.print_exception(exc)
             rc = 1
         main_process.terminate()
         # Wait for server to finish saving coverage and shutting down

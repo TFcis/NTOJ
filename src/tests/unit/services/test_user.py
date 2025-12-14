@@ -181,7 +181,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
     async def test_info_sign_success(self):
         req = DummyReq(id_val="1", cookie_val="sesskey", remote_ip="192.168.1.1")
         with patch("services.user.unpackb", return_value={"time": time.time()}):
-            self.fake_rs.exists.return_value = True
+            self.fake_rs.get.return_value = 1
             self.fake_conn.fetch.return_value = [{"acct_id": 1, "lastip": "127.0.0.1"}]
             with patch.object(self.service, "rs", self.fake_rs):
                 err, acct_id, ip = await self.service.info_sign(req)
@@ -319,7 +319,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
     async def test_info_sign_db_not_found(self):
         req = DummyReq(id_val="1", cookie_val="sesskey", remote_ip="192.168.1.1")
         with patch("services.user.unpackb", return_value={"time": time.time()}):
-            self.fake_rs.exists.return_value = None
+            self.fake_rs.get.return_value = None
             self.fake_conn.fetch.return_value = []
             with patch.object(self.service, "rs", self.fake_rs):
                 err, acct_id, ip = await self.service.info_sign(req)
@@ -330,7 +330,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
     async def test_info_sign_db_update_lastip(self):
         req = DummyReq(id_val="1", cookie_val="sesskey", remote_ip="192.168.1.2")
         with patch("services.user.unpackb", return_value={"time": time.time()}):
-            self.fake_rs.exists.return_value = None
+            self.fake_rs.get.return_value = None
             self.fake_conn.fetch.return_value = [{"acct_id": 1, "lastip": "127.0.0.1"}]
             with (
                 patch.object(self.service, "rs", self.fake_rs),

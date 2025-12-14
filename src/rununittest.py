@@ -7,11 +7,11 @@ try:
     result = main()
     if result is None:
         rc = 1
-    elif hasattr(result, "wasSuccessful") and not result.wasSuccessful():
+    elif not result.wasSuccessful():
         rc = 1
-except BaseException as exc:
+except Exception as exc:
     print("Exception while running tests:", exc)
-    traceback.print_exc()
+    traceback.print_exception(exc)
     rc = 1
 
 sys.exit(rc)

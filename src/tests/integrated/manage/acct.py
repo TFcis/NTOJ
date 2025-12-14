@@ -18,3 +18,17 @@ class ManageAcctTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(acct.acct_type, UserConst.ACCTTYPE_KERNEL)
             self.assertEqual(acct.specific_ip, '192.168.11.10')
+
+            # NOTE: Test Empty specific_ip
+            res = admin_session.post('manage/acct/update', {
+                'reqtype': 'update',
+                'acct_id': 3,
+                'acct_type': UserConst.ACCTTYPE_KERNEL,
+                'specific_ip': '',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            err, acct = await UserService.inst.info_acct(3)
+            self.assertIsNone(err)
+            self.assertEqual(acct.acct_type, UserConst.ACCTTYPE_KERNEL)
+            self.assertEqual(acct.specific_ip, '')
