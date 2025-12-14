@@ -64,8 +64,16 @@ jobs:
       REPORTS_DIR_ON_RUNNER: ${{ github.workspace }}/reports
       POSTGRES_IMAGE: postgres:18-alpine
       REDIS_IMAGE: redis:8-alpine
+      JUDGE_REPO: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git
       CACHE_SUFFIX: v1
     steps:
+      - name: Get judge repo commit
+        id: get-judge-commit
+        run: |
+          set -euo pipefail
+          commit=$(git ls-remote "${JUDGE_REPO}" HEAD | cut -f1)
+          echo "judge_commit=$commit" >> $GITHUB_OUTPUT
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -77,7 +85,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: cached-images
-          key: ${{ runner.os }}-docker-images-${{ env.CACHE_SUFFIX }}-${{ env.POSTGRES_IMAGE }}-${{ env.REDIS_IMAGE }}
+          key: ${{ runner.os }}-docker-images-${{ env.CACHE_SUFFIX }}-${{ env.POSTGRES_IMAGE }}-${{ env.REDIS_IMAGE }}-${{ steps.get-judge-commit.outputs.judge_commit }}
 
       - name: Load images from cache if present, otherwise pull and save
         run: |
@@ -107,12 +115,24 @@ jobs:
             docker save -o cached-images/redis.tar "${REDIS_IMAGE}"
           fi
 
+          # Handle judge image cache (use commit hash as key)
+          JUDGE_COMMIT=${{ steps.get-judge-commit.outputs.judge_commit }}
+          if [ -f "cached-images/judge.tar" ]; then
+            echo "Found cached judge.tar — loading into docker"
+            docker load -i cached-images/judge.tar
+          else
+            echo "No cached judge.tar — building judge image at ${JUDGE_COMMIT}"
+            docker build -t judge:${JUDGE_COMMIT} "${JUDGE_REPO}#${JUDGE_COMMIT}"
+            echo "Saving judge:${JUDGE_COMMIT} to cached-images/judge.tar"
+            docker save -o cached-images/judge.tar "judge:${JUDGE_COMMIT}"
+          fi
+
       - name: Prepare reports dir
         run: mkdir -p "${REPORTS_DIR_ON_RUNNER}"
 
       - name: Create CI override to avoid /srv mounts and mount reports
         run: |
-          cat > docker-compose.ci.yml <<'YAML'
+          cat > docker-compose.ci.yml <<YAML
           version: "3.8"
           services:
             backend:
@@ -131,6 +151,7 @@ jobs:
               volumes:
                 - cache_data:/data
             judge:
+              image: judge:${{ steps.get-judge-commit.outputs.judge_commit }}
               volumes:
                 - backend_problem:/problem:ro
                 - backend_code:/code:ro
