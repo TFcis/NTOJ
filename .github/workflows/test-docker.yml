@@ -16,13 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.14
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3
+        uses: snok/install-poetry@v1
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.14
+          cache: 'poetry'
+
+      # - name: Install Poetry
+      #   run: |
+      #     curl -sSL https://install.python-poetry.org | python3
 
       - name: Install Project dependencies
         run: |

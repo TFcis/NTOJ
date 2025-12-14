@@ -12,7 +12,7 @@ RUN apt update \
     && apt upgrade -y \
     && apt install git curl dos2unix xz-utils gcc postgresql-client libpq-dev -y \
     && curl -sSL https://install.python-poetry.org | python3 - \
-    && poetry install && poetry add coverage requests \
+    && poetry install && poetry add coverage requests dowhen \
     && apt autoremove --purge -y gcc libpq-dev curl \
     && apt clean -y \
     && rm -rf /var/lib/apt/lists/
