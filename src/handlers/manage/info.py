@@ -8,7 +8,7 @@ import time
 import psutil
 
 import config
-from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
+from handlers.base import ActionDispatcher, RequestHandler, UnifiedWebSocketHandler, reqenv, require_permission
 from services.user import UserConst, UserService
 
 info_dispatcher = ActionDispatcher()
@@ -30,6 +30,9 @@ class ManageInfoHandler(RequestHandler):
 
     async def _get_system_info(self):
         info = {}
+
+        async with UnifiedWebSocketHandler._connections_lock:
+            info['active_websocket_connections'] = len(UnifiedWebSocketHandler.active_connections)
 
         try:
             with open("./version.txt", "r") as f:

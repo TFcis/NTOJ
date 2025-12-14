@@ -4,7 +4,6 @@
 <link rel="stylesheet" type="text/css" href="{{ url('/src/challist.css') }}">
 
 <script type="text/javascript">
-    var newchal_ws, newstate_ws;
     var state_map = {
         {% for state, desc in ChalConst.STATE_LONG_STR.items() %}
             {% raw f"{state}: '{desc}'," %}
@@ -73,19 +72,24 @@
             chalsub_count = 0;
 
             {% if contest %}
-                newchal_ws = index.get_ws('contests/{{ contest.contest_id }}/scoreboardsub');
-                newchal_ws.onopen = function(e) {
-                    newchal_ws.send('{{ contest.contest_id }}')
+                // Contest scoreboard uses different channel
+                index.register_ws_callback('contestnewchalsub', function(data) {
+                    chalsub_count += 1;
+                    j_chalsub.find('a').text(chalsub_count + ' new challenges');
+                    j_chalsub.show();
+                });
+                // Send contest_id after registration (for backward compatibility with old handler)
+                if (index.ws && index.ws.readyState === WebSocket.OPEN) {
+                    index.ws_send('contestnewchalsub_init', '{{ contest.contest_id }}');
                 }
             {% else %}
-                newchal_ws = index.get_ws('challistnewchalsub');
+                // Normal challenge list
+                index.register_ws_callback('challist_sub', function(data) {
+                    chalsub_count += 1;
+                    j_chalsub.find('a').text(chalsub_count + ' new challenges');
+                    j_chalsub.show();
+                });
             {% end %}
-
-            newchal_ws.onmessage = function(e) {
-                chalsub_count += 1;
-                j_chalsub.find('a').text(chalsub_count + ' new challenges');
-                j_chalsub.show();
-            };
         })();
 
         (() => {
@@ -100,23 +104,36 @@
                 state_el.innerText = state_map[state];
             };
 
-            newstate_ws = index.get_ws('challistnewstatesub');
+            // Register callback for challenge state updates
+            index.register_ws_callback('challiststatesub', function(data) {
+                update_state(JSON.parse(data));
+            });
 
-            newstate_ws.onopen = (e) => {
+            // Send initial subscription data after WebSocket is ready
+            let send_subscription = () => {
                 let chalids = [
                     {% for chal in challist %}
                         {{ chal.chal_id }},
                     {% end %}
                 ];
-                newstate_ws.send(JSON.stringify({
-                    acct_id: '{{ user.acct_id }}',
+                index.ws_send('challiststatesub_init', JSON.stringify({
                     chalids: chalids,
                 }));
             };
 
-            newstate_ws.onmessage = (e) => {
-                update_state(JSON.parse(e['data']));
-            };
+            // If WebSocket is already open, send immediately
+            if (index.ws && index.ws.readyState === WebSocket.OPEN) {
+                send_subscription();
+            } else {
+                // Otherwise, wait for onopen
+                if (index.ws) {
+                    let original_onopen = index.ws.onopen;
+                    index.ws.onopen = function(e) {
+                        if (original_onopen) original_onopen(e);
+                        send_subscription();
+                    };
+                }
+            }
         })();
 
         {% if (flt.state == 100 or flt.state == 101) and isadmin %}
@@ -144,8 +161,15 @@
     }
 
     function destroy() {
-        newchal_ws.close();
-        newstate_ws.close();
+        // Unregister callbacks when leaving page
+        if (index.ws && index.ws.readyState === WebSocket.OPEN) {
+            {% if contest %}
+                index.ws_send('unregister', 'contestnewchalsub');
+            {% else %}
+                index.ws_send('unregister', 'challist_sub');
+            {% end %}
+            index.ws_send('unregister', 'challiststatesub');
+        }
     }
 </script>
 

@@ -7,6 +7,8 @@ from services.user import UserService
 from services.rate import RateService
 
 from .util import AsyncTest, AccountContext
+from tornado.websocket import websocket_connect
+from tornado.httpclient import HTTPRequest
 
 
 class SignTest(AsyncTest):
@@ -138,6 +140,24 @@ class AcctPageTest(AsyncTest):
 
         with AccountContext('test1@test', 'test') as user_session:
             pass
+
+
+    class WebSocketLogoutTest(AsyncTest):
+        async def main(self):
+            # Test that sign-out publishes logout event and closes websocket
+            with AccountContext('admin@test', 'testtest') as user_session:
+                cookie_value = user_session.cookies.get('id')
+                headers = {"Cookie": f"id={cookie_value}"}
+
+                # connect websocket with same cookie
+                ws = await websocket_connect(HTTPRequest("ws://localhost:5501/be/ws", headers=headers))
+
+                # sign out - this should publish logout event and close websocket
+                user_session.post('sign', data={"reqtype": "signout"})
+
+                # read_message should return None after the server closes the connection
+                msg = await ws.read_message()
+                self.assertIsNone(msg)
 
         # # TODO: session
         # with AccountContext('admin@test', 'testtest') as admin_session:

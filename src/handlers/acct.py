@@ -6,7 +6,7 @@ import hashlib
 from msgpack import packb, unpackb
 
 import config
-from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
+from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission, UnifiedWebSocketHandler
 from services.log import LogService
 from services.pro import ProService, ProClassService, ProClassConst, ProConst
 from services.rate import RateService
@@ -164,6 +164,8 @@ class AcctConfigHandler(RequestHandler):
             if hashlib.md5(session_key).hexdigest() == hashed_session_key:
                 found = True
                 await self.rs.hdel(f"account_session@{target_acct_id}", session_key)
+                # notify websocket handlers to close connections matching this session
+                await self.rs.publish(UnifiedWebSocketHandler._LOGOUT_EVENT_CHANNEL, session_key)
                 break
 
         if found:
@@ -178,6 +180,9 @@ class AcctConfigHandler(RequestHandler):
         if target_acct_id != str(self.acct.acct_id):
             return self.error(PERMISSION_DENIED_ERROR)
 
+        # publish all session keys to logout channel so websocket connections close
+        for session_key in await self.rs.hgetall(f"account_session@{target_acct_id}"):
+            await self.rs.publish(UnifiedWebSocketHandler._LOGOUT_EVENT_CHANNEL, session_key.decode())
         await self.rs.delete(f"account_session@{target_acct_id}")
         self.clear_cookie("id")
         return self.error(("S", ""))
@@ -432,5 +437,6 @@ class SignHandler(RequestHandler):
 
         if (session_key := self.get_cookie("id")) is not None:
             await self.rs.hdel(f"account_session@{self.acct.acct_id}", session_key)
+            await self.rs.publish(UnifiedWebSocketHandler._LOGOUT_EVENT_CHANNEL, session_key)
         self.clear_cookie("id", path=base_url)
         self.error(("S", ""))

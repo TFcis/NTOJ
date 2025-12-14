@@ -152,7 +152,8 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("id", session.cookies.get_dict())
 
     async def wait_for_judge_finish(self, callback):
-        ws = await websocket_connect("ws://localhost:5501/be/manage/judgecntws")
+        ws = await websocket_connect("ws://localhost:5501/be/ws")
+        await ws.write_message(json.dumps({'type': 'register', 'data': 'judgechalcnt_sub'}))
 
         callback()
 
@@ -162,7 +163,11 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
             if msg is None:
                 break
 
-            j = json.loads(msg)
+            data = json.loads(msg)
+            if data.get('type') != 'judgechalcnt_sub':
+                continue
+
+            j = json.loads(data['data'])
             judge_id = j["judge_id"]
             cnt = j["chal_cnt"]
 

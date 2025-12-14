@@ -3,16 +3,16 @@
 
 <script type="text/javascript" id="contjs">
     var j_form = $('#form');
-    var ws;
+
     function init() {
-        ws = index.get_ws('manage/judgecntws');
-
-	    ws.onopen = function(e) {};
-
-	    ws.onmessage = function(e) {
-            let res = JSON.parse(e['data']);
+        index.register_ws_callback('judgechalcnt_sub', function(data) {
+            let res = JSON.parse(data);
             $(`#${res.judge_id}`).text(res.chal_cnt);
-        };
+        });
+    }
+
+    function destroy() {
+        index.ws_send('unregister', 'judgechalcnt_sub');
     }
 
     function connect_sever(idx) {
