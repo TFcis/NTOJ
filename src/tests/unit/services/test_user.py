@@ -85,13 +85,30 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(err[0], "Enamemin")
 
     async def test_sign_in_success(self):
-        self.fake_conn.fetch.return_value = [{"acct_id": 1, "password": "aGVsbG8="}]
+        self.fake_conn.fetch.return_value = [{"acct_id": 1, "password": "aGVsbG8=", "specific_ip": ""}]
         with patch("base64.b64decode", return_value=b"hashedpw"):
             with patch("bcrypt.hashpw", return_value=b"hashedpw"):
                 err, acct_id = await self.service.sign_in("test@mail.com", "pw123")
         self.fake_conn.fetch.assert_awaited_once()
         self.assertIsNone(err)
         self.assertEqual(acct_id, 1)
+
+    async def test_sign_in_success_with_ip(self):
+        self.fake_conn.fetch.return_value = [{"acct_id": 1, "password": "aGVsbG8=", "specific_ip": "192.168.11.10"}]
+        with patch("base64.b64decode", return_value=b"hashedpw"):
+            with patch("bcrypt.hashpw", return_value=b"hashedpw"):
+                err, acct_id = await self.service.sign_in("test@mail.com", "pw123", "192.168.11.10")
+        self.fake_conn.fetch.assert_awaited_once()
+        self.assertIsNone(err)
+        self.assertEqual(acct_id, 1)
+
+    async def test_sign_in_fail_block_by_ip(self):
+        self.fake_conn.fetch.return_value = [{"acct_id": 1, "password": "aGVsbG8=", "specific_ip": "192.168.11.10"}]
+        err, acct_id = await self.service.sign_in("test@mail.com", "pw123", "127.0.0.1")
+        self.fake_conn.fetch.assert_awaited_once()
+        self.assertIsNotNone(err)
+        self.assertIsNone(acct_id)
+        self.assertEqual(err[0], "Esignip")
 
     async def test_sign_in_fail(self):
         self.fake_conn.fetch.return_value = []
@@ -263,8 +280,8 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
     async def test_list_acct_success(self):
         self.fake_rs.hget.return_value = None
         self.fake_conn.fetch.return_value = [
-            (1, UserConst.ACCTTYPE_USER, "tester", "test@mail.com", "127.0.0.1"),
-            (2, UserConst.ACCTTYPE_USER, "tester2", "test2@mail.com", "127.0.0.2"),
+            (1, UserConst.ACCTTYPE_USER, "tester", "test@mail.com", "127.0.0.1", ""),
+            (2, UserConst.ACCTTYPE_USER, "tester2", "test2@mail.com", "127.0.0.2", ""),
         ]
         self.fake_rs.hset.return_value = None
         err, acctlist = await self.service.list_acct()
