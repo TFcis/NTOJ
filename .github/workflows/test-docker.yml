@@ -35,8 +35,11 @@ jobs:
         run: |
           cd src
           chmod +x rununittest.sh
+          set +e
           ./rununittest.sh
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+          rc=$?
+          set -e
+          echo "exit_code=$rc" >> $GITHUB_OUTPUT
         continue-on-error: true
 
       - name: Upload test reports
@@ -151,8 +154,10 @@ jobs:
         id: run-tests
         run: |
           set -o pipefail
+          set +e
           docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml run --rm -T "$TEST_SERVICE" bash -c "./runintegratedtest.sh"
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+          rc=$?
+          echo "exit_code=$rc" >> $GITHUB_OUTPUT
         continue-on-error: true
 
       - name: Upload test reports
