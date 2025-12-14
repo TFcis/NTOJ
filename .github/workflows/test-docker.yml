@@ -179,3 +179,104 @@ jobs:
             echo "Integration tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
             exit ${{ steps.run-tests.outputs.exit_code }}
           fi
+
+  release-build:
+    name: Release Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env for release build
+        run: |
+          cat > .env <<'ENV'
+          DB_PASSWORD=ntoj_test_password
+          UNLOCK_PASSWORD=ntoj-test-unlock
+          TIMEDELTA=8
+          SITE_TITLE=ntoj-test
+          ADMIN_NAME=admin
+          ADMIN_MAIL=admin@example.com
+          ADMIN_PASSWORD=admin
+          BASE_URL=/
+          ENV
+
+      - name: Ensure reports dir
+        run: mkdir -p reports
+
+      - name: Create CI override compose file
+        run: |
+          cat > docker-compose.ci.yml <<'YAML'
+          version: "3.8"
+          services:
+            backend:
+              volumes:
+                - ./reports:/ntoj/htmlcov/
+                - backend_static:/ntoj/static
+                - backend_problem:/ntoj/problem
+                - backend_code:/ntoj/code
+            db:
+              volumes:
+                - db_data:/var/lib/postgresql/18/docker
+            cache:
+              volumes:
+                - cache_data:/data
+          volumes:
+            backend_static:
+            backend_problem:
+            backend_code:
+            db_data:
+            cache_data:
+          YAML
+
+      - name: Build and start release compose
+        id: release-up
+        run: |
+          set -euo pipefail
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          # Build and start
+          set +e
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+          rc=$?
+          set -e
+          echo "exit_code=$rc" >> $GITHUB_OUTPUT
+
+      - name: Collect backend logs
+        if: always()
+        run: |
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          mkdir -p reports
+          docker compose logs --no-color backend > reports/backend.log || true
+
+      - name: Wait and verify backend container
+        if: steps.release-up.outputs.exit_code == '0'
+        run: |
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          # Wait for backend container to show Up status
+          for i in {1..20}; do
+            status=$(docker compose ps backend --format "{{.State}}" || true)
+            echo "backend state: $status"
+            if [[ "$status" == "running" || "$status" == "Up" || "$status" == *"Up"* ]]; then
+              echo "backend is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "backend did not reach running state"
+          docker compose logs --no-color backend || true
+          exit 1
+
+      - name: Upload release logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-logs
+          path: reports
+
+      - name: Tear down release compose
+        if: always()
+        run: |
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
