@@ -11,6 +11,49 @@ permissions:
   contents: read
 
 jobs:
+  unit:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.14
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3
+
+      - name: Install Project dependencies
+        run: |
+          $HOME/.local/bin/poetry lock
+          $HOME/.local/bin/poetry install
+          $HOME/.local/bin/poetry add --dev coverage
+
+      - name: Run Unit Test
+        id: run-tests
+        run: |
+          cd src
+          chmod +x rununittest.sh
+          ./rununittest.sh
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-reports
+          path: src/htmlcov
+
+      - name: Fail job if tests failed
+        if: always()
+        run: |
+          if [ "${{ steps.run-tests.outputs.exit_code }}" != "0" ]; then
+            echo "Integration tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
+            exit ${{ steps.run-tests.outputs.exit_code }}
+          fi
+
   integration:
     name: Integration tests
     runs-on: ubuntu-latest
@@ -105,6 +148,7 @@ jobs:
           docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml up -d
 
       - name: Run integration tests (runintegratedtest.sh)
+        id: run-tests
         run: |
           set -o pipefail
           docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml run --rm -T "$TEST_SERVICE" bash -c "./runintegratedtest.sh"
