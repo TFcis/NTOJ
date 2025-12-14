@@ -25,10 +25,6 @@ jobs:
           python-version: 3.14
           cache: 'poetry'
 
-      # - name: Install Poetry
-      #   run: |
-      #     curl -sSL https://install.python-poetry.org | python3
-
       - name: Install Project dependencies
         run: |
           $HOME/.local/bin/poetry lock
@@ -135,15 +131,23 @@ jobs:
       - name: Prepare reports dir
         run: mkdir -p "${REPORTS_DIR_ON_RUNNER}"
 
+      - name: Build backend image with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: development
+          tags: backend:dev
+          load: true
+          cache-from: type=gha,scope=backend-dev
+          cache-to: type=gha,mode=max,scope=backend-dev
+
       - name: Create CI override to avoid /srv mounts and mount reports
         run: |
           cat > docker-compose.ci.yml <<YAML
           version: "3.8"
           services:
             backend:
-              build:
-                context: ./
-                target: development
+              image: backend:dev
               volumes:
                 - ./reports:/ntoj/htmlcov/
                 - backend_static:/ntoj/static
@@ -228,12 +232,32 @@ jobs:
       - name: Ensure reports dir
         run: mkdir -p reports
 
+      - name: Build backend release image with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: release
+          tags: backend:release
+          load: true
+          cache-from: type=gha,scope=backend-release
+          cache-to: type=gha,mode=min,scope=backend-release
+          build-args: |
+            DB_PASSWORD=ntoj_test_password
+            UNLOCK_PASSWORD=ntoj-test-unlock
+            TIMEDELTA=8
+            SITE_TITLE=ntoj-test
+            ADMIN_NAME=admin
+            ADMIN_MAIL=admin@example.com
+            ADMIN_PASSWORD=admin
+            BASE_URL=/
+
       - name: Create CI override compose file
         run: |
           cat > docker-compose.ci.yml <<'YAML'
           version: "3.8"
           services:
             backend:
+              image: backend:release
               volumes:
                 - ./reports:/ntoj/htmlcov/
                 - backend_static:/ntoj/static
@@ -260,7 +284,7 @@ jobs:
           export COMPOSE_PROJECT_NAME=ntoj_release_test
           # Build and start
           set +e
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
           rc=$?
           set -e
           echo "exit_code=$rc" >> $GITHUB_OUTPUT
