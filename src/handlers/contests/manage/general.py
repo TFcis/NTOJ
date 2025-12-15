@@ -71,7 +71,7 @@ class ContestManageGeneralHandler(RequestHandler):
             freeze_scoreboard_period = 0
 
         try:
-            penalty_value = int(self.get_argument("penalty_value"))
+            penalty_value = int(self.get_argument("penalty_value", default="20"))
             if penalty_value < 0:
                 penalty_value = 20
 

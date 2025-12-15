@@ -168,7 +168,8 @@ class ContestScoreboardHandler(RequestHandler):
             else:
                 s[pro_id] = unpackb(scores, strict_map_key=False)
                 for pro_score in s[pro_id].values():
-                    pro_score['timestamp'] = datetime.datetime.fromtimestamp(pro_score['timestamp'])
+                    if pro_score['timestamp'] is not None:
+                        pro_score['timestamp'] = datetime.datetime.fromtimestamp(pro_score['timestamp'])
                     pro_score['score'] = Decimal(pro_score['score'])
 
             if is_ended:
@@ -187,7 +188,7 @@ class ContestScoreboardHandler(RequestHandler):
                 scores[pro_id] = {
                     'pro_id': pro_id,
                     'chal_id': p['chal_id'],
-                    'timestamp': p['timestamp'].astimezone(config.TIMEZONE) - start_time,
+                    'timestamp': (p['timestamp'].astimezone(config.TIMEZONE) - start_time) if p['timestamp'] else None,
                     'score': p['score'],
                     'fail_cnt': p['fail_cnt']
                 }
