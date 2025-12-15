@@ -5,16 +5,21 @@
 	function init() {
         let contest_id = "{{ contest.contest_id }}";
 
-		const post_func = (reqtype, pro_id, fail_action=null) => {
+		const post_func = (reqtype, pro_id, score_type=null, fail_action=null) => {
 			if (pro_id.length == 0) {
 				index.show_notify_dialog('Input cannot empty.', index.DIALOG_TYPE.warning);
 				return;
 			}
 
-			$.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
+			let data = {
 				reqtype: reqtype,
 				pro_id: pro_id,
-			}, res => {
+			};
+			if (score_type !== null) {
+				data.score_type = score_type;
+			}
+
+			$.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, data, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
@@ -48,16 +53,44 @@
             });
         });
 
-		$("#addPro").on('click', () => post_func('add', $("#proId").val(), () => $("#proID").val('')));
-		$("#removePro").on('click', () => post_func('remove', $("#proId").val(), () => $("#proID").val('')));
-		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), () => $("#proList").val('')));
-		$("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val(), () => $("#proList").val('')));
+		// Handle score type change dropdown
+		$(".score-type-select").on('change', function() {
+			let pro_id = $(this).attr('pro_id');
+			let new_score_type = $(this).val();
+			let old_score_type = $(this).attr('data-old-value');
+
+			if (new_score_type == old_score_type) {
+				return;
+			}
+
+			$.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
+				reqtype: 'update_score_type',
+				pro_id: pro_id,
+				score_type: new_score_type
+			}, res => {
+				res = JSON.parse(res);
+				if (res.status == 'S') {
+					index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+					setTimeout(() => index.reload(), 1000);
+				} else {
+					index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+					// Reset to old value on error
+					$(this).val(old_score_type);
+				}
+			});
+		});
+
+		$("#addPro").on('click', () => post_func('add', $("#proId").val(), parseInt($("#proScoreType").val()), () => $("#proId").val('')));
+		$("#removePro").on('click', () => post_func('remove', $("#proId").val(), null, () => $("#proId").val('')));
+		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), parseInt($("#proListScoreType").val()), () => $("#proList").val('')));
+		$("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val(), null, () => $("#proList").val('')));
     }
 </script>
 {% end %}
 
 {% block content %}
 {% from services.pro import ProConst %}
+{% from services.contests import ProblemScoreType %}
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
 
@@ -75,6 +108,10 @@
 						<label for="#name" class="form-label">Problem ID (Single)</label>
 						<div class="input-group mb-1">
 							<input type="number" class="form-control" placeholder="pro id" id="proId">
+							<select class="form-select" id="proScoreType" style="max-width: 150px;">
+								<option value="{{ ProblemScoreType.IOI2017 }}">IOI2017</option>
+								<option value="{{ ProblemScoreType.IOI2013 }}">IOI2013</option>
+							</select>
 							<button class="btn btn-primary" id="addPro" type="button">Add</button>
 							<button class="btn btn-warning" id="removePro" type="button">Remove</button>
 						</div>
@@ -82,6 +119,10 @@
 						<label for="#name" class="form-label">Problem ID List (Multi)</label>
 						<div class="input-group mb-1">
 							<input type="text" class="form-control" placeholder="pro id list" id="proList">
+							<select class="form-select" id="proListScoreType" style="max-width: 150px;">
+								<option value="{{ ProblemScoreType.IOI2017 }}">IOI2017</option>
+								<option value="{{ ProblemScoreType.IOI2013 }}">IOI2013</option>
+							</select>
 							<button class="btn btn-primary" id="addProList" type="button">Add</button>
 							<button class="btn btn-warning" id="removeProList" type="button">Remove</button>
 						</div>
@@ -97,6 +138,7 @@
 						<tr>
 							<th scope="col">Pro ID</th>
 							<th scope="col">Problem Name</th>
+							<th scope="col">Score Type</th>
 							<th scope="col">Operation</th>
 						</tr>
 					</thead>
@@ -105,6 +147,12 @@
 						<tr>
 							<th scope="row"><a href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }}</a></th>
 							<td>{{ pro.name }}</td>
+							<td>
+								<select class="form-select form-select-sm score-type-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id]['score_type'] }}" style="width: auto;">
+									<option value="1" {% if contest.pro_list[pro.pro_id]['score_type'] == 1 %}selected{% end %}>IOI2017</option>
+									<option value="0" {% if contest.pro_list[pro.pro_id]['score_type'] == 0 %}selected{% end %}>IOI2013</option>
+								</select>
+							</td>
 							<td>
 								<button class="btn btn-warning me-2 remove" pro_id="{{ pro.pro_id }}">Remove</button>
 								<button class="btn btn-danger me-2 rechal" pro_id="{{ pro.pro_id }}">Rechallenge</button>
