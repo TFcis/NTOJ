@@ -35,16 +35,20 @@ class ContestManageProHandler(RequestHandler):
     @contest_manage_pro_dispatcher.action("add")
     async def add_action(self):
         pro_id = int(self.get_argument("pro_id"))
+        score_type = int(self.get_argument("score_type", default=ProblemScoreType.IOI2017))
 
         if self.contest.is_pro(pro_id):
             return self.error(("Eexist", f"Problem(#{pro_id}) is already in contest"))
 
-        self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType.IOI2017}
+        if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017):
+            return self.error(("Eparam", "Invalid score type"))
+
+        self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType(score_type)}
 
         await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
-        await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+        # await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
         return self.error(
             ("S", f"Problem(#{pro_id}) successfully added to problem list.")
         )
@@ -61,7 +65,7 @@ class ContestManageProHandler(RequestHandler):
         await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
-        await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+        await self.rs.hdel(f"contest_{self.contest.contest_id}_scores", str(pro_id))
         return self.error(
             ("S", f"Problem(#${pro_id}) successfully removed from problem list.")
         )
@@ -70,13 +74,18 @@ class ContestManageProHandler(RequestHandler):
     async def multi_add_action(self):
         pro_id = self.get_argument("pro_id")
         pro_id = parse_str_to_list(pro_id)
+        score_type = int(self.get_argument("score_type", default=ProblemScoreType.IOI2017))
+
+        if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017):
+            return self.error(("Eparam", "Invalid score type"))
+
         for p_id in pro_id:
-            self.contest.pro_list[p_id] = {"score_type": ProblemScoreType.IOI2017}
+            self.contest.pro_list[p_id] = {"score_type": ProblemScoreType(score_type)}
 
         await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
-        await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+        # await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
         return self.error(
             ("S", f"Problems(#{pro_id}) successfully added to problem list.")
         )
@@ -89,13 +98,13 @@ class ContestManageProHandler(RequestHandler):
         for pro_id in pro_list:
             try:
                 self.contest.pro_list.pop(pro_id)
+                await self.rs.hdel(f"contest_{self.contest.contest_id}_scores", str(pro_id))
             except KeyError:
                 continue
 
         await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
-        await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
         return self.error(
             ("S", f"Problems(#${pro_id}) successfully removed from problem list.")
         )
@@ -148,6 +157,25 @@ class ContestManageProHandler(RequestHandler):
 
         await asyncio.create_task(_rechal(rechals=result))
         return self.error(("S", f"Problem(#{pro_id}) is rechallenging."))
+
+    @contest_manage_pro_dispatcher.action("update_score_type")
+    async def update_score_type_action(self):
+        pro_id = int(self.get_argument("pro_id"))
+        score_type = int(self.get_argument("score_type"))
+
+        if not self.contest.is_pro(pro_id):
+            return self.error(("Enoext", f"Problem(#{pro_id}) not in contest"))
+
+        if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017):
+            return self.error(("Eparam", "Invalid score type"))
+
+        self.contest.pro_list[pro_id]["score_type"] = ProblemScoreType(score_type)
+
+        await ContestService.inst.update_contest(
+            self.acct, self.contest, prolist_updated=True
+        )
+        await self.rs.hdel(f"contest_{self.contest.contest_id}_scores", str(pro_id))
+        return self.error(("S", "Score type updated successfully."))
 
     @contest_manage_pro_dispatcher.action("public")
     async def public_action(self):
