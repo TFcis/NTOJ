@@ -59,6 +59,7 @@ class Contest:
     hide_admin: bool = True
     submission_cd_time: int = 30
     freeze_scoreboard_period: int = 0
+    penalty_value: int = 20
 
     def is_start(self) -> bool:
         return datetime.datetime.now(datetime.UTC) >= self.contest_start
@@ -139,7 +140,8 @@ class ContestService:
                         "allow_view_other_page",
                         "hide_admin",
                         "submission_cd_time",
-                        "freeze_scoreboard_period"
+                        "freeze_scoreboard_period",
+                        "penalty_value"
                         FROM "contest" WHERE "contest_id" = $1;
                     ''',
                     contest_id
@@ -247,8 +249,9 @@ class ContestService:
                     "allow_view_other_page" = $12,
                     "hide_admin" = $13,
                     "submission_cd_time" = $14,
-                    "freeze_scoreboard_period" = $15
-                    WHERE "contest_id" = $16;
+                    "freeze_scoreboard_period" = $15,
+                    "penalty_value" = $16
+                    WHERE "contest_id" = $17;
                 ''',
                 contest.name,
                 contest.desc_before_contest,
@@ -264,6 +267,7 @@ class ContestService:
                 contest.hide_admin,
                 contest.submission_cd_time,
                 contest.freeze_scoreboard_period,
+                contest.penalty_value,
                 contest.contest_id
             )
 
