@@ -191,7 +191,7 @@ class RankService:
         acctlist = []
         total_cnt = 0
         for total_cnt, acct_id, name, photo, motto, ac_pro_cnt, total_rate, ac_cnt, all_cnt, rank in res:
-            acct = Account(acct_id, -1, '', name, photo, '', motto, '', '', [])
+            acct = Account(acct_id, -1, '', name, photo, '', motto, '', '', [], '')
             acct.rank = rank
 
             acct.rate_data = {
