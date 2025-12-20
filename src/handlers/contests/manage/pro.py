@@ -3,7 +3,7 @@ import asyncio
 from handlers.base import reqenv, RequestHandler, ActionDispatcher
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService
-from services.contests import ContestService, ProblemScoreType
+from services.contests import ContestService, ProblemScoreType,  ChallengeResultStyle
 from services.judge import JudgeServerClusterService
 from services.pro import ProService, ProConst
 from utils.numeric import parse_str_to_list
@@ -43,7 +43,10 @@ class ContestManageProHandler(RequestHandler):
         if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017):
             return self.error(("Eparam", "Invalid score type"))
 
-        self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType(score_type)}
+        self.contest.pro_list[pro_id] = {
+            "score_type": ProblemScoreType(score_type),
+            "challenge_style": ChallengeResultStyle.FULL
+        }
 
         await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
@@ -80,7 +83,10 @@ class ContestManageProHandler(RequestHandler):
             return self.error(("Eparam", "Invalid score type"))
 
         for p_id in pro_id:
-            self.contest.pro_list[p_id] = {"score_type": ProblemScoreType(score_type)}
+            self.contest.pro_list[p_id] = {
+                "score_type": ProblemScoreType(score_type),
+                "challenge_style": ChallengeResultStyle.FULL
+            }
 
         await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
@@ -177,9 +183,28 @@ class ContestManageProHandler(RequestHandler):
         await self.rs.hdel(f"contest_{self.contest.contest_id}_scores", str(pro_id))
         return self.error(("S", "Score type updated successfully."))
 
+    @contest_manage_pro_dispatcher.action("update_challenge_style")
+    async def update_challenge_style_action(self):
+        from services.contests import ChallengeResultStyle
+        pro_id = int(self.get_argument("pro_id"))
+        challenge_style = int(self.get_argument("challenge_style"))
+
+        if not self.contest.is_pro(pro_id):
+            return self.error(("Enoext", f"Problem(#{pro_id}) not in contest"))
+
+        if challenge_style not in (ChallengeResultStyle.FULL, ChallengeResultStyle.STATE_COUNT,
+                                   ChallengeResultStyle.SUBTASK_ONLY, ChallengeResultStyle.TOTAL_ONLY):
+            return self.error(("Eparam", "Invalid challenge style"))
+
+        self.contest.pro_list[pro_id]["challenge_style"] = ChallengeResultStyle(challenge_style)
+
+        await ContestService.inst.update_contest(
+            self.acct, self.contest, prolist_updated=True
+        )
+        return self.error(("S", "Challenge style updated successfully."))
+
     @contest_manage_pro_dispatcher.action("public")
     async def public_action(self):
-        """公開題目"""
         pro_id = int(self.get_argument("pro_id"))
         if not self.contest.is_pro(pro_id):
             return self.error(("Enoext", f"Problem(#{pro_id}) not in contest"))
