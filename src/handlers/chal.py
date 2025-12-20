@@ -20,7 +20,7 @@ from services.chal import (
 )
 from services.pro import ProService, ProConst
 from services.user import UserService, UserConst
-from services.contests import UserStatus, ContestService
+from services.contests import UserStatus, ContestService, ChallengeResultStyle
 from utils.numeric import parse_str_to_list
 from services.log import LogService
 
@@ -296,6 +296,62 @@ class ChalStateCallback:
                     msg_data['total_result']['ce_message'] = ''
                     msg_data['total_result']['ie_message'] = ''
                     msg_data['total_result']['message_type'] = MessageType.NONE.value
+            return msg_data
+
+        async def apply_challenge_style(style: int):
+            """Apply challenge style filtering to msg_data"""
+            nonlocal msg_data
+
+            # Check if this is a single testdata update (has 'id' field at top level)
+            # or a summary update (has 'total_result' field)
+            is_single_testdata = 'id' in msg_data and 'total_result' not in msg_data
+            is_summary = 'total_result' in msg_data
+
+            if style == ChallengeResultStyle.TOTAL_ONLY:
+                if is_summary:
+                    msg_data = {
+                        'chal_id': msg_data.get('chal_id'),
+                        'total_result': msg_data.get('total_result')
+                    }
+                elif is_single_testdata:
+                    return None
+
+            elif style == ChallengeResultStyle.SUBTASK_ONLY:
+                if is_summary:
+                    if 'testdata_results' in msg_data:
+                        del msg_data['testdata_results']
+                elif is_single_testdata:
+                    return None
+
+            elif style == ChallengeResultStyle.STATE_COUNT:
+                if is_single_testdata:
+                    _, testdata_results = await ChalService.inst.get_testdata_results(chal.chal_id)
+                    state_count = {}
+                    for td in testdata_results.values():
+                        if td.state not in state_count:
+                            state_count[td.state] = 0
+                        state_count[td.state] += 1
+
+                    state_count = {k: v for k, v in state_count.items() if v > 0}
+
+                    msg_data = {
+                        'chal_id': msg_data.get('chal_id'),
+                        'state_count': state_count
+                    }
+                elif is_summary:
+                    if 'testdata_results' in msg_data and isinstance(msg_data['testdata_results'], dict):
+                        state_count = {}
+                        for td in msg_data['testdata_results'].values():
+                            if isinstance(td, dict) and 'status' in td:
+                                state = td['status']
+                                if state not in state_count:
+                                    state_count[state] = 0
+                                state_count[state] += 1
+
+                        state_count = {k: v for k, v in state_count.items() if v > 0}
+
+                        msg_data['testdata_results'] = {'state_count': state_count}
+
             return json.dumps(msg_data)
 
 
@@ -307,28 +363,35 @@ class ChalStateCallback:
             if contest.is_admin(acct_id=viewer.acct_id):
                 return data
 
+            challenge_style = contest.pro_list.get(chal.pro_id, {}).get('challenge_style', ChallengeResultStyle.FULL)
+
             if contest.is_running():
                 if viewer.acct_id == chal.acct_id:
-                    return data
+                    result = await apply_challenge_style(challenge_style)
+                    return result if result is not None else None
                 return None
 
             if contest.is_end():
                 if viewer.acct_id == chal.acct_id:
-                    return data
+                    result = await apply_challenge_style(challenge_style)
+                    return result if result is not None else None
                 if not contest.is_admin(acct_id=chal.acct_id) and contest.is_public_scoreboard:
-                    return sanitize()
+                    # NOTE: apply_challenge_style get msg_data by nonlocal
+                    msg_data = sanitize()
+                    result = await apply_challenge_style(challenge_style)
+                    return result if result is not None else None
                 return None
 
             return None
 
-        # NOTE: normal
+        # NOTE: normal (non-contest challenges always show full data to owner/admin)
         if viewer.is_kernel():
             return data
 
         if viewer.acct_id == chal.acct_id:
             return data
 
-        return sanitize()
+        return json.dumps(sanitize())
 
     async def unregister(self, conn: UnifiedWebSocketHandler):
         """Called when a connection unsubscribes or closes"""
@@ -513,7 +576,7 @@ class ChalHandler(RequestHandler):
         if self.contest:
             rechal = rechal and self.contest.is_admin(self.acct)
 
-        await self.render("chal", pro=pro, chal=chal, rechal=rechal)
+        await self.render("chal", pro=pro, chal=chal, rechal=rechal, contest=self.contest)
         return
 
     @reqenv
