@@ -16,13 +16,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.14
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3
+        uses: snok/install-poetry@v1
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.14
+          cache: 'poetry'
 
       - name: Install Project dependencies
         run: |
@@ -64,8 +65,16 @@ jobs:
       REPORTS_DIR_ON_RUNNER: ${{ github.workspace }}/reports
       POSTGRES_IMAGE: postgres:18-alpine
       REDIS_IMAGE: redis:8-alpine
+      JUDGE_REPO: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git
       CACHE_SUFFIX: v1
     steps:
+      - name: Get judge repo commit
+        id: get-judge-commit
+        run: |
+          set -euo pipefail
+          commit=$(git ls-remote "${JUDGE_REPO}" HEAD | cut -f1)
+          echo "judge_commit=$commit" >> $GITHUB_OUTPUT
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -77,7 +86,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: cached-images
-          key: ${{ runner.os }}-docker-images-${{ env.CACHE_SUFFIX }}-${{ env.POSTGRES_IMAGE }}-${{ env.REDIS_IMAGE }}
+          key: ${{ runner.os }}-docker-images-${{ env.CACHE_SUFFIX }}-${{ env.POSTGRES_IMAGE }}-${{ env.REDIS_IMAGE }}-${{ steps.get-judge-commit.outputs.judge_commit }}
 
       - name: Load images from cache if present, otherwise pull and save
         run: |
@@ -107,18 +116,38 @@ jobs:
             docker save -o cached-images/redis.tar "${REDIS_IMAGE}"
           fi
 
+          # Handle judge image cache (use commit hash as key)
+          JUDGE_COMMIT=${{ steps.get-judge-commit.outputs.judge_commit }}
+          if [ -f "cached-images/judge.tar" ]; then
+            echo "Found cached judge.tar — loading into docker"
+            docker load -i cached-images/judge.tar
+          else
+            echo "No cached judge.tar — building judge image at ${JUDGE_COMMIT}"
+            docker build -t judge:${JUDGE_COMMIT} "${JUDGE_REPO}#${JUDGE_COMMIT}"
+            echo "Saving judge:${JUDGE_COMMIT} to cached-images/judge.tar"
+            docker save -o cached-images/judge.tar "judge:${JUDGE_COMMIT}"
+          fi
+
       - name: Prepare reports dir
         run: mkdir -p "${REPORTS_DIR_ON_RUNNER}"
 
+      - name: Build backend image with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: development
+          tags: backend:dev
+          load: true
+          cache-from: type=gha,scope=backend-dev
+          cache-to: type=gha,mode=max,scope=backend-dev
+
       - name: Create CI override to avoid /srv mounts and mount reports
         run: |
-          cat > docker-compose.ci.yml <<'YAML'
+          cat > docker-compose.ci.yml <<YAML
           version: "3.8"
           services:
             backend:
-              build:
-                context: ./
-                target: development
+              image: backend:dev
               volumes:
                 - ./reports:/ntoj/htmlcov/
                 - backend_static:/ntoj/static
@@ -131,6 +160,7 @@ jobs:
               volumes:
                 - cache_data:/data
             judge:
+              image: judge:${{ steps.get-judge-commit.outputs.judge_commit }}
               volumes:
                 - backend_problem:/problem:ro
                 - backend_code:/code:ro
@@ -202,12 +232,32 @@ jobs:
       - name: Ensure reports dir
         run: mkdir -p reports
 
+      - name: Build backend release image with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: release
+          tags: backend:release
+          load: true
+          cache-from: type=gha,scope=backend-release
+          cache-to: type=gha,mode=min,scope=backend-release
+          build-args: |
+            DB_PASSWORD=ntoj_test_password
+            UNLOCK_PASSWORD=ntoj-test-unlock
+            TIMEDELTA=8
+            SITE_TITLE=ntoj-test
+            ADMIN_NAME=admin
+            ADMIN_MAIL=admin@example.com
+            ADMIN_PASSWORD=admin
+            BASE_URL=/
+
       - name: Create CI override compose file
         run: |
           cat > docker-compose.ci.yml <<'YAML'
           version: "3.8"
           services:
             backend:
+              image: backend:release
               volumes:
                 - ./reports:/ntoj/htmlcov/
                 - backend_static:/ntoj/static
@@ -234,7 +284,7 @@ jobs:
           export COMPOSE_PROJECT_NAME=ntoj_release_test
           # Build and start
           set +e
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
           rc=$?
           set -e
           echo "exit_code=$rc" >> $GITHUB_OUTPUT

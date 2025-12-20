@@ -10,18 +10,18 @@ ENV PATH="/root/.local/bin:$PATH"
 COPY pyproject.toml .
 RUN apt update \
     && apt upgrade -y \
-    && apt install git curl dos2unix xz-utils gcc postgresql-client libpq-dev -y \
+    && apt install git curl dos2unix xz-utils gcc postgresql-client libpq-dev libc-dev --no-install-suggests --no-install-recommends -y \
     && curl -sSL https://install.python-poetry.org | python3 - \
-    && poetry install && poetry add coverage requests \
+    && poetry install && poetry add coverage requests dowhen \
     && apt autoremove --purge -y gcc libpq-dev curl \
     && apt clean -y \
     && rm -rf /var/lib/apt/lists/
 
-COPY src /ntoj
-COPY migration /ntoj/migration
 COPY scripts /ntoj/scripts
-COPY .git /ntoj/.git
 COPY pyproject.toml /ntoj/pyproject.toml
+COPY migration /ntoj/migration
+COPY src /ntoj
+COPY .git /ntoj/.git
 
 RUN UNLOCK_PASSWORD_PROCESSED=$(echo "UNLOCK_PASSWORD" | poetry run python3 scripts/get_unlock_pwd.py) \
 COOKIE_SEC=$(python3 -c "import sys; print(open('/dev/urandom','rb').read(32).hex())") \
