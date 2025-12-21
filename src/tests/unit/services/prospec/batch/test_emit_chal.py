@@ -167,13 +167,13 @@ class TestBatchProblemSpecEmitChal(unittest.IsolatedAsyncioTestCase):
         # First subtask has no dependencies
         subtask1 = next(s for s in subtasks if s['id'] == 1)
         self.assertEqual(subtask1['score'], 50)
-        self.assertEqual(subtask1['testdatas'], (1, 2))
+        self.assertEqual(subtask1['testdatas'], [1, 2])
         self.assertEqual(subtask1['dependency_subtasks'], [])
 
         # Second subtask depends on first
         subtask2 = next(s for s in subtasks if s['id'] == 2)
         self.assertEqual(subtask2['score'], 50)
-        self.assertEqual(subtask2['testdatas'], (3,))
+        self.assertEqual(subtask2['testdatas'], [3,])
         self.assertEqual(subtask2['dependency_subtasks'], [1])
 
     @patch('services.judge.JudgeServerClusterService')

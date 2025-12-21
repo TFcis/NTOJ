@@ -3,10 +3,16 @@
 {% from services.contests import ChallengeResultStyle %}
 
 {% set challenge_style = ChallengeResultStyle.FULL %}
+{% set should_hide_system_test = False %}
 {% if chal.contest_id != 0 and contest is not None %}
     {% set challenge_style = contest.pro_list.get(chal.pro_id, {}).get('challenge_style', ChallengeResultStyle.FULL) %}
     {% if contest.is_admin(acct_id=user.acct_id) %}
         {% set challenge_style = ChallengeResultStyle.FULL %}
+    {% else %}
+        {# Regular users: hide system-test during contest if system test is enabled #}
+        {% if contest.enable_system_test and contest.is_running() %}
+            {% set should_hide_system_test = True %}
+        {% end %}
     {% end %}
 {% end %}
 
@@ -334,6 +340,12 @@
             </thead>
             <tbody>
             {% for subtask in chal.subtask_results.values() %}
+                {% if should_hide_system_test %}
+                    {% set subtask_config = pro.config.subtask_configs.get(subtask.subtask_id) %}
+                    {% if subtask_config and subtask_config.is_system_test() %}
+                        {% continue %}
+                    {% end %}
+                {% end %}
                 <tr class="states" id="id{{ subtask.subtask_id }}">
                     <td class="idx">{{ '%04d' % (subtask.subtask_id + 1) }}</td>
                     <td class="state state-{{ subtask.state }}">{{ ChalConst.STATE_LONG_STR[subtask.state] }}</td>
@@ -383,6 +395,12 @@
                     <div id="testdata-state-count" class="mb-3">
                         {% set state_count = {} %}
                         {% for testdata in chal.testdata_results.values() %}
+                            {% if should_hide_system_test %}
+                                {% set td_config = pro.config.testdatas.get(testdata.testdata_id) %}
+                                {% if td_config and td_config.is_system_test() %}
+                                    {% continue %}
+                                {% end %}
+                            {% end %}
                             {% if testdata.state not in state_count %}
                                 {% set _ = state_count.update({testdata.state: 0}) %}
                             {% end %}
@@ -429,6 +447,12 @@
                         {% for testdata_result in chal.testdata_results.values() %}
                             {% if testdata_result.testdata_id not in effective_testdata_ids %}
                                 {% continue %}
+                            {% end %}
+                            {% if should_hide_system_test %}
+                                {% set td_config = pro.config.testdatas.get(testdata_result.testdata_id) %}
+                                {% if td_config and td_config.is_system_test() %}
+                                    {% continue %}
+                                {% end %}
                             {% end %}
 
                             {% set message = testdata_result.message %}
