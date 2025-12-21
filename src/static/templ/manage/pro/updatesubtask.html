@@ -153,7 +153,35 @@
 				});
             });
         });
-	}
+
+        document.querySelectorAll('button.set-metadata-tags').forEach(el => {
+            el.addEventListener('click', function(e) {
+                let subtask = $(this).parents('.accordion-collapse').attr('subtask');
+                let tags = $(this).siblings('#metadata-tags').val();
+
+                $.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
+                    'reqtype': 'updatemetadata',
+                    'pro_id': pro_id,
+                    'subtask': subtask,
+                    'tags': tags,
+                }, function (res) {
+                    let msg = '';
+                    let dialog_type = null;
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        dialog_type = index.DIALOG_TYPE.success;
+                        msg = `Subtask #${subtask} metadata tags updated successfully.`;
+                    } else {
+                        msg = res.data;
+                    }
+
+                    index.show_notify_dialog(msg, dialog_type);
+                    index.reload();
+                });
+            });
+        });
+    }
 </script>
 {% end %}
 
@@ -196,6 +224,12 @@
                     <div class="input-group mb-3">
                         <input id="depsubtasks" class="form-control mb-1" type="text" value="{{ merge_list_to_str(list(map(lambda x: x+1, subtask_config.dependency_subtasks))) }}" placeholder="Dependency Subtasks">
                         <button class="btn btn-primary set-depsubtasks">Update Dependency Subtasks</button>
+                    </div>
+
+                    <label for="metadata-tags" class="form-label">Metadata Tags (comma-separated). Use <code>system-test</code> to mark as system test (final test)</label>
+                    <div class="input-group mb-3">
+                        <input id="metadata-tags" class="form-control mb-1" type="text" value="{{ ','.join(subtask_config.metadata.get('tags', [])) }}" placeholder="e.g., system-test">
+                        <button class="btn btn-primary set-metadata-tags">Update Tags</button>
                     </div>
 				</div>
 			</div>

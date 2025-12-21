@@ -76,6 +76,7 @@ class ManageProListHandler(RequestHandler):
                     ChalConst.NORMAL_REJUDGE_PRI,
                     pro.problem_type,
                     skip_nonac=False,
+                    include_system_test=True,  # Non-contest rejudge includes system-test
                 )
 
         await asyncio.create_task(_rechal(rechals=result))
@@ -123,6 +124,7 @@ class ManageProListHandler(RequestHandler):
                     ChalConst.NORMAL_REJUDGE_PRI,
                     pro.problem_type,
                     skip_nonac=False,
+                    include_system_test=True,  # Non-contest rejudge includes system-test
                 )
 
         await asyncio.create_task(_rechal(rechals=result))

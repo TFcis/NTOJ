@@ -129,6 +129,15 @@ class BatchSubmitHandler(RequestHandler):
         if err:
             return self.error(err)
 
+        # Only filter system-test if in contest AND contest has system test enabled
+        # Contest Admin always runs full test (include system-test)
+        include_system_test = True
+        if self.contest and self.contest.enable_system_test:
+            # Check if user is contest admin
+            is_admin = self.contest.is_admin(self.acct)
+            if not is_admin:
+                include_system_test = False  # Regular users only run pretest during contest
+
         err, _ = await ChalService.inst.emit_chal(
             chal_id,
             pro.config,
@@ -136,6 +145,7 @@ class BatchSubmitHandler(RequestHandler):
             priority,
             pro.problem_type,
             skip_nonac=False,
+            include_system_test=include_system_test,
         )
         if err:
             return self.error(err)
@@ -178,6 +188,15 @@ class BatchSubmitHandler(RequestHandler):
         if err:
             return self.error(err)
 
+        # Only filter system-test if in contest AND contest has system test enabled
+        # Contest Admin always runs full test (include system-test)
+        include_system_test = True
+        if self.contest and self.contest.enable_system_test:
+            # Check if user is contest admin
+            is_admin = self.contest.is_admin(acct_id=chal.acct_id)
+            if not is_admin:
+                include_system_test = False  # Regular users only run pretest during contest
+
         err, _ = await ChalService.inst.emit_chal(
             chal_id,
             pro.config,
@@ -185,6 +204,7 @@ class BatchSubmitHandler(RequestHandler):
             priority,
             pro.problem_type,
             skip_nonac=False,
+            include_system_test=include_system_test,
         )
         if err:
             return self.error(err)

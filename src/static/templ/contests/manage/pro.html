@@ -42,8 +42,30 @@
 			el.addEventListener('click', () => post_func('rechal', $(el).attr('pro_id')));
 		});
 
+		document.querySelectorAll('button.system-test').forEach(el => {
+			el.addEventListener('click', () => {
+				if (confirm('Make sure you want to perform System Test? This will rejudge all AC submissions.')) {
+					post_func('system_test', $(el).attr('pro_id'));
+				}
+			});
+		});
+
         document.querySelectorAll('button.public').forEach(el => {
             el.addEventListener('click', () => post_func('public', $(el).attr('pro_id')));
+        });
+
+        $("button.systemtestall").on('click', function(e) {
+			if (!confirm('Make sure you want to perform System Test for all problems? This will rejudge all AC submissions.')) {
+				return;
+			}
+            document.querySelectorAll('button.system-test:not([disabled])').forEach(el => {
+                let pro_id = $(el).attr('pro_id');
+                $.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
+                    reqtype: "system_test",
+                    pro_id: pro_id
+                });
+            });
+			index.show_notify_dialog('System Test started for all problems', index.DIALOG_TYPE.success);
         });
 
         $("button.publicall").on('click', function(e) {
@@ -162,6 +184,12 @@
 						</div>
 					</form>
 
+                    {% if contest.enable_system_test %}
+                    <button
+                        class="btn btn-info me-2 systemtestall"
+                        {% if not contest.is_end() %} disabled {% end %}
+                    >System Test All</button>
+                    {% end %}
                     <button
                         class="btn btn-danger me-2 publicall"
                         {% if not contest.is_end() %} disabled {% end %}
@@ -203,6 +231,14 @@
 							<td>
 								<button class="btn btn-warning me-2 remove" pro_id="{{ pro.pro_id }}">Remove</button>
 								<button class="btn btn-danger me-2 rechal" pro_id="{{ pro.pro_id }}">Rechallenge</button>
+								{% if contest.enable_system_test %}
+								<button
+									class="btn btn-info me-2 system-test"
+									pro_id="{{ pro.pro_id }}"
+									{% if not contest.is_end() %} disabled {% end %}
+									title="{% if not contest.is_end() %}Contest 尚未結束{% else %}執行 System Test (重新評測所有 AC 提交){% end %}"
+								>System Test</button>
+								{% end %}
                                 <button
                                     class="btn btn-danger me-2 public"
                                     pro_id="{{ pro.pro_id }}"

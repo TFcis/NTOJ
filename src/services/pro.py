@@ -94,6 +94,19 @@ class ProConst:
 class BaseTestdata:
     """Base class for all problem type testdata, used for type checking only."""
     testdata_id: int
+    metadata: dict = None
+
+    def __post_init__(self):
+        if self.metadata is None:
+            self.metadata = {}
+
+    def has_tag(self, tag: str) -> bool:
+        """Check if testdata has a specific tag."""
+        return tag in self.metadata.get('tags', [])
+
+    def is_system_test(self) -> bool:
+        """Check if testdata is marked as system test."""
+        return self.has_tag('system-test')
 
 
 @dataclass(slots=True)
@@ -102,6 +115,19 @@ class SubtaskConfig:
     testdatas: list[BaseTestdata]
     dependency_subtasks: set[int]
     rate: int
+    metadata: dict = None
+
+    def __post_init__(self):
+        if self.metadata is None:
+            self.metadata = {}
+
+    def has_tag(self, tag: str) -> bool:
+        """Check if subtask has a specific tag."""
+        return tag in self.metadata.get('tags', [])
+
+    def is_system_test(self) -> bool:
+        """Check if subtask is marked as system test."""
+        return self.has_tag('system-test')
 
 
 @dataclass(slots=True)
@@ -163,6 +189,22 @@ class ProblemConfig:
 
         return [self.testdatas[t_id] for t_id in s]
 
+    def get_pretest_subtasks(self) -> dict[int, SubtaskConfig]:
+        """Get subtasks without system-test tag (for contest pretest)."""
+        return {
+            subtask_id: subtask
+            for subtask_id, subtask in self.subtask_configs.items()
+            if not subtask.is_system_test()
+        }
+
+    def get_system_test_subtasks(self) -> dict[int, SubtaskConfig]:
+        """Get subtasks with system-test tag."""
+        return {
+            subtask_id: subtask
+            for subtask_id, subtask in self.subtask_configs.items()
+            if subtask.is_system_test()
+        }
+
 
 @dataclass(slots=True)
 class Problem:
@@ -184,7 +226,6 @@ class ProService:
         ProService.inst = self
 
     async def get_pro(self, pro_id: int, allow_statuses: Sequence[int]) -> tuple[None, Problem] | ErrorType:
-        from services.chal import Compiler
         from services.prospec.batch import batch_spec
         """
         Fetch problem configuration and metadata by ID, ensuring it's in the allowed status.
@@ -233,7 +274,7 @@ class ProService:
             # Get testdata with new files structure
             result = await con.fetch(
                 """
-                    SELECT "id", "files"
+                    SELECT "id", "files", "metadata"
                     FROM "testdata" WHERE "pro_id" = $1;
                 """,
                 pro_id,
@@ -243,23 +284,26 @@ class ProService:
             # TODO: Support different problem types, for now only Batch
             if problem_type == ProType.BATCH:
                 spec = batch_spec
-                for id, files_json in result:
-                    testdatas[id] = spec.parse_testdata_files(id, json.loads(files_json))
+                for id, files_json, metadata_json in result:
+                    testdata = spec.parse_testdata_files(id, json.loads(files_json))
+                    testdata.metadata = json.loads(metadata_json) if metadata_json else {}
+                    testdatas[id] = testdata
 
             result = await con.fetch(
                 """
-                    SELECT "subtask_id", "rate", "testdatas", "dep_subtasks"
+                    SELECT "subtask_id", "rate", "testdatas", "dep_subtasks", "metadata"
                     FROM "subtask_config" WHERE "pro_id" = $1 ORDER BY "subtask_id" ASC;
                 """,
                 pro_id,
             )
             subtask_configs: dict[int, SubtaskConfig] = {}
-            for subtask_id, rate, testdata_ids, dep_subtasks in result:
+            for subtask_id, rate, testdata_ids, dep_subtasks, metadata_json in result:
                 subtask_configs[subtask_id] = SubtaskConfig(
                     subtask_id,
                     [testdatas[testdata_id] for testdata_id in testdata_ids],
                     set(dep_subtasks),
                     rate,
+                    json.loads(metadata_json) if metadata_json else {},
                 )
 
         # Parse config using ProSpec
@@ -454,10 +498,13 @@ class ProService:
         insert_testdatas_values = []
         for subtask_id, subtask_config in config.subtask_configs.items():
             rate = subtask_config.rate
+            metadata_json = json.dumps(subtask_config.metadata if subtask_config.metadata else {})
             insert_subtask_config_values.append(
                 (
                     pro_id, subtask_id, rate,
-                    [testdata.testdata_id for testdata in subtask_config.testdatas], subtask_config.dependency_subtasks
+                    [testdata.testdata_id for testdata in subtask_config.testdatas],
+                    subtask_config.dependency_subtasks,
+                    metadata_json
                 )
             )
 
@@ -466,8 +513,9 @@ class ProService:
             spec = batch_spec
             for testdata in config.testdatas.values():
                 files_json = spec.build_testdata_files(testdata)
+                metadata_json = json.dumps(testdata.metadata if testdata.metadata else {})
                 insert_testdatas_values.append(
-                    (pro_id, testdata.testdata_id, json.dumps(files_json))
+                    (pro_id, testdata.testdata_id, json.dumps(files_json), metadata_json)
                 )
 
         async with self.db.acquire() as con:
@@ -503,15 +551,15 @@ class ProService:
 
             await con.executemany(
                 """INSERT INTO "subtask_config"
-                    ("pro_id", "subtask_id", "rate", "testdatas", "dep_subtasks")
-                    VALUES ($1, $2, $3, $4, $5);""",
+                    ("pro_id", "subtask_id", "rate", "testdatas", "dep_subtasks", "metadata")
+                    VALUES ($1, $2, $3, $4, $5, $6);""",
                 insert_subtask_config_values,
             )
 
             await con.executemany(
                 """
-                    INSERT INTO "testdata" ("pro_id", "id", "files")
-                    VALUES ($1, $2, $3);
+                    INSERT INTO "testdata" ("pro_id", "id", "files", "metadata")
+                    VALUES ($1, $2, $3, $4);
                 """,
                 insert_testdatas_values,
             )

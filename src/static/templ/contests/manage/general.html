@@ -129,6 +129,7 @@
                 submission_cd_time: submit_cd_time,
                 freeze_scoreboard_period: freeze_period,
                 penalty_value: penalty_value,
+                enable_system_test: $("#enableSystemTest").is(":checked"),
             }, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
@@ -264,6 +265,11 @@
         <div class="mb-1 form-check">
             <label for="allowViewOtherPage" class="form-check-label">Allow View Other Page During Contest (WIP)</label>
             <input type="checkbox" id="allowViewOtherPage" class="form-check-input" {% if contest.allow_view_other_page %} checked {% end %}>
+        </div>
+
+        <div class="mb-1 form-check">
+            <label for="enableSystemTest" class="form-check-label">Enable System Test (Pretest/Final Test)</label>
+            <input type="checkbox" id="enableSystemTest" class="form-check-input" {% if contest.enable_system_test %} checked {% end %}>
         </div>
 
         <div class="mb-1">

@@ -34,8 +34,8 @@ class BatchConfig(BaseConfig):
 
 @dataclass(slots=True)
 class BatchTestdata(BaseTestdata):
-    inputfile: str
-    outputfile: str
+    inputfile: str = ''
+    outputfile: str = ''
 
 
 class BatchProblemSpec(ProSpec):
@@ -96,6 +96,7 @@ class BatchProblemSpec(ProSpec):
         config: ProblemConfig,
         priority: int,
         skip_nonac: bool = False,
+        include_system_test: bool = True,
     ) -> tuple[None, None] | tuple[tuple[str, str], None]:
         """Emit Batch challenge to judge server."""
         from services.chal import ChalConst, COMPILER_INFOS
@@ -116,15 +117,67 @@ class BatchProblemSpec(ProSpec):
 
         need_judge_testdatas: set[int] = set()
         subtasks = []
-        for subtask_id, subtask_config in config.subtask_configs.items():
-            t = [testdata.testdata_id for testdata in subtask_config.testdatas]
-            need_judge_testdatas.update(t)
-            subtasks.append({
-                "id": subtask_id,
-                "score": subtask_config.rate,
-                "testdatas": t,
-                "dependency_subtasks": list(subtask_config.dependency_subtasks),
-            })
+
+        if include_system_test:
+            # Include all subtasks and testdatas
+            for subtask_id, subtask_config in config.subtask_configs.items():
+                t = [testdata.testdata_id for testdata in subtask_config.testdatas]
+                need_judge_testdatas.update(t)
+                subtasks.append({
+                    "id": subtask_id,
+                    "score": subtask_config.rate,
+                    "testdatas": t,
+                    "dependency_subtasks": list(subtask_config.dependency_subtasks),
+                })
+        else:
+            # Pretest mode: exclude system-test tagged subtasks and testdatas
+            from services.chal import SubtaskResult, TestdataResult, ChalService, MessageType
+
+            system_test_subtasks = config.get_system_test_subtasks()
+
+            # Mark entire system-test subtasks as SKIPPED
+            for subtask_id, subtask_config in system_test_subtasks.items():
+                await ChalService.inst.update_subtask_result(
+                    chal_id,
+                    SubtaskResult(subtask_id, ChalConst.STATE_SKIPPED, 0, 0, decimal.Decimal())
+                )
+                # Mark all testdatas in this system-test subtask as SKIPPED
+                for testdata in subtask_config.testdatas:
+                    await ChalService.inst.update_testdata_result(
+                        chal_id,
+                        TestdataResult(testdata.testdata_id, ChalConst.STATE_SKIPPED, 0, 0, "", MessageType.NONE)
+                    )
+
+            # Process pretest subtasks (non-system-test subtasks)
+            pretest_subtasks = config.get_pretest_subtasks()
+            for subtask_id, subtask_config in pretest_subtasks.items():
+                # Filter out system-test tagged testdatas within this subtask
+                pretest_testdatas = []
+                for testdata in subtask_config.testdatas:
+                    if testdata.is_system_test():
+                        # Mark individual system-test testdata as SKIPPED
+                        await ChalService.inst.update_testdata_result(
+                            chal_id,
+                            TestdataResult(testdata.testdata_id, ChalConst.STATE_SKIPPED, 0, 0, "", MessageType.NONE)
+                        )
+                    else:
+                        pretest_testdatas.append(testdata.testdata_id)
+
+                # Only include subtask if it has at least one pretest testdata
+                if pretest_testdatas:
+                    need_judge_testdatas.update(pretest_testdatas)
+                    subtasks.append({
+                        "id": subtask_id,
+                        "score": subtask_config.rate,
+                        "testdatas": pretest_testdatas,
+                        "dependency_subtasks": list(subtask_config.dependency_subtasks),
+                    })
+                else:
+                    # Subtask has no pretest testdatas, mark as SKIPPED
+                    await ChalService.inst.update_subtask_result(
+                        chal_id,
+                        SubtaskResult(subtask_id, ChalConst.STATE_SKIPPED, 0, 0, decimal.Decimal())
+                    )
 
         await db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id = ANY($3);',
                         ChalConst.STATE_JUDGE, chal_id, list(need_judge_testdatas))
@@ -381,7 +434,11 @@ class BatchProblemSpec(ProSpec):
                     if t not in testdata_name_2_id:
                         t = os.path.basename(str(t))
                         testdata_name_2_id[t] = testdata_id_counter
-                        testdatas[testdata_id_counter] = BatchTestdata(testdata_id_counter, f"{t}.in", f"{t}.out")
+                        testdatas[testdata_id_counter] = BatchTestdata(
+                            testdata_id=testdata_id_counter,
+                            inputfile=f"{t}.in",
+                            outputfile=f"{t}.out"
+                        )
                         testdata_id_counter += 1
 
                 subtask_configs[test_idx] = SubtaskConfig(test_idx, [], set(), int(test_conf["weight"]))

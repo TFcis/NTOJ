@@ -158,6 +158,32 @@ class ManageProSubtaskHandler(RequestHandler):
         )
         return self.error(("S", ""))
 
+    @subtask_dispatcher.action("updatemetadata")
+    async def update_metadata_action(self):
+        pro_id = int(self.get_argument("pro_id"))
+        subtask_id = int(self.get_argument("subtask"))
+        tags_str = self.get_argument("tags", default="").strip()
+
+        err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
+        if err:
+            return self.error(err)
+
+        subtask_configs = pro.config.subtask_configs
+        if subtask_id not in subtask_configs:
+            return self.error(("Enoext", "Subtask not found"))
+
+        # Parse tags from comma-separated string
+        tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()]
+        subtask_configs[subtask_id].metadata["tags"] = tags
+
+        await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
+        await LogService.inst.add_log(
+            f"{self.acct.name} has sent a request to update metadata tags of subtask#{subtask_id} for problem #{pro_id}",
+            "manage.pro.update.subtask.updatemetadata",
+            {"tags": tags},
+        )
+        return self.error(("S", ""))
+
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self):

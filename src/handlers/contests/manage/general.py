@@ -52,6 +52,7 @@ class ContestManageGeneralHandler(RequestHandler):
         is_public_scoreboard = self.get_argument("is_public_scoreboard") == "true"
         allow_view_other_page = self.get_argument("allow_view_other_page") == "true"
         hide_admin = self.get_argument("hide_admin") == "true"
+        enable_system_test = self.get_argument("enable_system_test", default="false") == "true"
         try:
             submission_cd_time = int(self.get_argument("submission_cd_time"))
             if submission_cd_time < 0:
@@ -122,6 +123,7 @@ class ContestManageGeneralHandler(RequestHandler):
         self.contest.hide_admin = hide_admin
         self.contest.submission_cd_time = submission_cd_time
         self.contest.penalty_value = penalty_value
+        self.contest.enable_system_test = enable_system_test
         if self.contest.freeze_scoreboard_period != freeze_scoreboard_period:
             self.contest.freeze_scoreboard_period = freeze_scoreboard_period
             if self.contest.is_start():

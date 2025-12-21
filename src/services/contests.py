@@ -66,6 +66,7 @@ class Contest:
     submission_cd_time: int = 30
     freeze_scoreboard_period: int = 0
     penalty_value: int = 20
+    enable_system_test: bool = False  # Enable system test feature (pretest/final test)
 
     def is_start(self) -> bool:
         return datetime.datetime.now(datetime.UTC) >= self.contest_start
@@ -147,7 +148,8 @@ class ContestService:
                         "hide_admin",
                         "submission_cd_time",
                         "freeze_scoreboard_period",
-                        "penalty_value"
+                        "penalty_value",
+                        "enable_system_test"
                         FROM "contest" WHERE "contest_id" = $1;
                     ''',
                     contest_id
@@ -257,8 +259,9 @@ class ContestService:
                     "hide_admin" = $13,
                     "submission_cd_time" = $14,
                     "freeze_scoreboard_period" = $15,
-                    "penalty_value" = $16
-                    WHERE "contest_id" = $17;
+                    "penalty_value" = $16,
+                    "enable_system_test" = $17
+                    WHERE "contest_id" = $18;
                 ''',
                 contest.name,
                 contest.desc_before_contest,
@@ -275,6 +278,7 @@ class ContestService:
                 contest.submission_cd_time,
                 contest.freeze_scoreboard_period,
                 contest.penalty_value,
+                contest.enable_system_test,
                 contest.contest_id
             )
 

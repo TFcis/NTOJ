@@ -203,7 +203,9 @@ class BatchTestdataHandler(RequestHandler):
             return self.error(err)
 
         testdatas[new_testdata_id] = BatchTestdata(
-            new_testdata_id, f"{filename}.in", f"{filename}.out"
+            testdata_id=new_testdata_id,
+            inputfile=f"{filename}.in",
+            outputfile=f"{filename}.out"
         )
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
 
@@ -258,6 +260,33 @@ class BatchTestdataHandler(RequestHandler):
             f"{self.acct.name} has sent a request to delete testdata {testdata_id} for problem #{pro_id}",
             "manage.pro.update.testdata.deletesinglefile",
             {"testdata": asdict(deleted_testdata)},
+        )
+
+        return self.error(("S", ""))
+
+    @batch_testdata_dispatcher.action("updatemetadata")
+    async def update_metadata_action(self):
+        pro_id = int(self.get_argument("pro_id"))
+        testdata_id = int(self.get_argument("testdata_id"))
+        tags_str = self.get_argument("tags", default="").strip()
+
+        err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
+        if err:
+            return self.error(err)
+
+        testdatas = pro.config.testdatas
+        if testdata_id not in testdatas:
+            return self.error(("Enoext", "Testdata not found"))
+
+        # Parse tags from comma-separated string
+        tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()]
+        testdatas[testdata_id].metadata["tags"] = tags
+
+        await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
+        await LogService.inst.add_log(
+            f"{self.acct.name} has sent a request to update metadata tags of testdata {testdata_id} for problem #{pro_id}",
+            "manage.pro.update.testdata.updatemetadata",
+            {"tags": tags},
         )
 
         return self.error(("S", ""))
