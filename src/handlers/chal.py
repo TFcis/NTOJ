@@ -275,13 +275,15 @@ class ChalStateCallback:
         def sanitize():
             nonlocal msg_data
             try:
-                if 'total_result' in msg_data and isinstance(msg_data['total_result'], dict):
+                if 'total_result' in msg_data:
+                    assert isinstance(msg_data['total_result'], dict)
                     total_result = msg_data['total_result']
                     total_result['ce_message'] = ''
                     total_result['ie_message'] = ''
                     total_result['message_type'] = MessageType.NONE.value
 
-                if 'testdata_results' in msg_data and isinstance(msg_data['testdata_results'], dict):
+                if 'testdata_results' in msg_data:
+                    assert isinstance(msg_data['testdata_results'], dict)
                     for td in msg_data['testdata_results'].values():
                         if isinstance(td, dict):
                             td['message'] = ''
@@ -323,12 +325,53 @@ class ChalStateCallback:
                 if is_summary:
                     if 'testdata_results' in msg_data:
                         del msg_data['testdata_results']
+
+                    # Filter system-test subtasks if in contest running mode with system test enabled
+                    if chal.contest_id != 0 and 'subtask_results' in msg_data:
+                        err, contest = await ContestService.inst.get_contest(chal.contest_id)
+                        if err:
+                            return None
+                        if contest.enable_system_test and contest.is_running():
+                            # Need to filter out system-test subtasks
+                            err, pro = await ProService.inst.get_pro(chal.pro_id, ProConst.PRO_STATUS_FULL)
+                            if err:
+                                return None
+                            assert isinstance(msg_data['subtask_results'], dict)
+                            filtered_subtasks = {}
+                            for st_id_str, st_data in msg_data['subtask_results'].items():
+                                try:
+                                    st_id = int(st_id_str)
+                                    subtask = pro.config.subtask_configs.get(st_id)
+                                    if subtask and not subtask.is_system_test():
+                                        filtered_subtasks[st_id_str] = st_data
+                                except (ValueError, AttributeError):
+                                    continue
+                            msg_data['subtask_results'] = filtered_subtasks
+
                 elif is_single_testdata:
                     return None
 
             elif style == ChallengeResultStyle.STATE_COUNT:
                 if is_single_testdata:
                     _, testdata_results = await ChalService.inst.get_testdata_results(chal.chal_id)
+
+                    # Filter system-test testdata if in contest running mode with system test enabled
+                    if chal.contest_id != 0:
+                        err, contest = await ContestService.inst.get_contest(chal.contest_id)
+                        if err:
+                            return None
+                        if contest.enable_system_test and contest.is_running():
+                            # Need to filter out system-test testdata
+                            err, pro = await ProService.inst.get_pro(chal.pro_id, ProConst.PRO_STATUS_FULL)
+                            if err:
+                                return None
+                            filtered_results = {}
+                            for td_id, td_result in testdata_results.items():
+                                testdata = pro.config.testdatas.get(td_id)
+                                if testdata and not testdata.is_system_test():
+                                    filtered_results[td_id] = td_result
+                            testdata_results = filtered_results
+
                     state_count = {}
                     for td in testdata_results.values():
                         if td.state not in state_count:
@@ -355,6 +398,42 @@ class ChalStateCallback:
 
                         msg_data['testdata_results'] = {'state_count': state_count}
 
+            elif style == ChallengeResultStyle.FULL:
+                # Filter system-test testdata and subtasks if in contest running mode with system test enabled
+                if is_summary and chal.contest_id != 0:
+                    err, contest = await ContestService.inst.get_contest(chal.contest_id)
+                    if err:
+                        return None
+                    if contest.enable_system_test and contest.is_running():
+                        # Need to filter out system-test testdata and subtasks
+                        err, pro = await ProService.inst.get_pro(chal.pro_id, ProConst.PRO_STATUS_FULL)
+                        if err:
+                            return None
+
+                        if 'testdata_results' in msg_data and isinstance(msg_data['testdata_results'], dict):
+                            filtered_testdata = {}
+                            for td_id_str, td_data in msg_data['testdata_results'].items():
+                                try:
+                                    td_id = int(td_id_str)
+                                    testdata = pro.config.testdatas.get(td_id)
+                                    if testdata and not testdata.is_system_test():
+                                        filtered_testdata[td_id_str] = td_data
+                                except (ValueError, AttributeError):
+                                    continue
+                            msg_data['testdata_results'] = filtered_testdata
+
+                        if 'subtask_results' in msg_data and isinstance(msg_data['subtask_results'], dict):
+                            filtered_subtasks = {}
+                            for st_id_str, st_data in msg_data['subtask_results'].items():
+                                try:
+                                    st_id = int(st_id_str)
+                                    subtask = pro.config.subtask_configs.get(st_id)
+                                    if subtask and not subtask.is_system_test():
+                                        filtered_subtasks[st_id_str] = st_data
+                                except (ValueError, AttributeError):
+                                    continue
+                            msg_data['subtask_results'] = filtered_subtasks
+
             return json.dumps(msg_data)
 
 
@@ -368,8 +447,70 @@ class ChalStateCallback:
 
             challenge_style = contest.pro_list.get(chal.pro_id, {}).get('challenge_style', ChallengeResultStyle.FULL)
 
+            # Filter system-test testdata/subtasks during contest if enabled
+            async def filter_system_test():
+                """Filter out system-test tagged testdata/subtasks during contest
+
+                Returns:
+                    True: Continue processing (not filtered)
+                    False: Skip this message (filtered out)
+                """
+                nonlocal msg_data
+
+                if not contest.enable_system_test or not contest.is_running():
+                    return True  # No filtering needed, continue
+
+                # Get problem config to check metadata
+                err, pro = await ProService.inst.get_pro(chal.pro_id, ProConst.PRO_STATUS_FULL)
+                if err or not pro:
+                    return True  # Can't filter, continue
+
+                # Filter single testdata update (has 'id' at top level)
+                if 'id' in msg_data and 'total_result' not in msg_data:
+                    try:
+                        td_id = int(msg_data['id'])
+                        testdata = pro.config.testdatas.get(td_id)
+                        if testdata and testdata.is_system_test():
+                            # Skip this system-test testdata
+                            return False
+                    except (ValueError, AttributeError, KeyError):
+                        pass
+
+                # Filter testdata_results
+                if 'testdata_results' in msg_data and isinstance(msg_data['testdata_results'], dict):
+                    filtered_testdata = {}
+                    for td_id_str, td_data in msg_data['testdata_results'].items():
+                        try:
+                            td_id = int(td_id_str)
+                            testdata = pro.config.testdatas.get(td_id)
+                            # Only include if not system-test
+                            if testdata and not testdata.is_system_test():
+                                filtered_testdata[td_id_str] = td_data
+                        except (ValueError, AttributeError):
+                            continue
+                    msg_data['testdata_results'] = filtered_testdata
+
+                # Filter subtask_results
+                if 'subtask_results' in msg_data and isinstance(msg_data['subtask_results'], dict):
+                    filtered_subtask = {}
+                    for st_id_str, st_data in msg_data['subtask_results'].items():
+                        try:
+                            st_id = int(st_id_str)
+                            subtask = pro.config.subtask_configs.get(st_id)
+                            # Only include if not system-test
+                            if subtask and not subtask.is_system_test():
+                                filtered_subtask[st_id_str] = st_data
+                        except (ValueError, AttributeError):
+                            continue
+                    msg_data['subtask_results'] = filtered_subtask
+
+                return True  # Continue processing
+
             if contest.is_running():
                 if viewer.acct_id == chal.acct_id:
+                    # Filter system-test first
+                    if not await filter_system_test():
+                        return None  # Filtered out, skip
                     result = await apply_challenge_style(challenge_style)
                     return result if result is not None else None
                 return None

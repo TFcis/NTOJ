@@ -226,7 +226,36 @@
 				});
 			});
         });
-	}
+
+        document.querySelectorAll('button.update-metadata-tags').forEach(el => {
+            el.addEventListener('click', function (e) {
+                let testdata_id = $(this).parents('tr').attr('testdata_id');
+                let tags = $(this).siblings('#metadata-tags').val();
+
+                $.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
+                    'reqtype': 'updatemetadata',
+                    'pro_id': pro_id,
+                    'testdata_id': testdata_id,
+                    'tags': tags,
+                }, function (res) {
+                    let msg = '';
+                    let dialog_type = null;
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        dialog_type = index.DIALOG_TYPE.success;
+                        msg = `Testdata ${parseInt(testdata_id) + 1} metadata tags updated successfully.`;
+                    } else {
+                        dialog_type = index.DIALOG_TYPE.error;
+                        msg = res.data;
+                    }
+
+                    index.show_notify_dialog(msg, dialog_type);
+                    index.reload();
+                });
+            });
+        });
+    }
 </script>
 {% end %}
 
@@ -296,6 +325,7 @@
                 <th scope="col">ID</th>
                 <th scope="col">Input Filename</th>
                 <th scope="col">Output Filename</th>
+                <th scope="col">Tags</th>
                 <th scope="col">Operation</th>
             </tr>
         </thead>
@@ -306,6 +336,12 @@
                     <th scope="row">{{ testdata_id + 1 }}</th>
                     <td><a class="preview-file input">{{ testdata.inputfile }}</a></td>
                     <td><a class="preview-file output">{{ testdata.outputfile }}</a></td>
+                    <td>
+                        <div class="input-group input-group-sm">
+                            <input id="metadata-tags" class="form-control" type="text" value="{{ ','.join(testdata.metadata.get('tags', [])) }}" placeholder="e.g., system-test">
+                            <button class="btn btn-primary btn-sm update-metadata-tags">Update</button>
+                        </div>
+                    </td>
                     <td>
                         <div class="btn-toolbar">
                             <div class="dropdown me-2">

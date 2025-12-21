@@ -585,7 +585,7 @@ class ChalService:
         return None, Challenge(chal_id, pro_id, acct_id, contest_id, acct_name, compiler_type,
                                timestamp, total_results, subtask_results, testdata_results)
 
-    async def emit_chal(self, chal_id: int, pro_config: ProblemConfig, compiler_type: Compiler, priority: int, problem_type: int, skip_nonac: bool=False) -> tuple[None, None] | ErrorType:
+    async def emit_chal(self, chal_id: int, pro_config: ProblemConfig, compiler_type: Compiler, priority: int, problem_type: int, skip_nonac: bool=False, include_system_test: bool=True) -> tuple[None, None] | ErrorType:
         """
         Create and submit tests for a challenge based on the test metadata configuration,
         then send the challenge to the judging cluster.
@@ -597,6 +597,7 @@ class ChalService:
             priority (int): Priority level (within ChalConst.NORMAL_PRI and ChalConst.NORMAL_REJUDGE_PRI).
             problem_type (int): Problem type (from ProType enum).
             skip_nonac (bool): Skip the remaining testdata in the task if any of the testdata got non-AC or PC
+            include_system_test (bool): Whether to include system-test tagged testdatas/subtasks (default True for backward compatibility)
 
         Returns:
             tuple[None, None]: Always returns (None, None) on completion.
@@ -627,7 +628,7 @@ class ChalService:
             spec = batch_spec
             return await spec.emit_chal(
                 self.db, self.rs, chal_id, pro_id, acct_id, contest_id,
-                compiler_type, pro_config, priority, skip_nonac
+                compiler_type, pro_config, priority, skip_nonac, include_system_test
             )
 
         return ('Eunk', 'Unsupported problem type'), None

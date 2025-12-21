@@ -128,7 +128,7 @@ class ContestManageProHandler(RequestHandler):
         success_list = [pid for pid in proid_list if pid in self.contest.pro_list]
 
         # await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
-        
+
         if error_group:
             await self.add_log(
                 f"{self.acct.name} batch added {len(proid_list)} problems to contest",
@@ -177,6 +177,32 @@ class ContestManageProHandler(RequestHandler):
             ("S", f"Problems {removed_list} successfully removed from problem list. Failed to remove: {failed_remove_list} due to not found in contest.")
         )
 
+    async def _rejudge_challenges(self, pro_id: int, rechals: list, include_system_test: bool = False):
+        """Helper method to rejudge a list of challenges.
+
+        Args:
+            pro_id: Problem ID
+            rechals: List of (chal_id, compiler_type) tuples
+            include_system_test: Whether to include system test testdatas
+        """
+        err, pro = await ProService.inst.get_pro(
+            pro_id, ProConst.PRO_STATUS_CONTEST_USER
+        )
+        if err:
+            return
+
+        for chal_id, compiler_type in rechals:
+            await ChalService.inst.reset_chal(chal_id)
+            await ChalService.inst.emit_chal(
+                chal_id,
+                pro.config,
+                compiler_type,
+                ChalConst.CONTEST_REJUDGE_PRI,
+                pro.problem_type,
+                skip_nonac=False,
+                include_system_test=include_system_test,
+            )
+
     @contest_manage_pro_dispatcher.action("rechal")
     async def rechal_action(self):
         try:
@@ -194,43 +220,47 @@ class ContestManageProHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                """
-                    SELECT chal_id, compiler_type FROM challenge
-                    WHERE contest_id = $1 AND pro_id = $2;
-                """,
-                self.contest.contest_id,
-                pro_id,
+        if not self.contest.enable_system_test:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    """
+                        SELECT chal_id, compiler_type FROM challenge
+                        WHERE contest_id = $1 AND pro_id = $2;
+                    """,
+                    self.contest.contest_id,
+                    pro_id,
+                )
+            await asyncio.create_task(
+                self._rejudge_challenges(pro_id, result, include_system_test=True)
             )
-
-        # TODO: send notify to user
-        async def _rechal(rechals):
-            err, pro = await ProService.inst.get_pro(
-                pro_id, ProConst.PRO_STATUS_CONTEST_USER
-            )
-            if err:
-                return
-            for chal_id, compiler_type in rechals:
-                _, _ = await ChalService.inst.reset_chal(chal_id)
-                _, _ = await ChalService.inst.emit_chal(
-                    chal_id,
-                    pro.config,
-                    compiler_type,
-                    ChalConst.CONTEST_REJUDGE_PRI,
-                    pro.problem_type,
-                    skip_nonac=False,
+        else:
+            admin_chals = []
+            normal_chals = []
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    """
+                        SELECT acct_id, chal_id, compiler_type FROM challenge
+                        WHERE contest_id = $1 AND pro_id = $2;
+                    """,
+                    self.contest.contest_id,
+                    pro_id,
                 )
 
-        await asyncio.create_task(_rechal(rechals=result))
+            for acct_id, chal_id, compiler_type in result:
+                if self.contest.is_admin(acct_id=acct_id):
+                    admin_chals.append((chal_id, compiler_type))
+                else:
+                    normal_chals.append((chal_id, compiler_type))
 
-        await self.add_log(
-            f"{self.acct.name} requested rejudge for problem #{pro_id} with {len(result)} submissions",
-            "contest.manage.pro.rechal",
-            {"pro_id": pro_id, "chal_count": len(result)}
-        )
+            await asyncio.create_task(
+                self._rejudge_challenges(pro_id, admin_chals, include_system_test=True)
+            )
+            await asyncio.create_task(
+                self._rejudge_challenges(pro_id, normal_chals, include_system_test=self.contest.is_end())
+            )
 
         return self.error(("S", f"Problem(#{pro_id}) is rechallenging."))
+
 
     @contest_manage_pro_dispatcher.action("update_score_type")
     async def update_score_type_action(self):
@@ -250,7 +280,7 @@ class ContestManageProHandler(RequestHandler):
         )
         await self.rs.hdel(f"contest_{self.contest.contest_id}_scores", str(pro_id))
         return self.error(("S", "Score type updated successfully."))
-    
+
     @contest_manage_pro_dispatcher.action("update_challenge_style")
     async def update_challenge_style_action(self):
         from services.contests import ChallengeResultStyle
@@ -302,6 +332,56 @@ class ContestManageProHandler(RequestHandler):
         )
 
         return self.error(("S", ""))
+
+    @contest_manage_pro_dispatcher.action("system_test")
+    async def system_test_action(self):
+        """Start system test for all AC challenges for a specific problem.
+
+        System test will rejudge all AC challenges with full testdatas including
+        those tagged as 'system-test'.
+        """
+        pro_id = int(self.get_argument("pro_id"))
+
+        if not self.contest.is_pro(pro_id):
+            return self.error(("Enoext", f"Problem(#{pro_id}) not in contest"))
+
+        if not self.contest.enable_system_test:
+            return self.error(("Econf", "System test is not enabled for this contest"))
+
+        if not self.contest.is_end():
+            return self.error(("Etime", "Contest must be over to start system test"))
+
+        if not JudgeServerClusterService.inst.is_server_online():
+            return self.error(("Ejudge", "No judge available"))
+
+        err, pro = await ProService.inst.get_pro(
+            pro_id, ProConst.PRO_STATUS_CONTEST_USER
+        )
+        if err:
+            return self.error(err)
+
+        async with self.db.acquire() as con:
+            result = await con.fetch(
+                """
+                    SELECT challenge.chal_id, challenge.compiler_type
+                    FROM challenge
+                    INNER JOIN total_result ON challenge.chal_id = total_result.chal_id
+                    WHERE challenge.contest_id = $1
+                    AND challenge.pro_id = $2
+                    AND total_result.state = $3;
+                """,
+                self.contest.contest_id,
+                pro_id,
+                ChalConst.STATE_AC,
+            )
+
+        if len(result) == 0:
+            return self.error(("Enoext", "No AC challenges found for system test"))
+
+        await asyncio.create_task(
+            self._rejudge_challenges(pro_id, result, include_system_test=True)
+        )
+        return self.error(("S", f"System test started for {len(result)} AC challenges on Problem(#{pro_id})."))
 
     @reqenv
     @contest_require_permission("admin")
