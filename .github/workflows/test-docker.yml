@@ -256,17 +256,17 @@ jobs:
           cat > docker-compose.ci.yml <<'YAML'
           version: "3.8"
           services:
-            backend:
+            release-backend:
               image: backend:release
               volumes:
                 - ./reports:/ntoj/htmlcov/
                 - backend_static:/ntoj/static
                 - backend_problem:/ntoj/problem
                 - backend_code:/ntoj/code
-            db:
+            release-db:
               volumes:
                 - db_data:/var/lib/postgresql/18/docker
-            cache:
+            release-cache:
               volumes:
                 - cache_data:/data
           volumes:
