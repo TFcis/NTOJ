@@ -43,10 +43,11 @@ JUDGE_SERVER_LIST = [{'name': 'NTOJ Judge Rewrite (Docker Compose)', 'url': 'ws:
 BASE_URL = '/'"\
 > config-tmp.py \
 && echo -e "DB_PASSWORD=ntoj\n\
+DB_CONTAINER_NAME=db\n\
 ADMIN_NAME=admin\n\
 ADMIN_MAIL=admin@admin\n\
 ADMIN_PASSWORD=admin1234"\
-> scripts/.env \
+> scripts/.docker-init.env \
 && echo "" > docker-dev \
 && git rev-parse HEAD > version.txt \
 && git branch --show-current >> version.txt \
@@ -89,6 +90,7 @@ ARG ADMIN_NAME
 ARG ADMIN_MAIL
 ARG ADMIN_PASSWORD
 ARG BASE_URL
+ENV DB_CONTAINER_NAME=release-db
 
 RUN UNLOCK_PASSWORD_PROCESSED=$(echo "${UNLOCK_PASSWORD}" | python3 scripts/get_unlock_pwd.py) \
 && COOKIE_SEC=$(python3 -c "import sys; print(open('/dev/urandom','rb').read(32).hex())") \
@@ -100,23 +102,23 @@ RUN UNLOCK_PASSWORD_PROCESSED=$(echo "${UNLOCK_PASSWORD}" | python3 scripts/get_
 TIMEZONE   = datetime.timezone(datetime.timedelta(hours=${TIMEDELTA}))\n\
 PORT       = 5500\n\
 REDIS_DB   = 1\n\
-REDIS_HOST = 'cache'\n\
+REDIS_HOST = 'release-cache'\n\
 DBNAME_OJ  = 'ntoj'\n\
 DBUSER_OJ  = 'ntoj'\n\
-DBHOST_OJ  = 'db'\n\
+DBHOST_OJ  = 'release-db'\n\
 DBPW_OJ    = '${DB_PASSWORD}'\n\
 COOKIE_SEC = '${COOKIE_SEC}'\n\
 SITE_TITLE = '${SITE_TITLE}'\n\
 can_see_code_user = [1]\n\
 unlock_pwd = ${UNLOCK_PASSWORD_PROCESSED}\n\
-JUDGE_SERVER_LIST = [{'name': 'NTOJ Judge Rewrite (Docker Compose)', 'url': 'ws://judge:2502/judge', 'codes_path': '/code', 'problems_path': '/problem'}]\n\
+JUDGE_SERVER_LIST = [{'name': 'NTOJ Judge Rewrite (Docker Compose)', 'url': 'ws://release-judge:2502/judge', 'codes_path': '/code', 'problems_path': '/problem'}]\n\
 BASE_URL = '${BASE_URL}'"\
 > config-tmp.py \
 && echo -e "DB_PASSWORD=${DB_PASSWORD}\n\
 ADMIN_NAME=${ADMIN_NAME}\n\
 ADMIN_MAIL=${ADMIN_MAIL}\n\
 ADMIN_PASSWORD=${ADMIN_PASSWORD}"\
-> scripts/.env \
+> scripts/.docker-init.env \
 && echo "" > docker-release
 
 EXPOSE 5500

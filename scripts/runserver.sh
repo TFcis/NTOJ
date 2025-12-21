@@ -1,3 +1,8 @@
+until pg_isready -h ${DB_CONTAINER_NAME} -p 5432; do
+    echo "Postgres is unavailable - sleeping"
+    sleep 2
+done
+
 if [[ -f docker-dev || -f docker-release ]] && [ -d static-tmp ]; then
     ./scripts/docker-init.sh
 fi
