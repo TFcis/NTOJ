@@ -72,7 +72,7 @@
     {% for bulletin in bulletin_list %}
       <tr>
         <td>
-          <a href="/oj/bulletin/{{ bulletin['bulletin_id'] }}/" style="color: {{ bulletin['color'] }}">
+          <a href="{{ url(f'/bulletin/{ bulletin['bulletin_id'] }/') }}" style="color: {{ bulletin['color'] }}">
             <font size=5>
               {% if bulletin['pinned'] %}
                 <span class="material-symbols-outlined">push_pin</span>
@@ -86,7 +86,7 @@
         </td>
         <td>
           <font size=4>
-            <a href="/oj/acct/{{ bulletin['acct_id'] }}/">{{ bulletin['name'] }}</a>
+            <a href="{{ url(f'/acct/{ bulletin['acct_id'] }/') }}">{{ bulletin['name'] }}</a>
           </font>
         </td>
       </tr>

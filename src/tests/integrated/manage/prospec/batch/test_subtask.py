@@ -1,3 +1,4 @@
+"""Integration tests for Batch problem subtask and testdata configuration."""
 import re
 import os
 import json
@@ -6,7 +7,10 @@ from services.pro import ProService, ProConst, Problem, ProblemConfig
 from services.chal import ChalService, ChalConst
 from tests.integrated.util import AsyncTest, AccountContext
 
-class ManageProUpdateTestsTest(AsyncTest):
+
+class BatchSubtaskTest(AsyncTest):
+    """Test Batch problem subtask and testdata management."""
+
     async def _upload_file(self, filepath, session):
         pack_token = self.get_upload_token(session)
         with open(filepath, 'rb') as file:
@@ -37,7 +41,8 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'testdata_id': 0,
                 'type': 'output',
             })
-            self.assertEqual(json.loads(res.text)['data'], open('tests/static_file/toj3/res/testdata/1.out').read())
+            with open('tests/static_file/toj3/res/testdata/1.out') as f:
+                self.assertEqual(json.loads(res.text)['data'], f.read())
 
             self.assertTable(
                 'manage/pro/updatetestdata',
@@ -59,7 +64,8 @@ class ManageProUpdateTestsTest(AsyncTest):
             res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=0&type=output')
             self.assertIsNotNone(res.headers.get("content-disposition"))
             self.assertEqual(re.findall(r'filename="?([^";]+)"?', res.headers.get("content-disposition"))[0], "1.out")
-            self.assertEqual(res.content.decode('utf-8'), open('tests/static_file/toj3/res/testdata/1.out').read())
+            with open('tests/static_file/toj3/res/testdata/1.out') as f:
+                self.assertEqual(res.content.decode('utf-8'), f.read())
 
             res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=123&type=output')
             self.assertAPIReturnValue(res.text, ('Enoext', 'Testdata not found'))
@@ -68,7 +74,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid testdata file type'))
 
             # NOTE: updaterate
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'updaterate',
                 'pro_id': 1,
                 'rate': 60,
@@ -80,7 +86,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(config.subtask_configs[0].rate, 60)
 
             # NOTE: addsubtask
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'addsubtask',
                 'pro_id': 1,
                 'rate': 20,
@@ -107,8 +113,12 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(config.testdatas[2].outputfile, '3.out')
             self.assertTrue(os.path.exists(f'problem/1/res/testdata/{config.testdatas[2].inputfile}'))
             self.assertTrue(os.path.exists(f'problem/1/res/testdata/{config.testdatas[2].outputfile}'))
-            self.assertEqual(open('tests/static_file/toj3/3.in').read(), open('problem/1/res/testdata/3.in').read())
-            self.assertEqual(open('tests/static_file/toj3/3.out').read(), open('problem/1/res/testdata/3.out').read())
+            with open('tests/static_file/toj3/3.in') as f1:
+                with open('problem/1/res/testdata/3.in') as f2:
+                    self.assertEqual(f1.read(), f2.read())
+            with open('tests/static_file/toj3/3.out') as f1:
+                with open('problem/1/res/testdata/3.out') as f2:
+                    self.assertEqual(f1.read(), f2.read())
 
             self.assertTable(
                 'manage/pro/updatetestdata',
@@ -121,14 +131,14 @@ class ManageProUpdateTestsTest(AsyncTest):
                 },
                 [
                     {'pro_id': '100', 'equal_value': ('Enoext', 'Problem not found')}, # problem not found,
-                    {'filename': '../etc', 'equal_value': ('Eacces', 'Permission denied')}, # illegal filepath access
+                    {'filename': '../etc', 'equal_value': ('Eacces', 'Access denied: invalid file path')}, # illegal filepath access
                     {'filename': '3', 'equal_value': ('Eexist', 'File already exists')} # file already exists
                 ],
                 admin_session
             )
 
             # NOTE: settestdata (add testdata to range)
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'settestdata',
                 'pro_id': 1,
                 'testdatas': '0-2',
@@ -160,7 +170,9 @@ class ManageProUpdateTestsTest(AsyncTest):
                 'pack_token': pack_token,
             })
             self.assertAPIReturnSuccess(res.text)
-            self.assertEqual(open('tests/static_file/toj3/3.out.incorrect').read(), open('problem/1/res/testdata/3.out').read())
+            with open('tests/static_file/toj3/3.out.incorrect') as f1:
+                with open('problem/1/res/testdata/3.out') as f2:
+                    self.assertEqual(f1.read(), f2.read())
 
             self.assertTable(
                 'manage/pro/updatetestdata',
@@ -191,7 +203,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA])
 
             # NOTE: setdepsubtasks
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'setdepsubtasks',
                 'pro_id': 1,
                 'dep_subtasks': '2', # NOTE: user input subtask id start from 1
@@ -201,7 +213,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             config = await self.get_proconfig(1)
             self.assertIn(1, config.subtask_configs[2].dependency_subtasks)
 
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'setdepsubtasks',
                 'pro_id': 1,
                 'dep_subtasks': '3', # NOTE: user input subtask id start from 1
@@ -226,7 +238,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             self.assertEqual(config.testdatas[3].inputfile, '4.in')
             self.assertEqual(config.testdatas[3].outputfile, '4.out')
 
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'settestdata',
                 'pro_id': 1,
                 'testdatas': '0-1, 3',
@@ -278,7 +290,7 @@ class ManageProUpdateTestsTest(AsyncTest):
             )
 
             # NOTE: deletesubtask
-            res = admin_session.post('manage/pro/updatetests?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'deletesubtask',
                 'pro_id': 1,
                 'subtask': 2,

@@ -20,7 +20,7 @@
 </script>
 <body>
 <div class="col-lg-12">
-    <h3>RankList of <a style="font-size:26px;" href="/oj/pro/{{pro_id}}/">{{pro_id}}</a></h3>
+    <h3>RankList of <a style="font-size:26px;" href="{{ url(f'/pro/{ pro_id }/') }}">{{pro_id}}</a></h3>
     <div class="row">
         <table class="table table-borderless table-striped table-hover table-responsive">
             <thead>
@@ -50,12 +50,12 @@
                     {% end %}
                     <tr class="{{ rank_display_class }}">
                     <td>{{ rank }}</td>
-                    <td><a href="/oj/chal/{{chal['chal_id']}}/">{{ chal['chal_id']}}</a></td>
+                    <td><a href="{{ url(f'/chal/{ chal['chal_id'] }/') }}">{{ chal['chal_id']}}</a></td>
                     {% if chal['photo'] == "" %}
                         {% set chal['photo'] = f"https://www.gravatar.com/avatar/{ chal['acct_id'] }?d=identicon&f=y&s=480;" %}
                     {% end %}
                     <td><img class="img-fluid" width="30" height="30" src="{{ chal['photo'] }}" /></td>
-                    <td><a href="/oj/acct/{{chal['acct_id']}}/">{{ chal['acct_name']}}</a></td>
+                    <td><a href="{{ url(f'/acct/{ chal['acct_id'] }/') }}">{{ chal['acct_name']}}</a></td>
                     <td>{{ chal['rate'] }}</td>
                     <td>{{ chal['time'] }}</td>
                     <td>{{ chal['memory'] }}</td>

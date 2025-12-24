@@ -3,9 +3,10 @@ from handlers.manage.board import ManageBoardHandler
 from handlers.manage.bulletin import ManageBulletinHandler
 from handlers.manage.contest import ManageContestHandler
 from handlers.manage.dash import ManageDashHandler
-from handlers.manage.judge import JudgeChalCntSub, ManageJudgeHandler
+from handlers.manage.info import ManageInfoHandler
+from handlers.manage.judge import ManageJudgeHandler
 from handlers.manage.pack import ManagePackHandler
-from handlers.manage.pro import ManageProHandler
+from handlers.manage.pro.url import get_manage_pro_url
 from handlers.manage.proclass import ManageProClassHandler
 from handlers.manage.question import ManageQuestionHandler
 
@@ -16,24 +17,23 @@ def get_manage_url(db, rs, pool):
         'rs': rs,
     }
 
-    sub_args = {'pool': pool}
+    # Get pro management URLs with args applied
+    pro_urls = [(pattern, handler, args) for pattern, handler in get_manage_pro_url()]
 
     return [
-        ('/manage/dash', ManageDashHandler, args),
-        ('/manage/acct', ManageAcctHandler, args),
-        ('/manage/acct/(.+)', ManageAcctHandler, args),
-        ('/manage/pro', ManageProHandler, args),
-        ('/manage/pro/(.+)', ManageProHandler, args),
-        ('/manage/board', ManageBoardHandler, args),
-        ('/manage/board/(.+)', ManageBoardHandler, args),
-        ('/manage/contest', ManageContestHandler, args),
-        ('/manage/bulletin', ManageBulletinHandler, args),
-        ('/manage/bulletin/(.+)', ManageBulletinHandler, args),
-        ('/manage/proclass', ManageProClassHandler, args),
-        ('/manage/proclass/(.+)', ManageProClassHandler, args),
-        ('/manage/question', ManageQuestionHandler, args),
-        ('/manage/question/(.+)', ManageQuestionHandler, args),
-        ('/manage/judge', ManageJudgeHandler, args),
-        ('/manage/judgecntws', JudgeChalCntSub, sub_args),
-        ('/manage/pack', ManagePackHandler, args),
-    ]
+        ('/be/manage/dash', ManageDashHandler, args),
+        ('/be/manage/info', ManageInfoHandler, args),
+        ('/be/manage/acct', ManageAcctHandler, args),
+        ('/be/manage/acct/(.+)', ManageAcctHandler, args),
+        ('/be/manage/board', ManageBoardHandler, args),
+        ('/be/manage/board/(.+)', ManageBoardHandler, args),
+        ('/be/manage/contest', ManageContestHandler, args),
+        ('/be/manage/bulletin', ManageBulletinHandler, args),
+        ('/be/manage/bulletin/(.+)', ManageBulletinHandler, args),
+        ('/be/manage/proclass', ManageProClassHandler, args),
+        ('/be/manage/proclass/(.+)', ManageProClassHandler, args),
+        ('/be/manage/question', ManageQuestionHandler, args),
+        ('/be/manage/question/(.+)', ManageQuestionHandler, args),
+        ('/be/manage/judge', ManageJudgeHandler, args),
+        ('/be/manage/pack', ManagePackHandler, args),
+    ] + pro_urls

@@ -71,7 +71,7 @@
 
         $("button.submit").on('click', function(e) {
             let desc_type = $("#descType").val();
-            $.post("/oj/be/contests/{{ contest_id }}/manage/desc", {
+            $.post(`{{ url(f'/be/contests/{ contest_id }/manage/desc') }}`, {
                 reqtype: 'update',
                 desc_type: desc_type,
                 desc: desc_textarea.value,

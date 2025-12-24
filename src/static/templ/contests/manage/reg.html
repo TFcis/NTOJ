@@ -8,7 +8,7 @@
 		document.querySelectorAll('button.approval').forEach(el => {
             el.addEventListener('click', function (e) {
                 let acct_id = $(this).attr('acct_id');
-                $.post('/oj/be/contests/{{ contest_id }}/manage/reg', {
+                $.post(`{{ url(f'/be/contests/{ contest_id }/manage/reg') }}`, {
                     'reqtype': 'approval',
                     'acct_id': acct_id,
                 }, res => {
@@ -26,7 +26,7 @@
 		document.querySelectorAll('button.reject').forEach(el => {
             el.addEventListener('click', function (e) {
                 let acct_id = $(this).attr('acct_id');
-                $.post('/oj/be/contests/{{ contest_id }}/manage/reg', {
+                $.post(`{{ url(f'/be/contests/{ contest_id }/manage/reg') }}`, {
                     'reqtype': 'reject',
                     'acct_id': acct_id,
                 }, res => {
@@ -50,7 +50,7 @@
     {% if contest.reg_mode == RegMode.INVITED %}
     <p>
         Invited Mode
-        Just add account at <a href="/oj/contests/{{ contest_id }}/manage/acct/">Account Page</a>
+        Just add account at <a href="{{ url(f'/contests/{ contest_id }/manage/acct/') }}">Account Page</a>
     </p>
     {% elif contest.reg_mode == RegMode.FREE_REG %}
 
@@ -71,7 +71,7 @@
         <tbody>
         {% for acct in reg_list %}
             <tr>
-                <th scope="row"><a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.acct_id }}</a></th>
+                <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
                 <td>{{ acct.name }}</td>
                 <td>
                     <div class="btn-toolbar">

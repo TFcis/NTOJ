@@ -6,8 +6,8 @@
 
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
   <meta name="language" content="tw">
-  <link rel="stylesheet" href="/oj/index.css">
-  <link rel="stylesheet" href="/oj/third/bootstrap.min.css" /> <!-- 5.3.3 -->
+  <link rel="stylesheet" href="{{ url('/src/index.css') }}">
+  <link rel="stylesheet" href="{{ url('/src/third/bootstrap.min.css') }}" /> <!-- 5.3.3 -->
   <!--
   <link
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
@@ -16,11 +16,11 @@
   -->
 
 
-  <script src="/oj/third/jquery.min.js"></script> <!-- 3.7.1 -->
-  <script src="/oj/index.js"></script>
-  <script src="/oj/pack.js"></script>
-  <script type="module" src="/oj/third/pdf.min.js"></script> <!-- 4.7.76 -->
-  <script src="/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML" async></script>
+  <script src="{{ url('/src/third/jquery.min.js') }}"></script> <!-- 3.7.1 -->
+  <script src="{{ url('/src/index.js') }}"></script>
+  <script src="{{ url('/src/pack.js') }}"></script>
+  <script type="module" src="{{ url('/src/third/pdf.min.js') }}"></script> <!-- 4.7.76 -->
+  <script src="{{ url('/src/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML') }}" async></script>
   <script type="text/x-mathjax-config">
     MathJax.Hub.Config({
         jax: ['output/SVG'],
@@ -30,34 +30,32 @@
         }
     });
   </script>
-  <script src="/oj/third/marked.min.js" async></script>
-  <script src="/oj/third/purify.min.js" async></script> <!-- 3.1.7 -->
-  <script src="/oj/third/spark-md5.min.js" async></script> <!-- 3.0.2 -->
+    <script src="{{ url('/src/third/marked.min.js') }}" async></script>
+    <script src="{{ url('/src/third/purify.min.js') }}" async></script> <!-- 3.1.7 -->
+    <script src="{{ url('/src/third/spark-md5.min.js') }}" async></script> <!-- 3.0.2 -->
 
-  <script id="indexjs" type="text/javascript" acct_id="{{ user.acct_id }}" contest_id="{{ contest_id }}">
+    <script id="indexjs" type="text/javascript" acct_id="{{ user.acct_id }}" contest_id="{{ contest_id }}" base_url="{{ base_url }}">
     $(document).ready(function () {
       index.init();
       var j_index = $('#index-navlist');
 
-      var msg_ws = index.get_ws("informsub");
-
       var inform_count = 0;
       var on = false;
-      msg_ws.onopen = function (e) {
-      };
 
-      msg_ws.onmessage = function (e) {
+      // Register bulletin update callback
+      index.register_ws_callback('bulletinsub', function(data) {
         inform_count += 1;
         j_index.find('a.message').text('公告 *' + inform_count);
         j_index.find('a.message').show();
         on = true;
         setInterval(function () {if (on == true) {j_index.find('a.message').fadeOut(500).fadeIn(500);} }, 1000);
-      };
+      });
+
       j_index.find('a.message').on('click', function (e) {
         j_index.find('a.message').hide();
         inform_count = 0;
         on = false;
-        index.go('/oj/info/');
+        index.go(`{{ url('/info/') }}`);
       });
 
     {% if is_in_contest %}
@@ -92,35 +90,38 @@
         {% end %}
 
         {% if contest.is_admin(user) %}
-            let ws = index.get_ws("contests/{{ contest.contest_id }}/manage/qasub");
-            let contest_ask_cnt = parseInt("{{ contest_ask_cnt }}");
-            ws.onopen = (e) => {
-                ws.send("{{ contest.contest_id }}");
-            };
-            ws.onmessage = (e) => {
-                contest_ask_cnt += 1;
-                $("#notifyRedDot").text(contest_ask_cnt);
-                $("#notifyRedDot").show();
-            };
+          // Subscribe to admin-only new-question notifications using unified WS API
+          let contest_ask_cnt = parseInt("{{ contest_ask_cnt }}");
+          index.register_ws_callback('contestnewquessub', function(data) {
+            // data is a plain string with contest_id; just increment the counter
+            contest_ask_cnt += 1;
+            $("#notifyRedDot").text(contest_ask_cnt);
+            $("#notifyRedDot").show();
+          });
+          // Initialize channel with contest id
+          index.ws_send('contestnewquessub_init', "{{ contest.contest_id }}");
         {% elif contest.is_start() %}
-            let ws = index.get_ws("contests/{{ contest.contest_id }}/qasub");
             let contest_notification_cnt = parseInt("{{ contest_notification_cnt }}");
-            ws.onopen = (e) => {
-                ws.send(JSON.stringify({
-                    contest_id: "{{ contest.contest_id }}",
-                    acct_id: "{{ user.acct_id }}",
-                }));
-            };
-            ws.onmessage = (e) => {
-                e = JSON.parse(e.data);
+            index.register_ws_callback('contestnewqasub', function(data) {
+              // server publishes JSON string for contestnewqasub; parse it
+              try {
+                let e = JSON.parse(data);
                 if (e.type == 'popup-announce') {
-                    index.show_notify_dialog(e.content, index.DIALOG_TYPE.info, e.subject);
+                  index.show_notify_dialog(e.content, index.DIALOG_TYPE.info, e.subject);
                 } else {
-                    contest_notification_cnt += 1;
-                    $("#notifyRedDot").text(contest_notification_cnt);
-                    $("#notifyRedDot").show();
+                  contest_notification_cnt += 1;
+                  $("#notifyRedDot").text(contest_notification_cnt);
+                  $("#notifyRedDot").show();
                 }
-            };
+              } catch (err) {
+                console.warn('malformed contestnewqasub payload', data);
+              }
+            });
+            // Initialize channel with contest id + acct_id
+            index.ws_send('contestnewqasub_init', JSON.stringify({
+              contest_id: "{{ contest.contest_id }}",
+              acct_id: "{{ user.acct_id }}",
+            }));
         {% end %}
     {% end %}
 
@@ -138,9 +139,9 @@
   <nav class="navbar navbar-expand-lg">
     <div id="index-navlist" class="container-fluid">
       {% if is_in_contest %}
-        <a class="navbar-brand" href="/oj/contests/{{ contest_id }}/info/">NTOJ</a>
+        <a class="navbar-brand" href="{{ url(f'/contests/{ contest_id }/info/') }}">NTOJ</a>
       {% else %}
-        <a class="navbar-brand" href="/oj/info/">NTOJ</a>
+        <a class="navbar-brand" href="{{ url('/info/') }}">NTOJ</a>
       {% end %}
 
       <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
@@ -152,17 +153,17 @@
       <div class="navbar-collapse collapse" id="navbarSupportedContent">
         {% if is_in_contest %}
         <ul class="navbar-nav me-auto">
-          <li class="nav-item info"><a class="nav-link" href="/oj/contests/{{ contest_id  }}/info/">Info</a></li>
+          <li class="nav-item info"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/info/') }}">Info</a></li>
 
           {% if contest_manage or contest.is_start() %}
-            <li class="nav-item proset"><a class="nav-link" href="/oj/contests/{{ contest_id }}/proset/">ProblemSet</a></li>
-            <li class="nav-item chal"><a class="nav-link" href="/oj/contests/{{ contest_id }}/chal/">Challenges</a></li>
-            <li class="nav-item scoreboard"><a class="nav-link" href="/oj/contests/{{ contest_id }}/scoreboard/">Scoreboard</a></li>
+            <li class="nav-item proset"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/proset/') }}">ProblemSet</a></li>
+            <li class="nav-item chal"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/chal/') }}">Challenges</a></li>
+            <li class="nav-item scoreboard"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/scoreboard/') }}">Scoreboard</a></li>
           {% end %}
 
           {% if not contest_manage %}
             <li class="nav-item qa"></li>
-                <a class="nav-link position-relative" href="/oj/contests/{{ contest_id }}/qa/">
+                <a class="nav-link position-relative" href="{{ url(f'/contests/{ contest_id }/qa/') }}">
                     Q & A
                     <span
                         class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -177,7 +178,7 @@
 
           {% if contest_manage %}
             <li class="nav-item manage">
-                <a class="nav-link position-relative" href="/oj/contests/{{ contest_id }}/manage/">
+                <a class="nav-link position-relative" href="{{ url(f'/contests/{ contest_id }/manage/') }}">
                     Manage
                     <span
                         class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -193,41 +194,41 @@
         {% else %}
 
         <ul class="navbar-nav me-auto">
-          <li class="nav-item info"><a class="nav-link" href="/oj/info/">Info</a></li>
-          <li class="nav-item board"><a class="nav-link" href="/oj/board/">Board</a></li>
-          <li class="nav-item chal"><a class="nav-link" href="/oj/chal/">Challenges</a></li>
-          <li class="nav-item proset"><a class="nav-link" href="/oj/proset/">ProblemSet</a></li>
-          <li class="nav-item contests"><a class="nav-link" href="/oj/contests/">Contests</a></li>
-          <li class="nav-item users"><a class="nav-link" href="/oj/users/">Rank</a></li>
+          <li class="nav-item info"><a class="nav-link" href="{{ url('/info/') }}">Info</a></li>
+          <li class="nav-item board"><a class="nav-link" href="{{ url('/board/') }}">Board</a></li>
+          <li class="nav-item chal"><a class="nav-link" href="{{ url('/chal/') }}">Challenges</a></li>
+          <li class="nav-item proset"><a class="nav-link" href="{{ url('/proset/') }}">ProblemSet</a></li>
+          <li class="nav-item contests"><a class="nav-link" href="{{ url('/contests/') }}">Contests</a></li>
+          <li class="nav-item users"><a class="nav-link" href="{{ url('/users/') }}">Rank</a></li>
 
           {% if not user.is_kernel() %}
-          <li class="nav-item question"><a class="nav-link" href="/oj/question/">Question</a></li>
+          <li class="nav-item question"><a class="nav-link" href="{{ url('/question/') }}">Question</a></li>
           {% end %}
 
           {% if user.is_kernel() and ask_cnt > 0 %}
-          <li class="nav-item ask"><a class="nav-link" style="color: #e74c3c;" href="/oj/manage/question/">get {{
+          <li class="nav-item ask"><a class="nav-link" style="color: #e74c3c;" href="{{ url('/manage/question/') }}">get {{
               ask_cnt }} ask</a></li>
           {% end %}
 
           {% if not user.is_kernel() and reply %}
-          <li class="nav-item"><a class="nav-link" style="color: #e74c3c;" href="/oj/question/">get reply</a></li>
+          <li class="nav-item"><a class="nav-link" style="color: #e74c3c;" href="{{ url('/question/') }}">get reply</a></li>
           {% end %}
 
-          <li><a class="nav-link" style="display: none;" href="" class="message"></a></li>
+          <li><a class="nav-link message" style="display: none;" href=""></a></li>
           <!-- <li><a class="nav-link" href="http://forum.tfcis.org/forum.php?mod=forumdisplay&fid=40" target="_new">Discuss</a></li> -->
           <li><a class="nav-link" href="https://github.com/TFcis/NTOJ/issues" target="_new">Make A Wish</a></li>
-          <li class="nav-item about"><a class="nav-link" href="/oj/about/">About</a></li>
-          <li class="dev-info"><a class="nav-link" href="/oj/dev-info/">DevInfo</a></li>
+          <li class="nav-item about"><a class="nav-link" href="{{ url('/about/') }}">About</a></li>
+          <li class="dev-info"><a class="nav-link" href="{{ url('/dev-info/') }}">DevInfo</a></li>
           {% if user.is_kernel() %}
-          <li class="nav-item manage"><a class="nav-link" href="/oj/manage/dash/">Manage</a></li>
+          <li class="nav-item manage"><a class="nav-link" href="{{ url('/manage/dash/') }}">Manage</a></li>
           {% end %}
         </ul>
         {% end %}
 
         <ul class="navbar-nav ms-auto">
-          <li class="nav-link sign" style="display: none;"><a href="/oj/sign/">Reg | Log</a></li>
+          <li class="nav-link sign" style="display: none;"><a href="{{ url('/sign/') }}">Reg | Log</a></li>
           <li class="nav-link leave" style="display: none;"><a href="#">Leave</a></li>
-          <a class="nav-link" href="/oj/acct/{{ user.acct_id }}/">{{ user.name }}</a>
+          <a class="nav-link" href="{{ url(f'/acct/{ user.acct_id }/') }}">{{ user.name }}</a>
         </ul>
       </div>
     </div>
@@ -240,8 +241,8 @@
     <small>New TNFSH Online Judge - Go-Judge</small>
   </footer>
 
-  <script src="/oj/third/popper.min.js"></script> <!-- 2.11.8 -->
-  <script src="/oj/third/bootstrap.min.js"></script> <!-- 5.3.3 -->
+  <script src="{{ url('/src/third/popper.min.js') }}"></script> <!-- 2.11.8 -->
+  <script src="{{ url('/src/third/bootstrap.min.js') }}"></script> <!-- 5.3.3 -->
 </body>
 
 </html>

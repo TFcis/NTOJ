@@ -13,15 +13,13 @@ from services.chal import Compiler, TotalResult, SubtaskResult, TestdataResult, 
 
 from services.chal import Compiler
 from services.pro import ProConst, ProService
-from runintegratedtest import testing_loop, db
-
 
 class AsyncTest(unittest.IsolatedAsyncioTestCase):
     def __init__(self, *args, **kwargs):
-        self.db = db
         super().__init__(*args, **kwargs)
 
     def run(self, result=None):
+        testing_loop = asyncio.get_event_loop()
         runner = asyncio.Runner(debug=True, loop_factory=lambda: testing_loop)
         self._asyncioRunner = runner
         try:
@@ -56,7 +54,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
 
             md5.update(data)
 
-        ws = await websocket_connect("ws://localhost:5501/pack")
+        ws = await websocket_connect("ws://localhost:5501/be/pack")
         await ws.write_message(
             json.dumps(
                 {
@@ -134,7 +132,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
     def signup(self, name: str, mail: str, pw: str):
         session = requests.Session()
         res = session.post(
-            "http://localhost:5501/sign",
+            "http://localhost:5501/be/sign",
             data={
                 "reqtype": "signup",
                 "name": name,
@@ -146,7 +144,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("id", session.cookies.get_dict())
 
         res = session.post(
-            "http://localhost:5501/sign",
+            "http://localhost:5501/be/sign",
             data={
                 "reqtype": "signout",
             },
@@ -155,7 +153,8 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("id", session.cookies.get_dict())
 
     async def wait_for_judge_finish(self, callback):
-        ws = await websocket_connect("ws://localhost:5501/manage/judgecntws")
+        ws = await websocket_connect("ws://localhost:5501/be/ws")
+        await ws.write_message(json.dumps({'type': 'register', 'data': 'judgechalcnt_sub'}))
 
         callback()
 
@@ -165,7 +164,11 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
             if msg is None:
                 break
 
-            j = json.loads(msg)
+            data = json.loads(msg)
+            if data.get('type') != 'judgechalcnt_sub':
+                continue
+
+            j = json.loads(data['data'])
             judge_id = j["judge_id"]
             cnt = j["chal_cnt"]
 
@@ -194,22 +197,23 @@ class BaseUrlSession(requests.Session):
         if "full_url" in kwargs:
             url = kwargs.pop("full_url")
         else:
-            url = f"http://localhost:5501/{url}"
+            url = f"http://localhost:5501/be/{url}"
+
+        # Disable keep-alive to prevent response mixing between rapid requests
+        kwargs.setdefault('headers', {})
+        if isinstance(kwargs['headers'], dict):
+            kwargs['headers']['Connection'] = 'close'
+
         return super().request(method, url, *args, **kwargs)
 
 
 class AccountContext:
-    LAST_TIME = time.time()
     def __init__(self, mail: str, pw: str):
         self.mail = mail
         self.pw = pw
         self.session = BaseUrlSession()
 
     def __enter__(self):
-        diff = time.time() - AccountContext.LAST_TIME
-        if diff < 1:
-            time.sleep(1) # NOTE: Make two session cookies different by introducing a time difference
-        AccountContext.LAST_TIME = time.time()
         res = self.session.post(
             "sign",
             data={

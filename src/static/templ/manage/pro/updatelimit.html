@@ -1,0 +1,193 @@
+{% extends '../manage.html' %}
+{% block head %}
+{% from services.chal import COMPILER_INFOS %}
+
+<script type="text/javascript" id="contjs" async>
+    function init() {
+        let pro_id = "{{ pro.pro_id }}";
+        let limits_form = $('#limits');
+
+        limits_form.find('button.submit').on('click', function(e) {
+            let limits = {};
+            let default_limit = null;
+
+            // First pass: get default limit
+            limits_form.find("tbody > tr[compiler='default']").each(function() {
+                let j_tr = $(this);
+                let time = j_tr.find("input.time").val();
+                let memory = j_tr.find("input.memory").val();
+                let output = j_tr.find("input.output").val();
+
+                if (time !== "" && memory !== "" && output !== "") {
+                    default_limit = {
+                        time: time,
+                        memory: memory,
+                        output: output,
+                    };
+                    limits['default'] = default_limit;
+                }
+            });
+
+            if (!default_limit) {
+                index.show_notify_dialog('Default limit must be set', index.DIALOG_TYPE.error);
+                return;
+            }
+
+            // Second pass: process compiler-specific limits with default fallback
+            limits_form.find("tbody > tr[compiler][compiler!='default']").each(function() {
+                let j_tr = $(this);
+                let lang = j_tr.attr('compiler');
+                let time = j_tr.find("input.time").val();
+                let memory = j_tr.find("input.memory").val();
+                let output = j_tr.find("input.output").val();
+
+                // If any value is set, use it; otherwise fall back to default
+                // Only add to limits if at least one value is specified
+                if (time !== "" || memory !== "" || output !== "") {
+                    limits[lang] = {
+                        time: time !== "" ? time : default_limit.time,
+                        memory: memory !== "" ? memory : default_limit.memory,
+                        output: output !== "" ? output : default_limit.output,
+                    };
+                }
+            });
+
+            $.post(`{{ url('/be/manage/pro/updatelimit') }}`, {
+                'reqtype': 'updatelimit',
+                'pro_id': pro_id,
+                'limits': JSON.stringify(limits),
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Update limit Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        });
+    }
+</script>
+{% end %}
+
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h3><i class="bi bi-speedometer"></i> Problem Limits Configuration - {{ pro.name }}</h3>
+
+    <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle"></i>
+        Configure time, memory, and output limits for each compiler. The "default" limit applies to all compilers that don't have specific limits set.
+    </div>
+
+    <form id="limits">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-sliders"></i> Compiler Limits</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 25%;">Compiler</th>
+                                <th style="width: 25%;">Time (ms)</th>
+                                <th style="width: 25%;">Memory (KiB)</th>
+                                <th style="width: 25%;">Output (KiB)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set limits = pro.config.limits %}
+                            <tr compiler="default" class="table-warning">
+                                <td class="fw-bold">
+                                    <i class="bi bi-star-fill text-warning"></i> Default
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control time"
+                                           value="{{ limits['default'].time }}" min="0" required>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control memory"
+                                           value="{{ limits['default'].memory }}" min="0" required>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control output"
+                                           value="{{ limits['default'].output }}" min="0" required>
+                                </td>
+                            </tr>
+
+                            {% from services.prospec.batch import BatchConfig %}
+                            {% set batch_config = pro.config.spec_config %}
+                            {% if isinstance(batch_config, BatchConfig) %}
+                                {% for compiler in batch_config.allow_compilers %}
+                                    {% set compiler_str = str(compiler) %}
+                                    {% if compiler_str in limits %}
+                                    <tr compiler="{{ compiler }}">
+                                        <td>
+                                            <i class="bi bi-code-slash"></i> {{ COMPILER_INFOS[compiler].short_name }}
+                                            <small class="text-muted d-block">{{ COMPILER_INFOS[compiler].version_name }}</small>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control time"
+                                                   value="{{ limits[compiler_str].time }}" min="0">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control memory"
+                                                   value="{{ limits[compiler_str].memory }}" min="0">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control output"
+                                                   value="{{ limits[compiler_str].output }}" min="0">
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr compiler="{{ compiler }}">
+                                        <td>
+                                            <i class="bi bi-code-slash"></i> {{ COMPILER_INFOS[compiler].short_name }}
+                                            <small class="text-muted d-block">{{ COMPILER_INFOS[compiler].version_name }}</small>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control time" placeholder="Use default" min="0">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control memory" placeholder="Use default" min="0">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control output" placeholder="Use default" min="0">
+                                        </td>
+                                    </tr>
+                                    {% end %}
+                                {% end %}
+                            {% end %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    <i class="bi bi-lightbulb"></i>
+                    Leave compiler-specific limits empty to use the default values.
+                    Time is in milliseconds, memory and output are in KiB.
+                </small>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mb-3">
+            <button type="button" class="btn btn-primary btn-lg submit">
+                <i class="bi bi-save"></i> Update Limits
+            </button>
+        </div>
+    </form>
+
+    <div class="mt-4">
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/update/?proid={ pro.pro_id }') }}">
+            <i class="bi bi-arrow-left"></i> Back to General Settings
+        </a>
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatesubtask/?proid={ pro.pro_id }') }}">
+            <i class="bi bi-list-check"></i> Configure Subtasks
+        </a>
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatetestdata/?proid={ pro.pro_id }') }}">
+            <i class="bi bi-file-earmark-binary"></i> Manage Testdata
+        </a>
+    </div>
+</div>
+{% end %}

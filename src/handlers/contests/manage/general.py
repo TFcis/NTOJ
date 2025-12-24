@@ -1,169 +1,218 @@
 import datetime
 
-from handlers.base import RequestHandler, reqenv, require_permission
+from handlers.base import RequestHandler, reqenv, require_permission, ActionDispatcher
 from handlers.contests.base import contest_require_permission
 from services.chal import Compiler
 from services.user import UserConst
-from services.contests import ContestConst, ContestService, ContestMode, RegMode, UserStatus
+from services.contests import (
+    ContestConst,
+    ContestService,
+    ContestMode,
+    RegMode,
+    UserStatus,
+)
+
+contest_manage_general_dispatcher = ActionDispatcher()
+contest_manage_desc_edit_dispatcher = ActionDispatcher()
+contest_manage_add_dispatcher = ActionDispatcher()
 
 
 class ContestManageDashHandler(RequestHandler):
     @reqenv
-    @contest_require_permission('admin')
+    @contest_require_permission("admin")
     async def get(self):
-        await self.render('contests/manage/dash', page='dash', contest_id=self.contest.contest_id)
+        await self.render(
+            "contests/manage/dash", page="dash", contest_id=self.contest.contest_id
+        )
 
 
 class ContestManageGeneralHandler(RequestHandler):
     @reqenv
-    @contest_require_permission('admin')
+    @contest_require_permission("admin")
     async def get(self):
-        await self.render('contests/manage/general', page='general', contest_id=self.contest.contest_id,
-                          contest=self.contest)
+        await self.render(
+            "contests/manage/general",
+            page="general",
+            contest_id=self.contest.contest_id,
+            contest=self.contest,
+        )
 
-    @reqenv
-    @contest_require_permission('admin')
-    async def post(self):
-        reqtype = self.get_argument('reqtype')
+    @contest_manage_general_dispatcher.action("update")
+    async def update_action(self):
+        name = self.get_argument("name")
 
-        if reqtype == "update":
-            name = self.get_argument("name")
+        contest_mode = ContestMode(int(self.get_argument("contest_mode")))
+        contest_start = self.get_argument("contest_start")
+        contest_end = self.get_argument("contest_end")
 
-            contest_mode = ContestMode(int(self.get_argument("contest_mode")))
-            contest_start = self.get_argument("contest_start")
-            contest_end = self.get_argument("contest_end")
+        reg_mode = RegMode(int(self.get_argument("reg_mode")))
+        reg_end = self.get_argument("reg_end")
 
-            reg_mode = RegMode(int(self.get_argument("reg_mode")))
-            reg_end = self.get_argument("reg_end")
+        allow_compilers = self.get_arguments("allow_compilers[]")
+        is_public_scoreboard = self.get_argument("is_public_scoreboard") == "true"
+        allow_view_other_page = self.get_argument("allow_view_other_page") == "true"
+        hide_admin = self.get_argument("hide_admin") == "true"
+        enable_system_test = self.get_argument("enable_system_test", default="false") == "true"
+        try:
+            submission_cd_time = int(self.get_argument("submission_cd_time"))
+            if submission_cd_time < 0:
+                submission_cd_time = 1 if contest_mode == ContestMode.ACM else 30
 
-            allow_compilers = self.get_arguments("allow_compilers[]")
-            is_public_scoreboard = self.get_argument("is_public_scoreboard") == "true"
-            allow_view_other_page = self.get_argument("allow_view_other_page") == "true"
-            hide_admin = self.get_argument("hide_admin") == "true"
-            try:
-                submission_cd_time = int(self.get_argument("submission_cd_time"))
-                if submission_cd_time < 0:
-                    submission_cd_time = 30
+        except ValueError:
+            submission_cd_time = 1 if contest_mode == ContestMode.ACM else 30
 
-            except ValueError:
-                submission_cd_time = 30
-
-            try:
-                freeze_scoreboard_period = int(self.get_argument("freeze_scoreboard_period"))
-                if freeze_scoreboard_period < 0:
-                    freeze_scoreboard_period = 0
-
-            except ValueError:
+        try:
+            freeze_scoreboard_period = int(
+                self.get_argument("freeze_scoreboard_period")
+            )
+            if freeze_scoreboard_period < 0:
                 freeze_scoreboard_period = 0
 
-            allow_compilers = set(map(lambda x: Compiler(int(x)),
-                                      filter(lambda compiler: int(compiler) in Compiler._value2member_map_, allow_compilers)))
+        except ValueError:
+            freeze_scoreboard_period = 0
 
-            err, contest_start = trantime(contest_start)
-            if err:
-                return self.error(err)
-            err, contest_end = trantime(contest_end)
-            if err:
-                return self.error(err)
-            err, reg_end = trantime(reg_end)
-            if err:
-                return self.error(err)
+        try:
+            penalty_value = int(self.get_argument("penalty_value", default="20"))
+            if penalty_value < 0:
+                penalty_value = 20
 
-            self.contest.name = name
+        except ValueError:
+            penalty_value = 20
 
-            self.contest.contest_mode = contest_mode
-            self.contest.contest_start = contest_start
-            self.contest.contest_end = contest_end
+        allow_compilers = set(
+            map(
+                lambda x: Compiler(int(x)),
+                filter(
+                    lambda compiler: int(compiler) in Compiler._value2member_map_,
+                    allow_compilers,
+                ),
+            )
+        )
 
-            # NOTE: when registration mode change from approval to free, we should approval all account which waiting approval
-            if self.contest.reg_mode is RegMode.REG_APPROVAL and reg_mode is RegMode.FREE_REG:
-                for acct_id, v in self.contest.user_list.items():
-                    if v['status'] == UserStatus.REQUESTED:
-                        self.contest.user_list[acct_id]['status'] = UserStatus.APPROVED
+        err, contest_start = trantime(contest_start)
+        if err:
+            return self.error(err)
+        err, contest_end = trantime(contest_end)
+        if err:
+            return self.error(err)
+        err, reg_end = trantime(reg_end)
+        if err:
+            return self.error(err)
 
-            self.contest.reg_mode = reg_mode
-            self.contest.reg_end = reg_end
+        self.contest.name = name
 
-            self.contest.allow_compilers = allow_compilers
-            self.contest.is_public_scoreboard = is_public_scoreboard
-            self.contest.allow_view_other_page = allow_view_other_page
-            self.contest.hide_admin = hide_admin
-            self.contest.submission_cd_time = submission_cd_time
-            if self.contest.freeze_scoreboard_period != freeze_scoreboard_period:
-                self.contest.freeze_scoreboard_period = freeze_scoreboard_period
-                if self.contest.is_start():
-                    await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+        self.contest.contest_mode = contest_mode
+        self.contest.contest_start = contest_start
+        self.contest.contest_end = contest_end
 
-            await ContestService.inst.update_contest(self.acct, self.contest)
+        # NOTE: when registration mode change from approval to free, we should approval all account which waiting approval
+        if (
+            self.contest.reg_mode is RegMode.REG_APPROVAL
+            and reg_mode is RegMode.FREE_REG
+        ):
+            for acct_id, v in self.contest.user_list.items():
+                if v["status"] == UserStatus.REQUESTED:
+                    self.contest.user_list[acct_id]["status"] = UserStatus.APPROVED
 
-            self.error(('S', ''))
+        self.contest.reg_mode = reg_mode
+        self.contest.reg_end = reg_end
+
+        self.contest.allow_compilers = allow_compilers
+        self.contest.is_public_scoreboard = is_public_scoreboard
+        self.contest.allow_view_other_page = allow_view_other_page
+        self.contest.hide_admin = hide_admin
+        self.contest.submission_cd_time = submission_cd_time
+        self.contest.penalty_value = penalty_value
+        self.contest.enable_system_test = enable_system_test
+        if self.contest.freeze_scoreboard_period != freeze_scoreboard_period:
+            self.contest.freeze_scoreboard_period = freeze_scoreboard_period
+            if self.contest.is_start():
+                await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await ContestService.inst.update_contest(self.acct, self.contest)
+
+        return self.error(("S", ""))
+
+    @reqenv
+    @contest_require_permission("admin")
+    async def post(self):
+        reqtype = self.get_argument("reqtype")
+        return await contest_manage_general_dispatcher.dispatch(self, reqtype)
 
 
 class ContestManageDescEditHandler(RequestHandler):
     @reqenv
-    @contest_require_permission('admin')
+    @contest_require_permission("admin")
     async def get(self):
-        await self.render('contests/manage/desc-edit', page='desc', contest_id=self.contest.contest_id,
-                          contest=self.contest)
+        await self.render(
+            "contests/manage/desc-edit",
+            page="desc",
+            contest_id=self.contest.contest_id,
+            contest=self.contest,
+        )
+
+    @contest_manage_desc_edit_dispatcher.action("update")
+    async def update_action(self):
+        desc = self.get_argument("desc")
+        desc_type = self.get_argument("desc_type")
+
+        if desc_type == "before":
+            self.contest.desc_before_contest = desc
+
+        elif desc_type == "during":
+            self.contest.desc_during_contest = desc
+
+        elif desc_type == "after":
+            self.contest.desc_after_contest = desc
+
+        else:
+            return self.error(("Eunk", "Unknown error"))
+
+        await ContestService.inst.update_contest(self.acct, self.contest)
+
+        return self.error(("S", ""))
 
     @reqenv
-    @contest_require_permission('admin')
+    @contest_require_permission("admin")
     async def post(self):
-        reqtype = self.get_argument('reqtype')
-
-        if reqtype == "update":
-            desc = self.get_argument('desc')
-            desc_type = self.get_argument('desc_type')
-
-            if desc_type == "before":
-                self.contest.desc_before_contest = desc
-
-            elif desc_type == "during":
-                self.contest.desc_during_contest = desc
-
-            elif desc_type == "after":
-                self.contest.desc_after_contest = desc
-
-            else:
-                return self.error(('Eunk', 'Unknown error'))
-
-            await ContestService.inst.update_contest(self.acct, self.contest)
-
-            self.error(('S', ''))
+        reqtype = self.get_argument("reqtype")
+        return await contest_manage_desc_edit_dispatcher.dispatch(self, reqtype)
 
 
 class ContestManageAddHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        await self.render('contests/manage/add')
+        await self.render("contests/manage/add")
+
+    @contest_manage_add_dispatcher.action("add")
+    async def add_action(self):
+        name = self.get_argument("name")
+        if err := self.len_check(
+            name, ContestConst.NAME_MIN, ContestConst.NAME_MAX, "Name"
+        ):
+            return self.error(err)
+
+        _, contest_id = await ContestService.inst.add_default_contest(self.acct, name)
+        return self.error(("S", contest_id))
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self):
-        reqtype = self.get_argument('reqtype')
-
-        if reqtype == "add":
-            name = self.get_argument('name')
-            if err := self.len_check(name, ContestConst.NAME_MIN, ContestConst.NAME_MAX, 'Name'):
-                return self.error(err)
-
-            _, contest_id = await ContestService.inst.add_default_contest(self.acct, name)
-            self.error(('S', contest_id))
-        else:
-            self.error(('Eunk', 'Unknown error'))
+        reqtype = self.get_argument("reqtype")
+        return await contest_manage_add_dispatcher.dispatch(self, reqtype)
 
 
 def trantime(time):
-    if time == '':
+    if time == "":
         time = None
 
     else:
         try:
-            time = datetime.datetime.strptime(time, '%Y-%m-%dT%H:%M:%S.%fZ')
+            time = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%S.%fZ")
             time = time.replace(tzinfo=datetime.timezone.utc)
 
         except ValueError:
-            return ('Eparam', 'Invalid time'), None
+            return ("Eparam", "Invalid time"), None
 
     return None, time

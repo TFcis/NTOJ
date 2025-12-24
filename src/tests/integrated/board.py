@@ -19,7 +19,6 @@ class BoardTest(AsyncTest):
                 'pro_list': '1, 2',
                 'acct_list': '1',
             })
-            print(self.get_isoformat(now - datetime.timedelta(days=7)))
             self.assertAPIReturnSuccess(res.text)
 
             err, boardlist = await BoardService.inst.get_boardlist()

@@ -5,7 +5,7 @@ import pickle
 
 import asyncpg
 
-from services.chal import Compiler
+from services.chal import Compiler, ChalConst
 from services.user import Account
 
 
@@ -22,6 +22,12 @@ class ContestMode(enum.IntEnum):
 class ProblemScoreType(enum.IntEnum):
     IOI2013 = 0
     IOI2017 = 1
+
+class ChallengeResultStyle(enum.IntEnum):
+    FULL = 1  # Total + Subtask + Testcase
+    STATE_COUNT = 2  # Total + Subtask + Testcase State Count
+    SUBTASK_ONLY = 3  # Total + Subtask
+    TOTAL_ONLY = 4  # Total Only
 
 class UserStatus(enum.IntEnum):
     REJECTED = 0
@@ -59,6 +65,8 @@ class Contest:
     hide_admin: bool = True
     submission_cd_time: int = 30
     freeze_scoreboard_period: int = 0
+    penalty_value: int = 20
+    enable_system_test: bool = False  # Enable system test feature (pretest/final test)
 
     def is_start(self) -> bool:
         return datetime.datetime.now(datetime.UTC) >= self.contest_start
@@ -139,7 +147,9 @@ class ContestService:
                         "allow_view_other_page",
                         "hide_admin",
                         "submission_cd_time",
-                        "freeze_scoreboard_period"
+                        "freeze_scoreboard_period",
+                        "penalty_value",
+                        "enable_system_test"
                         FROM "contest" WHERE "contest_id" = $1;
                     ''',
                     contest_id
@@ -157,10 +167,11 @@ class ContestService:
                 contest.contest_end = contest.contest_end
                 contest.reg_end = contest.reg_end
 
-                result = await con.fetch('SELECT pro_id, score_type FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
-                for pro_id, score_type in result:
+                result = await con.fetch('SELECT pro_id, score_type, challenge_style FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
+                for pro_id, score_type, challenge_style in result:
                     contest.pro_list[pro_id] = {
-                        "score_type": ProblemScoreType(int(score_type))
+                        "score_type": ProblemScoreType(int(score_type)),
+                        "challenge_style": ChallengeResultStyle(int(challenge_style))
                     }
 
                 result = await con.fetch('SELECT acct_id, status FROM contest_users WHERE contest_id = $1 ORDER BY acct_id', contest_id)
@@ -247,8 +258,10 @@ class ContestService:
                     "allow_view_other_page" = $12,
                     "hide_admin" = $13,
                     "submission_cd_time" = $14,
-                    "freeze_scoreboard_period" = $15
-                    WHERE "contest_id" = $16;
+                    "freeze_scoreboard_period" = $15,
+                    "penalty_value" = $16,
+                    "enable_system_test" = $17
+                    WHERE "contest_id" = $18;
                 ''',
                 contest.name,
                 contest.desc_before_contest,
@@ -264,6 +277,8 @@ class ContestService:
                 contest.hide_admin,
                 contest.submission_cd_time,
                 contest.freeze_scoreboard_period,
+                contest.penalty_value,
+                contest.enable_system_test,
                 contest.contest_id
             )
 
@@ -272,14 +287,16 @@ class ContestService:
                 failed = []
                 for pro_id, v in contest.pro_list.items():
                     try:
+                        challenge_style = v.get('challenge_style', ChallengeResultStyle.FULL)
                         await con.execute('''
-                            INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
-                            VALUES ($1, $2, $3, $4) ON CONFLICT (contest_id, pro_id) DO UPDATE
-                            SET score_type = EXCLUDED.score_type, "order" = EXCLUDED."order"
+                            INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "challenge_style", "order")
+                            VALUES ($1, $2, $3, $4, $5) ON CONFLICT (contest_id, pro_id) DO UPDATE
+                            SET score_type = EXCLUDED.score_type, challenge_style = EXCLUDED.challenge_style, "order" = EXCLUDED."order"
                             WHERE
                                 contest_problem_joints.score_type != EXCLUDED.score_type OR
+                                contest_problem_joints.challenge_style != EXCLUDED.challenge_style OR
                                 contest_problem_joints.order != EXCLUDED.order;
-                        ''', contest.contest_id, pro_id, int(v['score_type']), order)
+                        ''', contest.contest_id, pro_id, int(v['score_type']), int(challenge_style), order)
                         order += 1
                     except asyncpg.ForeignKeyViolationError:
                         failed.append(pro_id)
@@ -378,9 +395,177 @@ class ContestService:
         res = await self.db.fetch('SELECT COUNT(*) FROM contest_question WHERE contest_id = $1 AND reply_acct_id IS NULL;', contest_id)
         return None, res[0]['count']
 
+    async def get_unread_notification_cnt(self, contest_id: int, acct_id: int):
+        """Get unread notification count for user
+
+        Args:
+            contest_id: Contest ID
+            acct_id: User ID
+
+        Returns:
+            tuple: (err, cnt) Unread notification count
+        """
+        new_cnt = await self.db.fetch('''
+        SELECT
+            (SELECT COUNT(*) FROM contest_announcement WHERE contest_id = $1) +
+            (SELECT COUNT(*) FROM contest_question WHERE contest_id = $1 AND ask_acct_id = $2 AND reply_acct_id IS NOT NULL)
+        AS total_count;
+        ''', contest_id, acct_id)
+        new_cnt = new_cnt[0]['total_count']
+
+        old_cnt = await self.db.fetch('SELECT notification_read_count FROM contest_users WHERE contest_id = $1 AND acct_id = $2',
+                                      contest_id, acct_id)
+        old_cnt = old_cnt[0]['notification_read_count']
+
+        return None, max(new_cnt - old_cnt, 0)
+
+    async def mark_notifications_as_read(self, contest_id: int, acct_id: int):
+        """Mark notifications as read
+
+        Args:
+            contest_id: Contest ID
+            acct_id: User ID
+
+        Returns:
+            tuple: (err, None)
+        """
+        await self.db.execute(
+            '''
+            UPDATE contest_users
+            SET notification_read_count = sub.total_count
+            FROM (
+                SELECT
+                    (SELECT COUNT(*) FROM contest_announcement WHERE contest_id = $1) +
+                    (SELECT COUNT(*) FROM contest_question WHERE contest_id = $1 AND ask_acct_id = $2 AND reply_acct_id IS NOT NULL)
+                    AS total_count
+            ) AS sub
+            WHERE contest_users.contest_id = $1
+            AND contest_users.acct_id = $2;
+            ''',
+            contest_id, acct_id
+        )
+
+        return None, None
+
+    async def get_icpc_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
+        """
+        Calculate ICPC scores for a problem.
+
+        Score (Spend Time) = (first_ac_timestamp) + fail_cnt * penalty_value (Minute)
+        where fail_cnt is the number of submissions before first AC.
+
+        For users without AC: Score = 0, first_ac_timestamp = NULL, chal_id = latest submission chal_id,
+                             fail_cnt = total number of valid submissions
+
+        Filters out invalid/non-verdictable states: CE, CLE, ERR, JE, JUDGE, NOTSTARTED, REJECTED
+        """
+        _, contest = await self.get_contest(contest_id)
+
+        # States to filter out (invalid/non-verdictable submissions)
+        invalid_states = [
+            ChalConst.STATE_CE,
+            ChalConst.STATE_CLE,
+            ChalConst.STATE_ERR,
+            ChalConst.STATE_JE,
+            ChalConst.STATE_JUDGE,
+            ChalConst.STATE_NOTSTARTED,
+            ChalConst.STATE_REJECTED
+        ]
+
+        res = await self.db.fetch('''
+        WITH valid_challenges AS (
+            -- Get all challenges that are valid (not in invalid states) and before before_time
+            SELECT
+                challenge.chal_id,
+                acct_id,
+                pro_id,
+                timestamp,
+                state
+            FROM challenge
+            INNER JOIN total_result
+                ON challenge.chal_id = total_result.chal_id
+            WHERE contest_id = $1
+                AND pro_id = $2
+                AND timestamp < $3::timestamptz
+                AND state NOT IN (SELECT unnest($4::int[]))
+        ),
+        acct_challenges AS (
+            -- Partition challenges by acct_id and pro_id, ordered by timestamp
+            SELECT
+                acct_id,
+                chal_id,
+                pro_id,
+                timestamp,
+                state,
+                ROW_NUMBER() OVER (PARTITION BY acct_id, pro_id ORDER BY timestamp ASC) AS submission_order
+            FROM valid_challenges
+        ),
+        first_ac_challenges AS (
+            -- Find first AC for each acct (may be empty if no AC)
+            SELECT
+                acct_id,
+                chal_id,
+                pro_id,
+                timestamp AS first_ac_timestamp,
+                submission_order - 1 AS fail_cnt  -- Number of submissions before first AC
+            FROM acct_challenges
+            WHERE state = $5  -- Only AC state
+                AND submission_order = (
+                    -- Get the first AC submission order for this acct
+                    SELECT MIN(submission_order)
+                    FROM acct_challenges ac2
+                    WHERE ac2.acct_id = acct_challenges.acct_id
+                        AND ac2.pro_id = acct_challenges.pro_id
+                        AND ac2.state = $5
+                )
+        ),
+        acct_submission_counts AS (
+            -- Count total valid submissions for each acct (for those without AC)
+            SELECT
+                acct_id,
+                pro_id,
+                COUNT(*) AS total_submissions,
+                MAX(chal_id) AS latest_chal_id
+            FROM acct_challenges
+            GROUP BY acct_id, pro_id
+        )
+        SELECT
+            COALESCE(fac.acct_id, ascsub.acct_id) AS acct_id,
+            COALESCE(fac.chal_id, ascsub.latest_chal_id) AS chal_id,
+            fac.first_ac_timestamp,
+            COALESCE(fac.fail_cnt, ascsub.total_submissions) AS fail_cnt,
+            CASE
+                WHEN fac.acct_id IS NOT NULL THEN (EXTRACT(EPOCH FROM (fac.first_ac_timestamp - $6::timestamptz))::integer / 60) + (fac.fail_cnt * $7)::integer
+                ELSE 0
+            END AS score
+        FROM first_ac_challenges fac
+        FULL OUTER JOIN acct_submission_counts ascsub
+            ON fac.acct_id = ascsub.acct_id AND fac.pro_id = ascsub.pro_id
+        ORDER BY acct_id;
+        ''', contest_id, pro_id, before_time,
+            invalid_states,  # $4: array of invalid states to filter out
+            ChalConst.STATE_AC,  # $5: AC state
+            contest.contest_start,  # $6: contest start time for score calculation
+            contest.penalty_value, # $7: penalty value
+        )
+
+        if len(res) == 0:
+            return {}
+
+        scores = {
+            acct_id: {
+                'acct_id': acct_id,
+                'chal_id': chal_id,
+                'score': score,
+                'timestamp': first_ac_timestamp,
+                'fail_cnt': fail_cnt
+            }
+            for acct_id, chal_id, first_ac_timestamp, fail_cnt, score in res
+        }
+
+        return scores
 
     async def get_ioi2013_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
-        _, contest = await self.get_contest(contest_id)
         res = await self.db.fetch(
             f'''
         WITH ranked_challenges AS (

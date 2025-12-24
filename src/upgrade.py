@@ -6,8 +6,6 @@ import datetime
 import tempfile
 import subprocess
 
-import config
-
 with tempfile.TemporaryDirectory() as working_path:
     subprocess.run(['git', 'clone', '--branch', 'tfcis-testing', 'https://github.com/TFcis/NTOJ', f'{working_path}/NTOJ'])
 
@@ -28,25 +26,6 @@ with tempfile.TemporaryDirectory() as working_path:
     shutil.copytree('handlers', f'{bak_dir}/handlers')
     shutil.copytree('static', f'{bak_dir}/static')
     shutil.copytree('utils', f'{bak_dir}/utils')
-
-    os.mkdir(f'{bak_dir}/web')
-    web_dir = config.WEB_PROBLEM_STATIC_FILE_DIRECTORY[0:-8]  # /srv/oj_web/oj/problem, remove `/problem`
-    shutil.copy(f'{web_dir}/index.js', f'{bak_dir}/web/index.js')
-    shutil.copy(f'{web_dir}/pack.js', f'{bak_dir}/web/pack.js')
-    shutil.copy(f'{web_dir}/index.css', f'{bak_dir}/web/index.css')
-    shutil.copy(f'{web_dir}/challist.css', f'{bak_dir}/web/challist.css')
-    shutil.copy(f'{web_dir}/manage-pro.css', f'{bak_dir}/web/manage-pro.css')
-    shutil.copy(f'{web_dir}/pro.css', f'{bak_dir}/web/pro.css')
-    shutil.copy(f'{web_dir}/submit.css', f'{bak_dir}/web/submit.css')
-
-    # copy
-    shutil.copy(f'{working_path}/NTOJ/src/static/index.js', f'{web_dir}/index.js')
-    shutil.copy(f'{working_path}/NTOJ/src/static/pack.js', f'{web_dir}/pack.js')
-    shutil.copy(f'{working_path}/NTOJ/src/static/index.css', f'{web_dir}/index.css')
-    shutil.copy(f'{working_path}/NTOJ/src/static/challist.css', f'{web_dir}/challist.css')
-    shutil.copy(f'{working_path}/NTOJ/src/static/manage-pro.css', f'{web_dir}/manage-pro.css')
-    shutil.copy(f'{working_path}/NTOJ/src/static/pro.css', f'{web_dir}/pro.css')
-    shutil.copy(f'{working_path}/NTOJ/src/static/submit.css', f'{web_dir}/submit.css')
 
     shutil.copy(f'{working_path}/NTOJ/src/fixnoeol.sh', 'fixnoeol.sh')
     shutil.copy(f'{working_path}/NTOJ/src/newline.sh', 'newline.sh')

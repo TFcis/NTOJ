@@ -1,10 +1,9 @@
-import re
+import asyncio
+import json
 
 from tornado.websocket import websocket_connect
-from tornado.escape import xhtml_escape
 
 from services.bulletin import BulletinService
-from utils.htmlgen import markdown_escape
 
 from .util import AsyncTest, AccountContext
 
@@ -13,13 +12,16 @@ class BulletinTest(AsyncTest):
     async def main(self):
         with AccountContext('admin@test', 'testtest') as admin_session:
             # bulletin
+            received_messages = []
             def _message(msg):
                 if msg is None:
                     return
+                data = json.loads(msg)
+                if data.get('type') == 'bulletinsub':
+                    received_messages.append(int(data['data']))
 
-                self.assertEqual(int(msg), 1)
-
-            ws = await websocket_connect('ws://localhost:5501/informsub', on_message_callback=_message)
+            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'bulletinsub'}))
             res = admin_session.post('manage/bulletin/add', data={
                 'reqtype': 'add',
                 'title': 'bulletin 1',
@@ -48,6 +50,14 @@ class BulletinTest(AsyncTest):
             self.assertEqual(bulletin_list[1]['title'], 'bulletin 2 (pinned)')
             self.assertTrue(bulletin_list[1]['pinned'])
             self.assertEqual(bulletin_list[1]['color'], 'red')
+
+            # Wait up to 2 seconds for a message to be received
+            for _ in range(20):
+                if received_messages:
+                    break
+                await asyncio.sleep(0.1)
+            self.assertGreater(len(received_messages), 0)
+            ws.close()
             self.assertEqual(bulletin_list[1]['name'], 'admin')
             self.assertEqual(bulletin_list[1]['acct_id'], 1)
 

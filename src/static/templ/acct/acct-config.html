@@ -4,6 +4,7 @@
 {% if acct.acct_id != user.acct_id and not user.is_kernel() %}
     You don't have permission.
 {% else %}
+
 <script id="contjs" type="text/javascript">
     function init() {
         let j_profile = $('#profile');
@@ -35,7 +36,7 @@
                 }
             }
 
-            $.post('/oj/be/acctedit', {
+            $.post(`{{ url('/be/acctedit') }}`, {
                 'reqtype': 'profile',
                 'acct_id': acct_id,
                 'name': name,
@@ -63,7 +64,7 @@
                 return;
             }
 
-            $.post('/oj/be/acctedit', {
+            $.post(`{{ url('/be/acctedit') }}`, {
                 'reqtype': 'reset',
                 'acct_id': acct_id,
                 'old': old,
@@ -80,25 +81,25 @@
         });
 
         j_login.find('button.logout-all').on('click', function(e) {
-            $.post('/oj/be/acctedit', {
+            $.post(`{{ url('/be/acctedit') }}`, {
                 'reqtype': 'remote-logout-all',
                 'acct_id': acct_id,
             });
-            location.href = '/oj/sign/';
+            location.href = `{{ url('/sign/') }}`;
         });
 
         j_login.find('button.logout').each(function(_, __) {
             let j_this = $(this);
             j_this.on('click', function(e) {
                 let hashed_session_key = j_this.attr('hashed_session_key');
-                $.post('/oj/be/acctedit', {
+                $.post(`{{ url('/be/acctedit') }}`, {
                     'reqtype': 'remote-logout',
                     'acct_id': acct_id,
                     'hashed_session_key': hashed_session_key,
                 }, function(e) {
                     index.show_notify_dialog('Log out Successfully', index.DIALOG_TYPE.success);
                     if (hashed_session_key === "{{ current_session_key }}") {
-                        location.href = '/oj/sign/';
+                        location.href = `{{ url('/sign/') }}`;
                     } else {
                         index.reload();
                     }
@@ -111,7 +112,7 @@
 <div class="row">
     <div class="col-lg-6 col-sm-12">
         <span>
-            <h1>Edit User <a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.name }}</a></h1>
+            <h1>Edit User <a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.name }}</a></h1>
         </span>
 
         {% if acct.acct_id == user.acct_id %}

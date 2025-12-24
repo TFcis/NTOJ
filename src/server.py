@@ -54,10 +54,10 @@ if __name__ == "__main__":
     httpsock = tornado.netutil.bind_sockets(config.PORT)
 
     # tornado.process.fork_processes(4)
-    db: asyncpg.Pool = asyncio.get_event_loop().run_until_complete(
-        asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost')
-    )
-    pool = aioredis.ConnectionPool.from_url("redis://localhost", db=config.REDIS_DB)
+    async def f():
+        return await asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host=config.DBHOST_OJ)
+    db:asyncpg.Pool = tornado.ioloop.IOLoop.current().run_sync(f)
+    pool = aioredis.ConnectionPool.from_url(f"redis://{config.REDIS_HOST}", db=config.REDIS_DB)
     rs = aioredis.Redis.from_pool(pool)
 
     services_init(db, rs)

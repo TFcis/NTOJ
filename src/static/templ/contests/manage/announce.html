@@ -16,7 +16,7 @@
                 return;
             }
 
-            $.post('/oj/be/contests/{{ contest_id }}/manage/announce', {
+            $.post(`{{ url(f'/be/contests/{ contest_id }/manage/announce') }}`, {
                 reqtype: 'add-announce',
                 subject: subject,
                 content: content,
@@ -40,7 +40,7 @@
             });
 
             td.find(".popup").on('click', function(e) {
-                $.post('/oj/be/contests/{{ contest_id }}/manage/announce', {
+                $.post(`{{ url(f'/be/contests/{ contest_id }/manage/announce') }}`, {
                     reqtype: 'popup-announce',
                     announce_id: announce_id,
                 }, function (res) {
@@ -72,7 +72,7 @@
                     return;
                 }
 
-                $.post('/oj/be/contests/{{ contest_id }}/manage/announce', {
+                $.post(`{{ url(f'/be/contests/{ contest_id }/manage/announce') }}`, {
                     reqtype: 'edit-announce',
                     announce_id: announce_id,
                     subject: subject,
