@@ -16,14 +16,13 @@ class SubmitTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('Eempty', 'Submitted code should not be empty'))
 
-            with open('tests/static_file/code/large.cpp') as f:
-                res = user_session.post('submit', data={
-                    'reqtype': 'submit',
-                    'pro_id': 1,
-                    'code': f.read(),
-                    'compiler_type': Compiler.GPP,
-                })
-                self.assertAPIReturnValue(res.text, ('Ecodemax', 'Submitted code too long'))
+            res = user_session.post('submit', data={
+                'reqtype': 'submit',
+                'pro_id': 1,
+                'code': '1110' * 11101110,
+                'compiler_type': Compiler.GPP,
+            })
+            self.assertAPIReturnValue(res.text, ('Ecodemax', 'Submitted code too long'))
 
             res = user_session.post('submit', data={
                 'reqtype': 'submit',

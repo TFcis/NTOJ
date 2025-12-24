@@ -136,37 +136,88 @@ var index = new function() {
         }
 
         cont_defer.done(function(res) {
-            j_cont.html(res).ready(function() {
-                var defer;
+            var tmp = $('<div>').html(res);
 
-                defer = Array();
-                j_cont.find('script').each(function(i, e) {
-                    defer[i] = $.Deferred();
-
-                    $(e).on('load', function() {
-                        defer[i].resolve();
+            var externalScripts = [];
+            var inlineScripts = [];
+            tmp.find('script').each(function() {
+                var src = $(this).attr('src');
+                if (src) {
+                    externalScripts.push({
+                        src: src,
+                        attrs: (function(e){
+                            var at = {};
+                            $.each(e.attributes, function(i,a){ if (a.specified) at[a.name]=a.value; });
+                            return at;
+                        })(this)
                     });
-                });
-
-                j_cont.find('link').each(function(i, e) {
-                    defer[i] = $.Deferred();
-
-                    $(e).on('load', function() {
-                        defer[i].resolve();
-                    });
-                });
-
-                if (typeof(init) == 'function') {
-                    init();
+                } else {
+                    inlineScripts.push($(this).html());
                 }
+            });
 
-                $.when.apply($, defer).done(function() {
-                    j_cont.stop().fadeIn(100);
+            var links = [];
+            tmp.find('link[rel=stylesheet][href]').each(function() {
+                links.push($(this).attr('href'));
+            });
+
+            tmp.find('script[src], link[rel=stylesheet][href]').remove();
+            j_cont.html(tmp.html());
+
+            var promises = [];
+
+            // load links (CSS)
+            links.forEach(function(href) {
+                var d = $.Deferred();
+                var link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = href;
+                link.onload = function(){ console.log('CSS loaded', href); d.resolve(); };
+                link.onerror = function(){ console.warn('CSS failed', href); d.resolve(); };
+                document.head.appendChild(link);
+                promises.push(d.promise());
+            });
+
+            externalScripts.forEach(function(s) {
+                var d = $.Deferred();
+                var sc = document.createElement('script');
+                sc.src = s.src;
+                if (s.attrs) {
+                    if (s.attrs.type) sc.type = s.attrs.type;
+                    if (s.attrs.async) sc.async = s.attrs.async;
+                    if (s.attrs.defer) sc.defer = s.attrs.defer;
+                }
+                sc.onload = function(){ console.log('script loaded', s.src); d.resolve(); };
+                sc.onerror = function(){ console.warn('script load error', s.src); d.resolve(); };
+                document.body.appendChild(sc);
+                promises.push(d.promise());
+            });
+
+            var executeInline = function() {
+                inlineScripts.forEach(function(code) {
+                    try {
+                        $.globalEval(code);
+                    } catch (e) {
+                        console.error('inline script error', e);
+                    }
                 });
+            };
+
+            $.when.apply($, promises.length ? promises : [$.Deferred().resolve()]).done(function() {
+                console.log('all external resources loaded');
+                executeInline();
+                if (typeof init === 'function') {
+                    try { init(); console.log('init executed'); }
+                    catch (e) { console.error('init error', e); }
+                } else {
+                    console.log('no init function');
+                }
+                j_cont.stop().fadeIn(100);
             });
 
             _scroll();
         });
+
 
         $(window).scrollTop(0);
         $.ajax({

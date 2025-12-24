@@ -525,14 +525,15 @@ class ContestService:
                 acct_id,
                 pro_id,
                 COUNT(*) AS total_submissions,
-                MAX(chal_id) AS latest_chal_id
+                MAX(chal_id) AS latest_chal_id,
+                MAX(timestamp) AS latest_timestamp
             FROM acct_challenges
             GROUP BY acct_id, pro_id
         )
         SELECT
             COALESCE(fac.acct_id, ascsub.acct_id) AS acct_id,
             COALESCE(fac.chal_id, ascsub.latest_chal_id) AS chal_id,
-            fac.first_ac_timestamp,
+            COALESCE(fac.first_ac_timestamp, ascsub.latest_timestamp) AS timestamp,
             COALESCE(fac.fail_cnt, ascsub.total_submissions) AS fail_cnt,
             CASE
                 WHEN fac.acct_id IS NOT NULL THEN (EXTRACT(EPOCH FROM (fac.first_ac_timestamp - $6::timestamptz))::integer / 60) + (fac.fail_cnt * $7)::integer
