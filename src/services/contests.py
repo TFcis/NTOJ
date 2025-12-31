@@ -482,6 +482,37 @@ class ContestService:
             )
         return None, None
 
+    async def reorder_pro_set(self, contest: Contest, new_idxs: list[int]):
+        if contest.contest_mode != ContestMode.RANDOM_SET:
+            return ('Emod', 'Cannot reorder problem sets for non-random set contests'), None
+        old_size = len(next(iter(contest.ip_pro_list.values()), []))
+        if len(new_idxs) != old_size or sorted(new_idxs) != list(range(old_size)):
+            return ('Eparam', 'Invalid new indexes for problem sets'), None
+
+        # Reorder pro_sets
+        contest.pro_sets = [contest.pro_sets[i] for i in new_idxs]
+        # Reorder pro_list order
+        for order, pro_ids in enumerate(contest.pro_sets):
+            for pro_id in pro_ids:
+                contest.pro_list[pro_id]['order'] = order
+        # Reorder ip_pro_list
+        for ip in contest.ip_pro_list:
+            contest.ip_pro_list[ip] = [contest.ip_pro_list[ip][i] for i in new_idxs]
+
+        async with self.db.acquire() as con:
+            # Update contest_problem_joints
+            for order, pro_ids in enumerate(contest.pro_sets):
+                if new_idxs[order] == order:
+                    continue
+                await con.executemany(
+                    '''
+                    UPDATE contest_problem_joints
+                    SET "order" = $3
+                    WHERE "contest_id" = $1 AND "pro_id" = $2
+                    ''',
+                    [(contest.contest_id, pro_id, order) for pro_id in pro_ids]
+                )
+        return None, None
 
     async def add_announce(self, contest_id: int, acct_id: int, subject: str, content: str):
         res = await self.db.fetch('INSERT INTO contest_announcement ("contest_id", "acct_id", "subject", "content", "timestamp") VALUES ($1, $2, $3, $4, NOW()) RETURNING announce_id',
