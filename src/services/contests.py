@@ -8,6 +8,7 @@ import asyncpg
 from services.chal import Compiler
 from services.user import Account
 
+from ipaddress import IPv4Address
 
 class RegMode(enum.IntEnum):
     INVITED = 0
@@ -18,6 +19,7 @@ class RegMode(enum.IntEnum):
 class ContestMode(enum.IntEnum):
     IOI = 0
     ACM = 1
+    RANDOM_SET = 2
 
 class ProblemScoreType(enum.IntEnum):
     IOI2013 = 0
@@ -49,6 +51,8 @@ class Contest:
 
     user_list: dict[int, dict] = field(default_factory=dict)
     pro_list: dict[int, dict] = field(default_factory=dict)
+    ip_pro_list: dict[IPv4Address, list[int]] = field(default_factory=dict)
+    ip_range: tuple[IPv4Address, IPv4Address] | None = None
 
     reg_mode: RegMode
     reg_end: datetime.datetime
@@ -157,10 +161,11 @@ class ContestService:
                 contest.contest_end = contest.contest_end
                 contest.reg_end = contest.reg_end
 
-                result = await con.fetch('SELECT pro_id, score_type FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
-                for pro_id, score_type in result:
+                result = await con.fetch('SELECT pro_id, score_type, order FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
+                for pro_id, score_type, order in result:
                     contest.pro_list[pro_id] = {
-                        "score_type": ProblemScoreType(int(score_type))
+                        "score_type": ProblemScoreType(int(score_type)),
+                        "order": int(order) # Only used for random set contests
                     }
 
                 result = await con.fetch('SELECT acct_id, status FROM contest_users WHERE contest_id = $1 ORDER BY acct_id', contest_id)
@@ -168,6 +173,18 @@ class ContestService:
                     contest.user_list[acct_id] = {
                         "status": UserStatus(int(status))
                     }
+
+                if contest.contest_mode == ContestMode.RANDOM_SET:
+                    result = await con.fetch('SELECT ip, pro_id FROM contest_ip_joints WHERE contest_id = $1; ORDER BY ip', contest_id)
+                    for ip_raw, pro_id in result:
+                        ip = IPv4Address(ip_raw)
+                        if ip not in contest.ip_pro_list:
+                            contest.ip_pro_list[ip] = []
+                        contest.ip_pro_list[ip].append(pro_id)
+
+                    # Sort the problem list for each IP by order
+                    for ip in contest.ip_pro_list:
+                        contest.ip_pro_list[ip].sort(key=lambda pid: contest.pro_list[pid]['order'])
 
             if contest.is_running():
                 b_contest = pickle.dumps(contest)
