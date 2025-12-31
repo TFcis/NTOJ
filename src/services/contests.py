@@ -52,6 +52,7 @@ class Contest:
 
     user_list: dict[int, dict] = field(default_factory=dict)
     pro_list: dict[int, dict] = field(default_factory=dict)
+    pro_sets: list[list[int]] = field(default_factory=list)
     ip_pro_list: dict[IPv4Address, list[int]] = field(default_factory=dict)
     ip_range: tuple[IPv4Address, IPv4Address] | None = None
 
@@ -186,6 +187,15 @@ class ContestService:
                     # Sort the problem list for each IP by order
                     for ip in contest.ip_pro_list:
                         contest.ip_pro_list[ip].sort(key=lambda pid: contest.pro_list[pid]['order'])
+
+                    pro_set_count = len(next(iter(contest.ip_pro_list.values()), []))
+                    for order in range(pro_set_count):
+                        result = await con.fetch('''
+                            SELECT pro_id FROM contest_problem_joints
+                            WHERE contest_id = $1 AND "order" = $2;
+                        ''', contest_id, order)
+                        pro_set = [pro_id for pro_id, in result]
+                        contest.pro_sets.append(pro_set)
 
             if contest.is_running():
                 b_contest = pickle.dumps(contest)
@@ -351,6 +361,8 @@ class ContestService:
             if pro_id in contest.pro_list:
                 return ('Eexist', f'Problem {pro_id} already in contest'), None
 
+        contest.pro_sets.append([pro_id for pro_id, _ in pro_set])
+
         pro_order = len(next(iter(contest.ip_pro_list.values()), []))
         for pro_id, score_type in pro_set:
             contest.pro_list[pro_id] = {
@@ -401,7 +413,7 @@ class ContestService:
         for pro_list in contest.ip_pro_list.values():
             pro_list.pop(pro_set_idx)
 
-        remove_pro_ids = [pro_id for pro_id, v in contest.pro_list.items() if v['order'] == pro_set_idx]
+        remove_pro_ids = contest.pro_sets.pop(pro_set_idx)
         for pro_id in remove_pro_ids:
             contest.pro_list.pop(pro_id)
         for pro_id in contest.pro_list:
