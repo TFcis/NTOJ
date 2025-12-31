@@ -358,7 +358,10 @@ class ContestService:
 
     async def update_ip(self, contest: Contest):
         if contest.ip_range is None:
-            return ('Eparam', 'IP range is not set'), None
+            contest.ip_range = (IPv4Address('0.0.0.0'), IPv4Address('0.0.0.0'))
+
+        if contest.ip_range[0] > contest.ip_range[1]:
+            return ('Eparam', 'Invalid IP range'), None
 
         async with self.db.acquire() as con:
             await con.execute('''
