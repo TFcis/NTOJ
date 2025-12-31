@@ -138,7 +138,7 @@ class ContestService:
                         "desc_after_contest",
 
                         "contest_mode", "contest_start", "contest_end",
-                        "reg_mode", "reg_end",
+                        "reg_mode", "reg_end", "start_ip", "end_ip",
 
                         "allow_compilers",
                         "is_public_scoreboard",
@@ -162,6 +162,10 @@ class ContestService:
                 contest.contest_start = contest.contest_start
                 contest.contest_end = contest.contest_end
                 contest.reg_end = contest.reg_end
+                if result['start_ip'] is not None and result['end_ip'] is not None:
+                    contest.ip_range = (IPv4Address(result['start_ip']), IPv4Address(result['end_ip']))
+                else:
+                    contest.ip_range = None
 
                 result = await con.fetch('SELECT pro_id, score_type, order FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
                 for pro_id, score_type, order in result:
@@ -349,6 +353,36 @@ class ContestService:
         await self.rs.hset('contest', str(contest.contest_id), b_contest)
 
         # log
+
+        return None, None
+
+    async def update_ip(self, contest: Contest):
+        if contest.ip_range is None:
+            return ('Eparam', 'IP range is not set'), None
+
+        async with self.db.acquire() as con:
+            await con.execute('''
+                UPDATE contest
+                SET start_ip = $1, end_ip = $2
+                WHERE contest_id = $3;
+            ''', str(contest.ip_range[0]), str(contest.ip_range[1]), contest.contest_id)
+
+        if contest.contest_mode != ContestMode.RANDOM_SET:
+            # Updated, but not random set contest, nothing more to do
+            return None, None
+
+        # Clear existting ip
+        contest.ip_pro_list.clear()
+        async with self.db.acquire() as con:
+            await con.execute('DELETE FROM contest_ip_joints WHERE contest_id = $1;', contest.contest_id)
+
+        # Readd IPs
+        for ip_int in range(int(contest.ip_range[0]), int(contest.ip_range[1]) + 1):
+            ip = IPv4Address(ip_int)
+            contest.ip_pro_list[ip] = []
+        for tmp_pro_set in contest.pro_sets:
+            pro_set = [(pro_id, contest.pro_list[pro_id]['score_type']) for pro_id in tmp_pro_set]
+            await self.add_pro_set(contest, pro_set)
 
         return None, None
 
