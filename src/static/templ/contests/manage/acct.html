@@ -30,6 +30,35 @@
 			});
 		};
 
+        const ip_re = /^(((?!25?[6-9])[12]\d|[1-9])?\d\.?\b){4}$/;
+		j_form.find('button.submit').on('click', function(e) {
+            var type = j_form.find('#type').val();
+            const start_ip = j_form.find('#start_ip').val().trim();
+            const end_ip = j_form.find('#end_ip').val().trim();
+
+            if((start_ip.length > 0 || end_ip.length > 0) && (!ip_re.test(start_ip) || !ip_re.test(end_ip))) {
+                index.show_notify_dialog('IP format error, please input correct IP address.', index.DIALOG_TYPE.error);
+                return;
+            }
+            if(start_ip.length == 0 && end_ip.length == 0) {
+                start_ip = end_ip = '0.0.0.0':
+            } 
+
+            $.post(`{{ url('/be/contests/{ contest_id }/manage/acct') }}`, {
+                'reqtype': 'update_ip',
+                'start_ip': start_ip,
+                'end_ip': end_ip,
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+		});
+
 		document.querySelectorAll('button.remove').forEach(el => {
 			el.addEventListener('click', () => post_func('remove', $(el).attr('acct_id'),
 				$(el).hasClass('normal') ? "normal" : "admin"
@@ -149,6 +178,32 @@
 					{% end %}
 					</tbody>
 					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="accordion">
+		<div class="accordion-item">
+			<h2 class="accordion-header" id="headingTwo">
+				<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="true" aria-controls="collapseOne">
+                    IP Whitelist
+				</button>
+			</h2>
+
+			<div id="collapseTwo" class="accordion-collapse collapse show" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+				<div class="accordion-body">
+					<form id="form">
+                        <div class="mb-3">
+                            <label>Start IP</label>
+                            <input class="form-control" id="start_ip" type="text" value="{{ start_ip }}">
+                        </div>
+                        <div class="mb-3">
+                            <label>End IP</label>
+                            <input class="form-control" id="end_ip" type="text" value="{{ end_ip }}">
+                        </div>
+                        <button type="button" class="btn btn-primary submit">Update</button>
+                        <button type="button" class="btn btn-secondary cancel">Cancel</button>
+                    </form>
 				</div>
 			</div>
 		</div>
