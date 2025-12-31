@@ -9,6 +9,7 @@ from services.chal import Compiler
 from services.user import Account
 
 from ipaddress import IPv4Address
+import random
 
 class RegMode(enum.IntEnum):
     INVITED = 0
@@ -249,6 +250,15 @@ class ContestService:
     async def update_contest(self, acct: Account, contest: Contest, prolist_updated=False, userlist_updated=False):
         # update db
         async with self.db.acquire() as con:
+
+            result = await con.fetch('SELECT "contest_mode" FROM "contest" WHERE "contest_id" = $1;', contest.contest_id)
+            if len(result) != 1:
+                return ('Enoext', 'Contest not found'), None
+            old_contest_mode = ContestMode(int(result[0]['contest_mode']))
+            if old_contest_mode != contest.contest_mode and ContestMode.RANDOM_SET in (old_contest_mode, contest.contest_mode):
+                if len(contest.pro_list) != 0:
+                    return ('Echmod', 'Cannot change contest mode when problem list is not empty'), None
+
             result = await con.fetch(
                 '''
                     UPDATE "contest"
@@ -285,6 +295,8 @@ class ContestService:
             )
 
             if prolist_updated:
+                if contest.contest_mode == ContestMode.RANDOM_SET:
+                    return ('Eprolist', 'Cannot update problem list for random set contests here'), None
                 order = 0
                 failed = []
                 for pro_id, v in contest.pro_list.items():
@@ -329,6 +341,101 @@ class ContestService:
         # log
 
         return None, None
+
+    async def add_pro_set(self, contest: Contest , pro_set: list[tuple[int, ProblemScoreType]]):
+        if contest.contest_mode != ContestMode.RANDOM_SET:
+            return ('Emod', 'Cannot add problem set to non-random set contests'), None
+        if len(pro_set) < 1:
+            return ('Eparam', 'Problem set must contain at least one problem'), None
+        for pro_id, _ in pro_set:
+            if pro_id in contest.pro_list:
+                return ('Eexist', f'Problem {pro_id} already in contest'), None
+
+        pro_order = len(next(iter(contest.ip_pro_list.values()), []))
+        for pro_id, score_type in pro_set:
+            contest.pro_list[pro_id] = {
+                "score_type": score_type,
+                "order": pro_order
+            }
+
+        pro_size = len(pro_set)
+        if pro_size == 1:
+            for pro_list in contest.ip_pro_list.values():
+                pro_list.append(pro_set[0][0])
+        elif pro_size == 2:
+            for pro_list in contest.ip_pro_list.values():
+                pro_list.append(pro_set[random.randint(0, 1)][0])
+        else:
+            init = 0
+            for pro_list in contest.ip_pro_list.values():
+                init = (init + random.randint(1,pro_size-1)) % pro_size
+                pro_list.append(pro_set[init][0])
+
+        async with self.db.acquire() as con:
+            # Insert problems into contest_problem_joints
+            await con.executemany(
+                '''
+                INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
+                VALUES ($1, $2, $3, $4)
+                ''',
+                [(contest.contest_id, pro_id, int(score_type), pro_order) for pro_id, score_type in pro_set]
+            )
+            # Insert por_id into contest_ip_joints
+            await con.executemany(
+                '''
+                INSERT INTO contest_ip_joints ("contest_id", "ip", "pro_id")
+                VALUES ($1, $2, $3)
+                ''',
+                [(contest.contest_id, str(ip), pro_list[-1]) for ip, pro_list in contest.ip_pro_list.items()]
+            )
+
+        return None, None
+
+    async def remove_pro_set(self, contest: Contest , pro_set_idx: int):
+        if contest.contest_mode != ContestMode.RANDOM_SET:
+            return ('Emod', 'Cannot remove problem set from non-random set contests'), None
+        max_order = len(next(iter(contest.ip_pro_list.values()), [])) - 1
+        if pro_set_idx < 0 or pro_set_idx > max_order:
+            return ('Eparam', 'Problem set index out of range'), None
+
+        for pro_list in contest.ip_pro_list.values():
+            pro_list.pop(pro_set_idx)
+
+        remove_pro_ids = [pro_id for pro_id, v in contest.pro_list.items() if v['order'] == pro_set_idx]
+        for pro_id in remove_pro_ids:
+            contest.pro_list.pop(pro_id)
+        for pro_id in contest.pro_list:
+            if contest.pro_list[pro_id]['order'] > pro_set_idx:
+                contest.pro_list[pro_id]['order'] -= 1
+
+        async with self.db.acquire() as con:
+            # Remove problems from contest_problem_joints
+            await con.executemany(
+                '''
+                DELETE FROM contest_problem_joints
+                WHERE "contest_id" = $1 AND "pro_id" = $2
+                ''',
+                [(contest.contest_id, pro_id) for pro_id in remove_pro_ids]
+            )
+            # Subtract order for problems with order > pro_set_idx
+            await con.execute(
+                '''
+                UPDATE contest_problem_joints
+                SET "order" = "order" - 1
+                WHERE "contest_id" = $1 AND "order" > $2
+                ''',
+                contest.contest_id, pro_set_idx
+            )
+            # Remove pro_id from contest_ip_joints
+            await con.executemany(
+                '''
+                DELETE FROM contest_ip_joints
+                WHERE "contest_id" = $1 AND "pro_id" = $2
+                ''',
+                [(contest.contest_id, pro_id) for pro_id in remove_pro_ids]
+            )
+        return None, None
+
 
     async def add_announce(self, contest_id: int, acct_id: int, subject: str, content: str):
         res = await self.db.fetch('INSERT INTO contest_announcement ("contest_id", "acct_id", "subject", "content", "timestamp") VALUES ($1, $2, $3, $4, NOW()) RETURNING announce_id',
