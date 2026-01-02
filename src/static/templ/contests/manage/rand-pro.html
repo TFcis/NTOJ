@@ -42,9 +42,12 @@
             // Swap contents of Problem Set & Operation columns
             let td1 = rows[ord1].querySelectorAll("td");
             let td2 = rows[ord2].querySelectorAll("td");
-            let tmp = td1.innerHTML;
-            td1.innerHTML = td2.innerHTML;
-            td2.innerHTML = tmp;
+            let tmp = td1[0].innerHTML;
+            td1[0].innerHTML = td2[0].innerHTML;
+            td2[0].innerHTML = tmp;
+            tmp = td1[1].innerHTML;
+            td1[1].innerHTML = td2[1].innerHTML;
+            td2[1].innerHTML = tmp;
 
             // update pro_set_ids & pro_set_ord
             const idx1 = pro_set_ids[ord1];
@@ -59,13 +62,13 @@
             el.addEventListener('click', function() {
                 const idx = parseInt($(el).attr('pro_set_id'));
                 swapRows(pro_set_ord[idx], pro_set_ord[idx] - 1);
-            }
+            })
 		});
 		document.querySelectorAll('button.moveDown').forEach(el => {
             el.addEventListener('click', function() {
                 const idx = parseInt($(el).attr('pro_set_id'));
                 swapRows(pro_set_ord[idx], pro_set_ord[idx] + 1);
-            }
+            })
 		});
 
 		document.querySelectorAll('button.remove').forEach(el => {
@@ -85,8 +88,8 @@
 		$("#addProSet").on('click', () => post_func('add_set', $("#proSet").val(), () => $("#proSet").val('')));
 
         // Send new ids order as csv to backend
-        document.querySelector("button.saveOrder").on('click', () = post_func('update_order', pro_set_ids.join(','), () => location.reload()));
-        document.querySelector("button.cancelOrder").on('click', function() {
+        $("button.saveOrder").on('click', () => post_func('update_order', pro_set_ids.join(','), () => location.reload()));
+        $("button.cancelOrder").on('click', function() {
             location.reload();
         });
     }

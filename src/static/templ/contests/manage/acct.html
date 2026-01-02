@@ -30,6 +30,7 @@
 			});
 		};
 
+		var j_form = $('#ip-form');
         const ip_re = /^(((?!25?[6-9])[12]\d|[1-9])?\d\.?\b){4}$/;
 		j_form.find('button.submit').on('click', function(e) {
             var type = j_form.find('#type').val();
@@ -41,10 +42,10 @@
                 return;
             }
             if(start_ip.length == 0 && end_ip.length == 0) {
-                start_ip = end_ip = '0.0.0.0':
+                start_ip = end_ip = '0.0.0.0';
             } 
 
-            $.post(`{{ url('/be/contests/{ contest_id }/manage/acct') }}`, {
+            $.post(`{{ url(f'/be/contests/{ contest_id }/manage/acct') }}`, {
                 'reqtype': 'update_ip',
                 'start_ip': start_ip,
                 'end_ip': end_ip,
@@ -192,7 +193,7 @@
 
 			<div id="collapseTwo" class="accordion-collapse collapse show" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
 				<div class="accordion-body">
-					<form id="form">
+					<form id="ip-form">
                         <div class="mb-3">
                             <label>Start IP</label>
                             <input class="form-control" id="start_ip" type="text" value="{{ start_ip }}">
