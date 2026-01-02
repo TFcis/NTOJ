@@ -166,7 +166,7 @@ class ContestService:
                 contest.start_ip = IPv4Address(result['start_ip'])
                 contest.end_ip = IPv4Address(result['end_ip'])
 
-                result = await con.fetch('SELECT pro_id, score_type, order FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
+                result = await con.fetch('SELECT "pro_id", "score_type", "order" FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
                 for pro_id, score_type, order in result:
                     contest.pro_list[pro_id] = {
                         "score_type": ProblemScoreType(int(score_type)),
