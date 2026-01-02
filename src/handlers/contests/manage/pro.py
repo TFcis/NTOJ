@@ -3,7 +3,7 @@ import asyncio
 from handlers.base import reqenv, RequestHandler, ActionDispatcher
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService
-from services.contests import ContestService, ProblemScoreType
+from services.contests import ContestService, ProblemScoreType, ContestMode
 from services.judge import JudgeServerClusterService
 from services.pro import ProService, ProConst
 from utils.numeric import parse_str_to_list
@@ -24,13 +24,22 @@ class ContestManageProHandler(RequestHandler):
                 continue
             pro_list.append(pro)
 
-        await self.render(
-            "contests/manage/pro",
-            page="pro",
-            contest_id=self.contest.contest_id,
-            contest=self.contest,
-            pro_list=pro_list,
-        )
+        if self.contest.contest_mode == ContestMode.RANDOM_SET:
+            await self.render(
+                "contests/manage/rand-pro",
+                page="pro",
+                contest_id=self.contest.contest_id,
+                contest=self.contest,
+                pro_sets=self.contest.pro_sets
+            )
+        else:
+            await self.render(
+                "contests/manage/pro",
+                page="pro",
+                contest_id=self.contest.contest_id,
+                contest=self.contest,
+                pro_list=pro_list,
+            )
 
     @contest_manage_pro_dispatcher.action("add")
     async def add_action(self):
@@ -167,6 +176,71 @@ class ContestManageProHandler(RequestHandler):
 
         pro.status = ProConst.STATUS_ONLINE
         err, _ = await ProService.inst.update_pro(pro)
+        if err:
+            return self.error(err)
+
+        return self.error(("S", ""))
+
+    @contest_manage_pro_dispatcher.action("add_set")
+    async def add_set_action(self):
+        '''
+            Add a problem set in random set mode
+            pro_id should be a list of problem ids separated by comma
+        '''
+        if self.contest.contest_mode != ContestMode.RANDOM_SET:
+            return ('Emod', 'Cannot add problem set to non-random set contests'), None
+
+        pro_ids = self.get_argument("pro_id")
+        pro_ids = parse_str_to_list(pro_ids)
+
+        if len(pro_ids) < 1:
+            return ('Eparam', 'Problem set must contain at least one problem'), None
+
+        pro_set = [(pro_id, ProblemScoreType.IOI2017) for pro_id in pro_ids]
+
+        err, _ = await ContestService.inst.add_pro_set(self.contest, pro_set)
+        if err:
+            return self.error(err)
+
+        return self.error(("S", ""))
+
+    @contest_manage_pro_dispatcher.action("remove_set")
+    async def remove_set_action(self):
+        '''
+            Remove a problem set in random set mode
+            pro_id is the problem set index 
+        '''
+        if self.contest.contest_mode != ContestMode.RANDOM_SET:
+            return ('Emod', 'Cannot remove problem set from non-random set contests'), None
+
+        pro_set_idx = int(self.get_argument("pro_id"))
+        if pro_set_idx < 0 or pro_set_idx > len(self.contest.pro_sets) - 1:
+            return ('Eparam', 'Problem set index out of range'), None
+
+        err, _ = await ContestService.inst.remove_pro_set(self.contest, pro_set_idx)
+        if err:
+            return self.error(err)
+
+        return self.error(("S", ""))
+
+    @contest_manage_pro_dispatcher.action("update_order")
+    async def update_order_action(self):
+        '''
+            Update problem order in random set mode
+            pro_id is a comma separated list of new problem set indices
+        '''
+        if self.contest.contest_mode != ContestMode.RANDOM_SET:
+            return ('Emod', 'Cannot update problem order in non-random set contests'), None
+
+        new_idxs = self.get_argument("pro_id")
+        new_idxs = parse_str_to_list(new_idxs)
+
+        pro_set_len = len(self.contest.pro_sets)
+
+        if len(new_idxs) != pro_set_len or sorted(new_idxs) != list(range(pro_set_len)):
+            return ('Eparam', 'Invalid new indexes for problem sets'), None
+
+        err, _ = await ContestService.inst.reorder_pro_set(self.contest, new_idxs)
         if err:
             return self.error(err)
 
