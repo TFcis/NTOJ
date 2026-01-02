@@ -357,12 +357,6 @@ class ContestService:
         return None, None
 
     async def update_ip(self, contest: Contest):
-        if contest.ip_range is None:
-            contest.ip_range = (IPv4Address('0.0.0.0'), IPv4Address('0.0.0.0'))
-
-        if contest.ip_range[0] > contest.ip_range[1]:
-            return ('Eparam', 'Invalid IP range'), None
-
         async with self.db.acquire() as con:
             await con.execute('''
                 UPDATE contest
@@ -390,10 +384,6 @@ class ContestService:
         return None, None
 
     async def add_pro_set(self, contest: Contest , pro_set: list[tuple[int, ProblemScoreType]]):
-        if contest.contest_mode != ContestMode.RANDOM_SET:
-            return ('Emod', 'Cannot add problem set to non-random set contests'), None
-        if len(pro_set) < 1:
-            return ('Eparam', 'Problem set must contain at least one problem'), None
         for pro_id, _ in pro_set:
             if pro_id in contest.pro_list:
                 return ('Eexist', f'Problem {pro_id} already in contest'), None
@@ -441,12 +431,6 @@ class ContestService:
         return None, None
 
     async def remove_pro_set(self, contest: Contest , pro_set_idx: int):
-        if contest.contest_mode != ContestMode.RANDOM_SET:
-            return ('Emod', 'Cannot remove problem set from non-random set contests'), None
-        max_order = len(next(iter(contest.ip_pro_list.values()), [])) - 1
-        if pro_set_idx < 0 or pro_set_idx > max_order:
-            return ('Eparam', 'Problem set index out of range'), None
-
         for pro_list in contest.ip_pro_list.values():
             pro_list.pop(pro_set_idx)
 
@@ -486,12 +470,6 @@ class ContestService:
         return None, None
 
     async def reorder_pro_set(self, contest: Contest, new_idxs: list[int]):
-        if contest.contest_mode != ContestMode.RANDOM_SET:
-            return ('Emod', 'Cannot reorder problem sets for non-random set contests'), None
-        old_size = len(next(iter(contest.ip_pro_list.values()), []))
-        if len(new_idxs) != old_size or sorted(new_idxs) != list(range(old_size)):
-            return ('Eparam', 'Invalid new indexes for problem sets'), None
-
         # Reorder pro_sets
         contest.pro_sets = [contest.pro_sets[i] for i in new_idxs]
         # Reorder pro_list order
