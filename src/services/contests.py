@@ -383,6 +383,7 @@ class ContestService:
         for pro_id, _ in pro_set:
             if pro_id in contest.pro_list:
                 return ('Eexist', f'Problem {pro_id} already in contest'), None
+            contest.pro_list[pro_id] = {} # Add dummy dict for avoiding repeated problem id
 
         pro_order = len(contest.pro_sets)
 
