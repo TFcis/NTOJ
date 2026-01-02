@@ -143,6 +143,7 @@
             <select id="contestMode" class="form-select">
                 <option value="{{ ContestMode.IOI }}"{% if contest.contest_mode == ContestMode.IOI %} selected {% end %}>IOI</option>
                 <option value="{{ ContestMode.ACM }}"{% if contest.contest_mode == ContestMode.ACM %} selected {% end %}>ACM</option>
+                <option value="{{ ContestMode.RANDOM_SET }}"{% if contest.contest_mode == ContestMode.RANDOM_SET %} selected {% end %}>Random Set</option>
             </select>
         </div>
 
