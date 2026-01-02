@@ -54,7 +54,7 @@ class Contest:
     pro_list: dict[int, dict] = field(default_factory=dict)
     pro_sets: list[list[int]] = field(default_factory=list)
     ip_pro_list: dict[IPv4Address, list[int]] = field(default_factory=dict)
-    ip_range: tuple[IPv4Address, IPv4Address] | None = None
+    ip_range: tuple[IPv4Address, IPv4Address] = None
 
     reg_mode: RegMode
     reg_end: datetime.datetime
