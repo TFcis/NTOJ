@@ -4,6 +4,8 @@ from services.contests import ContestService, UserStatus
 from services.user import UserService
 from utils.numeric import parse_str_to_list
 
+from ipaddress import IPv4Address, AddressValueError
+
 contest_manage_acct_dispatcher = ActionDispatcher()
 
 
@@ -26,6 +28,8 @@ class ContestManageAcctHandler(RequestHandler):
             contest_id=self.contest.contest_id,
             acct_list=acct_list,
             admin_list=admin_list,
+            start_ip=str(self.contest.ip_range[0]),
+            end_ip=str(self.contest.ip_range[1])
         )
 
     @contest_manage_acct_dispatcher.action("add")
@@ -143,6 +147,29 @@ class ContestManageAcctHandler(RequestHandler):
 
         return self.error(
             ("S", f"Accounts(#{acct_list} successfully removed from user list.")
+        )
+
+    @contest_manage_acct_dispatcher.action("update_ip")
+    async def update_ip_action(self):
+        start_ip = self.get_argument("start_ip")
+        end_ip = self.get_argument("end_ip")
+
+        try:
+            start_ip = IPv4Address(start_ip)
+            end_ip = IPv4Address(end_ip)
+        except AddressValueError:
+            return self.error(("Eparam", "Invalid IP address format."))
+
+        if start_ip > end_ip:
+            return ('Eparam', 'Invalid IP range'), None
+
+        self.contest.ip_range = (start_ip, end_ip)
+        await ContestService.inst.update_contest(
+            self.acct, self.contest
+        )
+
+        return self.error(
+            ("S", f"Contest IP range successfully updated.")
         )
 
     @reqenv
