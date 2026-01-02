@@ -28,8 +28,8 @@ class ContestManageAcctHandler(RequestHandler):
             contest_id=self.contest.contest_id,
             acct_list=acct_list,
             admin_list=admin_list,
-            start_ip=str(self.contest.ip_range[0]),
-            end_ip=str(self.contest.ip_range[1])
+            start_ip=str(self.contest.start_ip),
+            end_ip=str(self.contest.end_ip)
         )
 
     @contest_manage_acct_dispatcher.action("add")
@@ -163,7 +163,8 @@ class ContestManageAcctHandler(RequestHandler):
         if start_ip > end_ip:
             return ('Eparam', 'Invalid IP range'), None
 
-        self.contest.ip_range = (start_ip, end_ip)
+        self.contest.start_ip = start_ip
+        self.contest.end_ip = end_ip
         await ContestService.inst.update_contest(
             self.acct, self.contest
         )

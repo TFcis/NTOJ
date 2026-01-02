@@ -54,7 +54,8 @@ class Contest:
     pro_list: dict[int, dict] = field(default_factory=dict)
     pro_sets: list[list[int]] = field(default_factory=list)
     ip_pro_list: dict[IPv4Address, list[int]] = field(default_factory=dict)
-    ip_range: tuple[IPv4Address, IPv4Address] = None
+    start_ip: IPv4Address
+    end_ip: IPv4Address
 
     reg_mode: RegMode
     reg_end: datetime.datetime
@@ -162,10 +163,8 @@ class ContestService:
                 contest.contest_start = contest.contest_start
                 contest.contest_end = contest.contest_end
                 contest.reg_end = contest.reg_end
-                if result['start_ip'] is not None and result['end_ip'] is not None:
-                    contest.ip_range = (IPv4Address(result['start_ip']), IPv4Address(result['end_ip']))
-                else:
-                    contest.ip_range = None
+                contest.start_ip = IPv4Address(result['start_ip'])
+                contest.end_ip = IPv4Address(result['end_ip'])
 
                 result = await con.fetch('SELECT pro_id, score_type, order FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
                 for pro_id, score_type, order in result:
@@ -362,7 +361,7 @@ class ContestService:
                 UPDATE contest
                 SET start_ip = $1, end_ip = $2
                 WHERE contest_id = $3;
-            ''', str(contest.ip_range[0]), str(contest.ip_range[1]), contest.contest_id)
+            ''', str(contest.start_ip), str(contest.end_ip), contest.contest_id)
 
         if contest.contest_mode != ContestMode.RANDOM_SET:
             # Updated, but not random set contest, nothing more to do
