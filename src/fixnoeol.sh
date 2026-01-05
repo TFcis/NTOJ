@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # fix file no eol
 
 file=$1

@@ -32,7 +32,7 @@ services:
       - release-app
       - release-judge_net
     ports:
-      - "6600:5500"
+      - "5500:5500"
     logging: *default-logging
 
   release-db:

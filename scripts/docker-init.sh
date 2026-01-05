@@ -33,10 +33,8 @@ else
     PGPASSWORD=${DB_PASSWORD} psql -U ntoj -d ntoj -h ${DB_CONTAINER_NAME} -f scripts/oj.sql
     if [ -f docker-dev ]; then
         poetry run python3 scripts/add_admin.py ${ADMIN_NAME} ${ADMIN_PASSWORD} ${ADMIN_MAIL}
-        poetry run python3 scripts/install_first_pro.py
     else
         python3 scripts/add_admin.py ${ADMIN_NAME} ${ADMIN_PASSWORD} ${ADMIN_MAIL}
-        python3 scripts/install_first_pro.py
     fi
 fi
 
@@ -47,4 +45,3 @@ rm scripts/docker-init.sh
 rm scripts/get_unlock_pwd.py
 rm scripts/.docker-init.env
 rm scripts/config.py
-rm scripts/install_first_pro.py

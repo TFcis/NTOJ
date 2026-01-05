@@ -1,4 +1,6 @@
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import shutil
 import asyncpg
 import asyncio
@@ -9,7 +11,7 @@ from services.pro import ProService
 from services.pack import PackService
 import config
 
-async def main() :
+async def main():
     db = await asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host=config.DBHOST_OJ)
     rs = aioredis.Redis(host=config.REDIS_HOST, port=6379, db=config.REDIS_DB)
     pro_service = ProService(db, rs)
