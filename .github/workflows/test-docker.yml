@@ -256,17 +256,17 @@ jobs:
           cat > docker-compose.ci.yml <<'YAML'
           version: "3.8"
           services:
-            backend:
+            release-backend:
               image: backend:release
               volumes:
                 - ./reports:/ntoj/htmlcov/
                 - backend_static:/ntoj/static
                 - backend_problem:/ntoj/problem
                 - backend_code:/ntoj/code
-            db:
+            release-db:
               volumes:
                 - db_data:/var/lib/postgresql/18/docker
-            cache:
+            release-cache:
               volumes:
                 - cache_data:/data
           volumes:
@@ -294,7 +294,7 @@ jobs:
         run: |
           export COMPOSE_PROJECT_NAME=ntoj_release_test
           mkdir -p reports
-          docker compose logs --no-color backend > reports/backend.log || true
+          docker compose logs --no-color release-backend > reports/backend.log || true
 
       - name: Wait and verify backend container
         if: steps.release-up.outputs.exit_code == '0'
@@ -302,7 +302,7 @@ jobs:
           export COMPOSE_PROJECT_NAME=ntoj_release_test
           # Wait for backend container to show Up status
           for i in {1..20}; do
-            status=$(docker compose ps backend --format "{{.State}}" || true)
+            status=$(docker compose ps release-backend --format "{{.State}}" || true)
             echo "backend state: $status"
             if [[ "$status" == "running" || "$status" == "Up" || "$status" == *"Up"* ]]; then
               echo "backend is up"
@@ -311,7 +311,7 @@ jobs:
             sleep 2
           done
           echo "backend did not reach running state"
-          docker compose logs --no-color backend || true
+          docker compose logs --no-color release-backend || true
           exit 1
 
       - name: Upload release logs

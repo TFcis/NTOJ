@@ -72,7 +72,7 @@ class PackService:
             return ('Eunk', 'Unknown error (tar)'), None
 
         os.remove(f'tmp/{pack_token}')
-        await self._run_and_wait_process('/bin/bash', 'newline.sh', f'{dst}/res/testdata')
+        await self._run_and_wait_process('/bin/sh', 'newline.sh', f'{dst}/res/testdata')
 
         def check_file_illegal(path):
             if os.path.islink(path):

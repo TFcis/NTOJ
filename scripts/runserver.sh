@@ -1,4 +1,11 @@
+until pg_isready -h ${DB_CONTAINER_NAME} -p 5432; do
+    echo "Postgres is unavailable - sleeping"
+    sleep 2
+done
+
+should_install_first_problem=false
 if [[ -f docker-dev || -f docker-release ]] && [ -d static-tmp ]; then
+    should_install_first_problem=true
     ./scripts/docker-init.sh
 fi
 
@@ -11,9 +18,20 @@ then
         python3 migration.py
         cd ..
         rm -rf migration
+
+        if [ "$should_install_first_problem" = true ] ; then
+            python3 scripts/install_first_pro.py
+        fi
     else
         poetry run python3 migration.py
         cd ..
+        if [ "$should_install_first_problem" = true ] ; then
+            poetry run python3 scripts/install_first_pro.py
+        fi
+    fi
+
+    if [ "$should_install_first_problem" = true ] ; then
+        rm scripts/install_first_pro.py
     fi
 fi
 
