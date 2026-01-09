@@ -170,7 +170,6 @@ class ContestService:
                 for pro_id, score_type, order in result:
                     contest.pro_list[pro_id] = {
                         "score_type": ProblemScoreType(int(score_type)),
-                        "order": int(order) # Only used for random set contests
                     }
 
                 result = await con.fetch('SELECT acct_id, status FROM contest_users WHERE contest_id = $1 ORDER BY acct_id', contest_id)
@@ -180,16 +179,21 @@ class ContestService:
                     }
 
                 if contest.contest_mode == ContestMode.RANDOM_SET:
-                    result = await con.fetch('SELECT ip, pro_id FROM contest_ip_joints WHERE contest_id = $1; ORDER BY ip', contest_id)
+                    result = await con.fetch(
+                        '''
+                            SELECT ip, contest_ip_joints.pro_id 
+                            FROM contest_ip_joints INNER JOIN contest_problem_joints 
+                            ON contest_ip_joints.contest_id = contest_problem_joints.contest_id 
+                               AND contest_ip_joints.pro_id = contest_problem_joints.pro_id
+                            WHERE contest_ip_joints.contest_id = $1 ORDER BY contest_ip_joints.ip, contest_problem_joints."order" ASC;
+                        ''',
+                        contest_id
+                    )
                     for ip_raw, pro_id in result:
                         ip = IPv4Address(ip_raw)
                         if ip not in contest.ip_pro_list:
                             contest.ip_pro_list[ip] = []
                         contest.ip_pro_list[ip].append(pro_id)
-
-                    # Sort the problem list for each IP by order
-                    for ip in contest.ip_pro_list:
-                        contest.ip_pro_list[ip].sort(key=lambda pid: contest.pro_list[pid]['order'])
 
                     pro_set_count = len(next(iter(contest.ip_pro_list.values()), []))
                     for order in range(pro_set_count):
@@ -392,11 +396,9 @@ class ContestService:
 
         contest.pro_sets.append([pro_id for pro_id, _ in pro_set])
 
-        pro_order = len(next(iter(contest.ip_pro_list.values()), []))
         for pro_id, score_type in pro_set:
             contest.pro_list[pro_id] = {
                 "score_type": score_type,
-                "order": pro_order
             }
 
         pro_size = len(pro_set)
@@ -414,6 +416,7 @@ class ContestService:
 
         self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
+        pro_order = len(contest.pro_sets) - 1
         async with self.db.acquire() as con:
             # Insert problems into contest_problem_joints
             await con.executemany(
@@ -441,10 +444,6 @@ class ContestService:
         remove_pro_ids = contest.pro_sets.pop(pro_set_idx)
         for pro_id in remove_pro_ids:
             contest.pro_list.pop(pro_id)
-        for pro_id in contest.pro_list:
-            if contest.pro_list[pro_id]['order'] > pro_set_idx:
-                contest.pro_list[pro_id]['order'] -= 1
-
         self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
         async with self.db.acquire() as con:
@@ -478,10 +477,6 @@ class ContestService:
     async def reorder_pro_set(self, contest: Contest, new_idxs: list[int]):
         # Reorder pro_sets
         contest.pro_sets = [contest.pro_sets[i] for i in new_idxs]
-        # Reorder pro_list order
-        for order, pro_ids in enumerate(contest.pro_sets):
-            for pro_id in pro_ids:
-                contest.pro_list[pro_id]['order'] = order
         # Reorder ip_pro_list
         for ip in contest.ip_pro_list:
             contest.ip_pro_list[ip] = [contest.ip_pro_list[ip][i] for i in new_idxs]
