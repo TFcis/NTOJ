@@ -13,3 +13,17 @@ async def dochange(db, rs):
         );
     '''
     )
+
+    await db.execute(
+    '''
+        ALTER TABLE ONLY contest_ip_joints ADD CONSTRAINT contest_problem_joints_forkey_contest_id
+            FOREIGN KEY (contest_id) REFERENCES contest(contest_id) ON DELETE CASCADE;
+    '''
+    )
+
+    await db.execute(
+    '''
+        ALTER TABLE ONLY contest_ip_joints ADD CONSTRAINT contest_problem_joints_forkey_pro_id
+            FOREIGN KEY (pro_id) REFERENCES problem(pro_id) ON DELETE CASCADE;
+    '''
+    )
