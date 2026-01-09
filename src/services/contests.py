@@ -195,7 +195,10 @@ class ContestService:
                             contest.ip_pro_list[ip] = []
                         contest.ip_pro_list[ip].append(pro_id)
 
-                    pro_set_count = len(next(iter(contest.ip_pro_list.values()), []))
+                    pro_set_count = await con.fetchval('''
+                        SELECT COUNT(DISTINCT "order") FROM contest_problem_joints
+                        WHERE contest_id = $1;
+                    ''', contest_id)
                     for order in range(pro_set_count):
                         result = await con.fetch('''
                             SELECT pro_id FROM contest_problem_joints
