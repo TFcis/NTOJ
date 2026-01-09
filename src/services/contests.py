@@ -267,15 +267,6 @@ class ContestService:
     async def update_contest(self, acct: Account, contest: Contest, prolist_updated=False, userlist_updated=False):
         # update db
         async with self.db.acquire() as con:
-
-            result = await con.fetch('SELECT "contest_mode" FROM "contest" WHERE "contest_id" = $1;', contest.contest_id)
-            if len(result) != 1:
-                return ('Enoext', 'Contest not found'), None
-            old_contest_mode = ContestMode(int(result[0]['contest_mode']))
-            if old_contest_mode != contest.contest_mode and ContestMode.RANDOM_SET in (old_contest_mode, contest.contest_mode):
-                if len(contest.pro_list) != 0:
-                    return ('Echmod', 'Cannot change contest mode when problem list is not empty'), None
-
             result = await con.fetch(
                 '''
                     UPDATE "contest"
