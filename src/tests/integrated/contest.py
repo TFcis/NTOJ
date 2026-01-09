@@ -687,3 +687,222 @@ class ContestTest(AsyncTest):
         # test scoreboard, challist
         # hide_admin: bool = True
         # test rechal
+
+class RandomContestTest(AsyncTest):
+    async def main(self):
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
+                'name': 'random contest 1'
+            })
+            self.assertEqual(json.loads(res.text)['data'], 2)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(contest.name, 'random contest 1')
+
+            # update general
+            now = datetime.datetime.now()
+            contest_start = now + datetime.timedelta(days=1)
+            contest_end = now + datetime.timedelta(days=4)
+            reg_end = now + datetime.timedelta(days=1) - datetime.timedelta(hours=8)
+            default_config = {
+                'reqtype': 'update',
+                'name': 'random contest 1',
+
+                'contest_mode': ContestMode.IOI,
+                'contest_start': self.get_isoformat(contest_start),
+                'contest_end': self.get_isoformat(contest_end),
+
+                'reg_mode': RegMode.INVITED,
+                'reg_end': self.get_isoformat(reg_end),
+
+                'allow_compilers[]': [Compiler.GPP, Compiler.CLANGPP],
+                'is_public_scoreboard': 'true',
+                'allow_view_other_page': 'true',
+                'hide_admin': 'true',
+
+                'submission_cd_time': 60,
+                'freeze_scoreboard_period': 0
+            }
+            res = admin_session.post('contests/2/manage/general', data=default_config)
+            self.assertAPIReturnSuccess(res.text)
+
+            # add problem
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': 5
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertIn(5, contest.pro_list)
+
+            random_set_config = {
+                'reqtype': 'update',
+                'name': 'random contest 1',
+
+                'contest_mode': ContestMode.RANDOM_SET,
+                'contest_start': self.get_isoformat(contest_start),
+                'contest_end': self.get_isoformat(contest_end),
+
+                'reg_mode': RegMode.INVITED,
+                'reg_end': self.get_isoformat(reg_end),
+
+                'allow_compilers[]': [Compiler.GPP, Compiler.CLANGPP],
+                'is_public_scoreboard': 'true',
+                'allow_view_other_page': 'true',
+                'hide_admin': 'true',
+
+                'submission_cd_time': 60,
+                'freeze_scoreboard_period': 0
+            }
+            res = admin_session.post('contests/2/manage/general', data=random_set_config)
+            self.assertAPIReturnValue(res.text, ('Echmod', 'Cannot change contest mode when problem list is not empty'))
+
+            # Remove problem and try again
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'remove',
+                'pro_id': 5
+            })
+            res = admin_session.post('contests/2/manage/general', data=random_set_config)
+            self.assertAPIReturnSuccess(res.text)
+
+            err, contest = await ContestService.inst.get_contest(2)
+            assert contest
+            self.assertIsNone(err)
+            self.assertEqual(contest.contest_mode, ContestMode.RANDOM_SET)
+
+            _, contest_list = await ContestService.inst.get_contest_list()
+            self.assertEqual(len(contest_list), 2)
+            self.assertEqual(contest_list[1]['name'], 'random contest 1')
+            self.assertEqual(contest_list[1]['contest_mode'], ContestMode.RANDOM_SET)
+            self.assertTrue(contest_list[1]['is_public_scoreboard'])
+
+            res = admin_session.post('contests/2/manage/acct', data={
+                'reqtype': 'update_ip',
+                'start_ip': '255.255.193.256',
+                'end_ip': '192.168.1.16'
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid IP address format.'))
+
+            res = admin_session.post('contests/2/manage/acct', data={
+                'reqtype': 'update_ip',
+                'start_ip': '192.168.1.16',
+                'end_ip': '192.168.1.1'
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid IP range'))
+
+            res = admin_session.post('contests/2/manage/acct', data={
+                'reqtype': 'update_ip',
+                'start_ip': '192.168.1.1',
+                'end_ip': '192.168.1.16'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(str(contest.start_ip), '192.168.1.1')
+            self.assertEqual(str(contest.end_ip), '192.168.1.16')
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '8,7,9,11'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            pre_pro = None
+            self.assertEqual(len(contest.pro_list), 4)
+            self.assertEqual(len(contest.ip_pro_list), 16)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[0], [7,8,9,11])
+                self.assertNotEqual(ip_pro[0], pre_pro)
+                pre_pro = ip_pro[0]
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '5,10'
+            })
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 6)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[1], [5,10])
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '6'
+            })
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 7)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertEqual(ip_pro[2], 6)
+
+            res = admin_session.post('contests/2/manage/acct', data={
+                'reqtype': 'update_ip',
+                'start_ip': '192.168.2.1',
+                'end_ip': '192.168.2.16'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(str(contest.start_ip), '192.168.2.1')
+            self.assertEqual(str(contest.end_ip), '192.168.2.16')
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[0], [8,7,9,11])
+                self.assertIn(ip_pro[1], [5,10])
+                self.assertEqual(ip_pro[2], 6)
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'update_order',
+                'pro_id': '1,0,2'
+            })
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 7)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[0], [5,10])
+                self.assertIn(ip_pro[1], [8,7,9,11])
+                self.assertEqual(ip_pro[2], 6)
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'remove_set',
+                'pro_id': '1'
+            })
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 3)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[0], [5,10])
+                self.assertEqual(ip_pro[1], 6)
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '11,6'
+            })
+            self.assertAPIReturnValue(res.text, ('Eexist', 'Problem 6 already in contest'))
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 3)
+
+            invalid_order = ['1,1', '0,2', '2,0', 'a,b', '1', '1,2,3']
+            for order in invalid_order:
+                res = admin_session.post('contests/2/manage/pro', data={
+                    'reqtype': 'update_order',
+                    'pro_id': order
+                })
+                self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid new indexes for problem sets'))
+                err, contest = await ContestService.inst.get_contest(2)
+                self.assertIsNone(err)
+                self.assertEqual(len(contest.pro_list), 3)
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'remove_set',
+                'pro_id': '2'
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Problem set index out of range'))
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 3)
+
+
