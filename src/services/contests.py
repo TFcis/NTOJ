@@ -373,12 +373,14 @@ class ContestService:
             await con.execute('DELETE FROM contest_ip_joints WHERE contest_id = $1;', contest.contest_id)
 
         # Readd IPs
-        for ip_int in range(int(contest.ip_range[0]), int(contest.ip_range[1]) + 1):
+        for ip_int in range(int(contest.start_ip), int(contest.end_ip) + 1):
             ip = IPv4Address(ip_int)
             contest.ip_pro_list[ip] = []
         for tmp_pro_set in contest.pro_sets:
             pro_set = [(pro_id, contest.pro_list[pro_id]['score_type']) for pro_id in tmp_pro_set]
             await self.add_pro_set(contest, pro_set)
+
+        self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
         return None, None
 
@@ -410,6 +412,8 @@ class ContestService:
                 init = (init + random.randint(1,pro_size-1)) % pro_size
                 pro_list.append(pro_set[init][0])
 
+        self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
+
         async with self.db.acquire() as con:
             # Insert problems into contest_problem_joints
             await con.executemany(
@@ -440,6 +444,8 @@ class ContestService:
         for pro_id in contest.pro_list:
             if contest.pro_list[pro_id]['order'] > pro_set_idx:
                 contest.pro_list[pro_id]['order'] -= 1
+
+        self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
         async with self.db.acquire() as con:
             # Remove problems from contest_problem_joints
@@ -479,6 +485,8 @@ class ContestService:
         # Reorder ip_pro_list
         for ip in contest.ip_pro_list:
             contest.ip_pro_list[ip] = [contest.ip_pro_list[ip][i] for i in new_idxs]
+
+        self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
         async with self.db.acquire() as con:
             # Update contest_problem_joints
