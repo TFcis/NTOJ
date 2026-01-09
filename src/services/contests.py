@@ -368,10 +368,14 @@ class ContestService:
             return None, None
 
         # Clear existting ip
+        contest.ip_pro_list.clear()
         async with self.db.acquire() as con:
             await con.execute('DELETE FROM contest_ip_joints WHERE contest_id = $1;', contest.contest_id)
 
         # Readd IPs
+        for ip_int in range(int(contest.ip_range[0]), int(contest.ip_range[1]) + 1):
+            ip = IPv4Address(ip_int)
+            contest.ip_pro_list[ip] = []
         for tmp_pro_set in contest.pro_sets:
             pro_set = [(pro_id, contest.pro_list[pro_id]['score_type']) for pro_id in tmp_pro_set]
             await self.add_pro_set(contest, pro_set)
@@ -384,7 +388,14 @@ class ContestService:
                 return ('Eexist', f'Problem {pro_id} already in contest'), None
             contest.pro_list[pro_id] = {} # Add dummy dict for avoiding repeated problem id
 
-        pro_order = len(contest.pro_sets)
+        contest.pro_sets.append([pro_id for pro_id, _ in pro_set])
+
+        pro_order = len(next(iter(contest.ip_pro_list.values()), []))
+        for pro_id, score_type in pro_set:
+            contest.pro_list[pro_id] = {
+                "score_type": score_type,
+                "order": pro_order
+            }
 
         pro_size = len(pro_set)
         if pro_size == 1:
@@ -420,7 +431,15 @@ class ContestService:
         return None, None
 
     async def remove_pro_set(self, contest: Contest , pro_set_idx: int):
+        for pro_list in contest.ip_pro_list.values():
+            pro_list.pop(pro_set_idx)
+
         remove_pro_ids = contest.pro_sets.pop(pro_set_idx)
+        for pro_id in remove_pro_ids:
+            contest.pro_list.pop(pro_id)
+        for pro_id in contest.pro_list:
+            if contest.pro_list[pro_id]['order'] > pro_set_idx:
+                contest.pro_list[pro_id]['order'] -= 1
 
         async with self.db.acquire() as con:
             # Remove problems from contest_problem_joints
@@ -453,6 +472,13 @@ class ContestService:
     async def reorder_pro_set(self, contest: Contest, new_idxs: list[int]):
         # Reorder pro_sets
         contest.pro_sets = [contest.pro_sets[i] for i in new_idxs]
+        # Reorder pro_list order
+        for order, pro_ids in enumerate(contest.pro_sets):
+            for pro_id in pro_ids:
+                contest.pro_list[pro_id]['order'] = order
+        # Reorder ip_pro_list
+        for ip in contest.ip_pro_list:
+            contest.ip_pro_list[ip] = [contest.ip_pro_list[ip][i] for i in new_idxs]
 
         async with self.db.acquire() as con:
             # Update contest_problem_joints
