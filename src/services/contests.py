@@ -387,6 +387,20 @@ class ContestService:
                 return ('Eexist', f'Problem {pro_id} already in contest'), None
             contest.pro_list[pro_id] = {} # Add dummy dict for avoiding repeated problem id
 
+        pro_order = len(contest.pro_sets)
+        async with self.db.acquire() as con:
+            try:
+                # Insert problems into contest_problem_joints
+                await con.executemany(
+                    '''
+                    INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
+                    VALUES ($1, $2, $3, $4)
+                    ''',
+                    [(contest.contest_id, pro_id, int(score_type), pro_order) for pro_id, score_type in pro_set]
+                )
+            except asyncpg.ForeignKeyViolationError:
+                return ('Enoext', 'One or more problem IDs do not exist'), None
+
         contest.pro_sets.append([pro_id for pro_id, _ in pro_set])
 
         for pro_id, score_type in pro_set:
@@ -396,18 +410,6 @@ class ContestService:
 
         await self.add_random_pro(contest, [pro_id for pro_id, _ in pro_set])
         self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
-
-        pro_order = len(contest.pro_sets) - 1
-        async with self.db.acquire() as con:
-            # Insert problems into contest_problem_joints
-            await con.executemany(
-                '''
-                INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
-                VALUES ($1, $2, $3, $4)
-                ''',
-                [(contest.contest_id, pro_id, int(score_type), pro_order) for pro_id, score_type in pro_set]
-            )
-
         return None, None
 
     async def add_random_pro(self, contest: Contest, pro_set: list[int]):
