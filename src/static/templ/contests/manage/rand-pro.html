@@ -137,9 +137,7 @@
 						<tr>
                             <th scope="row">{{ id + 1 }}</th>
                             <td>
-                                {% for pro in pro_set %}
-                                    {{ pro.id }}{% if not loop.last %}, {% end %}
-                                {% end %}
+                                {{ ','.join(str(pro_id) for pro_id in pro_set) }}
                             </td>
 							<td>
 								<button class="btn btn-primary me-2 moveUp" pro_set_id="{{ id }}">Move Up</button>
