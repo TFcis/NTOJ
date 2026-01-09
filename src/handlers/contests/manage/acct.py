@@ -161,7 +161,7 @@ class ContestManageAcctHandler(RequestHandler):
             return self.error(("Eparam", "Invalid IP address format."))
 
         if start_ip > end_ip:
-            return ('Eparam', 'Invalid IP range'), None
+            return self.error(('Eparam', 'Invalid IP range'))
 
         self.contest.start_ip = start_ip
         self.contest.end_ip = end_ip

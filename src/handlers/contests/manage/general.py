@@ -90,6 +90,10 @@ class ContestManageGeneralHandler(RequestHandler):
         if err:
             return self.error(err)
 
+        if contest_mode != self.contest.contest_mode and ContestMode.RANDOM_SET in (contest_mode, self.contest.contest_mode):
+            if len(self.contest.pro_list) != 0:
+                return self.error(('Echmod', 'Cannot change contest mode when problem list is not empty'))
+
         self.contest.name = name
 
         self.contest.contest_mode = contest_mode

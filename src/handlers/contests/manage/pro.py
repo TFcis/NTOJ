@@ -188,13 +188,13 @@ class ContestManageProHandler(RequestHandler):
             pro_id should be a list of problem ids separated by comma
         '''
         if self.contest.contest_mode != ContestMode.RANDOM_SET:
-            return ('Emod', 'Cannot add problem set to non-random set contests'), None
+            return self.error(('Emod', 'Cannot add problem set to non-random set contests'))
 
         pro_ids = self.get_argument("pro_id")
         pro_ids = parse_str_to_list(pro_ids)
 
         if len(pro_ids) < 1:
-            return ('Eparam', 'Problem set must contain at least one problem'), None
+            return self.error(('Eparam', 'Problem set must contain at least one problem'))
 
         pro_set = [(pro_id, ProblemScoreType.IOI2017) for pro_id in pro_ids]
 
@@ -211,11 +211,11 @@ class ContestManageProHandler(RequestHandler):
             pro_id is the problem set index 
         '''
         if self.contest.contest_mode != ContestMode.RANDOM_SET:
-            return ('Emod', 'Cannot remove problem set from non-random set contests'), None
+            return self.error(('Emod', 'Cannot remove problem set from non-random set contests'))
 
         pro_set_idx = int(self.get_argument("pro_id"))
         if pro_set_idx < 0 or pro_set_idx > len(self.contest.pro_sets) - 1:
-            return ('Eparam', 'Problem set index out of range'), None
+            return self.error(('Eparam', 'Problem set index out of range'))
 
         err, _ = await ContestService.inst.remove_pro_set(self.contest, pro_set_idx)
         if err:
@@ -230,7 +230,7 @@ class ContestManageProHandler(RequestHandler):
             pro_id is a comma separated list of new problem set indices
         '''
         if self.contest.contest_mode != ContestMode.RANDOM_SET:
-            return ('Emod', 'Cannot update problem order in non-random set contests'), None
+            return self.error(('Emod', 'Cannot update problem order in non-random set contests'))
 
         new_idxs = self.get_argument("pro_id")
         new_idxs = parse_str_to_list(new_idxs)
@@ -238,7 +238,7 @@ class ContestManageProHandler(RequestHandler):
         pro_set_len = len(self.contest.pro_sets)
 
         if len(new_idxs) != pro_set_len or sorted(new_idxs) != list(range(pro_set_len)):
-            return ('Eparam', 'Invalid new indexes for problem sets'), None
+            return self.error(('Eparam', 'Invalid new indexes for problem sets'))
 
         err, _ = await ContestService.inst.reorder_pro_set(self.contest, new_idxs)
         if err:
