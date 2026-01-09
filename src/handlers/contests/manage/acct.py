@@ -165,8 +165,8 @@ class ContestManageAcctHandler(RequestHandler):
 
         self.contest.start_ip = start_ip
         self.contest.end_ip = end_ip
-        await ContestService.inst.update_contest(
-            self.acct, self.contest
+        await ContestService.inst.update_ip(
+            self.contest
         )
 
         return self.error(

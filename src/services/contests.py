@@ -375,7 +375,7 @@ class ContestService:
             pro_set = [(pro_id, contest.pro_list[pro_id]['score_type']) for pro_id in tmp_pro_set]
             await self.add_pro_set(contest, pro_set)
 
-        self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
+        await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
         return None, None
 
