@@ -371,9 +371,8 @@ class ContestService:
         for ip_int in range(int(contest.start_ip), int(contest.end_ip) + 1):
             ip = IPv4Address(ip_int)
             contest.ip_pro_list[ip] = []
-        for tmp_pro_set in contest.pro_sets:
-            pro_set = [(pro_id, contest.pro_list[pro_id]['score_type']) for pro_id in tmp_pro_set]
-            await self.add_pro_set(contest, pro_set)
+        for pro_set in contest.pro_sets:
+            await self.add_random_pro(contest, pro_set)
 
         await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
@@ -392,19 +391,7 @@ class ContestService:
                 "score_type": score_type,
             }
 
-        pro_size = len(pro_set)
-        if pro_size == 1:
-            for pro_list in contest.ip_pro_list.values():
-                pro_list.append(pro_set[0][0])
-        elif pro_size == 2:
-            for pro_list in contest.ip_pro_list.values():
-                pro_list.append(pro_set[random.randint(0, 1)][0])
-        else:
-            init = 0
-            for pro_list in contest.ip_pro_list.values():
-                init = (init + random.randint(1,pro_size-1)) % pro_size
-                pro_list.append(pro_set[init][0])
-
+        await self.add_random_pro(contest, [pro_id for pro_id, _ in pro_set])
         self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
         pro_order = len(contest.pro_sets) - 1
@@ -417,6 +404,27 @@ class ContestService:
                 ''',
                 [(contest.contest_id, pro_id, int(score_type), pro_order) for pro_id, score_type in pro_set]
             )
+
+        return None, None
+
+    async def add_random_pro(self, contest: Contest, pro_set: list[int]):
+        '''
+            Append a random problem in pro_set to each ip's problem list
+        '''
+        pro_size = len(pro_set)
+        if pro_size == 1:
+            for pro_list in contest.ip_pro_list.values():
+                pro_list.append(pro_set[0])
+        elif pro_size == 2:
+            for pro_list in contest.ip_pro_list.values():
+                pro_list.append(pro_set[random.randint(0, 1)])
+        else:
+            idx = 0
+            for pro_list in contest.ip_pro_list.values():
+                idx = (idx + random.randint(1,pro_size-1)) % pro_size
+                pro_list.append(pro_set[idx])
+
+        async with self.db.acquire() as con:
             # Insert por_id into contest_ip_joints
             await con.executemany(
                 '''
@@ -426,7 +434,7 @@ class ContestService:
                 [(contest.contest_id, str(ip), pro_list[-1]) for ip, pro_list in contest.ip_pro_list.items()]
             )
 
-        return None, None
+
 
     async def remove_pro_set(self, contest: Contest , pro_set_idx: int):
         for pro_list in contest.ip_pro_list.values():
