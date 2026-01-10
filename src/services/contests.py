@@ -409,7 +409,7 @@ class ContestService:
             }
 
         await self.add_random_pro(contest, [pro_id for pro_id, _ in pro_set])
-        self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
+        await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
         return None, None
 
     async def add_random_pro(self, contest: Contest, pro_set: list[int]):
@@ -448,7 +448,7 @@ class ContestService:
         remove_pro_ids = contest.pro_sets.pop(pro_set_idx)
         for pro_id in remove_pro_ids:
             contest.pro_list.pop(pro_id)
-        self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
+        await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
         async with self.db.acquire() as con:
             # Remove problems from contest_problem_joints
@@ -485,7 +485,7 @@ class ContestService:
         for ip in contest.ip_pro_list:
             contest.ip_pro_list[ip] = [contest.ip_pro_list[ip][i] for i in new_idxs]
 
-        self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
+        await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
         async with self.db.acquire() as con:
             # Update contest_problem_joints
