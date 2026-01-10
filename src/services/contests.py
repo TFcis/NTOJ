@@ -285,7 +285,7 @@ class ContestService:
                         failed.append(pro_id)
                         continue
 
-                await con.execute('DELETE FROM contest_problem_joints WHERE contest_id = $1 AND "order" > $2', contest.contest_id, order)
+                await con.execute('DELETE FROM contest_problem_joints WHERE contest_id = $1 AND "order" >= $2', contest.contest_id, order)
                 for failed_pro_id in failed:
                     contest.pro_list.pop(failed_pro_id)
 
