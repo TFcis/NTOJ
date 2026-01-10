@@ -452,12 +452,12 @@ class ContestService:
 
         async with self.db.acquire() as con:
             # Remove problems from contest_problem_joints
-            await con.executemany(
+            await con.execute(
                 '''
                 DELETE FROM contest_problem_joints
-                WHERE "contest_id" = $1 AND "pro_id" = $2
+                WHERE "contest_id" = $1 AND "order" = $2;
                 ''',
-                [(contest.contest_id, pro_id) for pro_id in remove_pro_ids]
+                contest.contest_id, pro_set_idx
             )
             # Subtract order for problems with order > pro_set_idx
             await con.execute(
