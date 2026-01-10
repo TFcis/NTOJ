@@ -832,6 +832,7 @@ class RandomContestTest(AsyncTest):
                 'reqtype': 'add_set',
                 'pro_id': '6'
             })
+            self.assertAPIReturnSuccess(res.text)
             err, contest = await ContestService.inst.get_contest(2)
             self.assertIsNone(err)
             self.assertEqual(len(contest.pro_list), 7)
@@ -848,6 +849,7 @@ class RandomContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(str(contest.start_ip), '192.168.2.1')
             self.assertEqual(str(contest.end_ip), '192.168.2.16')
+            self.assertEqual(len(contest.ip_pro_list), 16)
             for ip_pro in contest.ip_pro_list.values():
                 self.assertIn(ip_pro[0], [8,7,9,11])
                 self.assertIn(ip_pro[1], [5,10])
@@ -857,9 +859,11 @@ class RandomContestTest(AsyncTest):
                 'reqtype': 'update_order',
                 'pro_id': '1,0,2'
             })
+            self.assertAPIReturnSuccess(res.text)
             err, contest = await ContestService.inst.get_contest(2)
             self.assertIsNone(err)
             self.assertEqual(len(contest.pro_list), 7)
+            self.assertEqual(len(contest.ip_pro_list), 16)
             for ip_pro in contest.ip_pro_list.values():
                 self.assertIn(ip_pro[0], [5,10])
                 self.assertIn(ip_pro[1], [8,7,9,11])
@@ -869,8 +873,10 @@ class RandomContestTest(AsyncTest):
                 'reqtype': 'remove_set',
                 'pro_id': '1'
             })
+            self.assertAPIReturnSuccess(res.text)
             err, contest = await ContestService.inst.get_contest(2)
             self.assertIsNone(err)
+            self.assertEqual(len(contest.ip_pro_list), 16)
             self.assertEqual(len(contest.pro_list), 3)
             for ip_pro in contest.ip_pro_list.values():
                 self.assertIn(ip_pro[0], [5,10])
