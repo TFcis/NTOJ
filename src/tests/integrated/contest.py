@@ -857,7 +857,7 @@ class RandomContestTest(AsyncTest):
                 'reqtype': 'update_order',
                 'pro_id': '1,0,2'
             })
-            err, contest = await ContestService.inst.get_contest(1)
+            err, contest = await ContestService.inst.get_contest(2)
             self.assertIsNone(err)
             self.assertEqual(len(contest.pro_list), 7)
             for ip_pro in contest.ip_pro_list.values():
@@ -869,7 +869,7 @@ class RandomContestTest(AsyncTest):
                 'reqtype': 'remove_set',
                 'pro_id': '1'
             })
-            err, contest = await ContestService.inst.get_contest(1)
+            err, contest = await ContestService.inst.get_contest(2)
             self.assertIsNone(err)
             self.assertEqual(len(contest.pro_list), 3)
             for ip_pro in contest.ip_pro_list.values():
