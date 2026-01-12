@@ -4,12 +4,12 @@ from dataclasses import dataclass, field
 import pickle
 
 import asyncpg
+from ipaddress import IPv4Address
+import random
 
 from services.chal import Compiler
 from services.user import Account
 
-from ipaddress import IPv4Address
-import random
 
 class RegMode(enum.IntEnum):
     INVITED = 0
