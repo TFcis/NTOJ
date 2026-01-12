@@ -299,6 +299,12 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
             if not self.contest.is_pro(pro_id):
                 return self.error(("Enoext", "Problem not in contest"))
 
+            if not self.contest.is_member(self.acct):
+                return self.error(PERMISSION_DENIED_ERROR)
+
+            if not self.contest.is_admin(self.acct) and not self.contest.is_running():
+                return self.error(PERMISSION_DENIED_ERROR)
+
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
         else:
             if self.acct.is_kernel():
@@ -357,12 +363,10 @@ class ProHandler(RequestHandler):
             if not self.contest.is_pro(pro_id):
                 return self.error(("Enoext", "Problem not in contest"))
 
-            if not self.contest.is_start() and not self.contest.is_admin(self.acct):
+            if not self.contest.is_member(self.acct):
                 return self.error(PERMISSION_DENIED_ERROR)
 
-            elif not self.contest.is_running() and not self.contest.is_member(
-                self.acct
-            ):
+            if not self.contest.is_admin(self.acct) and not self.contest.is_running():
                 return self.error(PERMISSION_DENIED_ERROR)
 
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
