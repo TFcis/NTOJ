@@ -44,7 +44,7 @@ class ContestManageProHandler(RequestHandler):
     @contest_manage_pro_dispatcher.action("add")
     async def add_action(self):
         if self.contest.contest_mode == ContestMode.RANDOM_SET:
-            return self.error(('Emod', 'Cannot add individual problems to random set contests'))
+            return self.error(('Emod', 'Cannot add problems to random set contests'))
 
         pro_id = int(self.get_argument("pro_id"))
 
@@ -64,7 +64,7 @@ class ContestManageProHandler(RequestHandler):
     @contest_manage_pro_dispatcher.action("remove")
     async def remove_action(self):
         if self.contest.contest_mode == ContestMode.RANDOM_SET:
-            return self.error(('Emod', 'Cannot add individual problems to random set contests'))
+            return self.error(('Emod', 'Cannot remove problems from random set contests'))
 
         pro_id = int(self.get_argument("pro_id"))
 
@@ -84,7 +84,7 @@ class ContestManageProHandler(RequestHandler):
     @contest_manage_pro_dispatcher.action("multi_add")
     async def multi_add_action(self):
         if self.contest.contest_mode == ContestMode.RANDOM_SET:
-            return self.error(('Emod', 'Cannot add individual problems to random set contests'))
+            return self.error(('Emod', 'Cannot add problems to random set contests'))
 
         pro_id = self.get_argument("pro_id")
         pro_id = parse_str_to_list(pro_id)
@@ -102,7 +102,7 @@ class ContestManageProHandler(RequestHandler):
     @contest_manage_pro_dispatcher.action("multi_remove")
     async def multi_remove_action(self):
         if self.contest.contest_mode == ContestMode.RANDOM_SET:
-            return self.error(('Emod', 'Cannot add individual problems to random set contests'))
+            return self.error(('Emod', 'Cannot remove problems from random set contests'))
 
         pro_id = self.get_argument("pro_id")
         pro_list = parse_str_to_list(pro_id)
