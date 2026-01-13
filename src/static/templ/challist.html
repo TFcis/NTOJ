@@ -136,7 +136,7 @@
             }
         })();
 
-        {% if (flt.state == 100 or flt.state == 101) and isadmin %}
+        {% if (flt.state == ChalConst.STATE_NOTSTARTED or flt.state == ChalConst.STATE_JUDGE) and isadmin and challist %}
             let chalids = [
                 {% for chal in challist %}
                     {{ chal.chal_id }},
