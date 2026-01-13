@@ -184,6 +184,22 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(pro.status, ProConst.STATUS_CONTEST)
 
+            res = admin_session.post('contests/1/manage/pro' , data={
+                'reqtype': 'add_set',
+                'pro_id': '5-7'
+            })
+            self.assertAPIReturnValue(res.text, ('Emod', 'Cannot add problem set to non-random set contests'))
+            res = admin_session.post('contests/1/manage/pro' , data={
+                'reqtype': 'remove_set',
+                'pro_id': '1'
+            })
+            self.assertAPIReturnValue(res.text, ('Emod', 'Cannot remove problem set from non-random set contests'))
+            res = admin_session.post('contests/1/manage/pro' , data={
+                'reqtype': 'update_order',
+                'pro_id': '1'
+            })
+            self.assertAPIReturnValue(res.text, ('Emod', 'Cannot update problem order in non-random set contests'))
+
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'add',
@@ -882,13 +898,30 @@ class RandomContestTest(AsyncTest):
                 self.assertIn(ip_pro[0], [5,10])
                 self.assertEqual(ip_pro[1], 6)
 
+        with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/2/manage/pro', data={
                 'reqtype': 'add_set',
                 'pro_id': '11,6'
             })
             self.assertAPIReturnValue(res.text, ('Eexist', 'Problem 6 already in contest'))
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '7,20,8'
+            })
+            self.assertAPIReturnValue(res.text, ('Enoext', 'One or more problem IDs do not exist'))
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': '11'
+            })
+            self.assertAPIReturnValue(res.text,('Emod', 'Cannot add problems to random set contests'))
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'multi_add',
+                'pro_id': '7-8'
+            })
+            self.assertAPIReturnValue(res.text,('Emod', 'Cannot add problems to random set contests'))
             err, contest = await ContestService.inst.get_contest(2)
             self.assertIsNone(err)
+            self.assertEqual(len(contest.ip_pro_list), 16)
             self.assertEqual(len(contest.pro_list), 3)
 
             invalid_order = ['1,1', '0,2', '2,0', 'a,b', '1', '1,2,3']
@@ -898,17 +931,28 @@ class RandomContestTest(AsyncTest):
                     'pro_id': order
                 })
                 self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid new indexes for problem sets'))
-                err, contest = await ContestService.inst.get_contest(2)
-                self.assertIsNone(err)
-                self.assertEqual(len(contest.pro_list), 3)
+            self.assertEqual(len(contest.ip_pro_list), 16)
+            self.assertEqual(len(contest.pro_list), 3)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[0], [5,10])
+                self.assertEqual(ip_pro[1], 6)
 
             res = admin_session.post('contests/2/manage/pro', data={
                 'reqtype': 'remove_set',
                 'pro_id': '2'
             })
             self.assertAPIReturnValue(res.text, ('Eparam', 'Problem set index out of range'))
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'remove',
+                'pro_id': '6'
+            })
+            self.assertAPIReturnValue(res.text,('Emod', 'Cannot remove problems from random set contests'))
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'multi_remove',
+                'pro_id': '5-6'
+            })
+            self.assertAPIReturnValue(res.text,('Emod', 'Cannot remove problems from random set contests'))
             err, contest = await ContestService.inst.get_contest(2)
             self.assertIsNone(err)
+            self.assertEqual(len(contest.ip_pro_list), 16)
             self.assertEqual(len(contest.pro_list), 3)
-
-
