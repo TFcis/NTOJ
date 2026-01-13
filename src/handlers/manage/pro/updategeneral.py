@@ -8,7 +8,7 @@ from services.user import UserConst
 update_dispatcher = ActionDispatcher()
 
 
-class ManageProUpdateHandler(RequestHandler):
+class ManageProUpdateGeneralHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
