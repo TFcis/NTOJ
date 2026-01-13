@@ -54,7 +54,7 @@
                     {% if chal['photo'] == "" %}
                         {% set chal['photo'] = f"https://www.gravatar.com/avatar/{ chal['acct_id'] }?d=identicon&f=y&s=480;" %}
                     {% end %}
-                    <td><img class="img-fluid" width="30" height="30" src="{{ chal['photo'] }}" /></td>
+                    <td><img width="30" src="{{ chal['photo'] }}" /></td>
                     <td><a href="{{ url(f'/acct/{ chal['acct_id'] }/') }}">{{ chal['acct_name']}}</a></td>
                     <td>{{ chal['rate'] }}</td>
                     <td>{{ chal['time'] }}</td>
