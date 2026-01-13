@@ -24,8 +24,10 @@
         };
 
         const auto_scroll = () => {
-            desc_textarea.style.height = 'auto';
-            desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
+            const newHeight = desc_textarea.scrollHeight;
+            if (newHeight > desc_textarea.offsetHeight) {
+                desc_textarea.style.height = newHeight + 'px';
+            }
         }
         desc_textarea.value = desc_before_contest;
         desc_textarea.addEventListener('input', (event) => auto_scroll());
