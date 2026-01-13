@@ -68,7 +68,7 @@
         });
 
         general_form.find('button.rechal').on('click', function (e) {
-            $.post(`{{ url('/be/manage/pro/update') }}`, {
+            $.post(`{{ url('/be/manage/pro') }}`, {
                 'reqtype': 'rechal',
                 'pro_id': pro_id
             }, function (res) {
@@ -83,7 +83,7 @@
 
         general_form.find('button.rechalall').on('click', function (e) {
             let pwd = prompt('server config password');
-            $.post(`{{ url('/be/manage/pro/update') }}`, {
+            $.post(`{{ url('/be/manage/pro') }}`, {
                 'reqtype': 'rechalall',
                 'pro_id': pro_id,
                 'pwd': pwd,
