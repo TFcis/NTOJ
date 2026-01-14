@@ -46,7 +46,8 @@
             let testdata_id = $("#preview-title").attr("testdata_id");
             let type = $("#preview-title").attr("testdata_type");
 
-            window.open(`{{ url('/be/manage/pro/updatetestdata?proid=${pro_id}&download=1&testdata_id=${testdata_id}&type=${type}') }}`);
+            let url = "{{ url('/be/manage/pro/updatetestdata') }}";
+            window.open(`${url}?proid=${pro_id}&download=1&testdata_id=${testdata_id}&type=${type}`);
         });
 
 		document.querySelectorAll('button.delete-single-file').forEach(el => {
@@ -298,7 +299,7 @@
         <tbody>
             {% for testdata_id, testdata in config.testdatas.items() %}
                 <tr testdata_id="{{ testdata_id }}">
-                    <th scope="row">{{ testdata_id }}</th>
+                    <th scope="row">{{ testdata_id + 1 }}</th>
                     <td><a class="preview-file input">{{ testdata.inputfile }}</a></td>
                     <td><a class="preview-file output">{{ testdata.outputfile }}</a></td>
                     <td>

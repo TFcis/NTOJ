@@ -60,6 +60,13 @@
             }
 	    });
 
+        j_filter.find('#yourIDFilter').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            j_filter.find('#acctid').val('{{ user.acct_id }}');
+            index.go(get_goto_filtered_challist_url());
+        });
+
         j_filter.find('button.submit').on('click', function(e) {
             index.go(get_goto_filtered_challist_url());
         });
@@ -136,7 +143,7 @@
             }
         })();
 
-        {% if (flt.state == 100 or flt.state == 101) and isadmin %}
+        {% if (flt.state == ChalConst.STATE_NOTSTARTED or flt.state == ChalConst.STATE_JUDGE) and isadmin and challist %}
             let chalids = [
                 {% for chal in challist %}
                     {{ chal.chal_id }},
@@ -188,8 +195,19 @@
         <form id="filter">
             <label class="form-label">過濾器</label>
 
+            {% set your_id_query_params = f'?acctid={ user.acct_id }' %}
+            {% if flt.pro != None %}
+                {% set your_id_query_params = your_id_query_params + f"&proid={ppro_id}" %}
+            {% end %}
+            {% if flt.state != 0 %}
+                {% set your_id_query_params = your_id_query_params + f"&state={flt.state}" %}
+            {% end %}
+            {% if flt.compiler != -1 %}
+            {% set your_id_query_params = your_id_query_params + f"&compiler_type={flt.compiler}" %}
+            {% end %}
+
             <div class="mb-1">
-                <label class="form-label">Your ID: <a href="?acctid={{ user.acct_id }}">{{ user.acct_id }}</a></label>
+                <label class="form-label">Your ID: <a id="yourIDFilter" href="{{ your_id_query_params }}">{{ user.acct_id }}</a></label>
                 <input id="proid" class="form-control mb-1" type="text" value="{% if flt.pro != None %}{{ ppro_id }}{% end %}" placeholder="Problem ID">
                 <input id="acctid" class="form-control mb-1" type="text" value="{% if flt.acct != None %}{{ pacct_id }}{% end %}" placeholder="Account ID">
             </div>

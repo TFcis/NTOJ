@@ -12,7 +12,7 @@ from services.user import UserConst
 
 PERMISSION_DENIED_ERROR = ("Eacces", "Permission denied")
 
-general_dispatcher = ActionDispatcher()
+prolist_dispatcher = ActionDispatcher()
 
 
 class ManageProListHandler(RequestHandler):
@@ -36,9 +36,9 @@ class ManageProListHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self):
         reqtype = self.get_argument("reqtype")
-        return await general_dispatcher.dispatch(self, reqtype)
+        return await prolist_dispatcher.dispatch(self, reqtype)
 
-    @general_dispatcher.action("rechal")
+    @prolist_dispatcher.action("rechal")
     async def rechal_pro(self):
         pro_id = int(self.get_argument("pro_id"))
         can_submit = JudgeServerClusterService.inst.is_server_online()
@@ -81,7 +81,7 @@ class ManageProListHandler(RequestHandler):
         await asyncio.create_task(_rechal(rechals=result))
         self.error(("S", ""))
 
-    @general_dispatcher.action("rechalall")
+    @prolist_dispatcher.action("rechalall")
     async def rechal_all_pro(self):
         pwd = self.get_argument("pwd")
         if config.unlock_pwd != base64.b64encode(packb(pwd)):

@@ -59,7 +59,7 @@ class RateService:
                         INNER JOIN problem p
                             ON t.pro_id = p.pro_id
                         INNER JOIN challenge c
-                            ON t.chal_id = c.chal_id
+                            ON t.chal_id = c.chal_id AND c.contest_id = 0
                         WHERE
                             p.status = {ProConst.STATUS_ONLINE}
                             AND t.state IN ({ChalConst.STATE_AC}, {ChalConst.STATE_PC})

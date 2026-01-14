@@ -201,6 +201,7 @@ class BatchProblemSpec(ProSpec):
             pro_id,
             contest_id,
         )
+        await rs.hdel('rate', str(acct_id))
 
         return None, None
 

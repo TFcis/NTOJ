@@ -1,7 +1,6 @@
 import datetime
 import os
 import platform
-import subprocess
 import sys
 import time
 
@@ -69,30 +68,6 @@ class ManageInfoHandler(RequestHandler):
             "code": os.path.abspath("code"),
             "problem": os.path.abspath("problem"),
         }
-
-        try:
-            code_size = (
-                subprocess.check_output(
-                    ["du", "-sh", "code"], stderr=subprocess.DEVNULL
-                )
-                .decode()
-                .split()[0]
-            )
-            info["path"]["code_size"] = code_size
-        except Exception:
-            info["path"]["code_size"] = "N/A"
-
-        try:
-            problem_size = (
-                subprocess.check_output(
-                    ["du", "-sh", "problem"], stderr=subprocess.DEVNULL
-                )
-                .decode()
-                .split()[0]
-            )
-            info["path"]["problem_size"] = problem_size
-        except Exception:
-            info["path"]["problem_size"] = "N/A"
 
         info["config"] = {
             "timezone": str(getattr(config, "TIMEZONE", "N/A")),

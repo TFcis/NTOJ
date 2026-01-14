@@ -14,8 +14,10 @@
         desc_textarea.style.height = 'auto';
         desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
         desc_textarea.addEventListener('input', (event) => {
-            desc_textarea.style.height = 'auto';
-            desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
+            const newHeight = desc_textarea.scrollHeight;
+            if (newHeight > desc_textarea.offsetHeight) {
+                desc_textarea.style.height = newHeight + 'px';
+            }
         });
 
         j_form.find('#preview').on('click', function(e) {
