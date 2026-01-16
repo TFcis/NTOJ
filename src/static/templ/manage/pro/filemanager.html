@@ -40,7 +40,8 @@
             let filename = $("#preview-title").attr("filename");
             let path = $("#preview-title").attr("path");
 
-            window.open(`{{ url('/be/manage/pro/filemanager?proid=${pro_id}&download=1&filename=${filename}&path=${path}') }}`);
+			let url = "{{ url('/be/manage/pro/filemanager') }}";
+            window.open(`${url}?proid=${pro_id}&download=1&filename=${filename}&path=${path}`);
         });
 
 		document.querySelectorAll('button.rename-single-file').forEach(el => {
