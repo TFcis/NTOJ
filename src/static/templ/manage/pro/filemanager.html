@@ -74,6 +74,46 @@
             window.open(`${url}?proid=${pro_id}&download=1&filename=${filename}&path=${path}`);
         });
 
+        $("#previewModal").find("button.save").on('click', function(e) {
+            const filename = $("#preview-title").attr("filename");
+            const path = $("#preview-title").attr("path");
+            const content = aceEditor.getValue();
+
+            // Create a file-like object
+            const file = new File([content], filename, { type: "text/plain" });
+
+            pack.get_token().done(function(token) {
+                index.create_progress_bar('Saving...');
+                pack.send(token, file).done(function () {
+                    index.update_progress_bar_progress(100);
+                    index.remove_progress_bar();
+
+                    $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
+                        'reqtype': 'updatesinglefile',
+                        'pack_token': token,
+                        'pro_id': pro_id,
+                        'filename': filename,
+                        'path': path,
+                    }, function (res) {
+                        let msg = '';
+                        let dialog_type = null;
+                        res = JSON.parse(res);
+                        if (res.status == 'S') {
+                            dialog_type = index.DIALOG_TYPE.success;
+                            msg = `Save ${filename} successfully.`;
+                        } else {
+                            msg = res.data;
+                        }
+                        index.show_notify_dialog(msg, dialog_type);
+                        preview_modal.hide();
+                        index.reload();
+                    });
+                }).progress(function(prog) {
+                    index.update_progress_bar_progress(prog * 100);
+                });
+            });
+		});
+
 		document.querySelectorAll('button.rename-single-file').forEach(el => {
 			el.addEventListener('click', function (e) {
                 let path = $(this).parents('.accordion-collapse').attr('path');
@@ -274,6 +314,7 @@
 
 			<div class="modal-footer">
 				<button class="btn btn-primary download">Download</button>
+                <button class="btn btn-primary save">Save</button>
 			</div>
 		</div>
 	</div>
