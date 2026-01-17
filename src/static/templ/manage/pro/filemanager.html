@@ -1,5 +1,8 @@
 {% extends '../manage.html' %}
 {% block head %}
+<style>
+   #editor { height: 400px; width: 100%; }
+</style>
 <script src="{{ url('/src/third/prism.js') }}"></script>
 <link rel="stylesheet" type="text/css" href="{{ url('/src/manage-pro.css') }}">
 <link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
@@ -9,6 +12,7 @@
 		let pro_id = "{{ pro_id }}";
 		let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
         let add_single_file_modal = new bootstrap.Modal(document.getElementById('addSingleFileModal'));
+        let aceEditor = null;
 
 		document.querySelectorAll('a.preview-file').forEach(el => {
 			el.addEventListener('click', function (e) {
@@ -26,12 +30,38 @@
                     res = JSON.parse(res);
                     file_content = res.data;
 
-					$("#code").find("code").html(file_content);
+                    const ext = filename.split('.').pop();
+                    const langMap = {
+                        'html': 'html',
+                        'htm': 'html',
+                        'css': 'css',
+                        'js': 'javascript',
+                        'json': 'json',
+                        'xml': 'xml',
+                        'md': 'markdown',
+                        'sh': 'sh',
+                        'c': 'c_cpp',
+                        'cpp': 'c_cpp',
+                        'h': 'c_cpp',
+                        'py': 'python',
+                        'java': 'java',
+                        'rs': 'rust',
+                        's': 'assembly_x86', 
+                    };
+                    const lang = langMap[ext] || 'text';
+
                     $("#preview-title").text(filename);
                     $("#preview-title").attr("filename", filename);
                     $("#preview-title").attr("path", path);
                     Prism.highlightAll();
 					preview_modal.show();
+                    if (!aceEditor) {
+                        aceEditor = ace.edit("editor");
+                        aceEditor.setTheme("ace/theme/twilight");
+                        aceEditor.session.setMode("ace/mode/c_cpp"); 
+                    }
+                    aceEditor.session.setMode("ace/mode/" + lang);
+                    aceEditor.setValue(file_content, -1);
 				});
 			});
 		});
@@ -239,12 +269,7 @@
 			</div>
 
 			<div class="modal-body">
-				<pre id="code"
-					data-language=""
-					data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"
-				>
-					<code class=""></code>
-				</pre>
+                <div id="editor">place holder</div>
 			</div>
 
 			<div class="modal-footer">
@@ -331,4 +356,5 @@
 	{% end %}
 	</div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js"></script>
 {% end %}

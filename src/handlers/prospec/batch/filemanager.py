@@ -125,7 +125,7 @@ class BatchFilemanagerHandler(RequestHandler):
 
         await LogService.inst.add_log(f'{self.acct.name} preview {filename} for problem #{pro_id}',
                                       'manage.pro.update.filemanager.preview')
-        return self.error(('S', tornado.escape.xhtml_escape(content)))
+        return self.error(('S', content))
 
     @batch_filemanager_dispatcher.action('renamesinglefile')
     async def rename_single_file_action(self):
