@@ -23,6 +23,7 @@ COPY migration /ntoj/migration
 COPY src /ntoj
 COPY .git /ntoj/.git
 
+ENV DB_CONTAINER_NAME=db
 RUN UNLOCK_PASSWORD_PROCESSED=$(echo "UNLOCK_PASSWORD" | poetry run python3 scripts/get_unlock_pwd.py) \
 COOKIE_SEC=$(python3 -c "import sys; print(open('/dev/urandom','rb').read(32).hex())") \
 && mv /ntoj/static /ntoj/static-tmp \
