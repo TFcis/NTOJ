@@ -17,6 +17,7 @@
 <script src="{{ url('/src/third/prism.js') }}"></script>
 <link rel="stylesheet" type="text/css" href="{{ url('/src/manage-pro.css') }}">
 <link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js"></script>
 
 <script type="text/javascript" id="contjs">
 	function init() {
@@ -25,6 +26,34 @@
         let add_single_file_modal = new bootstrap.Modal(document.getElementById('addSingleFileModal'));
         let aceEditor = null;
         let isEditorModified = false;
+
+        const handleApiResponse = (res, onSuccess, onError) => {
+            let msg = '';
+            let dialog_type = null;
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                dialog_type = index.DIALOG_TYPE.success;
+                msg = onSuccess ? onSuccess(res) : res.data;
+            } else {
+                msg = res.data;
+                dialog_type = index.DIALOG_TYPE.error;
+                if (onError) onError(res);
+            }
+            index.show_notify_dialog(msg, dialog_type);
+        };
+
+        const uploadFile = (file, progressMsg, callback) => {
+            pack.get_token().done(function(token) {
+                index.create_progress_bar(progressMsg);
+                pack.send(token, file).done(function () {
+                    index.update_progress_bar_progress(100);
+                    index.remove_progress_bar();
+                    callback(token);
+                }).progress(function(prog) {
+                    index.update_progress_bar_progress(prog * 100);
+                });
+            });
+        };
 
 		document.querySelectorAll('a.preview-file').forEach(el => {
 			el.addEventListener('click', function (e) {
@@ -97,36 +126,21 @@
             // Create a file-like object
             const file = new File([content], filename, { type: "text/plain" });
 
-            pack.get_token().done(function(token) {
-                index.create_progress_bar('Saving...');
-                pack.send(token, file).done(function () {
-                    index.update_progress_bar_progress(100);
-                    index.remove_progress_bar();
-
-                    $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
-                        'reqtype': 'updatesinglefile',
-                        'pack_token': token,
-                        'pro_id': pro_id,
-                        'filename': filename,
-                        'path': path,
-                    }, function (res) {
-                        let msg = '';
-                        let dialog_type = null;
-                        res = JSON.parse(res);
-                        if (res.status == 'S') {
-                            dialog_type = index.DIALOG_TYPE.success;
-                            msg = `Save ${filename} successfully.`;
-                        } else {
-                            msg = res.data;
-                        }
-                        index.show_notify_dialog(msg, dialog_type);
-                        resetEditor();
-                        isEditorModified = false;
-                        preview_modal.hide();
-                        index.reload();
-                    });
-                }).progress(function(prog) {
-                    index.update_progress_bar_progress(prog * 100);
+            uploadFile(file, 'Saving...', function(token) {
+                $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
+                    'reqtype': 'updatesinglefile',
+                    'pack_token': token,
+                    'pro_id': pro_id,
+                    'filename': filename,
+                    'path': path,
+                }, function (res) {
+                    handleApiResponse(res,
+                        (r) => `Save ${filename} successfully.`
+                    );
+                    resetEditor();
+                    isEditorModified = false;
+                    preview_modal.hide();
+                    index.reload();
                 });
             });
 		});
@@ -180,18 +194,9 @@
                     'new_filename': new_filename,
                     'path': path,
 				}, function (res) {
-					let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Rename ${old_filename} to ${new_filename} successfully.`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
+                    handleApiResponse(res,
+                        (r) => `Rename ${old_filename} to ${new_filename} successfully.`
+                    );
                     index.reload();
 				});
 			});
@@ -208,18 +213,9 @@
                     'filename': filename,
                     'path': path,
 				}, function (res) {
-                    let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Delete ${filename} successfully.`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
+                    handleApiResponse(res,
+                        (r) => `Delete ${filename} successfully.`
+                    );
                     index.reload();
 				});
 			});
@@ -239,31 +235,6 @@
 
         j_add_single_file.find("button.upload").on('click', function(e) {
             let path = j_add_single_file.attr('path');
-			function _update(token, filename) {
-				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
-					'reqtype': 'addsinglefile',
-					'pack_token': token,
-					'pro_id': pro_id,
-                    'filename': filename,
-                    'path': path,
-				}, function (res) {
-                    let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Upload single file ${filename} successfully`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
-                    index.reload();
-				});
-			}
-            add_single_file_modal.hide();
-
             let filename = j_add_single_file.find("input.filename").val();
             if (filename.length == 0) {
                 index.show_notify_dialog('Filename should not empty', index.DIALOG_TYPE.error);
@@ -277,18 +248,21 @@
                 return;
             }
             let file = files[0];
+            add_single_file_modal.hide();
 
-            pack.get_token().done(function(token) {
-                index.create_progress_bar('File Uploading...');
-
-                pack.send(token, file).done(function () {
-                    index.update_progress_bar_progress(100);
-                    index.remove_progress_bar();
-                    _update(token, filename);
-
+            uploadFile(file, 'File Uploading...', function(token) {
+                $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
+                    'reqtype': 'addsinglefile',
+                    'pack_token': token,
+                    'pro_id': pro_id,
+                    'filename': filename,
+                    'path': path,
+                }, function (res) {
+                    handleApiResponse(res,
+                        (r) => `Upload single file ${filename} successfully`
+                    );
                     j_add_single_file.find("input.file").val("");
-                }).progress(function(prog) {
-                    index.update_progress_bar_progress(prog * 100);
+                    index.reload();
                 });
             });
         });
@@ -296,30 +270,6 @@
 		document.querySelectorAll('button.update-single-file').forEach(el => {
 			let j_input = $(el).siblings('input');
             let path = $(el).parents('.accordion-collapse').attr('path');
-
-			function _update(pack_token, filename) {
-				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
-					'reqtype': 'updatesinglefile',
-					'pack_token': pack_token,
-					'pro_id': pro_id,
-                    'filename': filename,
-                    'path': path,
-				}, function (res) {
-                    let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Update ${filename} successfully.`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
-                    index.reload();
-				});
-			}
 
 			el.addEventListener('click', function (e) {
 				j_input.click();
@@ -334,18 +284,20 @@
 
 				let filename = $(this).parents('tr').attr('filename');
 				let file = e.target.files[0];
-				pack.get_token().done(function(token) {
-					index.create_progress_bar('Uploading...');
-
-					pack.send(token, file).done(function () {
-						index.update_progress_bar_progress(100);
-						index.remove_progress_bar();
-						_update(token, filename);
-						j_input.val(''); // for the same file upload
-
-					}).progress(function(prog) {
-						index.update_progress_bar_progress(prog * 100);
-					});
+				uploadFile(file, 'Uploading...', function(token) {
+                    $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
+                        'reqtype': 'updatesinglefile',
+                        'pack_token': token,
+                        'pro_id': pro_id,
+                        'filename': filename,
+                        'path': path,
+                    }, function (res) {
+                        handleApiResponse(res,
+                            (r) => `Update ${filename} successfully.`
+                        );
+                        j_input.val(''); // for the same file upload
+                        index.reload();
+                    });
 				});
 			});
 		});
@@ -474,5 +426,4 @@
 	{% end %}
 	</div>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js"></script>
 {% end %}
