@@ -1,5 +1,6 @@
 import datetime
 from dataclasses import dataclass
+import requests
 
 @dataclass(slots=True, kw_only=True)
 class DayRange:
@@ -50,7 +51,75 @@ class HolidayService:
         self.rs.set('is_weekday', end <= start)
         return end <= start
 
+    async def fetch_weekdays(self):
+
+        async def add_days(dt, days):
+            # Add 'days' weekdays after dt
+            for d in range(1, days + 1):
+                # weekday from 7 a.m. to 4 p.m.
+                start = dt + datetime.timedelta(days=d,hours=7)
+                end = dt + datetime.timedelta(days=d,hours=16)
+                await self.update_weekdays(None, DayRange(start=start, end=end))
+        
+        BASE_API_URL = 'https://data.taipei/api/v1/dataset/0dcbcfcf-f7a1-4664-a810-82c01cb524e0?scope=resourceAquire'
+        offset = await self._get_offset()
+        resp = requests.get(f'{BASE_API_URL}&offset={offset}&limit=1000')
+        if resp.status_code != 200:
+            return ('Eio', f'Failed to fetch holiday data: HTTP {resp.status_code}')
+
+        data = resp.json()
+        last_holiday = data['result']['results'][0]['date']
+        last_holiday = datetime.datetime.strptime(last_holiday, '%Y%m%d')
+
+        WINTER_START = datetime.datetime(last_holiday.year, 1, 21)
+        WINTER_END = datetime.datetime(last_holiday.year, 2, 10)
+        SUMMER_START = datetime.datetime(last_holiday.year, 7, 1)
+        SUMMER_END = datetime.datetime(last_holiday.year, 8, 29)
+        for idx, item in enumerate(data['result']['results']):
+            if idx == 0:
+                continue
+            dt = datetime.datetime.strptime(item['date'], '%Y%m%d')
+
+            if dt.year > WINTER_START.year:
+                # New year, reset vacation periods
+                WINTER_START = datetime.datetime(dt.year, 1, 21)
+                WINTER_END = datetime.datetime(dt.year, 2, 10)
+                SUMMER_START = datetime.datetime(dt.year, 7, 1)
+                SUMMER_END = datetime.datetime(dt.year, 8, 29)
+
+            if WINTER_START <= dt <= WINTER_END:
+                await add_days(last_holiday, (WINTER_START - last_holiday).days - 1)
+                last_holiday = WINTER_END
+                continue
+            if SUMMER_START <= dt <= SUMMER_END:
+                await add_days(last_holiday, (SUMMER_START - last_holiday).days - 1)
+                last_holiday = SUMMER_END
+                continue
+
+            is_holiday = item['is_holiday'] == '是' \
+                         or (item['holidaycategory'] in ('星期六、星期日', '補假', '放假之紀念日及節日'))
+            if is_holiday:
+                await add_days(last_holiday, (dt - last_holiday).days - 1)
+                last_holiday = dt
+            elif idx == len(data['result']['results']) - 1:
+                # This is last data
+                await add_days(last_holiday, (dt - last_holiday).days)
+
+        new_offset = data['result']['results'][-1]['_id'] - 1
+        self.rs.set('weekday_fetch_offset', new_offset)
+        if new_offset != offset:
+            async with self.db.acquire() as con:
+                await con.execute(
+                    '''
+                        UPDATE "weekdays_fetch_status" SET "offset" = $1:
+                    ''',
+                    new_offset,
+                )
+
+        return None
+
     async def get_weekdays(self) -> list[DayRange]:
+        await self.fetch_weekdays()
         async with self.db.acquire() as con:
             res = await con.fetch(
                 '''
@@ -160,3 +229,16 @@ class HolidayService:
         # Invalidate cache
         self.rs.set('weekday_valid_time', 0)
         return None
+
+    async def _get_offset(self):
+        offset = self.rs.get('weekday_fetch_offset', -1)
+        if offset != -1:
+            return offset
+
+        async with self.db.acquire() as con:
+            res = await con.fetchrow(
+                '''
+                    SELECT "offset" FROM "weekdays_fetch_status"
+                ''',
+            )
+        return res['offset']
