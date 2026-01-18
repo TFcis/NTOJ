@@ -61,7 +61,7 @@ services:
     logging: *default-logging
 
   release-judge:
-    build: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git
+    build: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git#main
     cap_add:
       - MKNOD
       - SYS_ADMIN
