@@ -348,9 +348,9 @@
     </div>
 </div>
 
-{% set not_show_testdata_result_states = [ChalConst.STATE_ERR, ChalConst.STATE_JE, ChalConst.STATE_CE, ChalConst.STATE_CLE, ChalConst.STATE_REJECTED] %}
+{% set not_show_testdata_result_states = (ChalConst.STATE_ERR, ChalConst.STATE_JE, ChalConst.STATE_CE, ChalConst.STATE_CLE, ChalConst.STATE_REJECTED) %}
 {% set show_testdata_result = chal.total_result.state not in not_show_testdata_result_states %}
-{% set show_testdata_section = challenge_style in [ChallengeResultStyle.FULL, ChallengeResultStyle.STATE_COUNT] %}
+{% set show_testdata_section = challenge_style in (ChallengeResultStyle.FULL, ChallengeResultStyle.STATE_COUNT) %}
 
 {% if show_testdata_section %}
 <div class="row">
@@ -388,11 +388,27 @@
                             {% end %}
                             {% set _ = state_count.update({testdata.state: state_count[testdata.state] + 1}) %}
                         {% end %}
-                        {% for state, count in sorted(state_count.items()) %}
-                            {% if count > 0 %}
-                                <span class="badge bg-secondary state-{{ state }} me-2">{{ count }}x {{ ChalConst.STATE_LONG_STR[state] }}</span>
-                            {% end %}
-                        {% end %}
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    {% for state, count in sorted(state_count.items()) %}
+                                        {% if count > 0 %}
+                                            <td class="state-{{ state }}">{{ ChalConst.STATE_LONG_STR[state] }}</td>
+                                        {% end %}
+                                    {% end %}
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <tr>
+                                    {% for state, count in sorted(state_count.items()) %}
+                                        {% if count > 0 %}
+                                            <td>{{ count }}</td>
+                                        {% end %}
+                                    {% end %}
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                     {% end %}
 
