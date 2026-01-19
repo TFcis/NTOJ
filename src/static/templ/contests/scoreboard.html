@@ -221,6 +221,14 @@ font-weight: bolder;
              */
             let scores = res.data;
             scores.sort((p, q) => {
+                if (Object.keys(p.scores).length == 0 && Object.keys(q.scores).length == 0) {
+                    return 0;
+                } else if (Object.keys(p.scores).length == 0) {
+                    return 1;
+                } else if (Object.keys(q.scores).length == 0) {
+                    return -1;
+                }
+
                 if (q.total_score == p.total_score) {
                     let p_max_timestamp = '';
                     let q_max_timestamp = '';
