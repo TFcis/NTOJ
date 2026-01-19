@@ -340,9 +340,10 @@ font-weight: bolder;
         // Calculate AC count and prepare for sorting
         scores_data.forEach(scores => {
             scores.ac_count = Object.values(scores.scores).filter(s => s.timestamp != null).length;
+            scores.fail_count = Object.values(scores.scores).reduce((acc, s) => acc + s.fail_cnt, 0);
         });
 
-        // Sort by: AC count (desc) -> Total Score (asc) -> Min Challenge ID (asc)
+        // Sort by: AC count (desc) -> Total Score (asc) -> Have AC: Min Challenge ID (asc) / Have nonac: Fail Count (asc)
         scores_data.sort((p, q) => {
             // Compare AC count (descending)
             if (p.ac_count !== q.ac_count) {
@@ -352,6 +353,11 @@ font-weight: bolder;
             // If AC count is same, compare total score (ascending)
             if (p.total_score !== q.total_score) {
                 return p.total_score - q.total_score;
+            }
+
+            if (p.total_score === 0 && q.total_score === 0) {
+                // Both have no AC - compare fail count (descending)
+                return p.fail_count - q.fail_count;
             }
 
             // If total score is same, compare min challenge ID (ascending)
