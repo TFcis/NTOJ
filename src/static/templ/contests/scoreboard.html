@@ -339,7 +339,7 @@ font-weight: bolder;
 
         // Calculate AC count and prepare for sorting
         scores_data.forEach(scores => {
-            scores.ac_count = Object.values(scores.scores).filter(s => s.timestamp != null).length;
+            scores.ac_count = Object.values(scores.scores).filter(s => s.score != 0).length;
             scores.fail_count = Object.values(scores.scores).reduce((acc, s) => acc + s.fail_cnt, 0);
         });
 
