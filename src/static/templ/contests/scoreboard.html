@@ -415,9 +415,9 @@ font-weight: bolder;
                     } else {
                         // No AC - only show fail_cnt
                         icpc_each_problems_score_html += `
-                        <td>
+                        <td class="state-0">
                             <p class="text-muted">-</p>
-                            <p class="state-0">${score.fail_cnt} ${score.fail_cnt == 1 ? 'try' : 'tries'}</p>
+                            <p><a class="" href="{{ url('/contests/${contest_id}/chal/${score.chal_id}/') }}">${score.fail_cnt} ${score.fail_cnt == 1 ? 'try' : 'tries'}</a></p>
                         </td>
                         `;
                     }
