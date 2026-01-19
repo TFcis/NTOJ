@@ -352,6 +352,8 @@ font-weight: bolder;
 
             // If AC count is same, compare total score (ascending)
             if (p.total_score !== q.total_score) {
+                if (p.total_score === 0) return 1;
+                if (q.total_score === 0) return -1;
                 return p.total_score - q.total_score;
             }
 
