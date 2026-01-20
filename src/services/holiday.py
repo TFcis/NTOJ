@@ -177,7 +177,7 @@ class HolidayService:
                 'is_weekday': row['is_weekday']
             } for row in res
         ]
-        return result
+        return None, result
 
     async def add_days(self, new: DayRange, is_weekday: bool=True, pri: DayPriority=DayPriority.MANUAL):
         '''
