@@ -370,7 +370,7 @@ font-weight: bolder;
             }
 
             if (p.total_score === 0 && q.total_score === 0) {
-                // Both have no AC - compare fail count (descending)
+                // Both have no AC - compare fail count (ascending)
                 return p.fail_count - q.fail_count;
             }
 
