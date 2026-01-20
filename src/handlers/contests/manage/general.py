@@ -10,6 +10,7 @@ from services.contests import (
     ContestMode,
     RegMode,
     UserStatus,
+    ProblemScoreType,
 )
 
 contest_manage_general_dispatcher = ActionDispatcher()
@@ -126,6 +127,10 @@ class ContestManageGeneralHandler(RequestHandler):
             self.contest.freeze_scoreboard_period = freeze_scoreboard_period
             if self.contest.is_start():
                 await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        new_score_type = ProblemScoreType.ICPC if contest_mode == ContestMode.ACM else ProblemScoreType.IOI2017
+        for pro_id in self.contest.pro_list:
+            self.contest.pro_list[pro_id]["score_type"] = new_score_type
 
         await ContestService.inst.update_contest(self.acct, self.contest)
 

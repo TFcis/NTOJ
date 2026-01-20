@@ -17,11 +17,12 @@ class RegMode(enum.IntEnum):
 
 class ContestMode(enum.IntEnum):
     IOI = 0
-    ACM = 1
+    ACM = 1 # NOTE: ACM/ICPC
 
 class ProblemScoreType(enum.IntEnum):
     IOI2013 = 0
     IOI2017 = 1
+    ICPC = 2 # NOTE: ContestMode.ACM
 
 class UserStatus(enum.IntEnum):
     REJECTED = 0

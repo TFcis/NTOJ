@@ -3,7 +3,7 @@ import asyncio
 from handlers.base import reqenv, RequestHandler, ActionDispatcher
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService
-from services.contests import ContestService, ProblemScoreType
+from services.contests import ContestService, ProblemScoreType, ContestMode
 from services.judge import JudgeServerClusterService
 from services.pro import ProService, ProConst
 from utils.numeric import parse_str_to_list
@@ -40,8 +40,11 @@ class ContestManageProHandler(RequestHandler):
         if self.contest.is_pro(pro_id):
             return self.error(("Eexist", f"Problem(#{pro_id}) is already in contest"))
 
-        if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017):
+        if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017, ProblemScoreType.ICPC):
             return self.error(("Eparam", "Invalid score type"))
+
+        if self.contest.contest_mode == ContestMode.ACM:
+            score_type = ProblemScoreType.ICPC
 
         self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType(score_type)}
 
@@ -75,8 +78,11 @@ class ContestManageProHandler(RequestHandler):
         pro_id = parse_str_to_list(pro_id)
         score_type = int(self.get_argument("score_type", default=ProblemScoreType.IOI2017))
 
-        if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017):
+        if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017, ProblemScoreType.ICPC):
             return self.error(("Eparam", "Invalid score type"))
+
+        if self.contest.contest_mode == ContestMode.ACM:
+            score_type = ProblemScoreType.ICPC
 
         for p_id in pro_id:
             self.contest.pro_list[p_id] = {"score_type": ProblemScoreType(score_type)}
