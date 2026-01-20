@@ -58,7 +58,7 @@ class HolidayService:
         self.rs.set('is_weekday', end <= start)
         return end <= start
 
-    async def fetch_days(self):
+    async def fetch_gov_data(self):
 
         async def add_weekdays(dt, days):
             # Add 'days' weekdays after dt
@@ -129,8 +129,35 @@ class HolidayService:
 
         return None
 
+    async def fetch_shool_data(self):
+        BASE_API_URL = 'https://clients6.google.com/calendar/v3/calendars/library@gm.tnfsh.tn.edu.tw/events?calendarId=library%40gm.tnfsh.tn.edu.tw&singleEvents=true&eventTypes=default&eventTypes=focusTime&eventTypes=outOfOffice&timeZone=Asia%2FTaipei&maxAttendees=1&maxResults=250&sanitizeHtml=true&key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs&%24unique=gc237'
+
+        now = datetime.datetime.now()
+        now_6months = now + datetime.timedelta(days=180)
+        resp = requests.get(f'{BASE_API_URL}&timeMin={now.strftime("%Y-%m-%dT00:00:00+08:00")}&timeMax={now_6months.strftime("%Y-%m-%dT23:59:59+08:00")}')
+        if resp.status_code != 200:
+            return ('Eio', f'Failed to fetch school holiday data: HTTP {resp.status_code}')
+
+        data = resp.json()
+
+        holidays = [
+            item for item in data['items'] if '放假' in item['summary']
+        ]
+
+        for item in holidays:
+            start_str = item['start'].get('dateTime', item['start'].get('date'))
+            end_str = item['end'].get('dateTime', item['end'].get('date'))
+
+            start_dt = datetime.datetime.fromisoformat(start_str)
+            end_dt = datetime.datetime.fromisoformat(end_str)
+
+            await self.add_days(DayRange(start=start_dt, end=end_dt), False, DayPriority.SCHOOL)
+
+        return None
+
     async def get_days(self) -> list[DayRange]:
-        await self.fetch_days()
+        await self.fetch_gov_data()
+        await self.fetch_shool_data()
         async with self.db.acquire() as con:
             res = await con.fetch(
                 '''
