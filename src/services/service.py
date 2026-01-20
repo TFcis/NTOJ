@@ -5,6 +5,7 @@ from .bulletin import BulletinService
 from .chal import ChalService
 from .code import CodeService
 from .contests import ContestService
+from .holiday import HolidayService
 from .judge import JudgeServerClusterService
 from .log import LogService
 from .pack import PackService
@@ -34,3 +35,4 @@ def services_init(db, rs):
     Service.Rate = RateService(db, rs)
     Service.Rank = RankService(db, rs)
     Service.Judge = JudgeServerClusterService(rs, config.JUDGE_SERVER_LIST)
+    Service.Holiday = HolidayService(db, rs)
