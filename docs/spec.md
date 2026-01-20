@@ -1,6 +1,6 @@
 # TOJ Spec
 
-這個文檔描述了 NTOJ（National Taiwan Online Judge）系統的規範。
+這個文檔描述了 NTOJ 系統的規範。
 
 系統分為以下主要部份：
 
