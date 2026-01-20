@@ -1,12 +1,68 @@
 {% extends 'manage.html' %}
 {% block head %}
+<style>
+    #calendar {
+        width: 100%;
+        max-height: 60vw;
+        height: 100%;
+    }
+</style>
+<link rel="stylesheet" href="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.css" />
+<script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
 <script type="text/javascript" id="contjs">
     function init() {
+        const Calendar = tui.Calendar;
+        const calendar = new Calendar('#calendar', {
+            defaultView: 'month',
+            useCreationPopup: true,
+            useDetailPopup: true,
+            theme: {
+                common: {
+                    backgroundColor: '#282a36',
+                    dayName: {
+                        color: '#f8f8f2',
+                    },
+                    saturday: {
+                        color: '#bd93f9',
+                    },
+                },
+                month: {
+                    dayExceptThisMonth: {
+                        color: '#6272a4',
+                    }
+                }
+            },
+        });
+
+        $('#prev-month').on('click', function() {
+            calendar.prev();
+            updateMonth();
+        });
+
+        $('#next-month').on('click', function() {
+            calendar.next();
+            updateMonth();
+        });
+        updateMonth();
+
+        function updateMonth() {
+            const date = calendar.getDate();
+            console.log(date);
+            $('#current-month').text(
+                `${date.getFullYear()}/${date.getMonth() + 1}`
+            );
+        }
     }
 </script>
 {% end %}
 
 {% block content %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <div id="calendar-menu" class="d-flex justify-content-center align-items-center mb-3">
+        <button id="prev-month" class="btn btn-primary">&lt;</button>
+        <span id="current-month" class="mx-3"></span>
+        <button id="next-month" class="btn btn-primary">&gt;</button>
+    </div>
+    <div id="calendar"></div>
 </div>
 {% end %}
