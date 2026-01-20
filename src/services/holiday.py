@@ -34,9 +34,9 @@ class HolidayService:
 
     async def is_weekday_now(self):
         timestamp = datetime.datetime.now().timestamp()
-        valid_time = self.rs.get('weekday_valid_time', 0)
-        is_weekday = self.rs.get('is_weekday', False)
-        if timestamp < valid_time:
+        valid_time = await self.rs.get('weekday_valid_time')
+        is_weekday = await self.rs.get('is_weekday')
+        if valid_time and timestamp < valid_time:
             return is_weekday
 
         async with self.db.acquire() as con:
@@ -48,14 +48,14 @@ class HolidayService:
                 int(timestamp),
             )
         if not res or not res[0]['start'] or not res[0]['end']:
-            self.rs.set('weekday_valid_time', timestamp + 30*86400) # valid for one month
-            self.rs.set('is_weekday', False)
+            await self.rs.set('weekday_valid_time', timestamp + 30*86400) # valid for one month
+            await self.rs.set('is_weekday', False)
             return False
 
         start = res[0]['start']
         end = res[0]['end']
-        self.rs.set('weekday_valid_time', min(start, end))
-        self.rs.set('is_weekday', end <= start)
+        await self.rs.set('weekday_valid_time', min(start, end))
+        await self.rs.set('is_weekday', end <= start)
         return end <= start
 
     async def fetch_gov_data(self):
@@ -117,7 +117,7 @@ class HolidayService:
                 await add_weekdays(last_holiday, (dt - last_holiday).days)
 
         new_offset = data['result']['results'][-1]['_id'] - 1
-        self.rs.set('weekday_fetch_offset', new_offset)
+        await self.rs.set('weekday_fetch_offset', new_offset)
         if new_offset != offset:
             async with self.db.acquire() as con:
                 await con.execute(
@@ -248,7 +248,7 @@ class HolidayService:
             )
 
         # Invalidate cache
-        self.rs.set('weekday_valid_time', 0)
+        await self.rs.set('weekday_valid_time', 0)
         return None
 
     async def delete_days(self, target: DayRange):
@@ -265,7 +265,7 @@ class HolidayService:
                 return ('Enoext', 'Target weekday range not found')
 
         # Invalidate cache
-        self.rs.set('weekday_valid_time', 0)
+        await self.rs.set('weekday_valid_time', 0)
         return None
 
     async def delete_day_range(self, range: DayRange):
@@ -284,12 +284,12 @@ class HolidayService:
             )
 
         # Invalidate cache
-        self.rs.set('weekday_valid_time', 0)
+        await self.rs.set('weekday_valid_time', 0)
         return None
 
     async def _get_offset(self):
-        offset = self.rs.get('weekday_fetch_offset', -1)
-        if offset != -1:
+        offset = await self.rs.get('weekday_fetch_offset')
+        if offset:
             return offset
 
         async with self.db.acquire() as con:
