@@ -374,35 +374,40 @@ font-weight: bolder;
                 return p.fail_count - q.fail_count;
             }
 
-            // If total score is same, compare min challenge ID (ascending)
-            let p_min_chal_id = Math.min(...Object.values(p.scores).map(s => s.chal_id));
-            let q_min_chal_id = Math.min(...Object.values(q.scores).map(s => s.chal_id));
+            // If total score is same, compare the latest AC challenge ID (ascending)
+            let p_latest_chal_id = Math.max(...Object.values(p.scores).filter(s => s.score != 0).map(s => s.chal_id));
+            let q_latest_chal_id = Math.max(...Object.values(q.scores).filter(s => s.score != 0).map(s => s.chal_id));
 
             // Handle case where there are no scores
-            p_min_chal_id = isFinite(p_min_chal_id) ? p_min_chal_id : Infinity;
-            q_min_chal_id = isFinite(q_min_chal_id) ? q_min_chal_id : Infinity;
+            p_latest_chal_id = isFinite(p_latest_chal_id) ? p_latest_chal_id : Infinity;
+            q_latest_chal_id = isFinite(q_latest_chal_id) ? q_latest_chal_id : Infinity;
 
-            return p_min_chal_id - q_min_chal_id;
+            return p_latest_chal_id - q_latest_chal_id;
         });
 
         let icpc_each_ranks_html = '';
         let icpc_cur_rank = 0;
         let icpc_cur_ac_count = -1;
         let icpc_cur_total_score = -1;
-        let icpc_cur_min_chal_id = -1;
+        let icpc_cur_latest_chal_id = -1;
 
         for (const [_, scores] of scores_data.entries()) {
             // Determine if rank should change
-            let icpc_min_chal_id = Object.keys(scores.scores).length > 0 ?
-                Math.min(...Object.values(scores.scores).map(s => s.chal_id)) : Infinity;
+            let icpc_latest_chal_id = Infinity;
+            if (Object.keys(scores.scores).length > 0) {
+                icpc_latest_chal_id = Math.max(...Object.values(scores.scores)
+                    .filter(s => s.score != 0) // Filter Non-AC problem
+                    .map(s => s.chal_id) // Get latest AC chal_id
+                );
+            }
 
             if (scores.ac_count !== icpc_cur_ac_count ||
                 scores.total_score !== icpc_cur_total_score ||
-                icpc_min_chal_id !== icpc_cur_min_chal_id) {
+                icpc_latest_chal_id !== icpc_cur_latest_chal_id) {
                 icpc_cur_rank += 1;
                 icpc_cur_ac_count = scores.ac_count;
                 icpc_cur_total_score = scores.total_score;
-                icpc_cur_min_chal_id = icpc_min_chal_id;
+                icpc_cur_latest_chal_id = icpc_latest_chal_id;
             }
 
             let icpc_each_problems_score_html = '';
