@@ -1,11 +1,18 @@
+from enum import IntEnum
 import datetime
 from dataclasses import dataclass
 import requests
 
-@dataclass(slots=True, kw_only=True)
+@dataclass(slots=True)
 class DayRange:
     start: datetime.datetime
     end: datetime.datetime
+
+class DayPriority(IntEnum):
+    NONE = 0
+    GOV = 1
+    SCHOOL = 2
+    MANUAL = 3
 
 class HolidayService:
     def __init__(self, db, rs) -> None:
@@ -19,7 +26,7 @@ class HolidayService:
             res = await con.fetchrow(
                 '''
                     SELECT COUNT(*) AS cnt FROM "weekdays"
-                    WHERE $1 >= "start" AND $1 < "end"
+                    WHERE $1 >= "start" AND $1 < "end" AND "is_weekday" = TRUE
                 ''',
                 int(timestamp),
             )
@@ -36,7 +43,7 @@ class HolidayService:
             res = await con.fetchrow(
                 '''
                     SELECT MIN("start") AS start, MIN("end") AS end FROM "weekdays"
-                    WHERE "start" >= $1 OR "end" >= $1
+                    WHERE ("start" >= $1 OR "end" >= $1) AND "is_weekday" = TRUE
                 ''',
                 int(timestamp),
             )
@@ -51,15 +58,15 @@ class HolidayService:
         self.rs.set('is_weekday', end <= start)
         return end <= start
 
-    async def fetch_weekdays(self):
+    async def fetch_days(self):
 
-        async def add_days(dt, days):
+        async def add_weekdays(dt, days):
             # Add 'days' weekdays after dt
             for d in range(1, days + 1):
                 # weekday from 7 a.m. to 4 p.m.
                 start = dt + datetime.timedelta(days=d,hours=7)
                 end = dt + datetime.timedelta(days=d,hours=16)
-                await self.update_weekdays(None, DayRange(start=start, end=end))
+                await self.add_days(DayRange(start=start, end=end), True, DayPriority.GOV)
         
         BASE_API_URL = 'https://data.taipei/api/v1/dataset/0dcbcfcf-f7a1-4664-a810-82c01cb524e0?scope=resourceAquire'
         offset = await self._get_offset()
@@ -71,39 +78,43 @@ class HolidayService:
         last_holiday = data['result']['results'][0]['date']
         last_holiday = datetime.datetime.strptime(last_holiday, '%Y%m%d')
 
-        WINTER_START = datetime.datetime(last_holiday.year, 1, 21)
-        WINTER_END = datetime.datetime(last_holiday.year, 2, 10)
-        SUMMER_START = datetime.datetime(last_holiday.year, 7, 1)
-        SUMMER_END = datetime.datetime(last_holiday.year, 8, 29)
+        WINTER = DayRange(datetime.datetime(last_holiday.year, 1, 21), datetime.datetime(last_holiday.year, 2, 10, 23, 59))
+        SUMMER = DayRange(datetime.datetime(last_holiday.year, 7, 1), datetime.datetime(last_holiday.year, 8, 29, 23, 59))
         for idx, item in enumerate(data['result']['results']):
-            if idx == 0:
-                continue
             dt = datetime.datetime.strptime(item['date'], '%Y%m%d')
 
-            if dt.year > WINTER_START.year:
+            if dt.year > WINTER.start.year:
                 # New year, reset vacation periods
-                WINTER_START = datetime.datetime(dt.year, 1, 21)
-                WINTER_END = datetime.datetime(dt.year, 2, 10)
-                SUMMER_START = datetime.datetime(dt.year, 7, 1)
-                SUMMER_END = datetime.datetime(dt.year, 8, 29)
+                WINTER = DayRange(datetime.datetime(dt.year, 1, 21), datetime.datetime(dt.year, 2, 10, 23, 59))
+                SUMMER = DayRange(datetime.datetime(dt.year, 7, 1), datetime.datetime(dt.year, 8, 29, 23, 59))
 
-            if WINTER_START <= dt <= WINTER_END:
-                await add_days(last_holiday, (WINTER_START - last_holiday).days - 1)
-                last_holiday = WINTER_END
+            if dt <= last_holiday:
                 continue
-            if SUMMER_START <= dt <= SUMMER_END:
-                await add_days(last_holiday, (SUMMER_START - last_holiday).days - 1)
-                last_holiday = SUMMER_END
+
+            if WINTER.start <= dt <= WINTER.end:
+                await add_weekdays(last_holiday, (WINTER.start - last_holiday).days - 1)
+                last_holiday = WINTER.end
+                await self.add_days(WINTER, False, DayPriority.GOV)
+                continue
+            if SUMMER.start <= dt <= SUMMER.end:
+                await add_weekdays(last_holiday, (SUMMER.start - last_holiday).days - 1)
+                last_holiday = SUMMER.end
+                await self.add_days(SUMMER, False, DayPriority.GOV)
                 continue
 
             is_holiday = item['is_holiday'] == '是' \
                          or (item['holidaycategory'] in ('星期六、星期日', '補假', '放假之紀念日及節日'))
             if is_holiday:
-                await add_days(last_holiday, (dt - last_holiday).days - 1)
+                await add_weekdays(last_holiday, (dt - last_holiday).days - 1)
+                if item['holidaycategory'] != '星期六、星期日':
+                    # Only add non-weekend holidays
+                    holiday = DayRange(dt, dt + datetime.timedelta(hours=23, minutes=59))
+                    await self.add_days(holiday, False, DayPriority.GOV)
+                    continue
                 last_holiday = dt
             elif idx == len(data['result']['results']) - 1:
                 # This is last data
-                await add_days(last_holiday, (dt - last_holiday).days)
+                await add_weekdays(last_holiday, (dt - last_holiday).days)
 
         new_offset = data['result']['results'][-1]['_id'] - 1
         self.rs.set('weekday_fetch_offset', new_offset)
@@ -118,8 +129,8 @@ class HolidayService:
 
         return None
 
-    async def get_weekdays(self) -> list[DayRange]:
-        await self.fetch_weekdays()
+    async def get_days(self) -> list[DayRange]:
+        await self.fetch_days()
         async with self.db.acquire() as con:
             res = await con.fetch(
                 '''
@@ -134,67 +145,79 @@ class HolidayService:
         ]
         return result
 
-    async def update_weekdays(self, old: DayRange|None, new: DayRange):
+    async def add_days(self, new: DayRange, is_weekday: bool=True, pri: DayPriority=DayPriority.MANUAL):
         '''
-            Update the weekday time range.
-            If old is None, insert new as a new range.
-            If old is not None, update the existing range to new.
-            Range that overlaps with new will be merged into new.
+            Add the days time range.
+            Overwrite existing ranges with lower priority.
         '''
-        new_timestamp = [int(new.start.timestamp()), int(new.end.timestamp())]
+        new_start = int(new.start.timestamp())
+        new_end = int(new.end.timestamp())
 
         async with self.db.acquire() as con:
-            if not old or new.start < old.start:
-                # Try to extend start earlier
-                res = await con.fetch(
-                    '''
-                        SELECT "start" FROM "weekdays"
-                        WHERE "start" <= $1 AND $1 <= "end";
-                    ''',
-                    new_timestamp[0],
-                )
-                if res:
-                    new_timestamp[0] = res[0]['start']
-            if not old or new.end > old.end:
-                # Try to extend end later
-                res = await con.fetch(
-                    '''
-                        SELECT "end" FROM "weekdays"
-                        WHERE "start" <= $1 AND $1 <= "end";
-                    ''',
-                    new_timestamp[1],
-                )
-                if res:
-                    new_timestamp[1] = res[0]['end']
+            # Try to merge with existing ranges of same priority
+            res = await con.fetch(
+                '''
+                    SELECT "start" FROM "weekdays"
+                    WHERE "start" < $1 AND $1 <= "end" AND "priority" = $2;
+                ''',
+                new_start, pri
+            )
+            if res:
+                new_start = res[0]['start']
+            res = await con.fetch(
+                '''
+                    SELECT "end" FROM "weekdays"
+                    WHERE "start" <= $1 AND $1 < "end" AND "priority" = $2;
+                ''',
+                new_end, pri
+            )
+            if res:
+                new_end = res[0]['end']
 
-            if old:
-                res = await con.execute(
-                    '''
-                        UPDATE "weekdays" SET "start" = $1, "end" = $2
-                        WHERE "start" = $3 AND "end" = $4;
-                    ''',
-                    new_timestamp[0],
-                    new_timestamp[1],
-                    int(old.start.timestamp()),
-                    int(old.end.timestamp()),
-                )
-                if res == 'UPDATE 0':
-                    return ('Enoext', 'Old weekday range not found')
+        async with self.db.acquire() as con:
+            res = await con.execute(
+                '''
+                    SELECT "start", "end" FROM "weekdays"
+                    WHERE $1 < "end" AND "start" < $2 AND "priority" > $3;
+                ''',
+                new_start, new_end, pri
+            )
 
-            await con.execute(
+        # Avoid higher priority ranges
+        new_timestamps = [[new_start, new_end]]
+        for row in res:
+            start = row['start']
+            end = row['end']
+
+            if start <= new_timestamps[-1][0]:
+                new_timestamps[-1][0] = end
+            elif end >= new_timestamps[-1][1]:
+                new_timestamps[-1][1] = start
+            else:
+                new_timestamps[-1][1] = start
+                new_timestamps.append([end, new_end])
+
+        async with self.db.acquire() as con:
+            await con.executemany(
                 '''
                     DELETE FROM "weekdays"
-                    WHERE $1 < "start" AND "end" < $2;
+                    WHERE $1 <= "start" AND "end" <= $2;
                 ''',
-                new_timestamp[0],
-                new_timestamp[1],
+                [(ts[0], ts[1]) for ts in new_timestamps],
+            )
+            await con.executemany(
+                '''
+                    INSERT INTO "weekdays" ("start", "end", "priority", "is_weekday")
+                    VALUES ($1, $2, $3, $4);
+                ''',
+                [(ts[0], ts[1], pri, is_weekday) for ts in new_timestamps],
             )
 
         # Invalidate cache
         self.rs.set('weekday_valid_time', 0)
         return None
 
-    async def delete_weekday(self, target: DayRange):
+    async def delete_days(self, target: DayRange):
         async with self.db.acquire() as con:
             res = await con.execute(
                 '''
@@ -211,7 +234,7 @@ class HolidayService:
         self.rs.set('weekday_valid_time', 0)
         return None
 
-    async def delete_weekday_range(self, range: DayRange):
+    async def delete_day_range(self, range: DayRange):
         '''
             Remove all weekdays within the specified range.
             Overlapping ranges won't be affected.
