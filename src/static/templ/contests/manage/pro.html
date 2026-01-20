@@ -5,8 +5,6 @@
 <script type="text/javascript" id="contjs">
 	function init() {
         let contest_id = "{{ contest.contest_id }}";
-        let contest_mode = {{ contest.contest_mode }};
-        let is_ioi_mode = contest_mode == {{ ContestMode.IOI }};
 
 		const post_func = (reqtype, pro_id, score_type=null, fail_action=null) => {
 			if (pro_id.length == 0) {
@@ -111,7 +109,7 @@
 						<label for="#name" class="form-label">Problem ID (Single)</label>
 						<div class="input-group mb-1">
 							<input type="number" class="form-control" placeholder="pro id" id="proId">
-							{% if contest.contest_mode == 0 %}
+							{% if contest.contest_mode == ContestMode.IOI %}
 							<select class="form-select" id="proScoreType" style="max-width: 150px;">
 								<option value="{{ ProblemScoreType.IOI2017 }}">IOI2017</option>
 								<option value="{{ ProblemScoreType.IOI2013 }}">IOI2013</option>
@@ -124,7 +122,7 @@
 						<label for="#name" class="form-label">Problem ID List (Multi)</label>
 						<div class="input-group mb-1">
 							<input type="text" class="form-control" placeholder="pro id list" id="proList">
-							{% if contest.contest_mode == 0 %}
+							{% if contest.contest_mode == ContestMode.IOI %}
 							<select class="form-select" id="proListScoreType" style="max-width: 150px;">
 								<option value="{{ ProblemScoreType.IOI2017 }}">IOI2017</option>
 								<option value="{{ ProblemScoreType.IOI2013 }}">IOI2013</option>
@@ -154,7 +152,7 @@
 						<tr>
 							<th scope="row"><a href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }}</a></th>
 							<td>{{ pro.name }}</td>
-							{% if contest.contest_mode == 0 %}
+							{% if contest.contest_mode == ContestMode.IOI %}
 							<td>
 								<select class="form-select form-select-sm score-type-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id]['score_type'] }}" style="width: auto;">
 									<option value="1" {% if contest.pro_list[pro.pro_id]['score_type'] == 1 %}selected{% end %}>IOI2017</option>

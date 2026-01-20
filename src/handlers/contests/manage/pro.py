@@ -66,7 +66,7 @@ class ContestManageProHandler(RequestHandler):
         )
         await self.rs.hdel(f"contest_{self.contest.contest_id}_scores", str(pro_id))
         return self.error(
-            ("S", f"Problem(#${pro_id}) successfully removed from problem list.")
+            ("S", f"Problem(#{pro_id}) successfully removed from problem list.")
         )
 
     @contest_manage_pro_dispatcher.action("multi_add")
@@ -104,7 +104,7 @@ class ContestManageProHandler(RequestHandler):
             self.acct, self.contest, prolist_updated=True
         )
         return self.error(
-            ("S", f"Problems(#${pro_id}) successfully removed from problem list.")
+            ("S", f"Problems(#{pro_id}) successfully removed from problem list.")
         )
 
     @contest_manage_pro_dispatcher.action("rechal")

@@ -313,7 +313,7 @@ font-weight: bolder;
             `;
         }
 
-        {% set prefix_url = f"/contests{ contest.contest_id }" %}
+        {% set prefix_url = f"/contests/{ contest.contest_id }" %}
         {% if contest.is_end() or not contest.is_member(user) %}
             {% set prefix_url = "" %} <!-- Redirect to STD -->
         {% end %}
@@ -449,7 +449,7 @@ font-weight: bolder;
             `;
         }
 
-        {% set prefix_url = f"/contests{ contest.contest_id }" %}
+        {% set prefix_url = f"/contests/{ contest.contest_id }" %}
         {% if contest.is_end() or not contest.is_member(user) %}
             {% set prefix_url = "" %} <!-- Redirect to STD -->
         {% end %}
