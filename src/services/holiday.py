@@ -102,7 +102,7 @@ class HolidayService:
                 await self.add_days(SUMMER, False, DayPriority.GOV)
                 continue
 
-            is_holiday = item['is_holiday'] == '是' \
+            is_holiday = item['isholiday'] == '是' \
                          or (item['holidaycategory'] in ('星期六、星期日', '補假', '放假之紀念日及節日'))
             if is_holiday:
                 await add_weekdays(last_holiday, (dt - last_holiday).days - 1)
