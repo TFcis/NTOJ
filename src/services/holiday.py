@@ -155,14 +155,18 @@ class HolidayService:
 
         return None
 
-    async def get_days(self):
+    async def get_days(self, range: DayRange):
         await self.fetch_gov_data()
         await self.fetch_shool_data()
         async with self.db.acquire() as con:
             res = await con.fetch(
                 '''
-                    SELECT "start", "end", "is_weekday" FROM "weekdays" ORDER BY "start" ASC
+                    SELECT "start", "end", "is_weekday" FROM "weekdays" 
+                    WHERE $1 <= "end" OR "start" <= $2
+                    ORDER BY "start" ASC
                 ''',
+                int(range.start.timestamp()),
+                int(range.end.timestamp()),
             )
         result = [
             {
