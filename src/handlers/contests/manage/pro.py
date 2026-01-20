@@ -48,7 +48,6 @@ class ContestManageProHandler(RequestHandler):
         await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
-        # await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
         return self.error(
             ("S", f"Problem(#{pro_id}) successfully added to problem list.")
         )
@@ -85,7 +84,6 @@ class ContestManageProHandler(RequestHandler):
         await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
-        # await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
         return self.error(
             ("S", f"Problems(#{pro_id}) successfully added to problem list.")
         )
@@ -116,7 +114,7 @@ class ContestManageProHandler(RequestHandler):
         if not can_submit:
             return self.error(("Ejudge", "No judge available"))
 
-        err, pro = await ProService.inst.get_pro(
+        err, _ = await ProService.inst.get_pro(
             pro_id, ProConst.PRO_STATUS_CONTEST_USER
         )
         if err:
@@ -179,7 +177,6 @@ class ContestManageProHandler(RequestHandler):
 
     @contest_manage_pro_dispatcher.action("public")
     async def public_action(self):
-        """公開題目"""
         pro_id = int(self.get_argument("pro_id"))
         if not self.contest.is_pro(pro_id):
             return self.error(("Enoext", f"Problem(#{pro_id}) not in contest"))
