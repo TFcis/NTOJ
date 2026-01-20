@@ -313,6 +313,10 @@ font-weight: bolder;
             `;
         }
 
+        {% set prefix_url = f"/contests{ contest.contest_id }" %}
+        {% if contest.is_end() or not contest.is_member(user) %}
+            {% set prefix_url = "" %} <!-- Redirect to STD -->
+        {% end %}
         let scoreboard_html = `
             <table class="table table-sm table-hover table-striped">
                 <thead>
@@ -321,7 +325,7 @@ font-weight: bolder;
                         <th scope="col">Username</th>
                         {% for idx, pro_id in enumerate(contest.pro_list) %}
                         <th scope="col">
-                            <a class="" href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro_id }/') }}">{{ pro_idx_to_pro_alphabet(idx) }}</a>
+                            <a class="" href="{{ url(f'{prefix_url}/pro/{ pro_id }/') }}">{{ pro_idx_to_pro_alphabet(idx) }}</a>
                         </th>
                         {% end %}
                         <th scope="col">Total</th>
@@ -445,6 +449,10 @@ font-weight: bolder;
             `;
         }
 
+        {% set prefix_url = f"/contests{ contest.contest_id }" %}
+        {% if contest.is_end() or not contest.is_member(user) %}
+            {% set prefix_url = "" %} <!-- Redirect to STD -->
+        {% end %}
         let icpc_scoreboard_html = `
             <table class="table table-sm table-hover table-striped">
                 <thead>
@@ -453,7 +461,7 @@ font-weight: bolder;
                         <th scope="col">Username</th>
                         {% for idx, pro_id in enumerate(contest.pro_list) %}
                         <th scope="col">
-                            <a class="" href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro_id }/') }}">{{ pro_idx_to_pro_alphabet(idx) }}</a>
+                            <a class="" href="{{ url(f'{prefix_url}/pro/{ pro_id }/') }}">{{ pro_idx_to_pro_alphabet(idx) }}</a>
                         </th>
                         {% end %}
                         <th scope="col">Total</th>
