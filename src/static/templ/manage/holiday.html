@@ -16,6 +16,11 @@
             defaultView: 'month',
             useCreationPopup: true,
             useDetailPopup: true,
+            template: {
+                time(event) {
+                    return `<span style="color: #f8f8f2;">${event.title}</span>`;
+                }
+            },
             theme: {
                 common: {
                     backgroundColor: '#282a36',
@@ -47,9 +52,25 @@
 
         function updateMonth() {
             const date = calendar.getDate();
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
             $('#current-month').text(
-                `${date.getFullYear()}/${date.getMonth() + 1}`
+                `${year}/${month}`
             );
+
+            $.get(`{{ url('/be/manage/holiday') }}`, {
+                action: `events`,
+                year: year,
+                month: month
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    calendar.clear();
+                    calendar.createEvents(res.data);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
         }
     }
 </script>
