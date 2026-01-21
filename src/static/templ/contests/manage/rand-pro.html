@@ -40,16 +40,22 @@
             if (ord1 === ord2) return;
             
             // Swap contents of Problem Set & Operation columns
-            let td1 = rows[ord1].querySelectorAll("td");
-            let td2 = rows[ord2].querySelectorAll("td");
-            let tmp = td1[0].innerHTML;
-            td1[0].innerHTML = td2[0].innerHTML;
-            td2[0].innerHTML = tmp;
-            tmp = td1[1].innerHTML;
-            td1[1].innerHTML = td2[1].innerHTML;
-            td2[1].innerHTML = tmp;
+            let row1 = rows[ord1];
+            let row2 = rows[ord2];
 
-            // update pro_set_ids & pro_set_ord
+            let placeholder = document.createElement("tr");
+
+            row1.parentNode.insertBefore(placeholder, row1);
+            row2.parentNode.insertBefore(row1, row2);
+
+            placeholder.parentNode.insertBefore(row2, placeholder);
+            placeholder.remove();
+
+            rows = tbody.querySelectorAll("tr");
+            rows.forEach((row, index) => {
+                row.querySelector("th").textContent = index + 1;
+            });
+
             const idx1 = pro_set_ids[ord1];
             const idx2 = pro_set_ids[ord2];
             pro_set_ids[ord1] = idx2;
