@@ -110,7 +110,6 @@ class HolidayService:
                     # Only add non-weekend holidays
                     holiday = DayRange(dt, dt + datetime.timedelta(hours=23, minutes=59))
                     await self.add_days(holiday, False, DayPriority.GOV)
-                    continue
                 last_holiday = dt
             elif idx == len(data['result']['results']) - 1:
                 # This is last data
