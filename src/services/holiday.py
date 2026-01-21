@@ -36,8 +36,8 @@ class HolidayService:
         timestamp = datetime.datetime.now().timestamp()
         valid_time = await self.rs.get('weekday_valid_time')
         is_weekday = await self.rs.get('is_weekday')
-        if valid_time and timestamp < valid_time:
-            return is_weekday
+        if valid_time and timestamp < int(valid_time.decode()) and is_weekday is not None:
+            return is_weekday == b'True'
 
         async with self.db.acquire() as con:
             res = await con.fetchrow(
@@ -156,8 +156,11 @@ class HolidayService:
         return None
 
     async def get_days(self, range: DayRange):
-        await self.fetch_gov_data()
-        await self.fetch_shool_data()
+        last_fetch = await self.rs.get('weekday_last_fetch')
+        if not last_fetch or int(last_fetch.decode()) + 86400 < datetime.datetime.now().timestamp():
+            await self.fetch_gov_data()
+            await self.fetch_shool_data()
+            await self.rs.set('weekday_last_fetch', datetime.datetime.now().timestamp())
         async with self.db.acquire() as con:
             res = await con.fetch(
                 '''
@@ -332,7 +335,7 @@ class HolidayService:
     async def _get_offset(self):
         offset = await self.rs.get('weekday_fetch_offset')
         if offset:
-            return offset
+            return str(offset)
 
         async with self.db.acquire() as con:
             res = await con.fetchrow(
