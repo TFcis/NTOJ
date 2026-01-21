@@ -234,8 +234,14 @@ class HolidayService:
             elif end >= new_timestamps[-1][1]:
                 new_timestamps[-1][1] = start
             else:
+                if start == new_timestamps[-1][0]:
+                    new_timestamps[-1][0] = end
+                    continue
                 new_timestamps[-1][1] = start
                 new_timestamps.append([end, new_end])
+
+        if new_timestamps[-1][0] >= new_timestamps[-1][1]:
+            new_timestamps.pop()
 
         async with self.db.acquire() as con:
             await con.executemany(
