@@ -208,14 +208,17 @@ class HolidayService:
             if res:
                 new_end = res[0]['end']
 
-        async with self.db.acquire() as con:
-            res = await con.execute(
+            res = await con.fetch(
                 '''
                     SELECT "start", "end" FROM "weekdays"
-                    WHERE $1 < "end" AND "start" < $2 AND "priority" > $3;
+                    WHERE NOT ("end" <= $1 OR $2 <= "start") AND "priority" > $3;
                 ''',
                 new_start, new_end, pri
             )
+
+        if res and res[0]['start'] <= new_start and new_end <= res[0]['end']:
+            # Fully covered by higher priority range
+            return None
 
         # Avoid higher priority ranges
         new_timestamps = [[new_start, new_end]]
