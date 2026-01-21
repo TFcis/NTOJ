@@ -7,16 +7,23 @@
         max-height: 60vw;
         height: 100%;
     }
+    .svg-inline--fa {
+        display: var(--fa-display, inline-block);
+        height: 1em;
+    }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/css/tempus-dominus.min.css" crossorigin="anonymous">
 <link rel="stylesheet" href="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.css" />
 <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
 <script type="text/javascript" id="contjs">
+    var info_start_date_picker = null;
+    var info_end_date_picker = null;
     function init() {
+        const infoModal = new bootstrap.Modal(document.getElementById('infoModal'));
         const Calendar = tui.Calendar;
         const calendar = new Calendar('#calendar', {
             defaultView: 'month',
-            useCreationPopup: true,
-            useDetailPopup: true,
             template: {
                 time(event) {
                     return `<span style="color: #f8f8f2;">${event.title}</span>`;
@@ -38,6 +45,76 @@
                     }
                 }
             },
+        });
+
+        const options = {
+            display: {
+                calendarWeeks: true,
+            },
+
+            localization: {
+                locale: 'zh-tw',
+                format: 'yyyy/MM/dd HH:mm',
+            },
+        };
+        info_start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerInfoStart'), options);
+        info_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerInfoEnd'), options);
+        calendar.on({
+            clickEvent: function(e) {
+                const event = e.event;
+                const start = new tempusDominus.DateTime(event.start.toDate());
+                const end = new tempusDominus.DateTime(event.end.toDate());
+                info_start_date_picker.dates.setValue(start);
+                info_end_date_picker.dates.setValue(end);
+                if(event.backgroundColor == '#ff5555') {
+                    $('input[name="info-type"][value="holiday"]').prop('checked', true);
+                } else {
+                    $('input[name="info-type"][value="weekday"]').prop('checked', true);
+                }
+                $('#infoModal').data('old-start', start.format('yyyy/MM/dd HH:mm'));
+                $('#infoModal').data('old-end', end.format('yyyy/MM/dd HH:mm'));
+                infoModal.show();
+            }
+        });
+
+        $('button.update').on('click', function() {
+            const start = info_start_date_picker.viewDate;
+            const end = info_end_date_picker.viewDate;
+            const type = $('input[name="info-type"]:checked').val();
+            $.post(`{{ url('/be/manage/holiday') }}`, {
+                reqtype: 'update',
+                old_start: $('#infoModal').data('old-start'),
+                old_end: $('#infoModal').data('old-end'),
+                new_start: start.format('yyyy/MM/dd HH:mm'),
+                new_end: end.format('yyyy/MM/dd HH:mm'),
+                is_weekday: type == 'weekday' ? 1 : 0
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Event updated successfully', index.DIALOG_TYPE.success);
+                    infoModal.hide();
+                    updateMonth();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        });
+
+        $('button.delete').on('click', function() {
+            $.post(`{{ url('/be/manage/holiday') }}`, {
+                reqtype: 'delete',
+                old_start: $('#infoModal').data('old-start'),
+                old_end: $('#infoModal').data('old-end'),
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Event deleted successfully', index.DIALOG_TYPE.success);
+                    infoModal.hide();
+                    updateMonth();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
         });
 
         $('#prev-month').on('click', function() {
@@ -111,10 +188,60 @@
             e.stopPropagation();
         });
     }
+
+    function destroy() {
+        info_start_date_picker.dispose();
+        info_end_date_picker.dispose();
+    }
 </script>
 {% end %}
 
 {% block content %}
+<div class="modal fade" id="infoModal" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="preview-title">Event Info</h5>
+			</div>
+
+			<div class="modal-body">
+                <form id="info-form" class="form-horizontal">
+                    <div class="mb-3 row">
+                        <label for="datepickerInfoStart" class="form-label">Start Time</label>
+                        <div class="input-group" id="datepickerInfoStart">
+                            <input id="datepickerInfoStartInput" class="form-control">
+                            <span class="input-group-text" data-td-target="#datepickerInfoStart" data-td-toggle="datepickerInfoStart">
+                                <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg><!-- <span class="fa-solid fa-calendar"></span> Font Awesome fontawesome.com -->
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label for="datepickerInfoEnd" class="form-label">End Time</label>
+                        <div class="input-group" id="datepickerInfoEnd">
+                            <input id="datepickerInfoEndInput" class="form-control">
+                            <span class="input-group-text" data-td-target="#datepickerInfoEnd" data-td-toggle="datepickerInfoEnd">
+                                <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg><!-- <span class="fa-solid fa-calendar"></span> Font Awesome fontawesome.com -->
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-2 col-form-label">Type</label>
+                        <div class="col-sm-10">
+                            <input type="radio" value="holiday" name="info-type" /> Holiday
+                            <input type="radio" value="weekday" name="info-type" /> Weekday
+                        </div>
+                    </div>
+                </form>
+			</div>
+
+			<div class="modal-footer">
+				<button class="btn btn-primary update">Update</button>
+				<button class="btn btn-danger delete">Delete</button>
+			</div>
+		</div>
+	</div>
+</div>
+
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <div id="calendar-menu" class="d-flex justify-content-center align-items-center mb-3">
         <button id="prev-month" class="btn btn-primary">&lt;</button>
