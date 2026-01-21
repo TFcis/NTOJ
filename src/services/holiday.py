@@ -122,7 +122,7 @@ class HolidayService:
             async with self.db.acquire() as con:
                 await con.execute(
                     '''
-                        UPDATE "weekdays_fetch_status" SET "offset" = $1:
+                        UPDATE "weekdays_fetch_status" SET "offset" = $1;
                     ''',
                     new_offset,
                 )
