@@ -214,13 +214,13 @@ class ContestManageProHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        return self.error(("S", ""))
+        return self.error(("S", "Add new problem set successfully"))
 
     @contest_manage_pro_dispatcher.action("remove_set")
     async def remove_set_action(self):
         '''
             Remove a problem set in random set mode
-            pro_id is the problem set index 
+            pro_id is the problem set index
         '''
         if self.contest.contest_mode != ContestMode.RANDOM_SET:
             return self.error(('Emod', 'Cannot remove problem set from non-random set contests'))
@@ -233,7 +233,7 @@ class ContestManageProHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        return self.error(("S", ""))
+        return self.error(("S", f"Remove problem set #{pro_set_idx} successfully"))
 
     @contest_manage_pro_dispatcher.action("update_order")
     async def update_order_action(self):
@@ -256,7 +256,7 @@ class ContestManageProHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        return self.error(("S", ""))
+        return self.error(("S", f"Update problem set order successfully"))
 
     @reqenv
     @contest_require_permission("admin")
