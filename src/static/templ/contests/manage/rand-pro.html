@@ -94,9 +94,9 @@
 		$("#addProSet").on('click', () => post_func('add_set', $("#proSet").val(), () => $("#proSet").val('')));
 
         // Send new ids order as csv to backend
-        $("button.saveOrder").on('click', () => post_func('update_order', pro_set_ids.join(','), () => location.reload()));
+        $("button.saveOrder").on('click', () => post_func('update_order', pro_set_ids.join(','), () => index.reload()));
         $("button.cancelOrder").on('click', function() {
-            location.reload();
+            index.reload();
         });
     }
 </script>
