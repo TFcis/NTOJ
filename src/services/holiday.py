@@ -160,7 +160,7 @@ class HolidayService:
         if not last_fetch or int(last_fetch.decode()) + 86400 < datetime.datetime.now().timestamp():
             await self.fetch_gov_data()
             await self.fetch_shool_data()
-            await self.rs.set('weekday_last_fetch', datetime.datetime.now().timestamp())
+            await self.rs.set('weekday_last_fetch', int(datetime.datetime.now().timestamp()))
         async with self.db.acquire() as con:
             res = await con.fetch(
                 '''
