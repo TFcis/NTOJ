@@ -15,6 +15,12 @@ class ManageHolidayHandler(RequestHandler):
             return
         await self.render("manage/holiday", page="holiday")
 
+    @reqenv
+    @require_permission(UserConst.ACCTTYPE_KERNEL)
+    async def post(self, page=None):
+        reqtype = self.get_argument("reqtype")
+        return await holiday_dispatcher.dispatch(self, reqtype)
+
     async def _get_events(self):
         '''
             Return json data of the requested month
@@ -43,3 +49,51 @@ class ManageHolidayHandler(RequestHandler):
             for day in res
         ]
         self.error(('S',events))
+
+    @holiday_dispatcher.action("update")
+    async def update_holiday(self):
+        old_start = self.get_argument("old_start")
+        old_end = self.get_argument("old_end")
+        new_start = self.get_argument("new_start")
+        new_end = self.get_argument("new_end")
+        is_weekday = self.get_argument("is_weekday") == '1'
+
+        try:
+            old_start = datetime.datetime.strptime(old_start, '%Y/%m/%d %H:%M')
+            old_end = datetime.datetime.strptime(old_end, '%Y/%m/%d %H:%M')
+            start = datetime.datetime.strptime(new_start, '%Y/%m/%d %H:%M')
+            end = datetime.datetime.strptime(new_end, '%Y/%m/%d %H:%M')
+        except ValueError:
+            return self.error(('Eparam', 'Invalid date format'))
+
+        if start >= end:
+            return self.error(('Eparam', 'Start time must be before end time'))
+
+        old_range = DayRange(old_start, old_end)
+        new_range= DayRange(start, end)
+        err = await HolidayService.inst.delete_days(old_range)
+        if err:
+            return self.error(err)
+        err = await HolidayService.inst.add_days(new_range, is_weekday)
+        if err:
+            return self.error(err)
+
+        self.error(('S', ''))
+
+    @holiday_dispatcher.action("delete")
+    async def delete_holiday(self):
+        start = self.get_argument("old_start")
+        end = self.get_argument("old_end")
+
+        try:
+            start = datetime.datetime.strptime(start, '%Y/%m/%d %H:%M')
+            end = datetime.datetime.strptime(end, '%Y/%m/%d %H:%M')
+        except ValueError:
+            return self.error(('Eparam', 'Invalid date format'))
+
+        del_range = DayRange(start, end)
+        err = await HolidayService.inst.delete_days(del_range)
+        if err:
+            return self.error(err)
+
+        self.error(('S', ''))
