@@ -93,12 +93,12 @@ class HolidayService:
 
             if WINTER.start <= dt <= WINTER.end:
                 await add_weekdays(last_holiday, (WINTER.start - last_holiday).days - 1)
-                last_holiday = WINTER.end
+                last_holiday = WINTER.end - datetime.timedelta(hours=23, minutes=59)
                 await self.add_days(WINTER, False, DayPriority.GOV)
                 continue
             if SUMMER.start <= dt <= SUMMER.end:
                 await add_weekdays(last_holiday, (SUMMER.start - last_holiday).days - 1)
-                last_holiday = SUMMER.end
+                last_holiday = SUMMER.end - datetime.timedelta(hours=23, minutes=59)
                 await self.add_days(SUMMER, False, DayPriority.GOV)
                 continue
 
