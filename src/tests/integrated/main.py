@@ -18,7 +18,6 @@ from .manage.prospec.batch.test_subtask import BatchSubtaskTest
 from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
-from .board import BoardTest
 from .chal import ChalTest, ChalListTest
 from .contest import ContestTest
 from .proclass import ProClassTest
@@ -189,7 +188,6 @@ class IntegratedTest(AsyncTest):
             ChalListTest().main,
             SubmitTest().main,
             ProTest().main,
-            BoardTest().main,
             ProClassTest().main,
             SignTest().main,
             AcctPageTest().main,

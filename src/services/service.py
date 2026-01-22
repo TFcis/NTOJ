@@ -1,6 +1,5 @@
 import config
 
-from .board import BoardService
 from .chal import ChalService
 from .code import CodeService
 from .contests import ContestService
@@ -22,7 +21,6 @@ def services_init(db, rs):
     Service.ProClass = ProClassService(db, rs)
     Service.Chal = ChalService(db, rs)
     Service.Contest = ContestService(db, rs)
-    Service.Board = BoardService(db, rs)
     Service.Pack = PackService(db, rs)
     Service.Code = CodeService(db, rs)
     Service.Log = LogService(db, rs)
