@@ -4,10 +4,10 @@ from collections import defaultdict
 
 from msgpack import packb, unpackb
 
+from services.pro import ProConst
 from services.chal import ChalConst
 from services.user import Account
 from services.contests import UserStatus
-from services.pro import ProConst
 
 
 class RateService:
@@ -91,6 +91,14 @@ class RateService:
 
         return None, rate_data
 
+    async def refresh_acct_rate(self, acct_id: int = 0, all_account: bool = False):
+        if all_account:
+            await self.rs.delete('rate')
+            return None, None
+
+        await self.rs.hdel('rate', str(acct_id))
+
+
     async def get_pro_ac_rate(self, pro_id, contest_id: int = 0):
         # problem submission ac rate
 
@@ -167,6 +175,10 @@ class RateService:
 
         return None, rate_data
 
+    async def refresh_pro_ac_rate(self, pro_id: int, contest_id: int = 0):
+        await self.rs.hdel('pro_rate', f'pro_id_{pro_id}_contest_id_{contest_id}')
+        return None, None
+
     async def get_pro_topcoder(self, pro_id: int) -> tuple[None, int | None]:
         """
         Get the top coder for a given problem ID based on challenge performance.
@@ -238,11 +250,14 @@ class RateService:
         else:
             return None, unpackb(topcoder)
 
+    async def refresh_pro_topcoder(self, pro_id: int):
+        await self.rs.hdel('pro_topcoder', str(pro_id))
+        return None, None
+
     async def map_rate_acct(
             self, acct: Account, contest_id: int = 0, starttime='1970-01-01 00:00:00.000',
             endtime='2100-01-01 00:00:00.000'
     ):
-        from services.pro import ProConst
         if isinstance(starttime, str):
             starttime = datetime.datetime.fromisoformat(starttime)
 
