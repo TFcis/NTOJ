@@ -1,6 +1,7 @@
 from handlers.base import RequestHandler, reqenv
 from services.contests import ContestService, UserStatus
 from services.ques import QuestionService
+from services.judge import JudgeServerClusterService
 
 
 class IndexHandler(RequestHandler):
@@ -63,6 +64,11 @@ class IndexHandler(RequestHandler):
             contest_id=contest_id,
             contest=contest,
         )
+
+class InfoHandler(RequestHandler):
+    async def get(self):
+        can_submit = JudgeServerClusterService.inst.is_server_online()
+        await self.render('info', judge_server_status=can_submit)
 
 
 class AbouotHandler(RequestHandler):

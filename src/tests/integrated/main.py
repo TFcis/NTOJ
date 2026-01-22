@@ -19,7 +19,6 @@ from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
 from .board import BoardTest
-from .bulletin import BulletinTest
 from .chal import ChalTest, ChalListTest
 from .contest import ContestTest
 from .proclass import ProClassTest
@@ -194,7 +193,6 @@ class IntegratedTest(AsyncTest):
             BoardTest().main,
             ProClassTest().main,
             QuesTest().main,
-            BulletinTest().main,
             SignTest().main,
             AcctPageTest().main,
             ManageAcctTest().main,

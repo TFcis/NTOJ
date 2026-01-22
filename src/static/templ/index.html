@@ -40,25 +40,6 @@
       index.init();
       var j_index = $('#index-navlist');
 
-      var inform_count = 0;
-      var on = false;
-
-      // Register bulletin update callback
-      index.register_ws_callback('bulletinsub', function(data) {
-        inform_count += 1;
-        j_index.find('a.message').text('公告 *' + inform_count);
-        j_index.find('a.message').show();
-        on = true;
-        setInterval(function () {if (on == true) {j_index.find('a.message').fadeOut(500).fadeIn(500);} }, 1000);
-      });
-
-      j_index.find('a.message').on('click', function (e) {
-        j_index.find('a.message').hide();
-        inform_count = 0;
-        on = false;
-        index.go(`{{ url('/info/') }}`);
-      });
-
     {% if is_in_contest %}
         {% if not contest.is_end() %}
             var contest_start = new Date("{{ contest.contest_start }}");

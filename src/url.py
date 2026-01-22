@@ -3,7 +3,6 @@ import tornado.web
 from handlers.acct import AcctConfigHandler, AcctHandler, AcctProClassHandler, SignHandler
 from handlers.base import UnifiedWebSocketHandler
 from handlers.board import BoardHandler
-from handlers.bulletin import BulletinHandler
 from handlers.chal import (
     ChalHandler,
     ChalListHandler,
@@ -14,6 +13,7 @@ from handlers.index import (
     AbouotHandler,
     DevInfoHandler,
     IndexHandler,
+    InfoHandler,
 )
 from handlers.log import LogHandler
 from handlers.manage.url import get_manage_url
@@ -38,8 +38,7 @@ def get_url(db, rs, pool):
     }
 
     return [
-        (r'/be/info', BulletinHandler, args),
-        (r'/be/bulletin/(\d+)', BulletinHandler, args),
+        (r'/be/info', InfoHandler, args),
         (r'/be/board', BoardHandler, args),
         (r'/be/board/(\d+)', BoardHandler, args),
         (r'/be/sign', SignHandler, args),
