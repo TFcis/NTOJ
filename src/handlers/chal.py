@@ -21,8 +21,9 @@ from services.chal import (
 from services.pro import ProService, ProConst
 from services.user import UserService, UserConst
 from services.contests import UserStatus, ContestService
-from utils.numeric import parse_str_to_list
+from services.rate import RateService
 from services.log import LogService
+from utils.numeric import parse_str_to_list
 
 chal_dispatcher = ActionDispatcher()
 
@@ -559,7 +560,7 @@ class ChalHandler(RequestHandler):
             r.state = ChalConst.STATE_REJECTED
             await ChalService.inst.update_testdata_result(chal_id, r)
 
-        await self.rs.hdel("pro_topcoder", str(chal.pro_id))
+        await RateService.inst.refresh_pro_topcoder(chal.pro_id)
 
         await LogService.inst.add_log(
             f"{self.acct.name}(#{self.acct.acct_id}) reject chal#{chal_id}.",
