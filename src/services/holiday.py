@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import requests
 
 @dataclass(slots=True)
-class DayRange:
+class TimeSlot:
     start: datetime.datetime
     end: datetime.datetime
 
@@ -66,7 +66,7 @@ class HolidayService:
                 # weekday from 7 a.m. to 4 p.m.
                 start = dt + datetime.timedelta(days=d,hours=7)
                 end = dt + datetime.timedelta(days=d,hours=16)
-                await self.add_days(DayRange(start=start, end=end), True, DayPriority.GOV)
+                await self.add_time_slot(TimeSlot(start=start, end=end), True, DayPriority.GOV)
         
         BASE_API_URL = 'https://data.taipei/api/v1/dataset/0dcbcfcf-f7a1-4664-a810-82c01cb524e0?scope=resourceAquire'
         offset = await self._get_offset()
@@ -78,15 +78,15 @@ class HolidayService:
         last_holiday = data['result']['results'][0]['date']
         last_holiday = datetime.datetime.strptime(last_holiday, '%Y%m%d')
 
-        WINTER = DayRange(datetime.datetime(last_holiday.year, 1, 21), datetime.datetime(last_holiday.year, 2, 10, 23, 59))
-        SUMMER = DayRange(datetime.datetime(last_holiday.year, 7, 1), datetime.datetime(last_holiday.year, 8, 29, 23, 59))
+        WINTER = TimeSlot(datetime.datetime(last_holiday.year, 1, 21), datetime.datetime(last_holiday.year, 2, 10, 23, 59))
+        SUMMER = TimeSlot(datetime.datetime(last_holiday.year, 7, 1), datetime.datetime(last_holiday.year, 8, 29, 23, 59))
         for idx, item in enumerate(data['result']['results']):
             dt = datetime.datetime.strptime(item['date'], '%Y%m%d')
 
             if dt.year > WINTER.start.year:
                 # New year, reset vacation periods
-                WINTER = DayRange(datetime.datetime(dt.year, 1, 21), datetime.datetime(dt.year, 2, 10, 23, 59))
-                SUMMER = DayRange(datetime.datetime(dt.year, 7, 1), datetime.datetime(dt.year, 8, 29, 23, 59))
+                WINTER = TimeSlot(datetime.datetime(dt.year, 1, 21), datetime.datetime(dt.year, 2, 10, 23, 59))
+                SUMMER = TimeSlot(datetime.datetime(dt.year, 7, 1), datetime.datetime(dt.year, 8, 29, 23, 59))
 
             if dt <= last_holiday:
                 continue
@@ -94,12 +94,12 @@ class HolidayService:
             if WINTER.start <= dt <= WINTER.end:
                 await add_weekdays(last_holiday, (WINTER.start - last_holiday).days - 1)
                 last_holiday = WINTER.end - datetime.timedelta(hours=23, minutes=59)
-                await self.add_days(WINTER, False, DayPriority.GOV)
+                await self.add_time_slot(WINTER, False, DayPriority.GOV)
                 continue
             if SUMMER.start <= dt <= SUMMER.end:
                 await add_weekdays(last_holiday, (SUMMER.start - last_holiday).days - 1)
                 last_holiday = SUMMER.end - datetime.timedelta(hours=23, minutes=59)
-                await self.add_days(SUMMER, False, DayPriority.GOV)
+                await self.add_time_slot(SUMMER, False, DayPriority.GOV)
                 continue
 
             is_holiday = item['isholiday'] == '是' \
@@ -108,8 +108,8 @@ class HolidayService:
                 await add_weekdays(last_holiday, (dt - last_holiday).days - 1)
                 if item['holidaycategory'] != '星期六、星期日':
                     # Only add non-weekend holidays
-                    holiday = DayRange(dt, dt + datetime.timedelta(hours=23, minutes=59))
-                    await self.add_days(holiday, False, DayPriority.GOV)
+                    holiday = TimeSlot(dt, dt + datetime.timedelta(hours=23, minutes=59))
+                    await self.add_time_slot(holiday, False, DayPriority.GOV)
                 last_holiday = dt
             elif idx == len(data['result']['results']) - 1:
                 # This is last data
@@ -150,11 +150,11 @@ class HolidayService:
             start_dt = datetime.datetime.fromisoformat(start_str)
             end_dt = datetime.datetime.fromisoformat(end_str)
 
-            await self.add_days(DayRange(start=start_dt, end=end_dt), False, DayPriority.SCHOOL)
+            await self.add_time_slot(TimeSlot(start=start_dt, end=end_dt), False, DayPriority.SCHOOL)
 
         return None
 
-    async def get_days(self, range: DayRange):
+    async def get_time_slots(self, range: TimeSlot):
         last_fetch = await self.rs.get('weekday_last_fetch')
         if not last_fetch or int(last_fetch.decode()) + 86400 < datetime.datetime.now().timestamp():
             await self.fetch_gov_data()
@@ -172,7 +172,7 @@ class HolidayService:
             )
         result = [
             {
-                'range': DayRange(
+                'range': TimeSlot(
                     start=datetime.datetime.fromtimestamp(row['start']),
                     end=datetime.datetime.fromtimestamp(row['end']),
                 ),
@@ -181,9 +181,9 @@ class HolidayService:
         ]
         return None, result
 
-    async def add_days(self, new: DayRange, is_weekday: bool=True, pri: DayPriority=DayPriority.MANUAL):
+    async def add_time_slot(self, new: TimeSlot, is_weekday: bool=True, pri: DayPriority=DayPriority.MANUAL):
         '''
-            Add the days time range.
+            Add the given time slot as weekday/non-weekday with the given priority.
             Overwrite existing ranges with lower priority.
         '''
         new_start = int(new.start.timestamp())
@@ -301,7 +301,7 @@ class HolidayService:
         await self.rs.set('weekday_valid_time', 0)
         return None
 
-    async def delete_days(self, target: DayRange):
+    async def delete_time_slot(self, target: TimeSlot):
         async with self.db.acquire() as con:
             res = await con.execute(
                 '''
@@ -318,9 +318,9 @@ class HolidayService:
         await self.rs.set('weekday_valid_time', 0)
         return None
 
-    async def delete_day_range(self, range: DayRange):
+    async def delete_range(self, range: TimeSlot):
         '''
-            Remove all weekdays within the specified range.
+            Remove all time slots within the specified range.
             Overlapping ranges won't be affected.
         '''
         async with self.db.acquire() as con:

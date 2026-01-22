@@ -2,7 +2,7 @@ import datetime
 
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from services.user import UserConst
-from services.holiday import HolidayService, DayRange
+from services.holiday import HolidayService, TimeSlot
 
 holiday_dispatcher = ActionDispatcher()
 
@@ -27,11 +27,11 @@ class ManageHolidayHandler(RequestHandler):
         '''
         year = int(self.get_argument("year"))
         month = int(self.get_argument("month"))
-        query_range = DayRange(
+        query_range = TimeSlot(
             datetime.datetime(year,month,1) - datetime.timedelta(days=7), 
             datetime.datetime(year,month,1) + datetime.timedelta(days=41)
         )
-        err, res = await HolidayService.inst.get_days(query_range)
+        err, res = await HolidayService.inst.get_time_slots(query_range)
         if err:
             return self.error(err)
 
@@ -69,12 +69,12 @@ class ManageHolidayHandler(RequestHandler):
         if start >= end:
             return self.error(('Eparam', 'Start time must be before end time'))
 
-        old_range = DayRange(old_start, old_end)
-        new_range= DayRange(start, end)
-        err = await HolidayService.inst.delete_days(old_range)
+        old_slot = TimeSlot(old_start, old_end)
+        new_slot = TimeSlot(start, end)
+        err = await HolidayService.inst.delete_time_slot(old_slot)
         if err:
             return self.error(err)
-        err = await HolidayService.inst.add_days(new_range, is_weekday)
+        err = await HolidayService.inst.add_time_slot(new_slot, is_weekday)
         if err:
             return self.error(err)
 
@@ -91,8 +91,8 @@ class ManageHolidayHandler(RequestHandler):
         except ValueError:
             return self.error(('Eparam', 'Invalid date format'))
 
-        del_range = DayRange(start, end)
-        err = await HolidayService.inst.delete_days(del_range)
+        del_slot = TimeSlot(start, end)
+        err = await HolidayService.inst.delete_time_slot(del_slot)
         if err:
             return self.error(err)
 
