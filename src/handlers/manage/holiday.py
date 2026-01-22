@@ -50,6 +50,28 @@ class ManageHolidayHandler(RequestHandler):
         ]
         self.error(('S',events))
 
+    @holiday_dispatcher.action("add")
+    async def add_holiday(self):
+        start = self.get_argument("new_start")
+        end = self.get_argument("new_end")
+        is_weekday = self.get_argument("is_weekday") == '1'
+
+        try:
+            start = datetime.datetime.strptime(start, '%Y/%m/%d %H:%M')
+            end = datetime.datetime.strptime(end, '%Y/%m/%d %H:%M')
+        except ValueError:
+            return self.error(('Eparam', 'Invalid date format'))
+
+        if start >= end:
+            return self.error(('Eparam', 'Start time must be before end time'))
+
+        new_slot = TimeSlot(start, end)
+        err = await HolidayService.inst.add_time_slot(new_slot, is_weekday)
+        if err:
+            return self.error(err)
+
+        self.error(('S', ''))
+
     @holiday_dispatcher.action("update")
     async def update_holiday(self):
         old_start = self.get_argument("old_start")

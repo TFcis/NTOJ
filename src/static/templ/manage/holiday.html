@@ -20,7 +20,7 @@
     var info_start_date_picker = null;
     var info_end_date_picker = null;
     function init() {
-        const infoModal = new bootstrap.Modal(document.getElementById('infoModal'));
+        const modal = new bootstrap.Modal(document.getElementById('modal'));
         const Calendar = tui.Calendar;
         const calendar = new Calendar('#calendar', {
             defaultView: 'month',
@@ -71,10 +71,47 @@
                 } else {
                     $('input[name="info-type"][value="weekday"]').prop('checked', true);
                 }
-                $('#infoModal').data('old-start', start.format('yyyy/MM/dd HH:mm'));
-                $('#infoModal').data('old-end', end.format('yyyy/MM/dd HH:mm'));
-                infoModal.show();
+                $('#modal-title').text('Event Info');
+                $('button.add').hide();
+                $('button.update').show();
+                $('button.delete').show();
+                $('#modal').data('old-start', start.format('yyyy/MM/dd HH:mm'));
+                $('#modal').data('old-end', end.format('yyyy/MM/dd HH:mm'));
+                modal.show();
+            },
+            selectDateTime: function(e) {
+                const start = new tempusDominus.DateTime(e.start);
+                const end = new tempusDominus.DateTime(e.end.setHours(23,59));
+                info_start_date_picker.dates.setValue(start);
+                info_end_date_picker.dates.setValue(end);
+                $('#modal-title').text('Add Event');
+                $('input[name="info-type"][value="weekday"]').prop('checked', true);
+                $('button.add').show();
+                $('button.update').hide();
+                $('button.delete').hide();
+                modal.show();
             }
+        });
+
+        $('button.add').on('click', function() {
+            const start = info_start_date_picker.viewDate;
+            const end = info_end_date_picker.viewDate;
+            const type = $('input[name="info-type"]:checked').val();
+            $.post(`{{ url('/be/manage/holiday') }}`, {
+                reqtype: 'add',
+                new_start: start.format('yyyy/MM/dd HH:mm'),
+                new_end: end.format('yyyy/MM/dd HH:mm'),
+                is_weekday: type == 'weekday' ? 1 : 0
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Event added successfully', index.DIALOG_TYPE.success);
+                    modal.hide();
+                    updateMonth();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
         });
 
         $('button.update').on('click', function() {
@@ -83,8 +120,8 @@
             const type = $('input[name="info-type"]:checked').val();
             $.post(`{{ url('/be/manage/holiday') }}`, {
                 reqtype: 'update',
-                old_start: $('#infoModal').data('old-start'),
-                old_end: $('#infoModal').data('old-end'),
+                old_start: $('#modal').data('old-start'),
+                old_end: $('#modal').data('old-end'),
                 new_start: start.format('yyyy/MM/dd HH:mm'),
                 new_end: end.format('yyyy/MM/dd HH:mm'),
                 is_weekday: type == 'weekday' ? 1 : 0
@@ -92,7 +129,7 @@
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Event updated successfully', index.DIALOG_TYPE.success);
-                    infoModal.hide();
+                    modal.hide();
                     updateMonth();
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
@@ -103,18 +140,22 @@
         $('button.delete').on('click', function() {
             $.post(`{{ url('/be/manage/holiday') }}`, {
                 reqtype: 'delete',
-                old_start: $('#infoModal').data('old-start'),
-                old_end: $('#infoModal').data('old-end'),
+                old_start: $('#modal').data('old-start'),
+                old_end: $('#modal').data('old-end'),
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Event deleted successfully', index.DIALOG_TYPE.success);
-                    infoModal.hide();
+                    modal.hide();
                     updateMonth();
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
+        });
+
+        $('#modal').on('hidden.bs.modal', function () {
+            calendar.clearGridSelections();
         });
 
         $('#prev-month').on('click', function() {
@@ -197,11 +238,11 @@
 {% end %}
 
 {% block content %}
-<div class="modal fade" id="infoModal" aria-hidden="true">
+<div class="modal fade" id="modal" aria-hidden="true">
 	<div class="modal-dialog modal-lg modal-dialog-scrollable">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title" id="preview-title">Event Info</h5>
+				<h5 class="modal-title" id="modal-title">Event Info</h5>
 			</div>
 
 			<div class="modal-body">
@@ -235,6 +276,7 @@
 			</div>
 
 			<div class="modal-footer">
+                <button class="btn btn-primary add">Add</button>
 				<button class="btn btn-primary update">Update</button>
 				<button class="btn btn-danger delete">Delete</button>
 			</div>
