@@ -154,17 +154,6 @@ class ProsetHandler(RequestHandler):
         for pro in prolist:
             pro_id = pro.pro_id
 
-            topcoder = None
-            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
-            if err:
-                return self.error(err)
-
-            if topcoder_id:
-                err, topcoder = await UserService.inst.info_acct(topcoder_id)
-                if err:
-                    return self.error(err)
-
-            score_map[pro_id]["topcoder"] = topcoder
             if order is None:
                 _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
                 score_map[pro_id]["rate_data"] = rate
@@ -399,23 +388,11 @@ class ProHandler(RequestHandler):
                 pro.tags = ""
 
         can_submit = JudgeServerClusterService.inst.is_server_online()
-        topcoder = None
-        if not self.contest:
-            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
-            if err:
-                return self.error(err)
-
-            if topcoder_id:
-                err, topcoder = await UserService.inst.info_acct(topcoder_id)
-                if err:
-                    return self.error(err)
-
         await self.render(
             "pro",
             pro=pro,
             can_submit=can_submit,
             contest=self.contest,
-            topcoder=topcoder,
         )
 
 

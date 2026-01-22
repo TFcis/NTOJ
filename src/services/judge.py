@@ -189,7 +189,6 @@ class JudgeServerService:
 
             # NOTE: Recalculate problem rate
             await RateService.inst.refresh_pro_ac_rate(pro_id, contest_id)
-            await RateService.inst.refresh_pro_topcoder(pro_id)
             self.chal_map.pop(res['chal_id'])
 
         global update_chal_task_running_cnt

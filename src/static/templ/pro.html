@@ -191,35 +191,6 @@
         <span id="tags-done" style="color: green; display: none">SET TAGS SUCCESS</span>
         <br>
 
-        {% if not contest %}
-            {% if topcoder %}
-                <div class="my-lg-1" id="topcoder">
-                    <div class="card">
-                    <div class="card-header">TopCoder</div>
-                    <div class="card-body">
-                        {% if topcoder.photo == "" %}
-                        {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
-                        {% end %}
-                        <img src="{{ topcoder.photo }}" style="max-width:100px; max-height:100px; position:relative; left:50px; transform:translateX(-50%);" />
-                        <div class="card-text-group">
-                            <h5 class="card-title"><a href="{{ url(f'/acct/{ topcoder.acct_id }/') }}">{{ topcoder.name }}</a></h5>
-                            <p class="card-text">{{ topcoder.motto }}</p>
-                        </div>
-                    </div>
-                    </div>
-                </div>
-            {% else %}
-                <div class="my-lg-1" id="topcoder">
-                    <div class="card">
-                    <div class="card-header">TopCoder</div>
-                    <div class="card-body">
-                        <h5 class="card-title">Waiting for you to become the first <span class="state-1">accepted</span>.</h5>
-                    </div>
-                    </div>
-                </div>
-            {% end %}
-        {% end %}
-
         <div class="table-responsive">
             <table class="table table-sm">
                 <thead>

@@ -91,10 +91,6 @@ class IntegratedTest(AsyncTest):
                 'user_ac_chal_cnt': 0,
             })
 
-            err, topcoder = await RateService.inst.get_pro_topcoder(1)
-            self.assertIsNone(err)
-            self.assertIsNone(topcoder)
-
             err, acct = await UserService.inst.info_acct(1)
             self.assertIsNone(err)
             assert acct
@@ -155,10 +151,6 @@ class IntegratedTest(AsyncTest):
                 'user_all_chal_cnt': 1,
                 'user_ac_chal_cnt': 1,
             })
-
-            err, topcoder = await RateService.inst.get_pro_topcoder(1)
-            self.assertIsNone(err)
-            self.assertEqual(topcoder, 1)
 
             err, ratemap = await RateService.inst.map_rate_acct(acct)
             self.assertEqual(len(ratemap), 1)

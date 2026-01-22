@@ -364,7 +364,6 @@
                     <th scope="col">#</th>
                     <th scope="col">State</th>
                     <th scope="col">Problem Name</th>
-                    <th class="text-center" scope="col">TopCoder</th>
                     <th scope="col">AC Ratio (User)</th>
                     <th scope="col">AC Ratio (Submission)</th>
                     <th scope="col">Tags</th>
@@ -383,19 +382,6 @@
                     <td class="name">
                         <a href="{{ url(f'/pro/{ pro_id }/') }}">{{ pro.name }}</a>
                     </td>
-                    {% set topcoder = score_map[pro_id]['topcoder'] %}
-                    {% if topcoder %}
-                        {% if topcoder.photo == "" %}
-                            {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
-                        {% end %}
-                        <td class="text-center">
-                            <a href="{{ url(f'/acct/{ topcoder.acct_id }/') }}">
-                                <img width="30" height="30" src="{{ topcoder.photo }}" />
-                            </a>
-                        </td>
-                    {% else %}
-                        <td></td>
-                    {% end %}
 
                     {% set rate = score_map[pro_id]['rate_data'] %}
                     <td>

@@ -546,7 +546,6 @@ class ProService:
                 refresh_tasks.append(task)
 
             await RateService.inst.refresh_acct_rate(all_account=True)
-            await RateService.inst.refresh_pro_topcoder(pro_id)
             await asyncio.gather(*refresh_tasks)
 
         return None, None
