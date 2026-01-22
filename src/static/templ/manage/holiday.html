@@ -100,6 +100,19 @@
             }
         });
 
+        $('button.to-add').on('click', function() {
+            calendar.clearGridSelections();
+            const now = new tempusDominus.DateTime();
+            info_start_date_picker.dates.setValue(now);
+            info_end_date_picker.dates.setValue(now);
+            $('#modal-title').text('Add Event');
+            $('input[name="info-type"][value="weekday"]').prop('checked', true);
+            $('button.add').show();
+            $('button.update').hide();
+            $('button.delete').hide();
+            modal.show();
+        });
+
         $('button.add').on('click', function() {
             const start = info_start_date_picker.viewDate;
             const end = info_end_date_picker.viewDate;
@@ -293,28 +306,31 @@
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <div id="calendar-menu" class="d-flex justify-content-center align-items-center mb-3">
-        <button id="prev-month" class="btn btn-primary">&lt;</button>
-        <span id="current-month" class="mx-3" style="cursor:pointer"></span>
-        <div id="month-picker" style="display:none; position:absolute; z-index:1000; background:#fff; border:1px solid #ccc; padding:10px;">
-        <select id="picker-year"></select>
-        <span style="color: black;">/</span>
-        <select id="picker-month">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-            <option value="10">10</option>
-            <option value="11">11</option>
-            <option value="12">12</option>
-        </select>
-        <button id="picker-confirm">Go</button>
+        <div class="position-absolute start-50 translate-middle-x">
+            <button id="prev-month" class="btn btn-primary">&lt;</button>
+            <span id="current-month" class="mx-3" style="cursor:pointer"></span>
+            <div id="month-picker" style="display:none; position:absolute; z-index:1000; background:#fff; border:1px solid #ccc; padding:10px;">
+            <select id="picker-year"></select>
+            <span style="color: black;">/</span>
+            <select id="picker-month">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+            </select>
+            <button id="picker-confirm">Go</button>
+            </div>
+            <button id="next-month" class="btn btn-primary">&gt;</button>
         </div>
-        <button id="next-month" class="btn btn-primary">&gt;</button>
+        <button  class="btn btn-primary ms-auto to-add">+</button>
     </div>
     <div id="calendar"></div>
 </div>
