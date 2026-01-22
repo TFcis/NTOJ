@@ -71,7 +71,6 @@ class IntegratedTest(AsyncTest):
             self.assertTrue(pro.allow_submit)
             self.assertEqual(pro.name, 'GCD')
             self.assertEqual(pro.status, ProConst.STATUS_ONLINE)
-            self.assertEqual(pro.tags, '')
 
             err, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_NORMAL_USER)
             self.assertIsNone(err)
@@ -79,7 +78,6 @@ class IntegratedTest(AsyncTest):
             self.assertEqual(prolist[0].pro_id, 1)
             self.assertEqual(prolist[0].name, 'GCD')
             self.assertEqual(prolist[0].status, ProConst.STATUS_ONLINE)
-            self.assertEqual(prolist[0].tags, '')
             self.assertTrue(prolist[0].allow_submit)
 
             err, rate = await RateService.inst.get_pro_ac_rate(pro.pro_id)

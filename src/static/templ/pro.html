@@ -24,29 +24,6 @@
         let PDFJS = pdfjsLib;
         PDFJS.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.mjs';
 
-        $('#tags').keydown(function(event) {
-            if (event.which == 13) // return
-                $('#tags').focusout();
-        });
-
-        $('#tags').focusout(function(event) {
-            var tags = event.target.value;
-            if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1 || tags.length == 0) {
-                // valid
-                $('#tags-invalid').hide();
-                $.post(`{{ url('/be/set-tags') }}`, {
-                    'pro_id': {{ pro.pro_id }},
-                    'tags': tags,
-                }, function() {
-                    $('#tags-done').show();
-                });
-            } else {
-                // invalid
-                event.target.focus();
-                $('#tags-invalid').show();
-            }
-        });
-
         $("#pdfbtn").on('click', function(event) {
             let url = `${pdf_url}?download=1`;
             let downloadLink = document.createElement("a");
@@ -179,16 +156,6 @@
             <a class="btn btn-warning my-lg-1" style="display: none; width: 156px; text-align: center;" id="pdfbtn">Download PDF</a>
             <a class="btn btn-warning my-lg-1" id="switchviewer" style="display: none; width: 156px; text-align: center;">Switch Viewer</a>
         </div>
-        {% if user.is_kernel() and not contest %}
-            <input id="tags" value="{{ pro.tags }}" style="width: 190px" placeholder="add tags here">
-        {% else %}
-            <input id="tags" value="{{ pro.tags }}" style="width: 190px" placeholder="no tags" disabled>
-        {% end %}
-        <div>
-
-        </div>
-        <span id="tags-invalid" style="color:#e74c3c; display: none">TAGS INVALID!</span>
-        <span id="tags-done" style="color: green; display: none">SET TAGS SUCCESS</span>
         <br>
 
         <div class="table-responsive">

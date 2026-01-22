@@ -18,7 +18,7 @@ from handlers.log import LogHandler
 from handlers.manage.url import get_manage_url
 from handlers.pack import PackHandler
 
-from handlers.pro import ProHandler, ProsetHandler, ProStaticHandler, ProTagsHandler
+from handlers.pro import ProHandler, ProsetHandler, ProStaticHandler
 from handlers.submit import SubmitHandler
 
 
@@ -50,7 +50,6 @@ def get_url(db, rs, pool):
         (r'/be/ws', UnifiedWebSocketHandler, unified_ws_args),
         (r'/be/pack', PackHandler, args),
         (r'/be/about', AbouotHandler, args),
-        (r'/be/set-tags', ProTagsHandler, args),
         (r'/be/log', LogHandler, args),
         (r'/be/log/(\d+)', LogHandler, args),
         (r'/be/code', CodeHandler, args),

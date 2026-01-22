@@ -23,7 +23,6 @@ class ProsetHandler(RequestHandler):
         show_only_online_pro = self.get_argument("online", default=False)
         order_reverse = self.get_argument("reverse", default=False)
         search_name = self.get_argument("name", default=None)
-        search_tags = self.get_argument("tags", default=None)
 
         flt = {
             "order": order,
@@ -31,12 +30,9 @@ class ProsetHandler(RequestHandler):
             "online": show_only_online_pro,
             "reverse": order_reverse,
             "name": search_name,
-            "tags": search_tags,
         }
         if search_name:
             search_name = search_name.lower()
-        if search_tags:
-            search_tags = search_tags.lower()
 
         proclass_id = int(self.get_argument("proclass_id", default=0))
         if proclass_id == 0:
@@ -90,14 +86,6 @@ class ProsetHandler(RequestHandler):
                 continue
 
             if search_name and pro.name.lower().find(search_name) == -1:
-                continue
-
-            if (self.acct.is_guest()) or (
-                not self.acct.is_kernel() and pro_state != ChalConst.STATE_AC
-            ):
-                pro.tags = ""
-
-            if search_tags and pro.tags.lower().find(search_tags) == -1:
                 continue
 
             rate = None
@@ -368,25 +356,6 @@ class ProHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        # NOTE: Guest cannot see tags
-        # NOTE: Admin can see tags
-        # NOTE: User get ac can see tags
-
-        if self.acct.is_guest():
-            pro.tags = ""
-
-        elif not self.acct.is_kernel():
-            from services.chal import ChalService
-
-            err, state = await ChalService.inst.check_acct_pro_state(
-                self.acct.acct_id, pro.pro_id
-            )
-            if err:
-                return self.error(err)
-
-            if state is None or state != ChalConst.STATE_AC:
-                pro.tags = ""
-
         can_submit = JudgeServerClusterService.inst.is_server_online()
         await self.render(
             "pro",
@@ -394,39 +363,3 @@ class ProHandler(RequestHandler):
             can_submit=can_submit,
             contest=self.contest,
         )
-
-
-class ProTagsHandler(RequestHandler):
-    @reqenv
-    @require_permission(UserConst.ACCTTYPE_KERNEL)
-    async def post(self):
-        tags = self.get_argument("tags")
-        pro_id = int(self.get_argument("pro_id"))
-
-        allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
-        if self.contest:
-            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
-
-        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
-        if err:
-            return self.error(err)
-
-        await LogService.inst.add_log(
-            (
-                self.acct.name
-                + " updated the tag of problem #"
-                + str(pro_id)
-                + ' to: "'
-                + str(tags)
-                + '".'
-            ),
-            "manage.pro.update.tag",
-        )
-
-        pro.tags = tags
-        err, _ = await ProService.inst.update_pro(pro)
-
-        if err:
-            return self.error(err)
-
-        self.error(("S", ""))
