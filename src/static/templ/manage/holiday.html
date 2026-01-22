@@ -106,11 +106,11 @@
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Event added successfully', index.DIALOG_TYPE.success);
-                    modal.hide();
                     updateMonth();
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
+                modal.hide();
             });
         });
 
@@ -129,11 +129,11 @@
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Event updated successfully', index.DIALOG_TYPE.success);
-                    modal.hide();
                     updateMonth();
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
+                modal.hide();
             });
         });
 
@@ -146,11 +146,11 @@
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Event deleted successfully', index.DIALOG_TYPE.success);
-                    modal.hide();
                     updateMonth();
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
+                modal.hide();
             });
         });
 
