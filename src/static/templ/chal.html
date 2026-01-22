@@ -181,12 +181,6 @@
             Prism.highlightAll();
 	    });
 
-        {% if user.acct_id == chal.acct_id %}
-        $('#report_pro_button').on('click', function(e) {
-            index.go(`{{ url('/report/?chal_id=${chal_id}') }}`);
-        });
-
-        {% end %}
     }
 
     function destroy() {
@@ -246,9 +240,6 @@
     {% if rechal == True %}
         <button id="rechal" class="btn btn-warning">Rechallenge</button>
         <button id="reject" class="btn btn-danger">Reject</button>
-    {% end %}
-    {% if chal.acct_id == user.acct_id %}
-        <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
     {% end %}
     </div>
 

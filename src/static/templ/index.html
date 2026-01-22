@@ -182,19 +182,6 @@
           <li class="nav-item proset"><a class="nav-link" href="{{ url('/proset/') }}">ProblemSet</a></li>
           <li class="nav-item contests"><a class="nav-link" href="{{ url('/contests/') }}">Contests</a></li>
 
-          {% if not user.is_kernel() %}
-          <li class="nav-item question"><a class="nav-link" href="{{ url('/question/') }}">Question</a></li>
-          {% end %}
-
-          {% if user.is_kernel() and ask_cnt > 0 %}
-          <li class="nav-item ask"><a class="nav-link" style="color: #e74c3c;" href="{{ url('/manage/question/') }}">get {{
-              ask_cnt }} ask</a></li>
-          {% end %}
-
-          {% if not user.is_kernel() and reply %}
-          <li class="nav-item"><a class="nav-link" style="color: #e74c3c;" href="{{ url('/question/') }}">get reply</a></li>
-          {% end %}
-
           <li><a class="nav-link message" style="display: none;" href=""></a></li>
           <!-- <li><a class="nav-link" href="http://forum.tfcis.org/forum.php?mod=forumdisplay&fid=40" target="_new">Discuss</a></li> -->
           <li><a class="nav-link" href="https://github.com/TFcis/NTOJ/issues" target="_new">Make A Wish</a></li>

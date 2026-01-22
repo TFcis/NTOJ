@@ -1,6 +1,5 @@
 from handlers.base import RequestHandler, reqenv
 from services.contests import ContestService, UserStatus
-from services.ques import QuestionService
 from services.judge import JudgeServerClusterService
 
 
@@ -17,9 +16,6 @@ class IndexHandler(RequestHandler):
         contest_id = 0
         contest_ask_cnt = 0
         contest_notification_cnt = 0
-
-        reply = False
-        ask_cnt = 0
 
         if page.startswith("contests"):
             is_in_contest = True
@@ -47,16 +43,8 @@ class IndexHandler(RequestHandler):
                         contest.contest_id, self.acct.acct_id
                     )
 
-        if self.acct.is_kernel():
-            _, _, ask_cnt = await QuestionService.inst.get_asklist()
-
-        elif not self.acct.is_guest():
-            reply = await QuestionService.inst.have_reply(self.acct.acct_id)
-
         await self.render(
             "index",
-            ask_cnt=ask_cnt,
-            reply=reply,
             contest_ask_cnt=contest_ask_cnt,
             contest_notification_cnt=contest_notification_cnt,
             is_in_contest=is_in_contest,

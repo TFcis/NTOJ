@@ -8,7 +8,6 @@ from .judge import JudgeServerClusterService
 from .log import LogService
 from .pack import PackService
 from .pro import ProClassService, ProService
-from .ques import QuestionService
 from .rate import RateService
 from .user import UserService
 
@@ -24,7 +23,6 @@ def services_init(db, rs):
     Service.Chal = ChalService(db, rs)
     Service.Contest = ContestService(db, rs)
     Service.Board = BoardService(db, rs)
-    Service.Question = QuestionService(db, rs)
     Service.Pack = PackService(db, rs)
     Service.Code = CodeService(db, rs)
     Service.Log = LogService(db, rs)

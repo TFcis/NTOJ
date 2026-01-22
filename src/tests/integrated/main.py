@@ -22,7 +22,6 @@ from .board import BoardTest
 from .chal import ChalTest, ChalListTest
 from .contest import ContestTest
 from .proclass import ProClassTest
-from .ques import QuesTest
 from .submit import SubmitTest
 
 
@@ -192,7 +191,6 @@ class IntegratedTest(AsyncTest):
             ProTest().main,
             BoardTest().main,
             ProClassTest().main,
-            QuesTest().main,
             SignTest().main,
             AcctPageTest().main,
             ManageAcctTest().main,
