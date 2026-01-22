@@ -27,6 +27,10 @@
             template: {
                 time(event) {
                     return `<span style="color: #f8f8f2;">${event.title}</span>`;
+                },
+                monthMoreTitleDate(e) {
+                    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    return `<span class="toastui-calendar-more-title-date" style="color: #f8f8f2">${e.date}</span><span class="toastui-calendar-more-title-day" style="color: #f8f8f2">${days[e.day]}</span>`;
                 }
             },
             theme: {
@@ -42,6 +46,9 @@
                 month: {
                     dayExceptThisMonth: {
                         color: '#6272a4',
+                    },
+                    moreView: {
+                        backgroundColor: '#44475a',
                     }
                 }
             },
