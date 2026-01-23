@@ -30,36 +30,16 @@ class AcctHandler(RequestHandler):
             return self.error(err)
 
         acct.acct_type = UserConst.ACCTTYPE_USER
-        err, rate_data = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
-        if err:
-            return self.error(err)
 
         err, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_NORMAL_USER)
         if err:
             return self.error(err)
 
-        err, ratemap = await RateService.inst.map_rate_acct(acct)
         acct.acct_type = UserConst.ACCTTYPE_KERNEL
-
-        prolist2 = []
-
-        ac_pro_cnt = 0
-        for pro in prolist:
-            pro_id = pro.pro_id
-            tmp = {"pro_id": pro_id, "score": -1, "state": None}
-            if pro_id in ratemap:
-                tmp["score"] = ratemap[pro_id]["rate"]
-                tmp["state"] = ratemap[pro_id]["state"]
-                ac_pro_cnt += ratemap[pro_id]["state"] == ChalConst.STATE_AC
-
-            prolist2.append(tmp)
 
         def chunk_list(la, size):
             for i in range(0, len(la), size):
                 yield la[i : i + size]
-
-        rate_data["rate"] = math.floor(rate_data["rate"])
-        rate_data["ac_pro_cnt"] = ac_pro_cnt
 
         # force https, add by xiplus, 2018/8/24
         acct.photo = re.sub(r"^http://", "https://", acct.photo)
@@ -68,9 +48,7 @@ class AcctHandler(RequestHandler):
         await self.render(
             "acct/profile",
             acct=acct,
-            rate=rate_data,
-            total_pro_cnt=len(prolist),
-            prolist=chunk_list(prolist2, 10),
+            prolist=chunk_list(prolist, 10),
         )
 
 

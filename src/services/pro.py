@@ -545,7 +545,6 @@ class ProService:
                 task = RateService.inst.refresh_pro_ac_rate(pro_id, contest_id)
                 refresh_tasks.append(task)
 
-            await RateService.inst.refresh_acct_rate(all_account=True)
             await asyncio.gather(*refresh_tasks)
 
         return None, None

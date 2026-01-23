@@ -1,4 +1,3 @@
-import decimal
 import datetime
 from collections import defaultdict
 
@@ -15,89 +14,6 @@ class RateService:
         self.db = db
         self.rs = rs
         RateService.inst = self
-
-    async def get_acct_rate_and_chal_cnt(self, acct: Account):
-        key = 'rate'
-        acct_id = acct.acct_id
-
-        if (rate_data := await self.rs.hget(key, acct_id)) is None:
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    f'''
-                        SELECT
-                            COUNT(*) AS all_chal_cnt,
-                            COUNT(CASE WHEN cs.state = {ChalConst.STATE_AC} THEN 1 END) AS ac_chal_cnt
-                        FROM
-                            challenge c
-                        INNER JOIN problem
-                            ON c.pro_id = problem.pro_id
-                        INNER JOIN total_result cs
-                            ON c.chal_id = cs.chal_id
-                        WHERE
-                            c.acct_id = $1 AND
-                            problem.status = {ProConst.STATUS_ONLINE} AND
-                            c.contest_id = 0;
-                    ''',
-                    acct_id,
-                )
-                if len(result) != 1:
-                    return ('Eunk', 'Unknown error'), None
-                result = result[0]
-
-                ac_chal_cnt, all_chal_cnt = (
-                    result['ac_chal_cnt'],
-                    result['all_chal_cnt'],
-                )
-
-                result = await con.fetch(
-                    f'''
-                    WITH accepted_tests AS (
-                        SELECT DISTINCT
-                            c.acct_id, t.pro_id, t.subtask_id, t.rate
-                        FROM
-                            subtask_result t
-                        INNER JOIN problem p
-                            ON t.pro_id = p.pro_id
-                        INNER JOIN challenge c
-                            ON t.chal_id = c.chal_id AND c.contest_id = 0
-                        WHERE
-                            p.status = {ProConst.STATUS_ONLINE}
-                            AND t.state IN ({ChalConst.STATE_AC}, {ChalConst.STATE_PC})
-                            AND c.acct_id = $1
-                    )
-                    SELECT
-                        SUM(at.rate) AS total_rate
-                    FROM
-                        accepted_tests at;
-                    ''',
-                    acct_id
-                )
-                if len(result) != 1:
-                    return ('Eunk', 'Unknown error'), None
-                rate = result[0]['total_rate']
-                if rate is None:
-                    rate = 0
-
-                rate_data = {
-                    'rate': str(rate),
-                    'ac_cnt': ac_chal_cnt,
-                    'all_cnt': all_chal_cnt,
-                }
-                await self.rs.hset(key, acct_id, packb(rate_data))
-        else:
-            rate_data = unpackb(rate_data)
-
-        rate_data['rate'] = decimal.Decimal(rate_data['rate'])
-
-        return None, rate_data
-
-    async def refresh_acct_rate(self, acct_id: int = 0, all_account: bool = False):
-        if all_account:
-            await self.rs.delete('rate')
-            return None, None
-
-        await self.rs.hdel('rate', str(acct_id))
-
 
     async def get_pro_ac_rate(self, pro_id, contest_id: int = 0):
         # problem submission ac rate

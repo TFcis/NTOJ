@@ -161,20 +161,14 @@ class ChalTest(AsyncTest):
         self.assertEqual(ratemap[1]['rate'], Decimal('1.110'))
         err, ratemap = await RateService.inst.map_rate()
         self.assertEqual(ratemap[1][1]['rate'], Decimal('1.110'))
-        err, acctrate = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
-        self.assertEqual(acctrate['rate'], Decimal('2.220'))
 
         await ChalService.inst.db.execute('UPDATE problem SET rate_precision = 1 WHERE pro_id=1;')
         err, ratemap = await RateService.inst.map_rate_acct(acct)
         self.assertEqual(ratemap[1]['rate'], Decimal('1.1'))
         err, ratemap = await RateService.inst.map_rate()
         self.assertEqual(ratemap[1][1]['rate'], Decimal('1.1'))
-        err, acctrate = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
-        self.assertEqual(acctrate['rate'], Decimal('2.220'))
 
         await ChalService.inst.db.execute('UPDATE problem SET rate_precision = 0 WHERE pro_id=1;')
-        err, acctrate = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
-        self.assertEqual(acctrate['rate'], Decimal('2.220'))
         with AccountContext('admin@test', 'testtest') as admin_session:
             def callback():
                 res = admin_session.post('submit', data={

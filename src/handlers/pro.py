@@ -18,14 +18,12 @@ class ProsetHandler(RequestHandler):
     @reqenv
     async def get(self):
         pageoff = int(self.get_argument("pageoff", default=0))
-        order = self.get_argument("order", default=None)
         problem_show = self.get_argument("show", default="all")
         show_only_online_pro = self.get_argument("online", default=False)
         order_reverse = self.get_argument("reverse", default=False)
         search_name = self.get_argument("name", default=None)
 
         flt = {
-            "order": order,
             "problem_show": problem_show,
             "online": show_only_online_pro,
             "reverse": order_reverse,
@@ -88,49 +86,10 @@ class ProsetHandler(RequestHandler):
             if search_name and pro.name.lower().find(search_name) == -1:
                 continue
 
-            rate = None
-            if order is not None:
-                _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
-            score_map[pro_id] = {"state": pro_state, "rate_data": rate}
+            score_map[pro_id] = {"state": pro_state}
             new_prolist.append(pro)
 
         prolist = new_prolist
-
-        def user_ac_cmp(pro: Problem):
-            pro_id = pro.pro_id
-            user_ac_chal_cnt = score_map[pro_id]["rate_data"]["user_ac_chal_cnt"]
-            user_all_chal_cnt = score_map[pro_id]["rate_data"]["user_all_chal_cnt"]
-
-            if user_ac_chal_cnt and user_all_chal_cnt:
-                return user_ac_chal_cnt / user_all_chal_cnt
-            else:
-                return -1
-
-        def chal_ac_cmp(pro: Problem):
-            pro_id = pro.pro_id
-            ac_chal_cnt = score_map[pro_id]["rate_data"]["ac_chal_cnt"]
-            all_chal_cnt = score_map[pro_id]["rate_data"]["all_chal_cnt"]
-
-            if ac_chal_cnt and all_chal_cnt:
-                return ac_chal_cnt / all_chal_cnt
-            else:
-                return -1
-
-        def cmp(pro: Problem, key: str):
-            return score_map[pro.pro_id]["rate_data"][key]
-
-        if order == "chal":
-            prolist = sorted(prolist, key=chal_ac_cmp)
-        elif order == "user":
-            prolist = sorted(prolist, key=user_ac_cmp)
-        elif order == "chalcnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "all_chal_cnt"))
-        elif order == "chalaccnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "ac_chal_cnt"))
-        elif order == "usercnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "user_all_chal_cnt"))
-        elif order == "useraccnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "user_ac_chal_cnt"))
 
         if order_reverse:
             prolist = reversed(prolist)
@@ -138,13 +97,6 @@ class ProsetHandler(RequestHandler):
         prolist = list(prolist)
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff : pageoff + 40]
-
-        for pro in prolist:
-            pro_id = pro.pro_id
-
-            if order is None:
-                _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
-                score_map[pro_id]["rate_data"] = rate
 
         await self.render(
             "proset",

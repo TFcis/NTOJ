@@ -8,7 +8,6 @@
         let j_filter = $('#filter');
 
         function get_goto_filtered_proset_url(proclass_id) {
-            let order = j_filter.find("#order").val();
             let show = j_filter.find("#show").val();
             let search_name = j_filter.find("#name").val();
             if (proclass_id == -1)
@@ -16,10 +15,6 @@
             let is_online = j_filter.find("#online").is(":checked");
             let is_reversed = j_filter.find("#reverse").is(":checked");
             let url = `{{ url('/proset/?') }}`;
-
-            if (order != '') {
-                url += `&order=${order}`;
-            }
 
             if (show != '') {
                 url += `&show=${show}`;
@@ -297,17 +292,6 @@
             <label class="form-label">過濾器</label>
 
             <div class="mb-3">
-                <label for="order" class="form-label">Sort By</label>
-                <select id="order" class="form-select">
-                    <option value="None" {% if flt['order'] == None %} selected {% end %}>None</option>
-                    <option value="chal" {% if flt['order'] == 'chal' %} selected {% end %}>Submission AC Ratio</option>
-                    <option value="user" {% if flt['order'] == 'user' %} selected {% end %}>User AC Ratio</option>
-                    <option value="chalcnt" {% if flt['order'] == 'chalcnt' %} selected {% end %}>Submission Count</option>
-                    <option value="chalaccnt" {% if flt['order'] == 'chalaccnt' %} selected {% end %}>Submission AC Count</option>
-                    <option value="usercnt" {% if flt['order'] == 'usercnt' %} selected {% end %}>User Submission Count</option>
-                    <option value="useraccnt" {% if flt['order'] == 'useraccnt' %} selected {% end %}>User Submission AC Count</option>
-                </select>
-
                 <label for="reverse" class="form-check-label">Reverse Sort Order</label>
                 <input type="checkbox" class="form-check-input" id="reverse" {% if flt['reverse'] %} checked {% end %} />
             </div>
@@ -354,8 +338,6 @@
                     <th scope="col">#</th>
                     <th scope="col">State</th>
                     <th scope="col">Problem Name</th>
-                    <th scope="col">AC Ratio (User)</th>
-                    <th scope="col">AC Ratio (Submission)</th>
                 </tr>
             </thead>
             <tbody>
@@ -371,29 +353,6 @@
                     <td class="name">
                         <a href="{{ url(f'/pro/{ pro_id }/') }}">{{ pro.name }}</a>
                     </td>
-
-                    {% set rate = score_map[pro_id]['rate_data'] %}
-                    <td>
-                        {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
-                            {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}%
-                        {% else %}
-                            {{ '0.00%' }}
-                        {% end %}
-
-                        (<a href="{{ url(f'/rank/{ pro_id }/') }}">{{ rate['user_ac_chal_cnt'] }}</a>
-                        / {{ rate['user_all_chal_cnt'] }})
-                    </td>
-
-                    <td>
-                        {% if rate['all_chal_cnt'] and rate['ac_chal_cnt'] %}
-                            {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}%
-                        {% else %}
-                            {{ '0.00%' }}
-                        {% end %}
-                        (<a href="{{ url(f'/chal/?proid={ pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
-                        /
-                        <a href="{{ url(f'/chal/?proid={ pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
-                    </td>
                 </tr>
             {% end %}
             </tbody>
@@ -406,9 +365,6 @@
         {% end %}
         {% if flt['problem_show'] != 'all' %}
         {% set postfix = postfix + f"&show={flt['problem_show']}" %}
-        {% end %}
-        {% if flt['order'] %}
-        {% set postfix = postfix + f"&order={flt['order']}" %}
         {% end %}
         {% if user.is_kernel() and flt['online'] %}
         {% set postfix = postfix + f"&online={flt['online']}" %}
