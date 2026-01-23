@@ -116,6 +116,17 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(acct_id)
         self.assertEqual(err[0], "Esignip")
 
+    async def test_sign_in_wrong_ip_in_holiday(self):
+        self.fake_conn.fetch.return_value = [{"acct_id": 1, "password": "aGVsbG8=", "specific_ip": "192.168.11.10"}]
+        self.fake_conn.fetchrow.return_value = {"start": 1769118000, "end": 1769118300}
+        with patch("base64.b64decode", return_value=b"hashedpw"):
+            with patch("bcrypt.hashpw", return_value=b"hashedpw"):
+                err, acct_id = await self.service.sign_in("test@mail.com", "pw123", "127.0.0.1")
+        self.fake_conn.fetch.assert_awaited_once()
+        self.fake_conn.fetchrow.assert_awaited_once()
+        self.assertIsNone(err)
+        self.assertEqual(acct_id, 1)
+
     async def test_sign_in_fail(self):
         self.fake_conn.fetch.return_value = []
         err, acct_id = await self.service.sign_in("test@mail.com", "pw123")
