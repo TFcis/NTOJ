@@ -2,6 +2,17 @@ from enum import IntEnum
 import datetime
 from dataclasses import dataclass
 import requests
+from requests.adapters import HTTPAdapter
+import ssl
+
+# Fix for "Missing Subject Key Identifier" when accessing data.taipei
+class TruststoreAdapter(HTTPAdapter):
+    def init_poolmanager(self, connections, maxsize, block=False, **pool_kwargs):
+        ctx = ssl.create_default_context()
+        ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        return super().init_poolmanager(connections, maxsize, 
+        block, ssl_context=ctx)
+
 
 @dataclass(slots=True)
 class TimeSlot:
@@ -70,7 +81,9 @@ class HolidayService:
         
         BASE_API_URL = 'https://data.taipei/api/v1/dataset/0dcbcfcf-f7a1-4664-a810-82c01cb524e0?scope=resourceAquire'
         offset = await self._get_offset()
-        resp = requests.get(f'{BASE_API_URL}&offset={offset}&limit=1000')
+        s = requests.Session()
+        s.mount("https://", TruststoreAdapter())
+        resp = s.get(f'{BASE_API_URL}&offset={offset}&limit=1000')
         if resp.status_code != 200:
             return ('Eio', f'Failed to fetch holiday data: HTTP {resp.status_code}')
 
