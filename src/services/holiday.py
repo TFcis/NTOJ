@@ -64,7 +64,7 @@ class HolidayService:
             # Add 'days' weekdays after dt
             for d in range(1, days + 1):
                 # weekday from 7 a.m. to 4 p.m.
-                start = dt + datetime.timedelta(days=d,hours=7)
+                start = dt + datetime.timedelta(days=d,hours=8)
                 end = dt + datetime.timedelta(days=d,hours=16)
                 await self.add_time_slot(TimeSlot(start=start, end=end), True, DayPriority.GOV)
         
