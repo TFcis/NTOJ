@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 from services.user import UserService, Account, UserConst, GUEST_ACCOUNT
 from services.chal import Compiler
+from services.holiday import HolidayService
 import time
 
 class DummyReq:
@@ -33,6 +34,9 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
         self.fake_db.acquire = MagicMock(return_value=fake_acquire_cm)
         self.fake_rs = AsyncMock()
         self.service = UserService(self.fake_db, self.fake_rs)
+        holiday_rs = AsyncMock()
+        holiday_rs.get = AsyncMock(return_value=None)
+        HolidayService(self.fake_db, holiday_rs)
 
     @patch("bcrypt.hashpw", return_value=b"hashedpw")
     @patch("bcrypt.gensalt", return_value=b"salt")
@@ -104,8 +108,10 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
 
     async def test_sign_in_fail_block_by_ip(self):
         self.fake_conn.fetch.return_value = [{"acct_id": 1, "password": "aGVsbG8=", "specific_ip": "192.168.11.10"}]
+        self.fake_conn.fetchrow.return_value = {"start": 1769118100, "end": 1769118000}
         err, acct_id = await self.service.sign_in("test@mail.com", "pw123", "127.0.0.1")
         self.fake_conn.fetch.assert_awaited_once()
+        self.fake_conn.fetchrow.assert_awaited_once()
         self.assertIsNotNone(err)
         self.assertIsNone(acct_id)
         self.assertEqual(err[0], "Esignip")
