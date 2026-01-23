@@ -15,6 +15,7 @@ class RegMode(enum.IntEnum):
     INVITED = 0
     FREE_REG = 1
     REG_APPROVAL = 2
+    PASSWORD = 3
 
 
 class ContestMode(enum.IntEnum):
@@ -59,6 +60,7 @@ class Contest:
 
     reg_mode: RegMode
     reg_end: datetime.datetime
+    contest_password: str = ''
 
     allow_compilers: set[Compiler] = field(default_factory=set)
     is_public_scoreboard: bool = False
@@ -139,7 +141,7 @@ class ContestService:
                         "desc_after_contest",
 
                         "contest_mode", "contest_start", "contest_end",
-                        "reg_mode", "reg_end", "start_ip", "end_ip",
+                        "reg_mode", "reg_end", "contest_password", "start_ip", "end_ip",
 
                         "allow_compilers",
                         "is_public_scoreboard",
@@ -279,14 +281,14 @@ class ContestService:
                     "desc_during_contest" = $3,
                     "desc_after_contest" = $4,
                     "contest_mode" = $5, "contest_start" = $6, "contest_end" = $7,
-                    "reg_mode" = $8, "reg_end" = $9,
-                    "allow_compilers" = $10,
-                    "is_public_scoreboard" = $11,
-                    "allow_view_other_page" = $12,
-                    "hide_admin" = $13,
-                    "submission_cd_time" = $14,
-                    "freeze_scoreboard_period" = $15
-                    WHERE "contest_id" = $16;
+                    "reg_mode" = $8, "reg_end" = $9, "contest_password" = $10,
+                    "allow_compilers" = $11,
+                    "is_public_scoreboard" = $12,
+                    "allow_view_other_page" = $13,
+                    "hide_admin" = $14,
+                    "submission_cd_time" = $15,
+                    "freeze_scoreboard_period" = $16
+                    WHERE "contest_id" = $17;
                 ''',
                 contest.name,
                 contest.desc_before_contest,
@@ -294,7 +296,7 @@ class ContestService:
                 contest.desc_after_contest,
 
                 contest.contest_mode, contest.contest_start, contest.contest_end,
-                contest.reg_mode, contest.reg_end,
+                contest.reg_mode, contest.reg_end, contest.contest_password,
 
                 contest.allow_compilers,
                 contest.is_public_scoreboard,

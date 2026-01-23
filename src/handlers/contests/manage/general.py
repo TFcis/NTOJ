@@ -47,6 +47,7 @@ class ContestManageGeneralHandler(RequestHandler):
 
         reg_mode = RegMode(int(self.get_argument("reg_mode")))
         reg_end = self.get_argument("reg_end")
+        contest_password = self.get_argument("contest_password", "")
 
         allow_compilers = self.get_arguments("allow_compilers[]")
         is_public_scoreboard = self.get_argument("is_public_scoreboard") == "true"
@@ -90,6 +91,11 @@ class ContestManageGeneralHandler(RequestHandler):
         if err:
             return self.error(err)
 
+        if reg_mode is RegMode.PASSWORD:
+            if contest_password == "":
+                return self.error(('Eparam', 'Contest registration password cannot be empty in Password mode'))
+            reg_end = contest_end
+
         if contest_mode != self.contest.contest_mode and ContestMode.RANDOM_SET in (contest_mode, self.contest.contest_mode):
             if len(self.contest.pro_list) != 0:
                 return self.error(('Echmod', 'Cannot change contest mode when problem list is not empty'))
@@ -111,6 +117,7 @@ class ContestManageGeneralHandler(RequestHandler):
 
         self.contest.reg_mode = reg_mode
         self.contest.reg_end = reg_end
+        self.contest.contest_password = contest_password
 
         self.contest.allow_compilers = allow_compilers
         self.contest.is_public_scoreboard = is_public_scoreboard
