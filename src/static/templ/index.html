@@ -70,41 +70,6 @@
                 setInterval(timer2, 1);
             }
         {% end %}
-
-        {% if contest.is_admin(user) %}
-          // Subscribe to admin-only new-question notifications using unified WS API
-          let contest_ask_cnt = parseInt("{{ contest_ask_cnt }}");
-          index.register_ws_callback('contestnewquessub', function(data) {
-            // data is a plain string with contest_id; just increment the counter
-            contest_ask_cnt += 1;
-            $("#notifyRedDot").text(contest_ask_cnt);
-            $("#notifyRedDot").show();
-          });
-          // Initialize channel with contest id
-          index.ws_send('contestnewquessub_init', "{{ contest.contest_id }}");
-        {% elif contest.is_start() %}
-            let contest_notification_cnt = parseInt("{{ contest_notification_cnt }}");
-            index.register_ws_callback('contestnewqasub', function(data) {
-              // server publishes JSON string for contestnewqasub; parse it
-              try {
-                let e = JSON.parse(data);
-                if (e.type == 'popup-announce') {
-                  index.show_notify_dialog(e.content, index.DIALOG_TYPE.info, e.subject);
-                } else {
-                  contest_notification_cnt += 1;
-                  $("#notifyRedDot").text(contest_notification_cnt);
-                  $("#notifyRedDot").show();
-                }
-              } catch (err) {
-                console.warn('malformed contestnewqasub payload', data);
-              }
-            });
-            // Initialize channel with contest id + acct_id
-            index.ws_send('contestnewqasub_init', JSON.stringify({
-              contest_id: "{{ contest.contest_id }}",
-              acct_id: "{{ user.acct_id }}",
-            }));
-        {% end %}
     {% end %}
 
     });
@@ -143,32 +108,10 @@
             <li class="nav-item scoreboard"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/scoreboard/') }}">Scoreboard</a></li>
           {% end %}
 
-          {% if not contest_manage %}
-            <li class="nav-item qa"></li>
-                <a class="nav-link position-relative" href="{{ url(f'/contests/{ contest_id }/qa/') }}">
-                    Q & A
-                    <span
-                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                        {% if not contest_notification_cnt %} style="display: none;" {% end %}
-                        id="notifyRedDot"
-                    >
-                        {{ contest_notification_cnt }}
-                    </span>
-                </a>
-            </li>
-          {% end %}
-
           {% if contest_manage %}
             <li class="nav-item manage">
                 <a class="nav-link position-relative" href="{{ url(f'/contests/{ contest_id }/manage/') }}">
                     Manage
-                    <span
-                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                        {% if not contest_ask_cnt %} style="display: none;" {% end %}
-                        id="notifyRedDot"
-                    >
-                        {{ contest_ask_cnt }}
-                    </span>
                 </a>
             </li>
           {% end %}

@@ -14,8 +14,6 @@ class IndexHandler(RequestHandler):
         contest_manage = False
         contest = None
         contest_id = 0
-        contest_ask_cnt = 0
-        contest_notification_cnt = 0
 
         if page.startswith("contests"):
             is_in_contest = True
@@ -27,26 +25,10 @@ class IndexHandler(RequestHandler):
             if contest_id != 0:
                 _, contest = await ContestService.inst.get_contest(contest_id)
                 if contest.is_admin(self.acct):
-                    (
-                        _,
-                        contest_ask_cnt,
-                    ) = await ContestService.inst.get_need_reply_question_cnt(
-                        contest_id
-                    )
                     contest_manage = True
-
-                elif contest.is_member(self.acct, UserStatus.APPROVED):
-                    (
-                        _,
-                        contest_notification_cnt,
-                    ) = await ContestService.inst.get_unread_notification_cnt(
-                        contest.contest_id, self.acct.acct_id
-                    )
 
         await self.render(
             "index",
-            contest_ask_cnt=contest_ask_cnt,
-            contest_notification_cnt=contest_notification_cnt,
             is_in_contest=is_in_contest,
             contest_manage=contest_manage,
             contest_id=contest_id,
