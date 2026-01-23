@@ -30,7 +30,7 @@ class HolidayService:
                 ''',
                 int(timestamp),
             )
-        return res[0]['cnt'] != 0
+        return res['cnt'] != 0
 
     async def is_weekday_now(self):
         timestamp = datetime.datetime.now().timestamp()
@@ -47,13 +47,13 @@ class HolidayService:
                 ''',
                 int(timestamp),
             )
-        if not res or not res[0]['start'] or not res[0]['end']:
+        if not res or not res['start'] or not res['end']:
             await self.rs.set('weekday_valid_time', timestamp + 30*86400) # valid for one month
             await self.rs.set('is_weekday', False)
             return False
 
-        start = res[0]['start']
-        end = res[0]['end']
+        start = res['start']
+        end = res['end']
         await self.rs.set('weekday_valid_time', min(start, end))
         await self.rs.set('is_weekday', end <= start)
         return end <= start
