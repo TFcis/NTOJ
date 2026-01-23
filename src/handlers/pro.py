@@ -43,21 +43,13 @@ class ProsetHandler(RequestHandler):
 
         proclass = None
         if proclass_id:
+            if not self.acct.is_kernel():
+                return self.error(PERMISSION_DENIED_ERROR)
+
             err, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if err:
                 return self.error(err)
             proclass = dict(proclass)
-
-            if (
-                proclass["type"] == ProClassConst.OFFICIAL_HIDDEN
-                and not self.acct.is_kernel()
-            ):
-                return self.error(PERMISSION_DENIED_ERROR)
-            elif (
-                proclass["type"] == ProClassConst.USER_HIDDEN
-                and proclass["acct_id"] != self.acct.acct_id
-            ):
-                return self.error(PERMISSION_DENIED_ERROR)
 
             p_list = proclass["list"]
             prolist = list(filter(lambda pro: pro.pro_id in p_list, prolist))
@@ -114,6 +106,10 @@ class ProsetHandler(RequestHandler):
     async def post(self):
         reqtype = self.get_argument("reqtype")
         if reqtype == "listproclass":
+            if not self.acct.is_kernel():
+                self.error(PERMISSION_DENIED_ERROR)
+                return
+
             proclass_type = self.get_argument("proclass_type")
             _, proclass_list = await ProClassService.inst.get_proclass_list()
 
@@ -140,32 +136,6 @@ class ProsetHandler(RequestHandler):
                             proclass_list,
                         )
                     )
-
-            elif proclass_type == "shared":
-                proclass_list = list(
-                    filter(
-                        lambda proclass: proclass["type"] == ProClassConst.USER_PUBLIC,
-                        proclass_list,
-                    )
-                )
-
-            elif proclass_type == "collection":
-                proclass_list = list(
-                    filter(
-                        lambda proclass: proclass["proclass_id"]
-                        in self.acct.proclass_collection,
-                        proclass_list,
-                    )
-                )
-
-            elif proclass_type == "own":
-                proclass_list = list(
-                    filter(
-                        lambda proclass: proclass["acct_id"] == self.acct.acct_id,
-                        proclass_list,
-                    )
-                )
-
             else:
                 self.error(("Eparam", "Wrong proclass_type"))
                 return
@@ -189,35 +159,6 @@ class ProsetHandler(RequestHandler):
                 proclass["total_cnt"] = len(p["list"])
 
             self.error(("S", proclass_list))
-
-        elif reqtype == "collect":
-            if self.acct.is_guest():
-                return self.error(("Eacces", "Please login"))
-
-            proclass_id = int(self.get_argument("proclass_id"))
-
-            if proclass_id in self.acct.proclass_collection:
-                return self.error(("Eexist", "Problem class is already collected"))
-
-            self.acct.proclass_collection.append(proclass_id)
-            self.acct.proclass_collection.sort()
-            await UserService.inst.update_acct(self.acct)
-            self.error(("S", ""))
-
-        elif reqtype == "decollect":
-            if self.acct.is_guest():
-                return self.error(("Eacces", "Please login"))
-
-            proclass_id = int(self.get_argument("proclass_id"))
-
-            if proclass_id not in self.acct.proclass_collection:
-                return self.error(("Enoext", "Problem class is not in your collection"))
-
-            self.acct.proclass_collection.remove(proclass_id)
-            self.acct.proclass_collection.sort()
-            await UserService.inst.update_acct(self.acct)
-            self.error(("S", ""))
-
 
 class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
     @reqenv

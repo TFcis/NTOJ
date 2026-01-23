@@ -1,6 +1,6 @@
 import tornado.web
 
-from handlers.acct import AcctConfigHandler, AcctHandler, AcctProClassHandler, SignHandler
+from handlers.acct import AcctConfigHandler, AcctHandler, SignHandler
 from handlers.base import UnifiedWebSocketHandler
 from handlers.chal import (
     ChalHandler,
@@ -37,7 +37,6 @@ def get_url(db, rs, pool):
         (r'/be/info', InfoHandler, args),
         (r'/be/sign', SignHandler, args),
         (r'/be/acct/(\d+)', AcctHandler, args),
-        (r'/be/acct/proclass/(\d+)', AcctProClassHandler, args),
         (r'/be/acctedit', AcctConfigHandler, args),
         (r'/be/acctedit/(\d+)', AcctConfigHandler, args),
         (r'/be/proset', ProsetHandler, args),
