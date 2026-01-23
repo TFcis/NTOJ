@@ -36,8 +36,8 @@ class HolidayService:
         timestamp = datetime.datetime.now().timestamp()
         valid_time = await self.rs.get('weekday_valid_time')
         is_weekday = await self.rs.get('is_weekday')
-        if valid_time and timestamp < int(valid_time.decode()) and is_weekday is not None:
-            return is_weekday == b'True'
+        if valid_time and is_weekday and timestamp < int(valid_time.decode()):
+            return is_weekday == b'1'
 
         async with self.db.acquire() as con:
             res = await con.fetchrow(
@@ -55,7 +55,7 @@ class HolidayService:
         start = res['start']
         end = res['end']
         await self.rs.set('weekday_valid_time', min(start, end))
-        await self.rs.set('is_weekday', end <= start)
+        await self.rs.set('is_weekday', int(end <= start))
         return end <= start
 
     async def fetch_gov_data(self):
