@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 import pickle
 
 import asyncpg
+from ipaddress import IPv4Address
+import random
 
 from services.chal import Compiler
 from services.user import Account
@@ -18,6 +20,7 @@ class RegMode(enum.IntEnum):
 class ContestMode(enum.IntEnum):
     IOI = 0
     ACM = 1
+    RANDOM_SET = 2
 
 class ProblemScoreType(enum.IntEnum):
     IOI2013 = 0
@@ -49,6 +52,10 @@ class Contest:
 
     user_list: dict[int, dict] = field(default_factory=dict)
     pro_list: dict[int, dict] = field(default_factory=dict)
+    pro_sets: list[list[int]] = field(default_factory=list)
+    ip_pro_list: dict[IPv4Address, list[int]] = field(default_factory=dict)
+    start_ip: IPv4Address
+    end_ip: IPv4Address
 
     reg_mode: RegMode
     reg_end: datetime.datetime
@@ -132,7 +139,7 @@ class ContestService:
                         "desc_after_contest",
 
                         "contest_mode", "contest_start", "contest_end",
-                        "reg_mode", "reg_end",
+                        "reg_mode", "reg_end", "start_ip", "end_ip",
 
                         "allow_compilers",
                         "is_public_scoreboard",
@@ -156,11 +163,13 @@ class ContestService:
                 contest.contest_start = contest.contest_start
                 contest.contest_end = contest.contest_end
                 contest.reg_end = contest.reg_end
+                contest.start_ip = IPv4Address(result['start_ip'])
+                contest.end_ip = IPv4Address(result['end_ip'])
 
-                result = await con.fetch('SELECT pro_id, score_type FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
-                for pro_id, score_type in result:
+                result = await con.fetch('SELECT "pro_id", "score_type", "order" FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
+                for pro_id, score_type, order in result:
                     contest.pro_list[pro_id] = {
-                        "score_type": ProblemScoreType(int(score_type))
+                        "score_type": ProblemScoreType(int(score_type)),
                     }
 
                 result = await con.fetch('SELECT acct_id, status FROM contest_users WHERE contest_id = $1 ORDER BY acct_id', contest_id)
@@ -168,6 +177,35 @@ class ContestService:
                     contest.user_list[acct_id] = {
                         "status": UserStatus(int(status))
                     }
+
+                if contest.contest_mode == ContestMode.RANDOM_SET:
+                    result = await con.fetch(
+                        '''
+                            SELECT ip, contest_ip_joints.pro_id 
+                            FROM contest_ip_joints INNER JOIN contest_problem_joints 
+                            ON contest_ip_joints.contest_id = contest_problem_joints.contest_id 
+                               AND contest_ip_joints.pro_id = contest_problem_joints.pro_id
+                            WHERE contest_ip_joints.contest_id = $1 ORDER BY contest_ip_joints.ip, contest_problem_joints."order" ASC;
+                        ''',
+                        contest_id
+                    )
+                    for ip_raw, pro_id in result:
+                        ip = IPv4Address(ip_raw)
+                        if ip not in contest.ip_pro_list:
+                            contest.ip_pro_list[ip] = []
+                        contest.ip_pro_list[ip].append(pro_id)
+
+                    pro_set_count = await con.fetchval('''
+                        SELECT COUNT(DISTINCT "order") FROM contest_problem_joints
+                        WHERE contest_id = $1;
+                    ''', contest_id)
+                    for order in range(pro_set_count):
+                        result = await con.fetch('''
+                            SELECT pro_id FROM contest_problem_joints
+                            WHERE contest_id = $1 AND "order" = $2;
+                        ''', contest_id, order)
+                        pro_set = [pro_id for pro_id, in result]
+                        contest.pro_sets.append(pro_set)
 
             if contest.is_running():
                 b_contest = pickle.dumps(contest)
@@ -268,6 +306,8 @@ class ContestService:
             )
 
             if prolist_updated:
+                if contest.contest_mode == ContestMode.RANDOM_SET:
+                    return ('Eprolist', 'Cannot update problem list for random set contests here'), None
                 order = 0
                 failed = []
                 for pro_id, v in contest.pro_list.items():
@@ -311,6 +351,153 @@ class ContestService:
 
         # log
 
+        return None, None
+
+    async def update_ip(self, contest: Contest):
+        async with self.db.acquire() as con:
+            await con.execute('''
+                UPDATE contest
+                SET start_ip = $1, end_ip = $2
+                WHERE contest_id = $3;
+            ''', str(contest.start_ip), str(contest.end_ip), contest.contest_id)
+
+        if contest.contest_mode != ContestMode.RANDOM_SET:
+            # Updated, but not random set contest, nothing more to do
+            return None, None
+
+        # Clear existting ip
+        contest.ip_pro_list.clear()
+        async with self.db.acquire() as con:
+            await con.execute('DELETE FROM contest_ip_joints WHERE contest_id = $1;', contest.contest_id)
+
+        # Readd IPs
+        for ip_int in range(int(contest.start_ip), int(contest.end_ip) + 1):
+            ip = IPv4Address(ip_int)
+            contest.ip_pro_list[ip] = []
+        for pro_set in contest.pro_sets:
+            await self.add_random_pro(contest, pro_set)
+
+        await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
+
+        return None, None
+
+    async def add_pro_set(self, contest: Contest , pro_set: list[tuple[int, ProblemScoreType]]):
+        for pro_id, _ in pro_set:
+            if pro_id in contest.pro_list:
+                return ('Eexist', f'Problem {pro_id} already in contest'), None
+            contest.pro_list[pro_id] = {} # Add dummy dict for avoiding repeated problem id
+
+        pro_order = len(contest.pro_sets)
+        async with self.db.acquire() as con:
+            try:
+                # Insert problems into contest_problem_joints
+                await con.executemany(
+                    '''
+                    INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
+                    VALUES ($1, $2, $3, $4)
+                    ''',
+                    [(contest.contest_id, pro_id, int(score_type), pro_order) for pro_id, score_type in pro_set]
+                )
+            except asyncpg.ForeignKeyViolationError:
+                return ('Enoext', 'One or more problem IDs do not exist'), None
+
+        contest.pro_sets.append([pro_id for pro_id, _ in pro_set])
+
+        for pro_id, score_type in pro_set:
+            contest.pro_list[pro_id] = {
+                "score_type": score_type,
+            }
+
+        await self.add_random_pro(contest, [pro_id for pro_id, _ in pro_set])
+        await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
+        return None, None
+
+    async def add_random_pro(self, contest: Contest, pro_set: list[int]):
+        '''
+            Append a random problem in pro_set to each ip's problem list
+        '''
+        pro_size = len(pro_set)
+        if pro_size == 1:
+            for pro_list in contest.ip_pro_list.values():
+                pro_list.append(pro_set[0])
+        elif pro_size == 2:
+            for pro_list in contest.ip_pro_list.values():
+                pro_list.append(pro_set[random.randint(0, 1)])
+        else:
+            idx = 0
+            for pro_list in contest.ip_pro_list.values():
+                idx = (idx + random.randint(1,pro_size-1)) % pro_size
+                pro_list.append(pro_set[idx])
+
+        async with self.db.acquire() as con:
+            # Insert por_id into contest_ip_joints
+            await con.executemany(
+                '''
+                INSERT INTO contest_ip_joints ("contest_id", "ip", "pro_id")
+                VALUES ($1, $2, $3)
+                ''',
+                [(contest.contest_id, str(ip), pro_list[-1]) for ip, pro_list in contest.ip_pro_list.items()]
+            )
+
+    async def remove_pro_set(self, contest: Contest , pro_set_idx: int):
+        for pro_list in contest.ip_pro_list.values():
+            pro_list.pop(pro_set_idx)
+
+        remove_pro_ids = contest.pro_sets.pop(pro_set_idx)
+        for pro_id in remove_pro_ids:
+            contest.pro_list.pop(pro_id)
+        await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
+
+        async with self.db.acquire() as con:
+            # Remove problems from contest_problem_joints
+            await con.execute(
+                '''
+                DELETE FROM contest_problem_joints
+                WHERE "contest_id" = $1 AND "order" = $2;
+                ''',
+                contest.contest_id, pro_set_idx
+            )
+            # Subtract order for problems with order > pro_set_idx
+            await con.execute(
+                '''
+                UPDATE contest_problem_joints
+                SET "order" = "order" - 1
+                WHERE "contest_id" = $1 AND "order" > $2
+                ''',
+                contest.contest_id, pro_set_idx
+            )
+            # Remove pro_id from contest_ip_joints
+            await con.executemany(
+                '''
+                DELETE FROM contest_ip_joints
+                WHERE "contest_id" = $1 AND "pro_id" = $2
+                ''',
+                [(contest.contest_id, pro_id) for pro_id in remove_pro_ids]
+            )
+        return None, None
+
+    async def reorder_pro_set(self, contest: Contest, new_idxs: list[int]):
+        # Reorder pro_sets
+        contest.pro_sets = [contest.pro_sets[i] for i in new_idxs]
+        # Reorder ip_pro_list
+        for ip in contest.ip_pro_list:
+            contest.ip_pro_list[ip] = [contest.ip_pro_list[ip][i] for i in new_idxs]
+
+        await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
+
+        async with self.db.acquire() as con:
+            # Update contest_problem_joints
+            for order, pro_ids in enumerate(contest.pro_sets):
+                if new_idxs[order] == order:
+                    continue
+                await con.executemany(
+                    '''
+                    UPDATE contest_problem_joints
+                    SET "order" = $3
+                    WHERE "contest_id" = $1 AND "pro_id" = $2
+                    ''',
+                    [(contest.contest_id, pro_id, order) for pro_id in pro_ids]
+                )
         return None, None
 
     async def get_ioi2013_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:

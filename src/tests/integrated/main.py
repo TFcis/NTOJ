@@ -19,7 +19,7 @@ from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
 from .chal import ChalTest, ChalListTest
-from .contest import ContestTest
+from .contest import ContestTest, RandomContestTest
 from .proclass import ProClassTest
 from .submit import SubmitTest
 
@@ -187,7 +187,8 @@ class IntegratedTest(AsyncTest):
             BatchSubtaskTest().main,
             ManageProFileManagerTest().main,
             ManagePackTest().main,
-            ContestTest().main
+            ContestTest().main,
+            RandomContestTest().main,
         ]
         for f in s:
             r = await f()
