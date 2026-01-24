@@ -8,19 +8,13 @@
         let j_filter = $('#filter');
 
         function get_goto_filtered_proset_url(proclass_id) {
-            let order = j_filter.find("#order").val();
             let show = j_filter.find("#show").val();
             let search_name = j_filter.find("#name").val();
-            let search_tags = j_filter.find("#tags").val();
             if (proclass_id == -1)
                 proclass_id = $("#curProclassId").attr("proclass");
             let is_online = j_filter.find("#online").is(":checked");
             let is_reversed = j_filter.find("#reverse").is(":checked");
             let url = `{{ url('/proset/?') }}`;
-
-            if (order != '') {
-                url += `&order=${order}`;
-            }
 
             if (show != '') {
                 url += `&show=${show}`;
@@ -40,10 +34,6 @@
 
             if (search_name != '') {
                 url += `&name=${search_name}`;
-            }
-
-            if (search_tags != '') {
-                url += `&tags=${search_tags}`;
             }
 
             return url;
@@ -96,7 +86,6 @@
         function render_proclass_list(proclass_type) {
             function _internal() {
                 let proclass_table = j_list_dialog.find("tbody");
-                let collected = new Set(proclass_cata.collection.map(proclass => proclass.proclass_id));
 
                 proclass_table.html("");
                 for (let proclass of proclass_cata[proclass_type]) {
@@ -109,41 +98,6 @@
                     } else {
                         tr.append($("<td></td>").text("Official"));
                     }
-
-                    let collect_td = null;
-                    if (collected.has(proclass.proclass_id)) {
-                        collect_td = $(`<td><button class="btn btn-success" actionType="decollect">Decollect</button></td>`);
-                    } else {
-                        collect_td = $(`<td><button class="btn btn-success" actionType="collect">Collect</button></td>`);
-                    }
-                    collect_td.find("button").on('click', function (e) {
-                        let action = $(this).attr("actionType");
-                        let j_this = $(this);
-                        $.post(`{{ url('/be/proset') }}`, data={
-                            'reqtype': action,
-                            'proclass_id': proclass.proclass_id,
-                        }, function(res) {
-                            res = JSON.parse(res);
-                            if (res.status == 'S') {
-                                if (action == "decollect") {
-                                    j_this.attr("actionType", "collect");
-                                    j_this.text("Collect");
-                                } else {
-                                    j_this.attr("actionType", 'decollect');
-                                    j_this.text("Decollect");
-                                }
-                                $.post(`{{ url('/be/proset') }}`, {
-                                    "reqtype": "listproclass",
-                                    "proclass_type": "collection",
-                                }, function (e) {
-                                    proclass_cata["collection"] = JSON.parse(e).data;
-                                });
-                            } else {
-                                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
-                            }
-                        });
-                    });
-                    tr.append(collect_td);
 
                     let goto = $(`<td><button class="btn btn-primary">Goto!</button></td>`)
                     goto.find("button").on('click', function(e) {
@@ -177,14 +131,8 @@
             document.querySelectorAll('.proclass-tab').forEach(el => el.classList.remove('active'));
             document.querySelector('.proclass-tab[proclassType="official"]').classList.add('active');
             proclass_cata = {};
-            $.post(`{{ url('/be/proset') }}`, {
-                "reqtype": "listproclass",
-                "proclass_type": "collection",
-            }, function (e) {
-                proclass_cata["collection"] = JSON.parse(e).data;
-                render_proclass_list("official");
-                list_dialog_modal.show();
-            });
+            render_proclass_list("official");
+            list_dialog_modal.show();
         });
 
         document.querySelectorAll('.proclass-tab').forEach(el => {
@@ -239,15 +187,6 @@
                 <li class="nav-item">
                     <a class="nav-link proclass-tab" proclassType="official">Official</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link proclass-tab" proclassType="shared">User Shared</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link proclass-tab" proclassType="collection">My Collection</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link proclass-tab" proclassType="own">My Problem Class</a>
-                </li>
             </ul>
             <table class="table">
                 <thead>
@@ -256,7 +195,6 @@
                         <th>Name</th>
                         <th>Progress</th>
                         <th>Creator</th>
-                        <th>Collect</th>
                         <th>Goto!</th>
                     </tr>
                 </thead>
@@ -273,6 +211,7 @@
 
 <div class="row">
     <div class="col-lg-2 col-12">
+        {% if user.is_kernel() %}
         <form id="proclass">
             <label class="form-label">Current Problem Class</label>
             {% if cur_proclass %}
@@ -291,28 +230,14 @@
                 {% if cur_proclass %}
                     <button type="button" class="btn btn-success" id="infoProClass">Info</button>
                 {% end %}
-
-                {% if not user.is_guest() %}
-                    <a class="btn btn-warning" href="{{ url(f'/acct/proclass/{ user.acct_id }/') }}">Manage</a>
-                {% end %}
             </div>
         </form>
+        {% end %}
 
         <form id="filter">
             <label class="form-label">過濾器</label>
 
             <div class="mb-3">
-                <label for="order" class="form-label">Sort By</label>
-                <select id="order" class="form-select">
-                    <option value="None" {% if flt['order'] == None %} selected {% end %}>None</option>
-                    <option value="chal" {% if flt['order'] == 'chal' %} selected {% end %}>Submission AC Ratio</option>
-                    <option value="user" {% if flt['order'] == 'user' %} selected {% end %}>User AC Ratio</option>
-                    <option value="chalcnt" {% if flt['order'] == 'chalcnt' %} selected {% end %}>Submission Count</option>
-                    <option value="chalaccnt" {% if flt['order'] == 'chalaccnt' %} selected {% end %}>Submission AC Count</option>
-                    <option value="usercnt" {% if flt['order'] == 'usercnt' %} selected {% end %}>User Submission Count</option>
-                    <option value="useraccnt" {% if flt['order'] == 'useraccnt' %} selected {% end %}>User Submission AC Count</option>
-                </select>
-
                 <label for="reverse" class="form-check-label">Reverse Sort Order</label>
                 <input type="checkbox" class="form-check-input" id="reverse" {% if flt['reverse'] %} checked {% end %} />
             </div>
@@ -334,11 +259,6 @@
             <div class="mb-1">
                 <label for="name" class="form-label">Search Name</label>
                 <input type="text" id="name" class="form-control" placeholder="problem name" value="{{ flt['name'] if flt['name'] else '' }}">
-            </div>
-
-            <div class="mb-1">
-                <label for="name" class="form-label">Search Tags</label>
-                <input type="text" id="tags" class="form-control" placeholder="problem tags" value="{{ flt['tags'] if flt['tags'] else '' }}">
             </div>
 
             <div class="mb-1">
@@ -364,10 +284,6 @@
                     <th scope="col">#</th>
                     <th scope="col">State</th>
                     <th scope="col">Problem Name</th>
-                    <th class="text-center" scope="col">TopCoder</th>
-                    <th scope="col">AC Ratio (User)</th>
-                    <th scope="col">AC Ratio (Submission)</th>
-                    <th scope="col">Tags</th>
                 </tr>
             </thead>
             <tbody>
@@ -383,44 +299,6 @@
                     <td class="name">
                         <a href="{{ url(f'/pro/{ pro_id }/') }}">{{ pro.name }}</a>
                     </td>
-                    {% set topcoder = score_map[pro_id]['topcoder'] %}
-                    {% if topcoder %}
-                        {% if topcoder.photo == "" %}
-                            {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
-                        {% end %}
-                        <td class="text-center">
-                            <a href="{{ url(f'/acct/{ topcoder.acct_id }/') }}">
-                                <img width="30" height="30" src="{{ topcoder.photo }}" />
-                            </a>
-                        </td>
-                    {% else %}
-                        <td></td>
-                    {% end %}
-
-                    {% set rate = score_map[pro_id]['rate_data'] %}
-                    <td>
-                        {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
-                            {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}%
-                        {% else %}
-                            {{ '0.00%' }}
-                        {% end %}
-
-                        (<a href="{{ url(f'/rank/{ pro_id }/') }}">{{ rate['user_ac_chal_cnt'] }}</a>
-                        / {{ rate['user_all_chal_cnt'] }})
-                    </td>
-
-                    <td>
-                        {% if rate['all_chal_cnt'] and rate['ac_chal_cnt'] %}
-                            {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}%
-                        {% else %}
-                            {{ '0.00%' }}
-                        {% end %}
-                        (<a href="{{ url(f'/chal/?proid={ pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
-                        /
-                        <a href="{{ url(f'/chal/?proid={ pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
-                    </td>
-
-                    <td class="name">{{ pro.tags }}</td>
                 </tr>
             {% end %}
             </tbody>
@@ -434,9 +312,6 @@
         {% if flt['problem_show'] != 'all' %}
         {% set postfix = postfix + f"&show={flt['problem_show']}" %}
         {% end %}
-        {% if flt['order'] %}
-        {% set postfix = postfix + f"&order={flt['order']}" %}
-        {% end %}
         {% if user.is_kernel() and flt['online'] %}
         {% set postfix = postfix + f"&online={flt['online']}" %}
         {% end %}
@@ -445,9 +320,6 @@
         {% end %}
         {% if flt['name'] %}
         {% set postfix = postfix + f"&name={flt['name']}" %}
-        {% end %}
-        {% if flt['tags'] %}
-        {% set postfix = postfix + f"&tags={flt['tags']}" %}
         {% end %}
 
         <div class="row">

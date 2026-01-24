@@ -1,7 +1,5 @@
 import config
 
-from .board import BoardService
-from .bulletin import BulletinService
 from .chal import ChalService
 from .code import CodeService
 from .contests import ContestService
@@ -9,8 +7,6 @@ from .judge import JudgeServerClusterService
 from .log import LogService
 from .pack import PackService
 from .pro import ProClassService, ProService
-from .ques import QuestionService
-from .rank import RankService
 from .rate import RateService
 from .user import UserService
 
@@ -25,12 +21,8 @@ def services_init(db, rs):
     Service.ProClass = ProClassService(db, rs)
     Service.Chal = ChalService(db, rs)
     Service.Contest = ContestService(db, rs)
-    Service.Board = BoardService(db, rs)
-    Service.Question = QuestionService(db, rs)
-    Service.Inform = BulletinService(db, rs)
     Service.Pack = PackService(db, rs)
     Service.Code = CodeService(db, rs)
     Service.Log = LogService(db, rs)
     Service.Rate = RateService(db, rs)
-    Service.Rank = RankService(db, rs)
     Service.Judge = JudgeServerClusterService(rs, config.JUDGE_SERVER_LIST)

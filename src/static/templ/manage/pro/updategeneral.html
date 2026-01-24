@@ -9,7 +9,6 @@
 
         general_form.find('button.submit').on('click', function(e) {
             let name = general_form.find('input.name').val();
-            let tags = general_form.find('input.tags').val();
             let status = general_form.find('select#status').val();
             let allow_submit = general_form.find('input#allow-submit').is(":checked");
 
@@ -17,7 +16,7 @@
                 'reqtype': 'updategeneral',
                 'pro_id': pro_id,
                 'name': name,
-                'tags': tags,
+                'tags': '',
                 'status': status,
                 'allow_submit': allow_submit,
             }, function(res) {
@@ -114,13 +113,6 @@
                     <label for="problemName" class="form-label fw-bold">Problem Name</label>
                     <input type="text" id="problemName" class="form-control name"
                            placeholder="Problem Name" value="{{ pro.name }}">
-                </div>
-
-                <div class="mb-3">
-                    <label for="problemTags" class="form-label fw-bold">Problem Tags</label>
-                    <input type="text" id="problemTags" class="form-control tags"
-                           placeholder="Tags (comma separated)" value="{{ pro.tags }}">
-                    <div class="form-text">Separate multiple tags with commas</div>
                 </div>
 
                 <div class="mb-3">

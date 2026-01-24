@@ -30,36 +30,16 @@ class AcctHandler(RequestHandler):
             return self.error(err)
 
         acct.acct_type = UserConst.ACCTTYPE_USER
-        err, rate_data = await RateService.inst.get_acct_rate_and_chal_cnt(acct)
-        if err:
-            return self.error(err)
 
         err, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_NORMAL_USER)
         if err:
             return self.error(err)
 
-        err, ratemap = await RateService.inst.map_rate_acct(acct)
         acct.acct_type = UserConst.ACCTTYPE_KERNEL
-
-        prolist2 = []
-
-        ac_pro_cnt = 0
-        for pro in prolist:
-            pro_id = pro.pro_id
-            tmp = {"pro_id": pro_id, "score": -1, "state": None}
-            if pro_id in ratemap:
-                tmp["score"] = ratemap[pro_id]["rate"]
-                tmp["state"] = ratemap[pro_id]["state"]
-                ac_pro_cnt += ratemap[pro_id]["state"] == ChalConst.STATE_AC
-
-            prolist2.append(tmp)
 
         def chunk_list(la, size):
             for i in range(0, len(la), size):
                 yield la[i : i + size]
-
-        rate_data["rate"] = math.floor(rate_data["rate"])
-        rate_data["ac_pro_cnt"] = ac_pro_cnt
 
         # force https, add by xiplus, 2018/8/24
         acct.photo = re.sub(r"^http://", "https://", acct.photo)
@@ -68,9 +48,7 @@ class AcctHandler(RequestHandler):
         await self.render(
             "acct/profile",
             acct=acct,
-            rate=rate_data,
-            total_pro_cnt=len(prolist),
-            prolist=chunk_list(prolist2, 10),
+            prolist=chunk_list(prolist, 10),
         )
 
 
@@ -186,158 +164,6 @@ class AcctConfigHandler(RequestHandler):
         await self.rs.delete(f"account_session@{target_acct_id}")
         self.clear_cookie("id")
         return self.error(("S", ""))
-
-
-proclass_dispatcher = ActionDispatcher()
-
-
-class AcctProClassHandler(RequestHandler):
-    @reqenv
-    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
-    async def get(self, acct_id):
-        acct_id = int(acct_id)
-        page = self.get_argument("page", default=None)
-
-        if page is None:
-            _, proclass_list = await ProClassService.inst.get_proclass_list()
-            proclass_list = filter(
-                lambda proclass: proclass["acct_id"] == self.acct.acct_id, proclass_list
-            )
-            await self.render("acct/proclass-list", proclass_list=proclass_list)
-
-        elif page == "add":
-            await self.render("acct/proclass-add", user=self.acct)
-
-        elif page == "update":
-            proclass_id = int(self.get_argument("proclassid"))
-            _, proclass = await ProClassService.inst.get_proclass(proclass_id)
-            if proclass["acct_id"] != self.acct.acct_id:
-                return self.error(PERMISSION_DENIED_ERROR)
-
-            await self.render(
-                "acct/proclass-update", proclass_id=proclass_id, proclass=proclass
-            )
-
-    @reqenv
-    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
-    async def post(self, acct_id):
-        reqtype = self.get_argument("reqtype")
-        acct_id = int(acct_id)
-        return await proclass_dispatcher.dispatch(self, reqtype)
-
-    @proclass_dispatcher.action("add")
-    async def add_proclass(self):
-        name = self.get_argument("name").strip()
-        desc = self.get_argument("desc").strip()
-        proclass_type = int(self.get_argument("type"))
-        p_list_str = self.get_argument("list")
-        p_list = parse_str_to_list(p_list_str)
-
-        if err := self.len_check(
-            name, ProClassConst.NAME_MIN, ProClassConst.NAME_MAX, "Name"
-        ):
-            return self.error(err)
-
-        if err := self.len_check(
-            desc, ProClassConst.DESC_MIN, ProClassConst.DESC_MAX, "Desc"
-        ):
-            return self.error(err)
-
-        if proclass_type not in (ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN):
-            return self.error(("Eparam", "Invalid problem class type"))
-
-        if len(p_list) == 0:
-            return self.error(("Eparam", "Problem list should not be empty"))
-
-        await LogService.inst.add_log(
-            f"{self.acct.name} add proclass name={name}",
-            "user.proclass.add",
-            {
-                "list": p_list,
-                "desc": desc,
-                "proclass_type": proclass_type,
-            },
-        )
-        err, proclass_id = await ProClassService.inst.add_proclass(
-            name, p_list, desc, self.acct.acct_id, proclass_type
-        )
-        if err:
-            return self.error(err)
-
-        self.error(("S", proclass_id))
-
-    @proclass_dispatcher.action("update")
-    async def update_proclass(self):
-        name = self.get_argument("name").strip()
-        desc = self.get_argument("desc").strip()
-        proclass_type = int(self.get_argument("type"))
-        p_list_str = self.get_argument("list")
-        p_list = parse_str_to_list(p_list_str)
-
-        if err := self.len_check(
-            name, ProClassConst.NAME_MIN, ProClassConst.NAME_MAX, "Name"
-        ):
-            return self.error(err)
-
-        if err := self.len_check(
-            desc, ProClassConst.DESC_MIN, ProClassConst.DESC_MAX, "Desc"
-        ):
-            return self.error(err)
-
-        if proclass_type not in (ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN):
-            return self.error(("Eparam", "Invalid problem class type"))
-
-        if len(p_list) == 0:
-            return self.error(("Eparam", "Problem list should not be empty"))
-
-        proclass_id = int(self.get_argument("proclass_id"))
-
-        _, proclass = await ProClassService.inst.get_proclass(proclass_id)
-        if proclass["acct_id"] != self.acct.acct_id:
-            await LogService.inst.add_log(
-                f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them",
-                "user.proclass.update.failed",
-            )
-            return self.error(PERMISSION_DENIED_ERROR)
-
-        await LogService.inst.add_log(
-            f"{self.acct.name} update proclass name={name}",
-            "user.proclass.update",
-            {
-                "list": p_list,
-                "desc": desc,
-                "proclass_type": proclass_type,
-            },
-        )
-        if err := await ProClassService.inst.update_proclass(
-            proclass_id, name, p_list, desc, proclass_type
-        ):
-            return self.error(err)
-
-        self.error(("S", ""))
-
-    @proclass_dispatcher.action("remove")
-    async def remove_proclass(self):
-        proclass_id = int(self.get_argument("proclass_id"))
-        err, proclass = await ProClassService.inst.get_proclass(proclass_id)
-
-        if err:
-            return self.error(err)
-
-        if proclass["acct_id"] != self.acct.acct_id:
-            await LogService.inst.add_log(
-                f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them",
-                "user.proclass.remove.failed",
-            )
-            return self.error(PERMISSION_DENIED_ERROR)
-
-        await LogService.inst.add_log(
-            f"{self.acct.name} remove proclass name={proclass['name']}.",
-            "user.proclass.remove",
-        )
-        await ProClassService.inst.remove_proclass(proclass_id)
-
-        self.error(("S", ""))
 
 
 sign_dispatcher = ActionDispatcher()

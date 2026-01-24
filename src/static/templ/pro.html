@@ -24,29 +24,6 @@
         let PDFJS = pdfjsLib;
         PDFJS.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.mjs';
 
-        $('#tags').keydown(function(event) {
-            if (event.which == 13) // return
-                $('#tags').focusout();
-        });
-
-        $('#tags').focusout(function(event) {
-            var tags = event.target.value;
-            if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1 || tags.length == 0) {
-                // valid
-                $('#tags-invalid').hide();
-                $.post(`{{ url('/be/set-tags') }}`, {
-                    'pro_id': {{ pro.pro_id }},
-                    'tags': tags,
-                }, function() {
-                    $('#tags-done').show();
-                });
-            } else {
-                // invalid
-                event.target.focus();
-                $('#tags-invalid').show();
-            }
-        });
-
         $("#pdfbtn").on('click', function(event) {
             let url = `${pdf_url}?download=1`;
             let downloadLink = document.createElement("a");
@@ -170,7 +147,6 @@
                 <a class="btn btn-success" href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }&acctid={ user.acct_id }') }}">My Status</a>
                 <a class="btn btn-secondary" href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }') }}">Status</a>
             {% else %}
-                <a class="btn btn-success" href="{{ url(f'/rank/{ pro.pro_id }/') }}">&nbsp;Rank&nbsp;</a>
                 <a class="btn btn-secondary" href="{{ url(f'/chal/?proid={ pro.pro_id }') }}">Status</a>
             {% end %}
 
@@ -180,46 +156,7 @@
             <a class="btn btn-warning my-lg-1" style="display: none; width: 156px; text-align: center;" id="pdfbtn">Download PDF</a>
             <a class="btn btn-warning my-lg-1" id="switchviewer" style="display: none; width: 156px; text-align: center;">Switch Viewer</a>
         </div>
-        {% if user.is_kernel() and not contest %}
-            <input id="tags" value="{{ pro.tags }}" style="width: 190px" placeholder="add tags here">
-        {% else %}
-            <input id="tags" value="{{ pro.tags }}" style="width: 190px" placeholder="no tags" disabled>
-        {% end %}
-        <div>
-
-        </div>
-        <span id="tags-invalid" style="color:#e74c3c; display: none">TAGS INVALID!</span>
-        <span id="tags-done" style="color: green; display: none">SET TAGS SUCCESS</span>
         <br>
-
-        {% if not contest %}
-            {% if topcoder %}
-                <div class="my-lg-1" id="topcoder">
-                    <div class="card">
-                    <div class="card-header">TopCoder</div>
-                    <div class="card-body">
-                        {% if topcoder.photo == "" %}
-                        {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
-                        {% end %}
-                        <img src="{{ topcoder.photo }}" style="max-width:100px; max-height:100px; position:relative; left:50px; transform:translateX(-50%);" />
-                        <div class="card-text-group">
-                            <h5 class="card-title"><a href="{{ url(f'/acct/{ topcoder.acct_id }/') }}">{{ topcoder.name }}</a></h5>
-                            <p class="card-text">{{ topcoder.motto }}</p>
-                        </div>
-                    </div>
-                    </div>
-                </div>
-            {% else %}
-                <div class="my-lg-1" id="topcoder">
-                    <div class="card">
-                    <div class="card-header">TopCoder</div>
-                    <div class="card-body">
-                        <h5 class="card-title">Waiting for you to become the first <span class="state-1">accepted</span>.</h5>
-                    </div>
-                    </div>
-                </div>
-            {% end %}
-        {% end %}
 
         <div class="table-responsive">
             <table class="table table-sm">

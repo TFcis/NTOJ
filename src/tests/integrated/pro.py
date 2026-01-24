@@ -13,31 +13,4 @@ class ProTest(AsyncTest):
             # self.assertEqual(res.headers.get('Content-Disposition'), 'attachment; filename="pro2.pdf"')
 
             # update tags
-            res = admin_session.post('set-tags', data={
-                'pro_id': 1,
-                'tags': 'GCD',
-            })
-            self.assertAPIReturnSuccess(res.text)
-            err, pro = await ProService.inst.get_pro(1, allow_statuses=ProConst.PRO_STATUS_NORMAL_USER)
-            self.assertIsNone(err)
-            self.assertEqual(pro.tags, 'GCD')
-
-            res = admin_session.post('set-tags', data={
-                'pro_id': 1,
-                'tags': '',
-            })
-            self.assertAPIReturnSuccess(res.text)
-            err, pro = await ProService.inst.get_pro(1, allow_statuses=ProConst.PRO_STATUS_NORMAL_USER)
-            self.assertIsNone(err)
-            self.assertEqual(pro.tags, '')
-
-            # NOTE: test set-tags permission
-            with AccountContext('test1@test', 'test') as user_session:
-                res = user_session.post('set-tags', data={
-                    'pro_id': 1,
-                    'tags': 'eazy',
-                })
-                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
-                err, pro = await ProService.inst.get_pro(1, allow_statuses=ProConst.PRO_STATUS_NORMAL_USER)
-                self.assertIsNone(err)
-                self.assertNotEqual(pro.tags, 'eazy')
+            pass
