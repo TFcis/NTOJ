@@ -85,7 +85,15 @@ async def init():
             
 
 class HolidayTest(AsyncTest):
-    def cmp(self, res: list, expect: list):
+    def cmp(self, res: list, expect: list, year: int, month: int):
+        # Truncate res to only include the expected month
+        start_of_month = datetime.datetime(year, month, 1).replace(tzinfo=config.TIMEZONE)
+        end_of_month = (start_of_month + datetime.timedelta(days=31)).replace(day=1)
+        self.assertGreater(datetime.datetime.fromisoformat(res[0]['end']), start_of_month - datetime.timedelta(days=7))
+        self.assertLess(datetime.datetime.fromisoformat(res[-1]['start']), start_of_month + datetime.timedelta(days=41))
+        res = [r for r in res 
+               if not (datetime.datetime.fromisoformat(r['end']) < start_of_month or
+                          datetime.datetime.fromisoformat(r['start']) >= end_of_month)]
         RED = '#ff5555'
         GREEN = '#50fa7b'
         for r, e in zip(res, expect):
@@ -96,6 +104,8 @@ class HolidayTest(AsyncTest):
             self.assertEqual(r_s, e_s)
             self.assertEqual(r_e, e_e)
             self.assertEqual(r['backgroundColor'], GREEN if e[2] else RED, f'{e}')
+
+        self.assertEqual(len(res), len(expect))
 
     async def main(self):
         await HolidayService.inst.delete_range(TimeSlot(
@@ -116,7 +126,7 @@ class HolidayTest(AsyncTest):
         ]
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.get('manage/holiday?action=events&year=2026&month=1').json()
-            self.cmp(res['data'], expect_1)
+            self.cmp(res['data'], expect_1, 2026, 1)
         expect_2 = [
             ('2026/01/21 00:00', '2026/02/10 23:59', False),
             ('2026/02/10 08:00', '2026/02/10 16:00', True),
@@ -130,7 +140,7 @@ class HolidayTest(AsyncTest):
         ]
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.get('manage/holiday?action=events&year=2026&month=2').json()
-            self.cmp(res['data'], expect_2)
+            self.cmp(res['data'], expect_2, 2026, 2)
 
         is_holiday = [
             '2026/01/12 12:00', # from school data
@@ -172,7 +182,7 @@ class HolidayTest(AsyncTest):
             expect_1[1] = ('2026/01/13 08:00', '2026/01/13 13:00', True)
             expect_1[2] = ('2026/01/13 13:00', '2026/01/15 12:00', True)
             res = admin_session.get('manage/holiday?action=events&year=2026&month=1').json()
-            self.cmp(res['data'], expect_1)
+            self.cmp(res['data'], expect_1, 2026, 1)
 
             ## Update & change type & shrink slot
             res = admin_session.post('manage/holiday', data={
@@ -186,7 +196,7 @@ class HolidayTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
             expect_1[0] = ('2026/01/12 12:00', '2026/01/12 16:00', True)
             res = admin_session.get('manage/holiday?action=events&year=2026&month=1').json()
-            self.cmp(res['data'], expect_1)
+            self.cmp(res['data'], expect_1, 2026, 1)
 
             ## Update but invalid date format
             res = admin_session.post('manage/holiday', data={
@@ -231,7 +241,7 @@ class HolidayTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
             expect_1.pop(0)
             res = admin_session.get('manage/holiday?action=events&year=2026&month=1').json()
-            self.cmp(res['data'], expect_1)
+            self.cmp(res['data'], expect_1, 2026, 1)
 
             ## Delete non-existing slot
             res = admin_session.post('manage/holiday', data={
@@ -260,7 +270,7 @@ class HolidayTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
             expect_2.append(('2026/02/17 19:00', '2026/02/17 21:00', False))
             res = admin_session.get('manage/holiday?action=events&year=2026&month=2').json()
-            self.cmp(res['data'], expect_2)
+            self.cmp(res['data'], expect_2, 2026, 2)
 
             ## Add with overlap & total cover
             res = admin_session.post('manage/holiday', data={
@@ -273,7 +283,7 @@ class HolidayTest(AsyncTest):
             expect_2[-2] = ('2026/02/17 08:00', '2026/02/17 13:00', True)
             expect_2[-1] = ('2026/02/17 13:00', '2026/02/18 04:00', False)
             res = admin_session.get('manage/holiday?action=events&year=2026&month=2').json()
-            self.cmp(res['data'], expect_2)
+            self.cmp(res['data'], expect_2, 2026, 2)
 
             ## Add and split old slot into two
             res = admin_session.post('manage/holiday', data={
@@ -287,10 +297,10 @@ class HolidayTest(AsyncTest):
             expect_1.append(('2026/01/31 08:00', '2026/01/31 12:00', True))
             expect_1.append(('2026/01/31 12:00', '2026/02/10 23:59', False))
             res = admin_session.get('manage/holiday?action=events&year=2026&month=1').json()
-            self.cmp(res['data'], expect_1)
+            self.cmp(res['data'], expect_1, 2026, 1)
             expect_2[0] = ('2026/01/31 12:00', '2026/02/10 23:59', False)
             res = admin_session.get('manage/holiday?action=events&year=2026&month=2').json()
-            self.cmp(res['data'], expect_2)
+            self.cmp(res['data'], expect_2, 2026, 2)
 
             ## Add with invalid date format
             res = admin_session.post('manage/holiday', data={
