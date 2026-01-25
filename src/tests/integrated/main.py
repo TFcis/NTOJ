@@ -25,6 +25,7 @@ from .contest import ContestTest
 from .proclass import ProClassTest
 from .ques import QuesTest
 from .submit import SubmitTest
+from .holiday import HolidayTest
 
 
 class IntegratedTest(AsyncTest):
@@ -203,7 +204,8 @@ class IntegratedTest(AsyncTest):
             BatchSubtaskTest().main,
             ManageProFileManagerTest().main,
             ManagePackTest().main,
-            ContestTest().main
+            ContestTest().main,
+            HolidayTest().main,
         ]
         for f in s:
             r = await f()
