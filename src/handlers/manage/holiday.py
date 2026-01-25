@@ -3,6 +3,7 @@ import datetime
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from services.user import UserConst
 from services.holiday import HolidayService, TimeSlot
+import config
 
 holiday_dispatcher = ActionDispatcher()
 
@@ -40,9 +41,10 @@ class ManageHolidayHandler(RequestHandler):
         events = [
             {
                 'calendarId': str(day['range'].start.timestamp()),
-                'title': f'{day['range'].start.strftime("%H:%M")} - {day['range'].end.strftime("%H:%M")}',
-                'start': day['range'].start.isoformat(),
-                'end': day['range'].end.isoformat(),
+                'title': f'{day['range'].start.astimezone(config.TIMEZONE).strftime("%H:%M")} - {
+                            day['range'].end.astimezone(config.TIMEZONE).strftime("%H:%M")}',
+                'start': day['range'].start.astimezone(config.TIMEZONE).isoformat(),
+                'end': day['range'].end.astimezone(config.TIMEZONE).isoformat(),
                 'backgroundColor': GREEN if day['is_weekday'] else RED,
                 
             }
@@ -58,7 +60,9 @@ class ManageHolidayHandler(RequestHandler):
 
         try:
             start = datetime.datetime.strptime(start, '%Y/%m/%d %H:%M')
+            start = start.replace(tzinfo=config.TIMEZONE)
             end = datetime.datetime.strptime(end, '%Y/%m/%d %H:%M')
+            end = end.replace(tzinfo=config.TIMEZONE)
         except ValueError:
             return self.error(('Eparam', 'Invalid date format'))
 
@@ -82,9 +86,13 @@ class ManageHolidayHandler(RequestHandler):
 
         try:
             old_start = datetime.datetime.strptime(old_start, '%Y/%m/%d %H:%M')
+            old_start = old_start.replace(tzinfo=config.TIMEZONE)
             old_end = datetime.datetime.strptime(old_end, '%Y/%m/%d %H:%M')
+            old_end = old_end.replace(tzinfo=config.TIMEZONE)
             start = datetime.datetime.strptime(new_start, '%Y/%m/%d %H:%M')
+            start = start.replace(tzinfo=config.TIMEZONE)
             end = datetime.datetime.strptime(new_end, '%Y/%m/%d %H:%M')
+            end = end.replace(tzinfo=config.TIMEZONE)
         except ValueError:
             return self.error(('Eparam', 'Invalid date format'))
 
@@ -109,7 +117,9 @@ class ManageHolidayHandler(RequestHandler):
 
         try:
             start = datetime.datetime.strptime(start, '%Y/%m/%d %H:%M')
+            start = start.replace(tzinfo=config.TIMEZONE)
             end = datetime.datetime.strptime(end, '%Y/%m/%d %H:%M')
+            end = end.replace(tzinfo=config.TIMEZONE)
         except ValueError:
             return self.error(('Eparam', 'Invalid date format'))
 

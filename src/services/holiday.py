@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import requests
 from requests.adapters import HTTPAdapter
 import ssl
+from zoneinfo import ZoneInfo
 
 # Fix for "Missing Subject Key Identifier" when accessing data.taipei
 class TruststoreAdapter(HTTPAdapter):
@@ -87,19 +88,22 @@ class HolidayService:
         if resp.status_code != 200:
             return ('Eio', f'Failed to fetch holiday data: HTTP {resp.status_code}')
 
+        TW_ZONE = ZoneInfo('Asia/Taipei')
         data = resp.json()
         last_holiday = data['result']['results'][0]['date']
         last_holiday = datetime.datetime.strptime(last_holiday, '%Y%m%d')
+        last_holiday = last_holiday.replace(tzinfo=TW_ZONE)
 
-        WINTER = TimeSlot(datetime.datetime(last_holiday.year, 1, 21), datetime.datetime(last_holiday.year, 2, 10, 23, 59))
-        SUMMER = TimeSlot(datetime.datetime(last_holiday.year, 7, 1), datetime.datetime(last_holiday.year, 8, 29, 23, 59))
+        WINTER = TimeSlot(datetime.datetime(last_holiday.year, 1, 21, tzinfo=TW_ZONE), datetime.datetime(last_holiday.year, 2, 10, 23, 59, tzinfo=TW_ZONE))
+        SUMMER = TimeSlot(datetime.datetime(last_holiday.year, 7, 1, tzinfo=TW_ZONE), datetime.datetime(last_holiday.year, 8, 29, 23, 59, tzinfo=TW_ZONE))
         for idx, item in enumerate(data['result']['results']):
             dt = datetime.datetime.strptime(item['date'], '%Y%m%d')
+            dt = dt.replace(tzinfo=TW_ZONE)
 
             if dt.year > WINTER.start.year:
                 # New year, reset vacation periods
-                WINTER = TimeSlot(datetime.datetime(dt.year, 1, 21), datetime.datetime(dt.year, 2, 10, 23, 59))
-                SUMMER = TimeSlot(datetime.datetime(dt.year, 7, 1), datetime.datetime(dt.year, 8, 29, 23, 59))
+                WINTER = TimeSlot(datetime.datetime(dt.year, 1, 21, tzinfo=TW_ZONE), datetime.datetime(dt.year, 2, 10, 23, 59, tzinfo=TW_ZONE))
+                SUMMER = TimeSlot(datetime.datetime(dt.year, 7, 1, tzinfo=TW_ZONE), datetime.datetime(dt.year, 8, 29, 23, 59, tzinfo=TW_ZONE))
 
             if dt <= last_holiday:
                 continue
