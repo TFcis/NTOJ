@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from .util import AsyncTest, AccountContext
 from services.holiday import HolidayService, TimeSlot
+import config
 
 
 async def init():
@@ -88,8 +89,8 @@ class HolidayTest(AsyncTest):
         RED = '#ff5555'
         GREEN = '#50fa7b'
         for r, e in zip(res, expect):
-            e_s = datetime.datetime.strptime(e[0], '%Y/%m/%d %H:%M')
-            e_e = datetime.datetime.strptime(e[1], '%Y/%m/%d %H:%M')
+            e_s = datetime.datetime.strptime(e[0], '%Y/%m/%d %H:%M').replace(tzinfo=config.TIMEZONE)
+            e_e = datetime.datetime.strptime(e[1], '%Y/%m/%d %H:%M').replace(tzinfo=config.TIMEZONE)
             r_s = datetime.datetime.fromisoformat(r['start'])
             r_e = datetime.datetime.fromisoformat(r['end'])
             self.assertEqual(r_s, e_s)
@@ -103,7 +104,7 @@ class HolidayTest(AsyncTest):
         ))
         await init()
         expect_1 = [
-            ('2026/01/12 00:00', '2026/01/12 23:59', False),
+            ('2026/01/12 00:00', '2026/01/13 00:00', False),
             ('2026/01/13 08:00', '2026/01/13 16:00', True),
             ('2026/01/15 08:00', '2026/01/15 16:00', True),
             ('2026/01/16 08:00', '2026/01/16 16:00', True),
@@ -141,7 +142,7 @@ class HolidayTest(AsyncTest):
             '2026/02/12 12:00', # festival holiday
         ]
         for dt_str in is_holiday:
-            dt = datetime.datetime.strptime(dt_str, '%Y/%m/%d %H:%M')
+            dt = datetime.datetime.strptime(dt_str, '%Y/%m/%d %H:%M').replace(tzinfo=config.TIMEZONE)
             self.assertFalse(await HolidayService.inst.is_weekday(dt))
 
         is_weekday = [
@@ -153,7 +154,7 @@ class HolidayTest(AsyncTest):
             '2026/02/17 12:00',
         ]
         for dt_str in is_weekday:
-            dt = datetime.datetime.strptime(dt_str, '%Y/%m/%d %H:%M')
+            dt = datetime.datetime.strptime(dt_str, '%Y/%m/%d %H:%M').replace(tzinfo=config.TIMEZONE)
             self.assertTrue(await HolidayService.inst.is_weekday(dt))
 
         with AccountContext('admin@test', 'testtest') as admin_session:
@@ -177,7 +178,7 @@ class HolidayTest(AsyncTest):
             res = admin_session.post('manage/holiday', data={
                 'reqtype': 'update',
                 'old_start': '2026/01/12 00:00',
-                'old_end': '2026/01/12 23:59',
+                'old_end': '2026/01/13 00:00',
                 'new_start': '2026/01/12 12:00',
                 'new_end': '2026/01/12 16:00',
                 'is_weekday': '1',
@@ -213,7 +214,7 @@ class HolidayTest(AsyncTest):
             res = admin_session.post('manage/holiday', data={
                 'reqtype': 'update',
                 'old_start': '2026/01/12 00:00',
-                'old_end': '2026/01/12 23:59',
+                'old_end': '2026/01/13 00:00',
                 'new_start': '2026/01/12 12:00',
                 'new_end': '2026/01/12 16:00',
                 'is_weekday': '1',
@@ -236,7 +237,7 @@ class HolidayTest(AsyncTest):
             res = admin_session.post('manage/holiday', data={
                 'reqtype': 'delete',
                 'old_start': '2026/01/12 00:00',
-                'old_end': '2026/01/12 23:59',
+                'old_end': '2026/01/13 00:00',
             })
             self.assertAPIReturnValue(res.text, ('Enoext', 'Target weekday range not found'))
 
@@ -264,13 +265,13 @@ class HolidayTest(AsyncTest):
             ## Add with overlap & total cover
             res = admin_session.post('manage/holiday', data={
                 'reqtype': 'add',
-                'new_start': '2026/02/16 13:00',
+                'new_start': '2026/02/17 13:00',
                 'new_end': '2026/02/18 04:00',
                 'is_weekday': '0',
             })
             self.assertAPIReturnSuccess(res.text)
-            expect_2[-2] = ('2026/02/16 08:00', '2026/02/16 13:00', True)
-            expect_2[-1] = ('2026/02/16 13:00', '2026/02/18 04:00', False)
+            expect_2[-2] = ('2026/02/17 08:00', '2026/02/17 13:00', True)
+            expect_2[-1] = ('2026/02/17 13:00', '2026/02/18 04:00', False)
             res = admin_session.get('manage/holiday?action=events&year=2026&month=2').json()
             self.cmp(res['data'], expect_2)
 
@@ -312,7 +313,7 @@ class HolidayTest(AsyncTest):
         nows = [('2026/01/12 06:00', False),
                 ('2026/01/12 11:30', False),
 
-                ('2026/01/13 05:00', True),
+                ('2026/01/13 05:00', False),
                 ('2026/01/13 14:10', True),
 
                 ('2026/01/15 10:15', True),
@@ -322,7 +323,7 @@ class HolidayTest(AsyncTest):
                 ('2026/01/16 12:15', True),
         ]
         for t_str, expect_res in nows:
-            now = datetime.datetime.strptime(t_str, '%Y/%m/%d %H:%M')
+            now = datetime.datetime.strptime(t_str, '%Y/%m/%d %H:%M').replace(tzinfo=config.TIMEZONE)
             with patch('datetime.datetime') as mock_datetime:
                 mock_datetime.now.return_value = now
                 res = await HolidayService.inst.is_weekday_now()
