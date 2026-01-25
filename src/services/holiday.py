@@ -120,7 +120,7 @@ class HolidayService:
                 continue
 
             is_holiday = item['isholiday'] == '是' \
-                         or (item['holidaycategory'] in ('星期六、星期日', '補假', '放假之紀念日及節日'))
+                         and (item['holidaycategory'] in ('星期六、星期日', '補假', '放假之紀念日及節日'))
             if is_holiday:
                 await add_weekdays(last_holiday, (dt - last_holiday).days - 1)
                 if item['holidaycategory'] != '星期六、星期日':
