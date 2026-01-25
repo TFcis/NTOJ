@@ -60,7 +60,7 @@ class HolidayService:
             )
         if not res or not res['start'] or not res['end']:
             await self.rs.set('weekday_valid_time', timestamp + 30*86400) # valid for one month
-            await self.rs.set('is_weekday', False)
+            await self.rs.set('is_weekday', 0)
             return False
 
         is_weekday = (res['start'] <= timestamp)
