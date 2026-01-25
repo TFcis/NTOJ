@@ -11,6 +11,7 @@ from .util import AsyncTest, AccountContext
 from tornado.websocket import websocket_connect
 from tornado.httpclient import HTTPRequest
 from unittest.mock import patch
+import config
 
 
 class SignTest(AsyncTest):
@@ -18,8 +19,8 @@ class SignTest(AsyncTest):
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('manage/holiday', data={
                 'reqtype': 'add',
-                'new_start': datetime.datetime.now().strftime('%Y/%m/%d %H:%M'),
-                'new_end': (datetime.datetime.now() + datetime.timedelta(hours=2)).strftime('%Y/%m/%d %H:%M'),
+                'new_start': datetime.datetime.now().astimezone(config.TIMEZONE).strftime('%Y/%m/%d %H:%M'),
+                'new_end': (datetime.datetime.now().astimezone(config.TIMEZONE) + datetime.timedelta(hours=2)).strftime('%Y/%m/%d %H:%M'),
                 'is_weekday': '1',
             })
         # signup but failed
