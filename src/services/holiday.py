@@ -53,8 +53,8 @@ class HolidayService:
         async with self.db.acquire() as con:
             res = await con.fetchrow(
                 '''
-                    SELECT MIN("start") AS start, MIN("end") AS end FROM "weekdays"
-                    WHERE ("start" >= $1 OR "end" >= $1) AND "is_weekday" = TRUE
+                    SELECT "start", "end" FROM "weekdays"
+                    WHERE "end" > $1 AND "is_weekday" = TRUE ORDER BY "start" ASC LIMIT 1
                 ''',
                 int(timestamp),
             )
@@ -63,11 +63,11 @@ class HolidayService:
             await self.rs.set('is_weekday', False)
             return False
 
-        start = res['start']
-        end = res['end']
-        await self.rs.set('weekday_valid_time', min(start, end))
-        await self.rs.set('is_weekday', int(end <= start))
-        return end <= start
+        is_weekday = (res['start'] <= timestamp)
+        valid_time = res['end'] if is_weekday else res['start']
+        await self.rs.set('weekday_valid_time', valid_time)
+        await self.rs.set('is_weekday', int(is_weekday))
+        return is_weekday
 
     async def fetch_gov_data(self):
 
