@@ -181,7 +181,7 @@ class HolidayService:
             res = await con.fetch(
                 '''
                     SELECT "start", "end", "is_weekday" FROM "weekdays" 
-                    WHERE $1 <= "end" OR "start" <= $2
+                    WHERE NOT ("end" < $1 OR $2 <= "start")
                     ORDER BY "start" ASC
                 ''',
                 int(range.start.timestamp()),
