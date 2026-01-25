@@ -357,7 +357,7 @@ class HolidayService:
     async def _get_offset(self):
         offset = await self.rs.get('weekday_fetch_offset')
         if offset:
-            return str(offset)
+            return offset.decode()
 
         async with self.db.acquire() as con:
             res = await con.fetchrow(
