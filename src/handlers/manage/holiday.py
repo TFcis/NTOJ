@@ -28,9 +28,10 @@ class ManageHolidayHandler(RequestHandler):
         '''
         year = int(self.get_argument("year"))
         month = int(self.get_argument("month"))
+        MAX_DAYS_SHOW = 42 # TUI calendar shows 6 weeks in month view
         query_range = TimeSlot(
             datetime.datetime(year,month,1) - datetime.timedelta(days=7), 
-            datetime.datetime(year,month,1) + datetime.timedelta(days=41)
+            datetime.datetime(year,month,1) + datetime.timedelta(days=MAX_DAYS_SHOW-1)
         )
         err, res = await HolidayService.inst.get_time_slots(query_range)
         if err:
