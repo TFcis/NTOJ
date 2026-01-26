@@ -1,20 +1,13 @@
 from enum import IntEnum
 import datetime
 from dataclasses import dataclass
-import requests
 from requests.adapters import HTTPAdapter
 import ssl
 from zoneinfo import ZoneInfo
 
-import config
+import aiohttp
 
-# Fix for "Missing Subject Key Identifier" when accessing data.taipei
-class TruststoreAdapter(HTTPAdapter):
-    def init_poolmanager(self, connections, maxsize, block=False, **pool_kwargs):
-        ctx = ssl.create_default_context()
-        ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
-        return super().init_poolmanager(connections, maxsize, 
-        block, ssl_context=ctx)
+import config
 
 
 @dataclass(slots=True)
@@ -83,14 +76,19 @@ class HolidayService:
         
         BASE_API_URL = 'https://data.taipei/api/v1/dataset/0dcbcfcf-f7a1-4664-a810-82c01cb524e0?scope=resourceAquire'
         offset = await self._get_offset()
-        s = requests.Session()
-        s.mount("https://", TruststoreAdapter())
-        resp = s.get(f'{BASE_API_URL}&offset={offset}&limit=1000')
-        if resp.status_code != 200:
-            return ('Eio', f'Failed to fetch holiday data: HTTP {resp.status_code}')
+
+        # Fix for "Missing Subject Key Identifier" when accessing data.taipei
+        ctx = ssl.create_default_context()
+        ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        connector = aiohttp.TCPConnector(ssl=ctx)
+
+        async with aiohttp.ClientSession(connector=connector) as session:
+            async with session.get(f'{BASE_API_URL}&offset={offset}&limit=1000') as resp:
+                if resp.status != 200:
+                    return ('Eio', f'Failed to fetch holiday data: HTTP {resp.status}')
+                data = await resp.json()
 
         TW_ZONE = ZoneInfo('Asia/Taipei')
-        data = resp.json()
         last_holiday = data['result']['results'][0]['date']
         last_holiday = datetime.datetime.strptime(last_holiday, '%Y%m%d')
         last_holiday = last_holiday.replace(tzinfo=TW_ZONE)
@@ -151,11 +149,11 @@ class HolidayService:
 
         now = datetime.datetime.now().astimezone(ZoneInfo('Asia/Taipei'))
         six_month_later = now + datetime.timedelta(days=180)
-        resp = requests.get(f'{BASE_API_URL}&timeMin={now.strftime("%Y-%m-%dT00:00:00+08:00")}&timeMax={six_month_later.strftime("%Y-%m-%dT23:59:59+08:00")}')
-        if resp.status_code != 200:
-            return ('Eio', f'Failed to fetch school holiday data: HTTP {resp.status_code}')
-
-        data = resp.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f'{BASE_API_URL}&timeMin={now.strftime("%Y-%m-%dT00:00:00+08:00")}&timeMax={six_month_later.strftime("%Y-%m-%dT23:59:59+08:00")}') as resp:
+                if resp.status != 200:
+                    return ('Eio', f'Failed to fetch school holiday data: HTTP {resp.status}')
+                data = await resp.json()
 
         holidays = [
             item for item in data['items'] if '放假' in item['summary']

@@ -1,84 +1,94 @@
 import datetime
 
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 from .util import AsyncTest, AccountContext
 from services.holiday import HolidayService, TimeSlot
 import config
 
+def make_mock_response(json_data, status=200):
+    mock_resp = AsyncMock()
+    mock_resp.__aenter__.return_value.status = status
+    mock_resp.__aenter__.return_value.json = AsyncMock(return_value=json_data)
+    return mock_resp
 
 async def init():
-    with patch('requests.Session.get') as mock_sess_get: # For fetch_gov_data
-        with patch('requests.get') as mock_get:          # For fetch_school_data
-            mock_sess_get.return_value.status_code = 200
-            mock_sess_get.return_value.json.return_value = {
-                'result': {
-                    'results': [
-                        {
-                            'date': '20260111',
-                            'isholiday': '是',
-                            'holidaycategory': '放假之紀念日及節日'
-                        },
-                        {
-                            'date': '20260114',
-                            'isholiday': '是',
-                            'holidaycategory': '星期六、星期日'
-                        },
-                        {
-                            'date': '20260115',
-                            'isholiday': '否',
-                            'holidaycategory': 'placeholder'
-                        },
-                        {
-                            'date': '20260117',
-                            'isholiday': '是',
-                            'holidaycategory': '補假'
-                        },
-                        {
-                            'date': '20260121',
-                            'isholiday': '是',
-                            'holidaycategory': '星期六、星期日'
-                        },
-                        {
-                            'date': '20260126',
-                            'isholiday': '否',
-                            'holidaycategory': 'placeholder'
-                        },
-                        {
-                            'date': '20260129',
-                            'isholiday': '是',
-                            'holidaycategory': '補假'
-                        },
-                        {
-                            'date': '20260212',
-                            'isholiday': '是',
-                            'holidaycategory': '放假之紀念日及節日'
-                        },
-                        {
-                            'date': '20260215',
-                            'isholiday': '是',
-                            'holidaycategory': '特定節日'
-                        },
-                        {
-                            '_id': 1800,
-                            'date': '20260217',
-                            'isholiday': '否',
-                            'holidaycategory': 'placeholder'
-                        },
-                    ]
-                }
+    gov_data = {
+        'result': {
+            'results': [
+                {
+                    'date': '20260111',
+                    'isholiday': '是',
+                    'holidaycategory': '放假之紀念日及節日'
+                },
+                {
+                    'date': '20260114',
+                    'isholiday': '是',
+                    'holidaycategory': '星期六、星期日'
+                },
+                {
+                    'date': '20260115',
+                    'isholiday': '否',
+                    'holidaycategory': 'placeholder'
+                },
+                {
+                    'date': '20260117',
+                    'isholiday': '是',
+                    'holidaycategory': '補假'
+                },
+                {
+                    'date': '20260121',
+                    'isholiday': '是',
+                    'holidaycategory': '星期六、星期日'
+                },
+                {
+                    'date': '20260126',
+                    'isholiday': '否',
+                    'holidaycategory': 'placeholder'
+                },
+                {
+                    'date': '20260129',
+                    'isholiday': '是',
+                    'holidaycategory': '補假'
+                },
+                {
+                    'date': '20260212',
+                    'isholiday': '是',
+                    'holidaycategory': '放假之紀念日及節日'
+                },
+                {
+                    'date': '20260215',
+                    'isholiday': '是',
+                    'holidaycategory': '特定節日'
+                },
+                {
+                    '_id': 1800,
+                    'date': '20260217',
+                    'isholiday': '否',
+                    'holidaycategory': 'placeholder'
+                },
+            ]
+        }
+    }
+    school_data = {
+        'items': [
+            {'summary': 'not ho1id4y'},
+            {
+                'summary': '這天有放假',
+                'start': {'dateTime': '2026-01-12T00:00:00+08:00'},
+                'end': {'dateTime': '2026-01-13T00:00:00+08:00'}
             }
-            mock_get.return_value.status_code = 200
-            mock_get.return_value.json.return_value = {
-                'items': [
-                    {'summary': 'not ho1id4y'},
-                    {
-                        'summary': '這天有放假',
-                        'start': {'dateTime': '2026-01-12T00:00:00+08:00'},
-                        'end': {'dateTime': '2026-01-13T00:00:00+08:00'}
-                    }
-                ]
-            }
+        ]
+    }
+    def get_side_effect(url, *args, **kwargs):
+        if 'data.taipei' in url:
+            return make_mock_response(gov_data)
+        elif 'google.com' in url:
+            return make_mock_response(school_data)
+        else:
+            return make_mock_response({}, status=404)
+    with AccountContext('admin@test', 'testtest') as admin_session:
+        with patch('aiohttp.ClientSession.get',side_effect=get_side_effect): # For fetch_gov_data
             # The range is not important, because we don't need return value here
             time_slot = TimeSlot(datetime.datetime(2026, 1, 1), datetime.datetime(2026, 1, 1))
             await HolidayService.inst.get_time_slots(time_slot)
