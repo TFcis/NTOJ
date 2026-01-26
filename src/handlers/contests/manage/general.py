@@ -95,6 +95,8 @@ class ContestManageGeneralHandler(RequestHandler):
             if contest_password == "":
                 return self.error(('Eparam', 'Contest registration password cannot be empty in Password mode'))
             reg_end = contest_end
+        else:
+            contest_password = ""
 
         if contest_mode != self.contest.contest_mode and ContestMode.RANDOM_SET in (contest_mode, self.contest.contest_mode):
             if len(self.contest.pro_list) != 0:
