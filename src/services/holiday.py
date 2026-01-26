@@ -6,6 +6,8 @@ from requests.adapters import HTTPAdapter
 import ssl
 from zoneinfo import ZoneInfo
 
+import config
+
 # Fix for "Missing Subject Key Identifier" when accessing data.taipei
 class TruststoreAdapter(HTTPAdapter):
     def init_poolmanager(self, connections, maxsize, block=False, **pool_kwargs):
@@ -45,7 +47,7 @@ class HolidayService:
         return res['cnt'] != 0
 
     async def is_weekday_now(self):
-        timestamp = datetime.datetime.now().timestamp()
+        timestamp = int(datetime.datetime.now().timestamp())
         valid_time = await self.rs.get('weekday_valid_time')
         is_weekday = await self.rs.get('is_weekday')
         if valid_time and is_weekday and timestamp < int(valid_time.decode()):
@@ -57,7 +59,7 @@ class HolidayService:
                     SELECT "start", "end" FROM "weekdays"
                     WHERE "end" > $1 AND "is_weekday" = TRUE ORDER BY "start" ASC LIMIT 1
                 ''',
-                int(timestamp),
+                timestamp,
             )
         if not res or not res['start'] or not res['end']:
             await self.rs.set('weekday_valid_time', timestamp + 30*86400) # valid for one month
@@ -149,8 +151,8 @@ class HolidayService:
         BASE_API_URL = 'https://clients6.google.com/calendar/v3/calendars/library@gm.tnfsh.tn.edu.tw/events?calendarId=library%40gm.tnfsh.tn.edu.tw&singleEvents=true&eventTypes=default&eventTypes=focusTime&eventTypes=outOfOffice&timeZone=Asia%2FTaipei&maxAttendees=1&maxResults=250&sanitizeHtml=true&key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs&%24unique=gc237'
 
         now = datetime.datetime.now()
-        now_6months = now + datetime.timedelta(days=180)
-        resp = requests.get(f'{BASE_API_URL}&timeMin={now.strftime("%Y-%m-%dT00:00:00+08:00")}&timeMax={now_6months.strftime("%Y-%m-%dT23:59:59+08:00")}')
+        six_month_later = now + datetime.timedelta(days=180)
+        resp = requests.get(f'{BASE_API_URL}&timeMin={now.strftime("%Y-%m-%dT00:00:00+08:00")}&timeMax={six_month_later.strftime("%Y-%m-%dT23:59:59+08:00")}')
         if resp.status_code != 200:
             return ('Eio', f'Failed to fetch school holiday data: HTTP {resp.status_code}')
 
@@ -190,8 +192,8 @@ class HolidayService:
         result = [
             {
                 'range': TimeSlot(
-                    start=datetime.datetime.fromtimestamp(row['start']),
-                    end=datetime.datetime.fromtimestamp(row['end']),
+                    start=datetime.datetime.fromtimestamp(row['start'], tz=config.TIMEZONE),
+                    end=datetime.datetime.fromtimestamp(row['end'], tz=config.TIMEZONE),
                 ),
                 'is_weekday': row['is_weekday']
             } for row in res
@@ -354,10 +356,10 @@ class HolidayService:
         await self.rs.set('weekday_valid_time', 0)
         return None
 
-    async def _get_offset(self):
+    async def _get_offset(self) -> int:
         offset = await self.rs.get('weekday_fetch_offset')
         if offset:
-            return offset.decode()
+            return int(offset.decode())
 
         async with self.db.acquire() as con:
             res = await con.fetchrow(
