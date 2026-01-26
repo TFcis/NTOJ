@@ -34,6 +34,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
         self.fake_db.acquire = MagicMock(return_value=fake_acquire_cm)
         self.fake_rs = AsyncMock()
         self.service = UserService(self.fake_db, self.fake_rs)
+        self.holiday_service = HolidayService(self.fake_db, self.fake_rs) # Init HolidayService
 
     @patch("bcrypt.hashpw", return_value=b"hashedpw")
     @patch("bcrypt.gensalt", return_value=b"salt")
