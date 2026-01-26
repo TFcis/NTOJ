@@ -35,22 +35,21 @@ class HolidayService:
         HolidayService.inst = self
 
     async def is_weekday(self, time: datetime.datetime):
-        timestamp = time.timestamp()
         async with self.db.acquire() as con:
             res = await con.fetchrow(
                 '''
                     SELECT COUNT(*) AS cnt FROM "weekdays"
                     WHERE $1 >= "start" AND $1 < "end" AND "is_weekday" = TRUE
                 ''',
-                int(timestamp),
+                time
             )
         return res['cnt'] != 0
 
     async def is_weekday_now(self):
-        timestamp = int(datetime.datetime.now().timestamp())
+        now = datetime.datetime.now().astimezone(config.TIMEZONE)
         valid_time = await self.rs.get('weekday_valid_time')
         is_weekday = await self.rs.get('is_weekday')
-        if valid_time and is_weekday and timestamp < int(valid_time.decode()):
+        if valid_time and is_weekday and now.timestamp() < float(valid_time.decode()):
             return is_weekday == b'1'
 
         async with self.db.acquire() as con:
@@ -59,16 +58,16 @@ class HolidayService:
                     SELECT "start", "end" FROM "weekdays"
                     WHERE "end" > $1 AND "is_weekday" = TRUE ORDER BY "start" ASC LIMIT 1
                 ''',
-                timestamp,
+                now,
             )
         if not res or not res['start'] or not res['end']:
-            await self.rs.set('weekday_valid_time', timestamp + 30*86400) # valid for one month
+            await self.rs.set('weekday_valid_time', now.timestamp() + 30*86400) # valid for one month
             await self.rs.set('is_weekday', 0)
             return False
 
-        is_weekday = (res['start'] <= timestamp)
+        is_weekday = (res['start'] <= now)
         valid_time = res['end'] if is_weekday else res['start']
-        await self.rs.set('weekday_valid_time', valid_time)
+        await self.rs.set('weekday_valid_time', valid_time.timestamp())
         await self.rs.set('is_weekday', int(is_weekday))
         return is_weekday
 
@@ -150,7 +149,7 @@ class HolidayService:
     async def fetch_shool_data(self):
         BASE_API_URL = 'https://clients6.google.com/calendar/v3/calendars/library@gm.tnfsh.tn.edu.tw/events?calendarId=library%40gm.tnfsh.tn.edu.tw&singleEvents=true&eventTypes=default&eventTypes=focusTime&eventTypes=outOfOffice&timeZone=Asia%2FTaipei&maxAttendees=1&maxResults=250&sanitizeHtml=true&key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs&%24unique=gc237'
 
-        now = datetime.datetime.now()
+        now = datetime.datetime.now().astimezone(ZoneInfo('Asia/Taipei'))
         six_month_later = now + datetime.timedelta(days=180)
         resp = requests.get(f'{BASE_API_URL}&timeMin={now.strftime("%Y-%m-%dT00:00:00+08:00")}&timeMax={six_month_later.strftime("%Y-%m-%dT23:59:59+08:00")}')
         if resp.status_code != 200:
@@ -175,10 +174,10 @@ class HolidayService:
 
     async def get_time_slots(self, range: TimeSlot):
         last_fetch = await self.rs.get('weekday_last_fetch')
-        if not last_fetch or int(last_fetch.decode()) + 86400 < datetime.datetime.now().timestamp():
+        if not last_fetch or float(last_fetch.decode()) + 86400 < datetime.datetime.now().timestamp():
             await self.fetch_gov_data()
             await self.fetch_shool_data()
-            await self.rs.set('weekday_last_fetch', int(datetime.datetime.now().timestamp()))
+            await self.rs.set('weekday_last_fetch', datetime.datetime.now().timestamp())
         async with self.db.acquire() as con:
             res = await con.fetch(
                 '''
@@ -186,14 +185,14 @@ class HolidayService:
                     WHERE NOT ("end" < $1 OR $2 <= "start")
                     ORDER BY "start" ASC
                 ''',
-                int(range.start.timestamp()),
-                int(range.end.timestamp()),
+                range.start,
+                range.end,
             )
         result = [
             {
                 'range': TimeSlot(
-                    start=datetime.datetime.fromtimestamp(row['start'], tz=config.TIMEZONE),
-                    end=datetime.datetime.fromtimestamp(row['end'], tz=config.TIMEZONE),
+                    start=row['start'].astimezone(config.TIMEZONE),
+                    end=row['end'].astimezone(config.TIMEZONE)
                 ),
                 'is_weekday': row['is_weekday']
             } for row in res
@@ -205,9 +204,6 @@ class HolidayService:
             Add the given time slot as weekday/non-weekday with the given priority.
             Overwrite existing ranges with lower priority.
         '''
-        new_start = int(new.start.timestamp())
-        new_end = int(new.end.timestamp())
-
         async with self.db.acquire() as con:
             # Try to merge with existing ranges of same priority
             res = await con.fetch(
@@ -215,16 +211,16 @@ class HolidayService:
                     SELECT "start" FROM "weekdays"
                     WHERE "start" < $1 AND $1 <= "end" AND "priority" = $2 AND "is_weekday" = $3;
                 ''',
-                new_start, pri, is_weekday
+                new.start, pri, is_weekday
             )
             if res:
-                new_start = res[0]['start']
+                new.start = res[0]['start']
             res = await con.fetch(
                 '''
                     SELECT "end" FROM "weekdays"
                     WHERE "start" <= $1 AND $1 < "end" AND "priority" = $2 AND "is_weekday" = $3;
                 ''',
-                new_end, pri, is_weekday
+                new.end, pri, is_weekday
             )
             if res:
                 new_end = res[0]['end']
@@ -234,32 +230,32 @@ class HolidayService:
                     SELECT "start", "end" FROM "weekdays"
                     WHERE NOT ("end" <= $1 OR $2 <= "start") AND "priority" > $3;
                 ''',
-                new_start, new_end, pri
+                new.start, new.end, pri
             )
 
-        if res and res[0]['start'] <= new_start and new_end <= res[0]['end']:
+        if res and res[0]['start'] <= new.start and new.end <= res[0]['end']:
             # Fully covered by higher priority range
             return None
 
         # Avoid higher priority ranges
-        new_timestamps = [[new_start, new_end]]
+        new_slots = [[new.start, new.end]]
         for row in res:
             start = row['start']
             end = row['end']
 
-            if start <= new_timestamps[-1][0]:
-                new_timestamps[-1][0] = end
-            elif end >= new_timestamps[-1][1]:
-                new_timestamps[-1][1] = start
+            if start <= new_slots[-1][0]:
+                new_slots[-1][0] = end
+            elif end >= new_slots[-1][1]:
+                new_slots[-1][1] = start
             else:
-                if start == new_timestamps[-1][0]:
-                    new_timestamps[-1][0] = end
+                if start == new_slots[-1][0]:
+                    new_slots[-1][0] = end
                     continue
-                new_timestamps[-1][1] = start
-                new_timestamps.append([end, new_end])
+                new_slots[-1][1] = start
+                new_slots.append([end, new.end])
 
-        if new_timestamps[-1][0] >= new_timestamps[-1][1]:
-            new_timestamps.pop()
+        if new_slots[-1][0] >= new_slots[-1][1]:
+            new_slots.pop()
 
         async with self.db.acquire() as con:
             await con.executemany(
@@ -267,14 +263,14 @@ class HolidayService:
                     DELETE FROM "weekdays"
                     WHERE $1 <= "start" AND "end" <= $2;
                 ''',
-                [(ts[0], ts[1]) for ts in new_timestamps],
+                [(ts[0], ts[1]) for ts in new_slots],
             )
             await con.executemany(
                 '''
                     INSERT INTO "weekdays" ("start", "end", "priority", "is_weekday")
                     VALUES ($1, $2, $3, $4);
                 ''',
-                [(ts[0], ts[1], pri, is_weekday) for ts in new_timestamps],
+                [(ts[0], ts[1], pri, is_weekday) for ts in new_slots],
             )
 
             res = await con.fetch(
@@ -282,7 +278,7 @@ class HolidayService:
                     SELECT "end", "priority", "is_weekday" FROM "weekdays"
                     WHERE "start" < $1 AND $2 < "end" AND "priority" <= $3;
                 ''',
-                new_start, new_end, pri
+                new.start, new.end, pri
             )
             if res:
                 # Split existing range
@@ -291,14 +287,14 @@ class HolidayService:
                         UPDATE "weekdays" SET "end" = $1
                         WHERE "start" < $1 AND $2 < "end" AND "priority" <= $3;
                     ''',
-                    new_start, new_end, pri
+                    new.start, new.end, pri
                 )
                 await con.execute(
                     '''
                         INSERT INTO "weekdays" ("start", "end", "priority", "is_weekday")
                         VALUES ($1, $2, $3, $4);
                     ''',
-                    new_end, res[0]['end'] , res[0]['priority'], res[0]['is_weekday']
+                    new.end, res[0]['end'] , res[0]['priority'], res[0]['is_weekday']
                 )
 
             await con.execute(
@@ -306,14 +302,14 @@ class HolidayService:
                     UPDATE "weekdays" SET "start" = $1
                     WHERE ("start" < $1 AND $1 < "end") AND "priority" <= $2;
                 ''',
-                new_end, pri
+                new.end, pri
             )
             await con.execute(
                 '''
                     UPDATE "weekdays" SET "end" = $1
                     WHERE ("start" < $1 AND $1 < "end") AND "priority" <= $2;
                 ''',
-                new_start, pri
+                new.start, pri
             )
 
         # Invalidate cache
@@ -327,8 +323,8 @@ class HolidayService:
                     DELETE FROM "weekdays"
                     WHERE "start" = $1 AND "end" = $2;
                 ''',
-                int(target.start.timestamp()),
-                int(target.end.timestamp()),
+                target.start,
+                target.end,
             )
             if res == 'DELETE 0':
                 return ('Enoext', 'Target weekday range not found')
@@ -348,8 +344,8 @@ class HolidayService:
                     DELETE FROM "weekdays"
                     WHERE $1 <= "start" AND "end" <= $2;
                 ''',
-                int(range.start.timestamp()),
-                int(range.end.timestamp()),
+                range.start,
+                range.end,
             )
 
         # Invalidate cache

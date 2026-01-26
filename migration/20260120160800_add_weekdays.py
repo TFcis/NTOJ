@@ -3,8 +3,8 @@ async def dochange(db, rs):
     await db.execute(
     '''
         CREATE TABLE weekdays (
-            "start" bigint NOT NULL unique,
-            "end" bigint NOT NULL unique,
+            "start" timestamp with time zone NOT NULL unique,
+            "end" timestamp with time zone NOT NULL unique,
             "priority" integer NOT NULL,
             "is_weekday" boolean NOT NULL
         );
