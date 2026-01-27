@@ -97,28 +97,33 @@ class HolidayService:
         last_holiday = datetime.datetime.strptime(last_holiday, '%Y%m%d')
         last_holiday = last_holiday.replace(tzinfo=TW_ZONE)
 
-        WINTER = TimeSlot(datetime.datetime(last_holiday.year, 1, 21, tzinfo=TW_ZONE), datetime.datetime(last_holiday.year, 2, 10, 23, 59, tzinfo=TW_ZONE))
-        SUMMER = TimeSlot(datetime.datetime(last_holiday.year, 7, 1, tzinfo=TW_ZONE), datetime.datetime(last_holiday.year, 8, 29, 23, 59, tzinfo=TW_ZONE))
+        END_OF_DAY = datetime.timedelta(hours=23, minutes=59) # 24 hours minus 1 minute
+
+        # NOTE: According to https://edu.law.moe.gov.tw/LawContent.aspx?id=FL008424.
+        # In principle, the winter vacation is from Jan 21 to Feb 10,
+        # and the summer vacation is from Jul 1 to Aug 29.
+        WINTER = TimeSlot(datetime.datetime(last_holiday.year, 1, 21, tzinfo=TW_ZONE), datetime.datetime(last_holiday.year, 2, 10, tzinfo=TW_ZONE) + END_OF_DAY)
+        SUMMER = TimeSlot(datetime.datetime(last_holiday.year, 7, 1, tzinfo=TW_ZONE), datetime.datetime(last_holiday.year, 8, 29, tzinfo=TW_ZONE) + END_OF_DAY)
         for idx, item in enumerate(data['result']['results']):
             dt = datetime.datetime.strptime(item['date'], '%Y%m%d')
             dt = dt.replace(tzinfo=TW_ZONE)
 
             if dt.year > WINTER.start.year:
-                # New year, reset vacation periods
-                WINTER = TimeSlot(datetime.datetime(dt.year, 1, 21, tzinfo=TW_ZONE), datetime.datetime(dt.year, 2, 10, 23, 59, tzinfo=TW_ZONE))
-                SUMMER = TimeSlot(datetime.datetime(dt.year, 7, 1, tzinfo=TW_ZONE), datetime.datetime(dt.year, 8, 29, 23, 59, tzinfo=TW_ZONE))
+                # New year, update year of winter/summer holidays
+                WINTER = TimeSlot(WINTER.start.replace(year=dt.year), WINTER.end.replace(year=dt.year))
+                SUMMER = TimeSlot(SUMMER.start.replace(year=dt.year), SUMMER.end.replace(year=dt.year))
 
             if dt <= last_holiday:
                 continue
 
             if WINTER.start <= dt <= WINTER.end:
                 await add_weekdays(last_holiday, (WINTER.start - last_holiday).days - 1)
-                last_holiday = WINTER.end - datetime.timedelta(hours=23, minutes=59)
+                last_holiday = WINTER.end - END_OF_DAY
                 await self.add_time_slot(WINTER, False, DayPriority.GOV)
                 continue
             if SUMMER.start <= dt <= SUMMER.end:
                 await add_weekdays(last_holiday, (SUMMER.start - last_holiday).days - 1)
-                last_holiday = SUMMER.end - datetime.timedelta(hours=23, minutes=59)
+                last_holiday = SUMMER.end - END_OF_DAY
                 await self.add_time_slot(SUMMER, False, DayPriority.GOV)
                 continue
 
@@ -128,7 +133,7 @@ class HolidayService:
                 await add_weekdays(last_holiday, (dt - last_holiday).days - 1)
                 if item['holidaycategory'] != '星期六、星期日':
                     # Only add non-weekend holidays
-                    holiday = TimeSlot(dt, dt + datetime.timedelta(hours=23, minutes=59))
+                    holiday = TimeSlot(dt, dt + END_OF_DAY)
                     await self.add_time_slot(holiday, False, DayPriority.GOV)
                 last_holiday = dt
             elif idx == len(data['result']['results']) - 1:
