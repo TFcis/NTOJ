@@ -1,7 +1,6 @@
 from enum import IntEnum
 import datetime
 from dataclasses import dataclass
-from requests.adapters import HTTPAdapter
 import ssl
 from zoneinfo import ZoneInfo
 
