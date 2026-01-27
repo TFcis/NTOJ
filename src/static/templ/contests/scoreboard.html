@@ -106,12 +106,11 @@ font-weight: bolder;
     /**
      * @function compare_timestamp
      * @description Compare two timestamp strings in "MM:SS" format
+     * @description p > q => return true
+     * @description p <= q => return false
      * @argument p { String }
      * @argument q { String }
      * @returns { number }
-     * Compare two timestamp strings in "MM:SS" format
-     * p > q => return true
-     * p <= q => return false
      */
     function compare_timestamp(p, q) {
         let [p_min, p_sec] = p.split(":");
@@ -121,7 +120,7 @@ font-weight: bolder;
         q_min = parseInt(q_min);
         q_sec = parseInt(q_sec);
         q_min = isNaN(q_min) ? 0 : q_min;
-        q_sec = isNaN(q_min) ? 0 : q_sec;
+        q_sec = isNaN(q_sec) ? 0 : q_sec;
 
         if (p_min != q_min) return p_min > q_min;
         return p_sec > q_sec;
@@ -259,7 +258,7 @@ font-weight: bolder;
                 .filter(([_, score]) => score.state === {{ ChalConst.STATE_AC }})
                 .forEach(([pro_id, score]) => {
                     const shouldUpdate = !first_kill_map.has(pro_id) ||
-                                        compare_timestamp(score.timestamp, first_kill_map.get(pro_id).timestamp);
+                                        compare_timestamp(first_kill_map.get(pro_id).timestamp, score.timestamp);
 
                     if (shouldUpdate) {
                         first_kill_map.set(pro_id, {
@@ -300,15 +299,15 @@ font-weight: bolder;
 
             let each_problems_score_html = '';
             let max_timestamp = scores.max_timestamp;
-            for (const pro_id of pro_list) {
-                if (!(pro_id in scores.scores)) {
+            for (const pro_order of pro_list) {
+                if (!(pro_order in scores.scores)) {
                     each_problems_score_html += `
                     <td>
                         <p class="text-muted">-</p>
                     </td>
                     `;
                 } else {
-                    let score = scores.scores[pro_id];
+                    let score = scores.scores[pro_order];
                     let score_idx = parseInt(score.score / 10);
                     if (score_idx > 10) score_idx = 10;
                     if (score_idx < 0) score_idx = 0;

@@ -15,7 +15,7 @@ class ContestProsetHandler(RequestHandler):
             return self.error(PERMISSION_DENIED_ERROR)
 
         scoreboard_key = f'contest_{self.contest.contest_id}_randomset_scoreboard'
-        randomset_prolist = self.contest.get_prolist_from_acct_by_ip(self.acct)
+        randomset_prolist = self.contest.get_randomset_prolist_from_acct_by_ip(self.acct)
         if randomset_prolist is None:
             return self.error(('Etodo', 'TODO: Assign problem set for out of range IP not implemented. Call Yushiuan9499.'))
         randomset_prolist_set = set(randomset_prolist)

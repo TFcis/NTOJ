@@ -177,7 +177,7 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
                 return self.error(PERMISSION_DENIED_ERROR)
 
             if self.contest.contest_mode == ContestMode.RANDOM_SET:
-                contest_prolist = self.contest.get_prolist_from_acct_by_ip(self.acct)
+                contest_prolist = self.contest.get_randomset_prolist_from_acct_by_ip(self.acct)
                 if contest_prolist is None:
                     return self.error(('Etodo', 'TODO: Assign problem set for out of range IP not implemented. Call Yushiuan9499.'))
                 if pro_id not in contest_prolist:
@@ -248,7 +248,7 @@ class ProHandler(RequestHandler):
                 return self.error(PERMISSION_DENIED_ERROR)
 
             if self.contest.contest_mode == ContestMode.RANDOM_SET:
-                contest_prolist = self.contest.get_prolist_from_acct_by_ip(self.acct)
+                contest_prolist = self.contest.get_randomset_prolist_from_acct_by_ip(self.acct)
                 if contest_prolist is None:
                     return self.error(('Etodo', 'TODO: Assign problem set for out of range IP not implemented. Call Yushiuan9499.'))
                 if pro_id not in contest_prolist:

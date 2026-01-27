@@ -117,7 +117,7 @@ class Contest:
 
         return self.user_list[acct_id]['status'] == status
 
-    def get_prolist_from_acct_by_ip(self, acct: Account) -> list[int] | None:
+    def get_randomset_prolist_from_acct_by_ip(self, acct: Account) -> list[int] | None:
         if self.contest_mode != ContestMode.RANDOM_SET:
             return None
 
@@ -131,6 +131,21 @@ class Contest:
         except KeyError:
             logger.warning(f'TODO: Assign problem set for out of range IP not implemented. Contest {self.contest_id} IP range {self.start_ip} - {self.end_ip}, but acct {acct.acct_id} IP is {ip}.')
             return None
+
+    def is_randomset_pro_allocated(self, acct: Account) -> bool:
+        if self.contest_mode != ContestMode.RANDOM_SET:
+            return False
+
+        if self.is_admin(acct):
+            logger.warning(f'Should not call is_randomset_pro_allocated for admin acct {acct.acct_id} in contest {self.contest_id}.')
+            return False
+
+        try:
+            ip = IPv4Address(acct.lastip)
+        except AddressValueError:
+            return False
+
+        return ip in self.ip_pro_list
 
 class ContestService:
     def __init__(self, db, rs):
@@ -550,14 +565,13 @@ class ContestService:
             return
         assert acct
 
-
         prolist = contest.get_prolist_from_acct_by_ip(acct)
         if prolist is None:
             return
 
         try:
             pro_order = prolist.index(chal.pro_id)
-        except IndexError:
+        except ValueError:
             logger.error(f'Contest {contest.contest_id} randomset problem list for acct {acct.acct_id} does not contain problem {chal.pro_id}.')
             return
 
@@ -567,23 +581,20 @@ class ContestService:
         assert total_result
 
         best_record = await self.rs.hget(f'contest_{contest.contest_id}_randomset_scoreboard', f'{acct.acct_id}_{pro_order}')
-        fail_cnt = total_result.state != ChalConst.STATE_AC
+        fail_count = 1 if total_result.state != ChalConst.STATE_AC else 0
         if best_record is not None:
             best_record = unpackb(best_record)
-            fail_cnt = best_record['fail_cnt']
+            fail_count += best_record['fail_count']
 
+        # NOTE: IOI2013
         if best_record is None or total_result.rate > Decimal(best_record['score']):
-            # NOTE: IOI2013
             best_record = {
                 'chal_id': chal.chal_id,
                 'timestamp': chal.timestamp,
                 'state': total_result.state,
                 'score': total_result.rate,
+                'fail_count': fail_count,
             }
-        if best_record['state'] != ChalConst.STATE_AC:
-            fail_cnt += 1
-
-        best_record['fail_cnt'] = fail_cnt
 
         await self.rs.hset(f'contest_{contest.contest_id}_randomset_scoreboard', f'{acct.acct_id}_{pro_order}', packb(best_record, default=self._encoder))
 
@@ -641,9 +652,9 @@ class ContestService:
                 'chal_id': chal_id,
                 'score': score,
                 'timestamp': timestamp,
-                'fail_cnt': fail_cnt
+                'fail_count': fail_count
             }
-            for acct_id, chal_id, score, timestamp, fail_cnt in res
+            for acct_id, chal_id, score, timestamp, fail_count in res
         }
 
         return scores
@@ -736,9 +747,9 @@ class ContestService:
                 'chal_id': chal_id,
                 'score': score,
                 'timestamp': timestamp,
-                'fail_cnt': fail_cnt
+                'fail_count': fail_count
             }
-            for acct_id, chal_id, score, timestamp, fail_cnt in res
+            for acct_id, chal_id, score, timestamp, fail_count in res
         }
 
         return scores
