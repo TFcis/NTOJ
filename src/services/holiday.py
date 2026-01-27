@@ -158,7 +158,8 @@ class HolidayService:
 
         BASE_API_URL = 'https://clients6.google.com/calendar/v3/calendars/library@gm.tnfsh.tn.edu.tw/events?calendarId=library%40gm.tnfsh.tn.edu.tw&singleEvents=true&eventTypes=default&eventTypes=focusTime&eventTypes=outOfOffice&timeZone=Asia%2FTaipei&maxAttendees=1&maxResults=250&sanitizeHtml=true&key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs&%24unique=gc237'
 
-        now = datetime.datetime.now().astimezone(ZoneInfo('Asia/Taipei'))
+        TW_ZONE = ZoneInfo('Asia/Taipei')
+        now = datetime.datetime.now().astimezone(TW_ZONE)
         six_month_later = now + datetime.timedelta(days=180)
         log = log.bind(timeMin=now.strftime("%Y-%m-%dT00:00:00+08:00"), timeMax=six_month_later.strftime("%Y-%m-%dT23:59:59+08:00"))
 
@@ -174,11 +175,26 @@ class HolidayService:
         ]
 
         for item in holidays:
-            start_str = item['start'].get('dateTime', item['start'].get('date'))
-            end_str = item['end'].get('dateTime', item['end'].get('date'))
+            if 'dateTime' in item['start'] or 'date' in item['start']:
+                start_str = item['start'].get('dateTime', item['start'].get('date'))
+                start_dt = datetime.datetime.fromisoformat(start_str)
+            else:
+                log.warning('Unknown start time format', item=item)
+                continue
 
-            start_dt = datetime.datetime.fromisoformat(start_str)
-            end_dt = datetime.datetime.fromisoformat(end_str)
+            if start_dt.tzinfo is None:
+                start_dt = start_dt.replace(tzinfo=TW_ZONE)
+
+            if 'dateTime' in item['end']:
+                end_dt = datetime.datetime.fromisoformat(item['end']['dateTime'])
+            elif 'date' in item['end']:
+                end_dt = datetime.datetime.fromisoformat(item['end']['date']) + datetime.timedelta(hours=23, minutes=59)
+            else:
+                log.warning('Unknown end time format', item=item)
+                continue
+
+            if end_dt.tzinfo is None:
+                end_dt = end_dt.replace(tzinfo=TW_ZONE)
 
             await self.add_time_slot(TimeSlot(start=start_dt, end=end_dt), False, DayPriority.SCHOOL)
 
