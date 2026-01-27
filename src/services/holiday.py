@@ -219,7 +219,7 @@ class HolidayService:
         async with self.db.acquire() as con:
             async with con.transaction():
                 # Try to merge with existing ranges of same priority
-                res = await con.fetch(
+                res = await con.fetchrow(
                     '''
                         SELECT "start" FROM "weekdays"
                         WHERE "start" < $1 AND $1 <= "end" AND "priority" = $2 AND "is_weekday" = $3;
@@ -227,8 +227,8 @@ class HolidayService:
                     new.start, pri, is_weekday
                 )
                 if res:
-                    new.start = res[0]['start']
-                res = await con.fetch(
+                    new.start = res['start']
+                res = await con.fetchrow(
                     '''
                         SELECT "end" FROM "weekdays"
                         WHERE "start" <= $1 AND $1 < "end" AND "priority" = $2 AND "is_weekday" = $3;
@@ -236,12 +236,13 @@ class HolidayService:
                     new.end, pri, is_weekday
                 )
                 if res:
-                    new_end = res[0]['end']
+                    new.end = res['end']
 
                 res = await con.fetch(
                     '''
                         SELECT "start", "end" FROM "weekdays"
-                        WHERE NOT ("end" <= $1 OR $2 <= "start") AND "priority" > $3;
+                        WHERE NOT ("end" <= $1 OR $2 <= "start") AND "priority" > $3
+                        ORDER BY "start" ASC;
                     ''',
                     new.start, new.end, pri
                 )
@@ -287,7 +288,7 @@ class HolidayService:
                     [(ts[0], ts[1], pri, is_weekday) for ts in new_slots],
                 )
 
-                res = await con.fetch(
+                res = await con.fetchrow(
                     '''
                         SELECT "end", "priority", "is_weekday" FROM "weekdays"
                         WHERE "start" < $1 AND $2 < "end" AND "priority" <= $3;
@@ -308,7 +309,7 @@ class HolidayService:
                             INSERT INTO "weekdays" ("start", "end", "priority", "is_weekday")
                             VALUES ($1, $2, $3, $4);
                         ''',
-                        new.end, res[0]['end'] , res[0]['priority'], res[0]['is_weekday']
+                        new.end, res['end'] , res['priority'], res['is_weekday']
                     )
 
                 await con.execute(
