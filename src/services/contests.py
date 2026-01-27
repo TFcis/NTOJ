@@ -1,15 +1,19 @@
 import datetime
 import enum
 from dataclasses import dataclass, field
+import random
 import pickle
+from ipaddress import IPv4Address, AddressValueError
+from decimal import Decimal
 
 import asyncpg
-from ipaddress import IPv4Address
-import random
+import tornado.log
+from msgpack import packb, unpackb
 
-from services.chal import Compiler
-from services.user import Account
+from services.chal import ChalService, Compiler, ChalConst
+from services.user import Account, UserService
 
+logger = tornado.log.app_log
 
 class RegMode(enum.IntEnum):
     INVITED = 0
@@ -113,6 +117,21 @@ class Contest:
 
         return self.user_list[acct_id]['status'] == status
 
+    def get_prolist_from_acct_by_ip(self, acct: Account) -> list[int] | None:
+        if self.contest_mode != ContestMode.RANDOM_SET:
+            return None
+
+        try:
+            ip = IPv4Address(acct.lastip)
+        except AddressValueError:
+            return None
+
+        try:
+            return self.ip_pro_list[ip]
+        except KeyError:
+            logger.warning(f'TODO: Assign problem set for out of range IP not implemented. Contest {self.contest_id} IP range {self.start_ip} - {self.end_ip}, but acct {acct.acct_id} IP is {ip}.')
+            return None
+
 class ContestService:
     def __init__(self, db, rs):
         self.db = db
@@ -181,9 +200,9 @@ class ContestService:
                 if contest.contest_mode == ContestMode.RANDOM_SET:
                     result = await con.fetch(
                         '''
-                            SELECT ip, contest_ip_joints.pro_id 
-                            FROM contest_ip_joints INNER JOIN contest_problem_joints 
-                            ON contest_ip_joints.contest_id = contest_problem_joints.contest_id 
+                            SELECT ip, contest_ip_joints.pro_id
+                            FROM contest_ip_joints INNER JOIN contest_problem_joints
+                            ON contest_ip_joints.contest_id = contest_problem_joints.contest_id
                                AND contest_ip_joints.pro_id = contest_problem_joints.pro_id
                             WHERE contest_ip_joints.contest_id = $1 ORDER BY contest_ip_joints.ip, contest_problem_joints."order" ASC;
                         ''',
@@ -499,6 +518,74 @@ class ContestService:
                     [(contest.contest_id, pro_id, order) for pro_id in pro_ids]
                 )
         return None, None
+
+    def _encoder(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return obj.timestamp()
+
+        elif isinstance(obj, Decimal):
+            return str(obj)
+
+        return obj
+
+    async def update_randomset_scoreboard(self, chal_id: int):
+        err, chal = await ChalService.inst.get_chal(chal_id)
+        if err:
+            return
+        assert chal
+
+        err, contest = await self.get_contest(chal.contest_id)
+        if err:
+            return
+        assert contest
+
+        if contest.contest_mode != ContestMode.RANDOM_SET:
+            return
+
+        if contest.is_admin(acct_id=chal.acct_id):
+            return
+
+        err, acct = await UserService.inst.info_acct(chal.acct_id)
+        if err:
+            return
+        assert acct
+
+
+        prolist = contest.get_prolist_from_acct_by_ip(acct)
+        if prolist is None:
+            return
+
+        try:
+            pro_order = prolist.index(chal.pro_id)
+        except IndexError:
+            logger.error(f'Contest {contest.contest_id} randomset problem list for acct {acct.acct_id} does not contain problem {chal.pro_id}.')
+            return
+
+        err, total_result = await ChalService.inst.get_total_result(chal.chal_id)
+        if err:
+            return
+        assert total_result
+
+        best_record = await self.rs.hget(f'contest_{contest.contest_id}_randomset_scoreboard', f'{acct.acct_id}_{pro_order}')
+        fail_cnt = total_result.state != ChalConst.STATE_AC
+        if best_record is not None:
+            best_record = unpackb(best_record)
+            fail_cnt = best_record['fail_cnt']
+
+        if best_record is None or total_result.rate > Decimal(best_record['score']):
+            # NOTE: IOI2013
+            best_record = {
+                'chal_id': chal.chal_id,
+                'timestamp': chal.timestamp,
+                'state': total_result.state,
+                'score': total_result.rate,
+            }
+        if best_record['state'] != ChalConst.STATE_AC:
+            fail_cnt += 1
+
+        best_record['fail_cnt'] = fail_cnt
+
+        await self.rs.hset(f'contest_{contest.contest_id}_randomset_scoreboard', f'{acct.acct_id}_{pro_order}', packb(best_record, default=self._encoder))
 
     async def get_ioi2013_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
         _, contest = await self.get_contest(contest_id)

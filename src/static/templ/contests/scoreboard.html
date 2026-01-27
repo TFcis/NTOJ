@@ -1,4 +1,5 @@
 {% import datetime %}
+{% from services.chal import ChalConst %}
 {% from services.contests import ContestMode %}
 {% from utils.htmlgen import pro_idx_to_pro_alphabet %}
 
@@ -103,9 +104,14 @@ font-weight: bolder;
     }
 
     /**
+     * @function compare_timestamp
+     * @description Compare two timestamp strings in "MM:SS" format
      * @argument p { String }
      * @argument q { String }
      * @returns { number }
+     * Compare two timestamp strings in "MM:SS" format
+     * p > q => return true
+     * p <= q => return false
      */
     function compare_timestamp(p, q) {
         let [p_min, p_sec] = p.split(":");
@@ -117,8 +123,8 @@ font-weight: bolder;
         q_min = isNaN(q_min) ? 0 : q_min;
         q_sec = isNaN(q_min) ? 0 : q_sec;
 
-        if (p_min == q_min) return p_sec > q_sec;
-        return p_min > q_min;
+        if (p_min != q_min) return p_min > q_min;
+        return p_sec > q_sec;
     }
 
     // from https://www.explainthis.io/zh-hant/swe/throttle
@@ -220,30 +226,150 @@ font-weight: bolder;
              * @type { Array<Object> }
              */
             let scores = res.data;
-            scores.sort((p, q) => {
-                if (q.total_score == p.total_score) {
-                    let p_max_timestamp = '';
-                    let q_max_timestamp = '';
-
-                    for (const [_, score] of Object.entries(p.scores)) {
-                        if (compare_timestamp(score.timestamp, p_max_timestamp)) p_max_timestamp = score.timestamp;
-                    }
-
-                    for (const [_, score] of Object.entries(q.scores)) {
-                        if (compare_timestamp(score.timestamp, q_max_timestamp)) q_max_timestamp = score.timestamp;
-                    }
-
-                    return compare_timestamp(p_max_timestamp, q_max_timestamp) ? 1 : -1;
-                }
-
-                return q.total_score - p.total_score;
-            });
-
             {% if contest.contest_mode is ContestMode.IOI %}
-            render_ioi_style_scoreboard(scores);
+                render_ioi_style_scoreboard(scores);
+            {% elif contest.contest_mode is ContestMode.RANDOM_SET %}
+                render_randomset_style_scoreboard(scores);
             {% end %}
         });
     }
+
+    {% if contest.contest_mode is ContestMode.RANDOM_SET %}
+
+    /**
+     * @argument scores_data { Array }
+     */
+    function render_randomset_style_scoreboard(scores_data) {
+        /**
+         * A map of problem_id to first kill acct_id
+         * @type { Map<number, Object> }
+         */
+        let first_kill_map = new Map();
+        scores_data.forEach(scores => {
+            scores.ac_count = Object.values(scores.scores).filter(score => score.state == {{ ChalConst.STATE_AC }}).length;
+            scores.fail_count = Object.values(scores.scores).reduce((acc, score) => acc + score.fail_count, 0);
+            scores.max_timestamp = Object.values(scores.scores).reduce((max, score) =>
+                compare_timestamp(score.timestamp, max) ? score.timestamp : max, '');
+            scores.latest_score_changed_timestamp = Object.values(scores.scores)
+                .filter(score => score.score !== 0)
+                .reduce((latest, score) =>
+                    compare_timestamp(score.timestamp, latest) ? score.timestamp : latest, '');
+
+            Object.entries(scores.scores)
+                .filter(([_, score]) => score.state === {{ ChalConst.STATE_AC }})
+                .forEach(([pro_id, score]) => {
+                    const shouldUpdate = !first_kill_map.has(pro_id) ||
+                                        compare_timestamp(score.timestamp, first_kill_map.get(pro_id).timestamp);
+
+                    if (shouldUpdate) {
+                        first_kill_map.set(pro_id, {
+                            acct_id: scores.acct_id,
+                            timestamp: score.timestamp
+                        });
+                    }
+                });
+        });
+        scores_data.forEach(scores => {
+            scores.first_kill_count = Object.entries(scores.scores)
+                .filter(([_, score]) => score.state === {{ ChalConst.STATE_AC }})
+                .filter(([pro_id]) => first_kill_map.get(pro_id).acct_id === scores.acct_id)
+                .length;
+        });
+
+        scores_data.sort((p, q) => {
+            const p_not_have_challenges = Object.keys(p.scores).length === 0;
+            const q_not_have_challenges = Object.keys(q.scores).length === 0;
+            if (p_not_have_challenges || q_not_have_challenges) return p_not_have_challenges - q_not_have_challenges;
+
+            if (q.total_score != p.total_score) return q.total_score - p.total_score;
+            if (q.ac_count != p.ac_count) return q.ac_count - p.ac_count;
+            if (q.first_kill_count != p.first_kill_count) return q.first_kill_count - p.first_kill_count;
+            if (q.fail_count != p.fail_count) return p.fail_count - q.fail_count;
+            return compare_timestamp(p.latest_score_changed_timestamp, q.latest_score_changed_timestamp) ? 1 : -1;
+        });
+
+        const pro_list = {{ [*range(len(contest.pro_sets))] }};
+        let each_ranks_html = '';
+        let cur_rank = 0;
+        let cur_total_score = 0;
+        for (const [_, scores] of scores_data.entries()) {
+            if (scores.total_score != cur_total_score) {
+                cur_total_score = scores.total_score;
+                cur_rank += 1;
+            }
+
+            let each_problems_score_html = '';
+            let max_timestamp = scores.max_timestamp;
+            for (const pro_id of pro_list) {
+                if (!(pro_id in scores.scores)) {
+                    each_problems_score_html += `
+                    <td>
+                        <p class="text-muted">-</p>
+                    </td>
+                    `;
+                } else {
+                    let score = scores.scores[pro_id];
+                    let score_idx = parseInt(score.score / 10);
+                    if (score_idx > 10) score_idx = 10;
+                    if (score_idx < 0) score_idx = 0;
+                    if (score.state == {{ ChalConst.STATE_AC }}) {
+                        score_idx = 10;
+                    }
+                    let score_color_class_html = score_color_class_map[score_idx];
+
+                    each_problems_score_html += `
+                    <td class="${score_color_class_html}">
+                        <p class=""><a href="{{ url('/contests/${contest_id}/chal/${score.chal_id}/') }}">${score.score}</a></p>
+                        <p class="text-muted">${score.timestamp}</p>
+                    </td>
+                    `;
+                }
+            }
+
+            each_ranks_html += `
+                <tr>
+                    <td>${cur_rank}</td>
+                    <td><a href="{{ url('/acct/${scores.acct_id}/') }}">${scores.name}</a></td>
+                    ${each_problems_score_html}
+                    <td>
+                        <p class="">${scores.total_score}</p>
+                        <p class="text-muted">${max_timestamp}</p>
+                    </td>
+                </tr>
+            `;
+        }
+
+        let scoreboard_html = `
+            <table class="table table-sm table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th scope="col">Rank</th>
+                        <th scope="col">Username</th>
+                        {% if contest.is_admin(user) or not contest.is_member(user) %}
+                            {% for i in range(len(contest.pro_sets)) %}
+                            <th scope="col">
+                                <span>{{ pro_idx_to_pro_alphabet(i) }}</span>
+                            </th>
+                            {% end %}
+                        {% else %}
+                            {% for idx, pro_id in enumerate(contest.get_prolist_from_acct_by_ip(user)) %}
+                            <th scope="col">
+                                <a class="" href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro_id }/') }}">{{ pro_idx_to_pro_alphabet(idx) }}</a>
+                            </th>
+                            {% end %}
+                        {% end %}
+                        <th scope="col">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${each_ranks_html}
+                </tbody>
+            </table>
+        `;
+
+        $("#scoreboard").html(scoreboard_html);
+    }
+    {% end %}
 
     {% if contest.contest_mode is ContestMode.IOI %}
 
@@ -251,6 +377,20 @@ font-weight: bolder;
      * @argument scores_data { Array }
      */
     function render_ioi_style_scoreboard(scores_data) {
+        scores_data.forEach(scores => {
+            scores.max_timestamp = Object.values(scores.scores).reduce((max, score) =>
+                compare_timestamp(score.timestamp, max) ? score.timestamp : max, '');
+        });
+
+        scores_data.sort((p, q) => {
+            const p_not_have_challenges = Object.keys(p.scores).length === 0;
+            const q_not_have_challenges = Object.keys(q.scores).length === 0;
+            if (p_not_have_challenges || q_not_have_challenges) return p_not_have_challenges - q_not_have_challenges;
+
+            if (q.total_score != p.total_score) return q.total_score - p.total_score;
+            return compare_timestamp(p.max_timestamp, q.max_timestamp) ? 1 : -1;
+        });
+
         let pro_list = {{ [pro_id for pro_id in contest.pro_list.keys()] }};
         let each_ranks_html = '';
         let cur_rank = 0;
@@ -262,7 +402,7 @@ font-weight: bolder;
             }
 
             let each_problems_score_html = '';
-            let max_timestamp = '00:00';
+            let max_timestamp = scores.max_timestamp;
             for (const pro_id of pro_list) {
                 if (!(pro_id in scores.scores)) {
                     each_problems_score_html += `
@@ -283,10 +423,6 @@ font-weight: bolder;
                         <p class="text-muted">${score.timestamp}</p>
                     </td>
                     `;
-
-                    if (compare_timestamp(score.timestamp, max_timestamp)) {
-                        max_timestamp = score.timestamp;
-                    }
                 }
             }
 
