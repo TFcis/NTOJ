@@ -5,6 +5,7 @@ import ssl
 from zoneinfo import ZoneInfo
 
 import aiohttp
+import structlog
 
 import config
 
@@ -72,9 +73,12 @@ class HolidayService:
                 start = dt + datetime.timedelta(days=d,hours=8)
                 end = dt + datetime.timedelta(days=d,hours=16)
                 await self.add_time_slot(TimeSlot(start=start, end=end), True, DayPriority.GOV)
+
+        log = structlog.get_logger()
         
         BASE_API_URL = 'https://data.taipei/api/v1/dataset/0dcbcfcf-f7a1-4664-a810-82c01cb524e0?scope=resourceAquire'
         offset = await self._get_offset()
+        log = log.bind(offset=offset)
 
         # Fix for "Missing Subject Key Identifier" when accessing data.taipei
         ctx = ssl.create_default_context()
@@ -84,7 +88,8 @@ class HolidayService:
         async with aiohttp.ClientSession(connector=connector) as session:
             async with session.get(f'{BASE_API_URL}&offset={offset}&limit=1000') as resp:
                 if resp.status != 200:
-                    return ('Eio', f'Failed to fetch holiday data: HTTP {resp.status}')
+                    log.error('Failed to fetch gov holiday data', status=resp.status)
+                    return ('Eio', f'Failed to fetch gov holiday data: HTTP {resp.status}')
                 data = await resp.json()
 
         TW_ZONE = ZoneInfo('Asia/Taipei')
@@ -144,13 +149,18 @@ class HolidayService:
         return None
 
     async def fetch_shool_data(self):
+        log = structlog.get_logger()
+
         BASE_API_URL = 'https://clients6.google.com/calendar/v3/calendars/library@gm.tnfsh.tn.edu.tw/events?calendarId=library%40gm.tnfsh.tn.edu.tw&singleEvents=true&eventTypes=default&eventTypes=focusTime&eventTypes=outOfOffice&timeZone=Asia%2FTaipei&maxAttendees=1&maxResults=250&sanitizeHtml=true&key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs&%24unique=gc237'
 
         now = datetime.datetime.now().astimezone(ZoneInfo('Asia/Taipei'))
         six_month_later = now + datetime.timedelta(days=180)
+        log = log.bind(timeMin=now.strftime("%Y-%m-%dT00:00:00+08:00"), timeMax=six_month_later.strftime("%Y-%m-%dT23:59:59+08:00"))
+
         async with aiohttp.ClientSession() as session:
             async with session.get(f'{BASE_API_URL}&timeMin={now.strftime("%Y-%m-%dT00:00:00+08:00")}&timeMax={six_month_later.strftime("%Y-%m-%dT23:59:59+08:00")}') as resp:
                 if resp.status != 200:
+                    log.error('Failed to fetch school holiday data', status=resp.status)
                     return ('Eio', f'Failed to fetch school holiday data: HTTP {resp.status}')
                 data = await resp.json()
 
@@ -314,6 +324,7 @@ class HolidayService:
         return None
 
     async def delete_time_slot(self, target: TimeSlot):
+        log = structlog.get_logger(target=target)
         async with self.db.acquire() as con:
             res = await con.execute(
                 '''
@@ -324,6 +335,7 @@ class HolidayService:
                 target.end,
             )
             if res == 'DELETE 0':
+                log.warning('Target weekday range not found')
                 return ('Enoext', 'Target weekday range not found')
 
         # Invalidate cache
