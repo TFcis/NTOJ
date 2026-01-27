@@ -217,33 +217,34 @@ class HolidayService:
             Overwrite existing ranges with lower priority.
         '''
         async with self.db.acquire() as con:
-            # Try to merge with existing ranges of same priority
-            res = await con.fetch(
-                '''
-                    SELECT "start" FROM "weekdays"
-                    WHERE "start" < $1 AND $1 <= "end" AND "priority" = $2 AND "is_weekday" = $3;
-                ''',
-                new.start, pri, is_weekday
-            )
-            if res:
-                new.start = res[0]['start']
-            res = await con.fetch(
-                '''
-                    SELECT "end" FROM "weekdays"
-                    WHERE "start" <= $1 AND $1 < "end" AND "priority" = $2 AND "is_weekday" = $3;
-                ''',
-                new.end, pri, is_weekday
-            )
-            if res:
-                new_end = res[0]['end']
+            async with con.transaction():
+                # Try to merge with existing ranges of same priority
+                res = await con.fetch(
+                    '''
+                        SELECT "start" FROM "weekdays"
+                        WHERE "start" < $1 AND $1 <= "end" AND "priority" = $2 AND "is_weekday" = $3;
+                    ''',
+                    new.start, pri, is_weekday
+                )
+                if res:
+                    new.start = res[0]['start']
+                res = await con.fetch(
+                    '''
+                        SELECT "end" FROM "weekdays"
+                        WHERE "start" <= $1 AND $1 < "end" AND "priority" = $2 AND "is_weekday" = $3;
+                    ''',
+                    new.end, pri, is_weekday
+                )
+                if res:
+                    new_end = res[0]['end']
 
-            res = await con.fetch(
-                '''
-                    SELECT "start", "end" FROM "weekdays"
-                    WHERE NOT ("end" <= $1 OR $2 <= "start") AND "priority" > $3;
-                ''',
-                new.start, new.end, pri
-            )
+                res = await con.fetch(
+                    '''
+                        SELECT "start", "end" FROM "weekdays"
+                        WHERE NOT ("end" <= $1 OR $2 <= "start") AND "priority" > $3;
+                    ''',
+                    new.start, new.end, pri
+                )
 
         if res and res[0]['start'] <= new.start and new.end <= res[0]['end']:
             # Fully covered by higher priority range
@@ -270,59 +271,60 @@ class HolidayService:
             new_slots.pop()
 
         async with self.db.acquire() as con:
-            await con.executemany(
-                '''
-                    DELETE FROM "weekdays"
-                    WHERE $1 <= "start" AND "end" <= $2;
-                ''',
-                [(ts[0], ts[1]) for ts in new_slots],
-            )
-            await con.executemany(
-                '''
-                    INSERT INTO "weekdays" ("start", "end", "priority", "is_weekday")
-                    VALUES ($1, $2, $3, $4);
-                ''',
-                [(ts[0], ts[1], pri, is_weekday) for ts in new_slots],
-            )
-
-            res = await con.fetch(
-                '''
-                    SELECT "end", "priority", "is_weekday" FROM "weekdays"
-                    WHERE "start" < $1 AND $2 < "end" AND "priority" <= $3;
-                ''',
-                new.start, new.end, pri
-            )
-            if res:
-                # Split existing range
-                await con.execute(
+            async with con.transaction():
+                await con.executemany(
                     '''
-                        UPDATE "weekdays" SET "end" = $1
-                        WHERE "start" < $1 AND $2 < "end" AND "priority" <= $3;
+                        DELETE FROM "weekdays"
+                        WHERE $1 <= "start" AND "end" <= $2;
                     ''',
-                    new.start, new.end, pri
+                    [(ts[0], ts[1]) for ts in new_slots],
                 )
-                await con.execute(
+                await con.executemany(
                     '''
                         INSERT INTO "weekdays" ("start", "end", "priority", "is_weekday")
                         VALUES ($1, $2, $3, $4);
                     ''',
-                    new.end, res[0]['end'] , res[0]['priority'], res[0]['is_weekday']
+                    [(ts[0], ts[1], pri, is_weekday) for ts in new_slots],
                 )
 
-            await con.execute(
-                '''
-                    UPDATE "weekdays" SET "start" = $1
-                    WHERE ("start" < $1 AND $1 < "end") AND "priority" <= $2;
-                ''',
-                new.end, pri
-            )
-            await con.execute(
-                '''
-                    UPDATE "weekdays" SET "end" = $1
-                    WHERE ("start" < $1 AND $1 < "end") AND "priority" <= $2;
-                ''',
-                new.start, pri
-            )
+                res = await con.fetch(
+                    '''
+                        SELECT "end", "priority", "is_weekday" FROM "weekdays"
+                        WHERE "start" < $1 AND $2 < "end" AND "priority" <= $3;
+                    ''',
+                    new.start, new.end, pri
+                )
+                if res:
+                    # Split existing range
+                    await con.execute(
+                        '''
+                            UPDATE "weekdays" SET "end" = $1
+                            WHERE "start" < $1 AND $2 < "end" AND "priority" <= $3;
+                        ''',
+                        new.start, new.end, pri
+                    )
+                    await con.execute(
+                        '''
+                            INSERT INTO "weekdays" ("start", "end", "priority", "is_weekday")
+                            VALUES ($1, $2, $3, $4);
+                        ''',
+                        new.end, res[0]['end'] , res[0]['priority'], res[0]['is_weekday']
+                    )
+
+                await con.execute(
+                    '''
+                        UPDATE "weekdays" SET "start" = $1
+                        WHERE ("start" < $1 AND $1 < "end") AND "priority" <= $2;
+                    ''',
+                    new.end, pri
+                )
+                await con.execute(
+                    '''
+                        UPDATE "weekdays" SET "end" = $1
+                        WHERE ("start" < $1 AND $1 < "end") AND "priority" <= $2;
+                    ''',
+                    new.start, pri
+                )
 
         # Invalidate cache
         await self.rs.set('weekday_valid_time', 0)
