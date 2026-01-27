@@ -106,7 +106,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
 
     async def test_sign_in_fail_block_by_ip(self):
         self.fake_conn.fetch.return_value = [{"acct_id": 1, "password": "aGVsbG8=", "specific_ip": "192.168.11.10"}]
-        with patch('services.holiday.HolidayService.is_weekday_now', return_value=True):
+        with patch('services.holiday.HolidayService.is_weekday_now', new=AsyncMock(return_value=True)):
             err, acct_id = await self.service.sign_in("test@mail.com", "pw123", "127.0.0.1")
         self.fake_conn.fetch.assert_awaited_once()
         self.assertIsNotNone(err)
@@ -115,7 +115,7 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
 
     async def test_sign_in_wrong_ip_in_holiday(self):
         self.fake_conn.fetch.return_value = [{"acct_id": 1, "password": "aGVsbG8=", "specific_ip": "192.168.11.10"}]
-        with patch('services.holiday.HolidayService.is_weekday_now', return_value=False):
+        with patch('services.holiday.HolidayService.is_weekday_now', new=AsyncMock(return_value=False)):
             with patch("base64.b64decode", return_value=b"hashedpw"):
                 with patch("bcrypt.hashpw", return_value=b"hashedpw"):
                     err, acct_id = await self.service.sign_in("test@mail.com", "pw123", "127.0.0.1")
