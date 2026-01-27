@@ -164,9 +164,10 @@ class HolidayService:
         log = log.bind(timeMin=now.strftime("%Y-%m-%dT00:00:00+08:00"), timeMax=six_month_later.strftime("%Y-%m-%dT23:59:59+08:00"))
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(f'{BASE_API_URL}&timeMin={now.strftime("%Y-%m-%dT00:00:00+08:00")}&timeMax={six_month_later.strftime("%Y-%m-%dT23:59:59+08:00")}') as resp:
+            # %3A is ':', %2B is '+'
+            async with session.get(f'{BASE_API_URL}&timeMin={now.strftime("%Y-%m-%dT00%3A00%3A00%2B08%3A00")}&timeMax={six_month_later.strftime("%Y-%m-%dT23%3A59%3A59%2B08%3A00")}') as resp:
                 if resp.status != 200:
-                    log.error('Failed to fetch school holiday data', status=resp.status)
+                    log.error('Failed to fetch school holiday data', status=resp.status, url=resp.url)
                     return ('Eio', f'Failed to fetch school holiday data: HTTP {resp.status}')
                 data = await resp.json()
 
