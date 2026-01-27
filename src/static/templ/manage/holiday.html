@@ -14,15 +14,18 @@
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/css/tempus-dominus.min.css" crossorigin="anonymous">
-<link rel="stylesheet" href="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.css" />
-<script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
+<link rel="stylesheet" href="https://uicdn.toast.com/calendar/v2.1.3/toastui-calendar.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"
+    integrity="sha512-U0hBMi01MTIoc3RkaW4pPSA0ODJlYzkzY2NmYWM4MmJiNTBiNTEyODI0MmQ0ZmUyNTkzZTYyMGM3NTI3NTM3N2M4ZTg0ZTAzZGUyYTk5NzAxMjRmM2U4OTVmMTIxMzc2YjI3MzIyZTBiOTlmZjI3OTdhNzFjZDlhNDQ1ODg3OThkNjk2NmI3YzNmNWQ5MmE4Ywo="/>
+<script src="https://uicdn.toast.com/calendar/v2.1.3/toastui-calendar.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"
+    integrity="sha512-U0hBMi01MTIoc3RkaW4pPSA3NjU0ZGExNjY2NDE4YWJiM2YwZDM4MmM5ODVjZDE0ODBmNTU4ODZhNjVkZmNjZmVkMWQ3MmVhYTdlNjMxMWY5ZjIzMmZiNzZkN2ZlODNkYzJhNmE3YmVjMjI4NGZiZTYzN2RjNzFlZjNhOGVhOGFmMWM3ZjgzOGE3NTMxMTRlYwo="></script>
 <script type="text/javascript" id="contjs">
     var info_start_date_picker = null;
     var info_end_date_picker = null;
+    var calendar = null;
     function init() {
         const modal = new bootstrap.Modal(document.getElementById('modal'));
         const Calendar = tui.Calendar;
-        const calendar = new Calendar('#calendar', {
+        calendar = new Calendar('#calendar', {
             defaultView: 'month',
             template: {
                 time(event) {
@@ -242,17 +245,19 @@
         });
 
         // click any where to close month picker
-        $(document).on('click', function() {
-            $('#month-picker').hide();
-        });
         $('#month-picker').on('click', function(e) {
             e.stopPropagation();
         });
     }
 
+    $(document).on('click', function() {
+        $('#month-picker').hide();
+    });
+
     function destroy() {
         info_start_date_picker.dispose();
         info_end_date_picker.dispose();
+        calendar.destroy();
     }
 </script>
 {% end %}
