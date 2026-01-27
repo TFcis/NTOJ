@@ -59,6 +59,13 @@
     We don't need to approval any request.
     </p>
 
+    {% elif contest.reg_mode == RegMode.PASSWORD %}
+
+    <p>
+    Password Mode
+    We don't need to approval any request.
+    </p>
+
     {% else %}
     <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
         <thead>

@@ -709,3 +709,103 @@ class RandomContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(len(contest.ip_pro_list), 16)
             self.assertEqual(len(contest.pro_list), 3)
+
+class ContestRegistrationPasswordModeTest(AsyncTest):
+    async def main(self):
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            now = datetime.datetime.now()
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
+                'name': 'password contest'
+            })
+            password_contest_id = json.loads(res.text)['data']
+            self.assertEqual(password_contest_id, 3)
+
+            # Setup password mode contest
+            contest_start = now + datetime.timedelta(days=1)
+            contest_end = now + datetime.timedelta(days=2)
+
+            password_config = {
+                'reqtype': 'update',
+                'name': 'password contest',
+
+                'contest_mode': ContestMode.IOI,
+                'contest_start': self.get_isoformat(contest_start),
+                'contest_end': self.get_isoformat(contest_end),
+
+                'reg_mode': RegMode.PASSWORD,
+                'reg_end': self.get_isoformat(contest_end),  # reg_end should be equal to contest_end
+                'contest_password': 'test_password_123',
+
+                'allow_compilers[]': [Compiler.GPP],
+                'is_public_scoreboard': 'true',
+                'allow_view_other_page': 'false',
+                'hide_admin': 'false',
+
+                'submission_cd_time': 30,
+                'freeze_scoreboard_period': 0
+            }
+            res = admin_session.post(f'contests/{password_contest_id}/manage/general', data=password_config)
+            self.assertAPIReturnSuccess(res.text)
+
+            # Verify password is saved
+            err, contest = await ContestService.inst.get_contest(password_contest_id)
+            self.assertIsNone(err)
+            assert contest
+            self.assertEqual(contest.reg_mode, RegMode.PASSWORD)
+            self.assertEqual(contest.contest_password, 'test_password_123')
+            self.assertEqual(contest.reg_end, to_utc(contest_end))
+
+        # Test password registration
+        with AccountContext('contest1@test', 'test') as user_session:
+            # Try to register without password
+            res = user_session.post(f'contests/{password_contest_id}/reg', data={
+                'reqtype': 'reg',
+                'password': '',
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Invalid password'))
+
+            # Try with wrong password
+            res = user_session.post(f'contests/{password_contest_id}/reg', data={
+                'reqtype': 'reg',
+                'password': 'wrong_password',
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Invalid password'))
+
+            # Register with correct password
+            res = user_session.post(f'contests/{password_contest_id}/reg', data={
+                'reqtype': 'reg',
+                'password': 'test_password_123',
+            })
+            self.assertAPIReturnSuccess(res.text, 'Register Successfully')
+
+            # Verify user is registered
+            err, contest = await ContestService.inst.get_contest(password_contest_id)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)  # contest1 is acct_id 4
+
+            # Try to unregister - should fail
+            res = user_session.post(f'contests/{password_contest_id}/reg', data={
+                'reqtype': 'unreg',
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Password mode do not allow unregister'))
+
+            # Verify user is still registered
+            err, contest = await ContestService.inst.get_contest(password_contest_id)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
+        # Test another user with PASSWORD mode
+        with AccountContext('contest2@test', 'test') as user_session:
+            # Register with correct password
+            res = user_session.post(f'contests/{password_contest_id}/reg', data={
+                'reqtype': 'reg',
+                'password': 'test_password_123',
+            })
+            self.assertAPIReturnSuccess(res.text, 'Register Successfully')
+
+            # Verify this user is also registered
+            err, contest = await ContestService.inst.get_contest(password_contest_id)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[5]['status'], UserStatus.APPROVED)  # contest2 is acct_id 5
+

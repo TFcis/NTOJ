@@ -46,6 +46,9 @@
                 <div class="card-body">
                     {% if contest.reg_mode is RegMode.INVITED %}
                         <h5>Invited</h5>
+                    {% elif contest.reg_mode is RegMode.PASSWORD %}
+                        <h5>{{ contest.reg_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+                        <h5>Password Required</h5>
                     {% else %}
                         <h5>{{ contest.reg_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
                         {% if contest.reg_mode is RegMode.FREE_REG %}
@@ -76,6 +79,15 @@
                                 <h5>Invited</h5>
                             {% else %}
                                 <h5>Not Invited</h5>
+                            {% end %}
+                        {% elif contest.reg_mode is RegMode.PASSWORD %}
+                            {% if contest.member_is_status(user, UserStatus.APPROVED) %}
+                                <h5>Registered</h5>
+                            {% else %}
+                                <h5>Not Registered</h5>
+                            {% end %}
+                            {% if can_reg %}
+                                <a href="{{ url(f'/contests/{ contest.contest_id }/reg/') }}" class="btn btn-primary">Go to Register</a>
                             {% end %}
                         {% elif contest.reg_mode is RegMode.FREE_REG %}
                             {% if contest.member_is_status(user, UserStatus.APPROVED) %}
