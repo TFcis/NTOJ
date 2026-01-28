@@ -39,6 +39,12 @@ class ContestManageProHandler(RequestHandler):
         if self.contest.is_pro(pro_id):
             return self.error(("Eexist", f"Problem(#{pro_id}) is already in contest"))
 
+        err, _ = await ProService.inst.get_pro(
+            pro_id, ProConst.PRO_STATUS_CONTEST_USER
+        )
+        if err:
+            return self.error(err)
+
         self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType.IOI2017}
 
         await ContestService.inst.update_contest(
@@ -68,17 +74,22 @@ class ContestManageProHandler(RequestHandler):
 
     @contest_manage_pro_dispatcher.action("multi_add")
     async def multi_add_action(self):
-        pro_id = self.get_argument("pro_id")
-        pro_id = parse_str_to_list(pro_id)
-        for p_id in pro_id:
-            self.contest.pro_list[p_id] = {"score_type": ProblemScoreType.IOI2017}
+        proid_list = self.get_argument("pro_id")
+        proid_list = parse_str_to_list(proid_list)
+        for pro_id in proid_list:
+            err, _ = await ProService.inst.get_pro(
+                pro_id, ProConst.PRO_STATUS_CONTEST_USER
+            )
+            if err:
+                continue
+            self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType.IOI2017}
 
         await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
         await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
         return self.error(
-            ("S", f"Problems(#{pro_id}) successfully added to problem list.")
+            ("S", f"Problems(#{proid_list}) successfully added to problem list.")
         )
 
     @contest_manage_pro_dispatcher.action("multi_remove")
