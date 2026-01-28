@@ -2,6 +2,7 @@ import datetime
 import enum
 from dataclasses import dataclass, field
 import pickle
+from itertools import groupby
 
 import asyncpg
 from ipaddress import IPv4Address
@@ -183,9 +184,9 @@ class ContestService:
                 if contest.contest_mode == ContestMode.RANDOM_SET:
                     result = await con.fetch(
                         '''
-                            SELECT ip, contest_ip_joints.pro_id 
-                            FROM contest_ip_joints INNER JOIN contest_problem_joints 
-                            ON contest_ip_joints.contest_id = contest_problem_joints.contest_id 
+                            SELECT ip, contest_ip_joints.pro_id
+                            FROM contest_ip_joints INNER JOIN contest_problem_joints
+                            ON contest_ip_joints.contest_id = contest_problem_joints.contest_id
                                AND contest_ip_joints.pro_id = contest_problem_joints.pro_id
                             WHERE contest_ip_joints.contest_id = $1 ORDER BY contest_ip_joints.ip, contest_problem_joints."order" ASC;
                         ''',
@@ -197,17 +198,14 @@ class ContestService:
                             contest.ip_pro_list[ip] = []
                         contest.ip_pro_list[ip].append(pro_id)
 
-                    pro_set_count = await con.fetchval('''
-                        SELECT COUNT(DISTINCT "order") FROM contest_problem_joints
-                        WHERE contest_id = $1;
+                    result = await con.fetch('''
+                        SELECT pro_id, "order" FROM contest_problem_joints
+                        WHERE contest_id = $1 ORDER BY "order";
                     ''', contest_id)
-                    for order in range(pro_set_count):
-                        result = await con.fetch('''
-                            SELECT pro_id FROM contest_problem_joints
-                            WHERE contest_id = $1 AND "order" = $2;
-                        ''', contest_id, order)
-                        pro_set = [pro_id for pro_id, in result]
-                        contest.pro_sets.append(pro_set)
+                    contest.pro_sets = [
+                        [pro_id for pro_id, _ in group]
+                        for _, group in groupby(result, key=lambda x: x['order'])
+                    ]
 
             if contest.is_running():
                 b_contest = pickle.dumps(contest)
