@@ -184,6 +184,65 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(pro.status, ProConst.STATUS_CONTEST)
 
+            # NOTE: Contest problem status
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_HIDDEN,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': 1
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'multi_add',
+                'pro_id': '1'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(1, contest.pro_list)
+
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_ONLINE,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': 1
+            })
+            self.assertAPIReturnSuccess(res.text)
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_HIDDEN,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(1, contest.pro_list)
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_ONLINE,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'add',
