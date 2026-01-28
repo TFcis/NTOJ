@@ -290,21 +290,32 @@ class ContestService:
                     contest.pro_list.pop(failed_pro_id)
 
             if userlist_updated:
-                failed = []
-                for acct_id, v in contest.user_list.items():
-                    try:
-                        await con.execute('''
-                            INSERT INTO contest_users ("contest_id", "acct_id", "status")
-                            VALUES ($1, $2, $3) ON CONFLICT (contest_id, acct_id) DO UPDATE
-                            SET status = EXCLUDED.status
-                            WHERE contest_users.status != EXCLUDED.status;
-                        ''', contest.contest_id, acct_id, int(v['status']))
-                    except asyncpg.ForeignKeyViolationError:
-                        failed.append(acct_id)
-                        continue
+                await con.execute('''
+                    WITH input_data AS (
+                        SELECT
+                            $1::integer           AS contest_id,
+                            unnest($2::integer[]) AS acct_id,
+                            unnest($3::integer[]) AS status
+                    ),
 
-                for failed_acct_id in failed:
-                    contest.user_list.pop(failed_acct_id)
+                    upserted AS (
+                        INSERT INTO contest_users (contest_id, acct_id, status)
+                        SELECT contest_id, acct_id, status
+                        FROM input_data
+                        ON CONFLICT (contest_id, acct_id) DO UPDATE
+                            SET status = EXCLUDED.status
+                            WHERE contest_users.status != EXCLUDED.status
+                        RETURNING acct_id
+                    )
+
+                    DELETE FROM contest_users cu
+                    WHERE cu.contest_id = $1
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM input_data i
+                        WHERE i.acct_id = cu.acct_id
+                    );
+                ''', contest.contest_id, list(contest.user_list.keys()), [int(v['status']) for v in contest.user_list.values()])
 
         b_contest = pickle.dumps(contest)
         await self.rs.hset('contest', str(contest.contest_id), b_contest)

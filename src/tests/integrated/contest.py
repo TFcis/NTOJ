@@ -735,6 +735,20 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(pro.status, ProConst.STATUS_CONTEST)
 
+            # NOTE: Make sure account removed in Cache && DB
+            res = admin_session.post('contests/1/manage/acct', data={
+                'reqtype': 'remove',
+                'acct_id': 4,
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
+
         with AccountContext('test1@test', 'test') as user_session:
             res = user_session.get('pro/5')
             self.assertNotIn('Eacces', res.text)
