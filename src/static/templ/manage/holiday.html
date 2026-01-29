@@ -218,7 +218,7 @@
             const offset = $this.offset();
             const height = $this.outerHeight();
             $('#month-picker').css({
-                top: offset.top + height,
+                top: offset.top + height + 5,
                 left: offset.left
             }).show();
 
@@ -318,28 +318,28 @@
         <div class="position-absolute start-50 translate-middle-x">
             <button id="prev-month" class="btn btn-primary">&lt;</button>
             <span id="current-month" class="mx-3" style="cursor:pointer"></span>
-            <div id="month-picker" style="display:none; position:absolute; z-index:1000; background:#fff; border:1px solid #ccc; padding:10px;">
-            <select id="picker-year"></select>
-            <span style="color: black;">/</span>
-            <select id="picker-month">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-                <option value="11">11</option>
-                <option value="12">12</option>
-            </select>
-            <button id="picker-confirm">Go</button>
-            </div>
             <button id="next-month" class="btn btn-primary">&gt;</button>
         </div>
         <button  class="btn btn-primary ms-auto to-add">+</button>
+    </div>
+    <div id="month-picker" style="display:none; position:absolute; z-index:1000; background:#fff; border:1px solid #ccc; padding:10px;">
+        <select id="picker-year"></select>
+        <span style="color: black;">/</span>
+        <select id="picker-month">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+        </select>
+        <button id="picker-confirm">Go</button>
     </div>
     <div id="calendar"></div>
 </div>
