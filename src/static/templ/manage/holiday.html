@@ -213,7 +213,14 @@
             });
         }
 
+        let month_picker_visible = false;
         $('#current-month').on('click', function(e) {
+            if (month_picker_visible) {
+                $('#month-picker').hide();
+                month_picker_visible = false;
+                return;
+            }
+
             const $this = $(this);
             const offset = $this.offset();
             const height = $this.outerHeight();
@@ -221,6 +228,7 @@
                 top: offset.top + height + 5,
                 left: offset.left
             }).show();
+            month_picker_visible = true;
 
             let html = '';
             for(let y = 2022; y <= 2050; y++) {
