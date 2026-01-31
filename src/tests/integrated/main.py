@@ -18,12 +18,9 @@ from .manage.prospec.batch.test_subtask import BatchSubtaskTest
 from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
-from .board import BoardTest
-from .bulletin import BulletinTest
 from .chal import ChalTest, ChalListTest
-from .contest import ContestTest
+from .contest import ContestTest, ContestRegistrationPasswordModeTest, RandomContestTest
 from .proclass import ProClassTest
-from .ques import QuesTest
 from .submit import SubmitTest
 from .holiday import HolidayTest
 
@@ -75,7 +72,6 @@ class IntegratedTest(AsyncTest):
             self.assertTrue(pro.allow_submit)
             self.assertEqual(pro.name, 'GCD')
             self.assertEqual(pro.status, ProConst.STATUS_ONLINE)
-            self.assertEqual(pro.tags, '')
 
             err, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_NORMAL_USER)
             self.assertIsNone(err)
@@ -83,7 +79,6 @@ class IntegratedTest(AsyncTest):
             self.assertEqual(prolist[0].pro_id, 1)
             self.assertEqual(prolist[0].name, 'GCD')
             self.assertEqual(prolist[0].status, ProConst.STATUS_ONLINE)
-            self.assertEqual(prolist[0].tags, '')
             self.assertTrue(prolist[0].allow_submit)
 
             err, rate = await RateService.inst.get_pro_ac_rate(pro.pro_id)
@@ -94,10 +89,6 @@ class IntegratedTest(AsyncTest):
                 'user_all_chal_cnt': 0,
                 'user_ac_chal_cnt': 0,
             })
-
-            err, topcoder = await RateService.inst.get_pro_topcoder(1)
-            self.assertIsNone(err)
-            self.assertIsNone(topcoder)
 
             err, acct = await UserService.inst.info_acct(1)
             self.assertIsNone(err)
@@ -160,10 +151,6 @@ class IntegratedTest(AsyncTest):
                 'user_ac_chal_cnt': 1,
             })
 
-            err, topcoder = await RateService.inst.get_pro_topcoder(1)
-            self.assertIsNone(err)
-            self.assertEqual(topcoder, 1)
-
             err, ratemap = await RateService.inst.map_rate_acct(acct)
             self.assertEqual(len(ratemap), 1)
             self.assertEqual(ratemap[1]['count'], 1)
@@ -192,10 +179,7 @@ class IntegratedTest(AsyncTest):
             ChalListTest().main,
             SubmitTest().main,
             ProTest().main,
-            BoardTest().main,
             ProClassTest().main,
-            QuesTest().main,
-            BulletinTest().main,
             SignTest().main,
             AcctPageTest().main,
             ManageAcctTest().main,
@@ -206,6 +190,8 @@ class IntegratedTest(AsyncTest):
             ManagePackTest().main,
             ContestTest().main,
             HolidayTest().main,
+            RandomContestTest().main,
+            ContestRegistrationPasswordModeTest().main,
         ]
         for f in s:
             r = await f()

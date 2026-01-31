@@ -1,6 +1,7 @@
 {% extends 'manage.html' %}
 
 {% block head %}
+{% from services.contests import RegMode %}
 <script src="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/css/tempus-dominus.min.css" crossorigin="anonymous">
 
@@ -32,11 +33,21 @@
         contest_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestEnd'), options);
         reg_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerRegEnd'), options);
 
-        $("button.submit").on('click', function(e) {
+        $("#regMode").on('change', function(e) {
+            let reg_mode = $(this).val();
+            if (reg_mode == '{{ RegMode.PASSWORD }}') {
+                $("#contestPasswordDiv").show();
+            } else {
+                $("#contestPasswordDiv").hide();
+            }
+        });
+
+        $(".submit").on('click', function(e) {
             let start_time = null, end_time = null, reg_end_time = null;
             let contest_name = $("#contestName").val();
             let contest_mode = $("#contestMode").val();
             let reg_mode = $("#regMode").val();
+            let contest_password = $("#contestPassword").val();
             let submit_cd_time = parseInt($("#submitCdTime").val());
             let freeze_period = parseInt($("#freezeScoreboardPeriod").val());
             let hide_admin = $("#hideAdmin").is(":checked");
@@ -53,6 +64,11 @@
 
             if (allow_compilers.length == 0) {
                 index.show_notify_dialog("請選至少一種支援的語言", index.DIALOG_TYPE.warning);
+                return;
+            }
+
+            if (reg_mode == '{{ RegMode.PASSWORD }}' && contest_password == '') {
+                index.show_notify_dialog("密碼註冊模式下，請設定報名密碼", index.DIALOG_TYPE.warning);
                 return;
             }
 
@@ -92,6 +108,7 @@
 
                 reg_mode: reg_mode,
                 reg_end: reg_end_time.toISOString(),
+                contest_password: contest_password,
 
                 allow_compilers: allow_compilers,
                 is_public_scoreboard: public_scoreboard,
@@ -143,6 +160,7 @@
             <select id="contestMode" class="form-select">
                 <option value="{{ ContestMode.IOI }}"{% if contest.contest_mode == ContestMode.IOI %} selected {% end %}>IOI</option>
                 <option value="{{ ContestMode.ACM }}"{% if contest.contest_mode == ContestMode.ACM %} selected {% end %}>ACM</option>
+                <option value="{{ ContestMode.RANDOM_SET }}"{% if contest.contest_mode == ContestMode.RANDOM_SET %} selected {% end %}>Random Set</option>
             </select>
         </div>
 
@@ -178,13 +196,31 @@
                 <option value="{{ RegMode.INVITED }}"{% if contest.reg_mode == RegMode.INVITED %} selected {% end %}>Invited</option>
                 <option value="{{ RegMode.FREE_REG }}"{% if contest.reg_mode == RegMode.FREE_REG %} selected {% end %}>Free registration</option>
                 <option value="{{ RegMode.REG_APPROVAL }}"{% if contest.reg_mode == RegMode.REG_APPROVAL %} selected {% end %}>Free registration but need approval</option>
+                <option value="{{ RegMode.PASSWORD }}"{% if contest.reg_mode == RegMode.PASSWORD %} selected {% end %}>Password</option>
             </select>
+        </div>
+
+
+        <div class="mb-1" id="contestPasswordDiv"
+            {% if contest.reg_mode != RegMode.PASSWORD %} style="display: none;" {% end %}
+        >
+            <label for="contestPassword" class="form-label">Contest Password</label>
+            <input type="text" id="contestPassword" class="form-control" value="{{ contest.contest_password }}">
         </div>
 
         <div class="mb-1">
             <label for="datepickerRegEnd" class="form-label">Registration End Time</label>
             <div class="input-group" id="datepickerRegEnd">
-                <input id="datepickerRegEndInput" class="form-control" value="{{ contest.reg_end.astimezone(config.TIMEZONE) }}">
+                <input
+                    id="datepickerRegEndInput"
+                    class="form-control"
+                    {% if contest.reg_mode == RegMode.PASSWORD %}
+                        value="{{ contest.contest_end.astimezone(config.TIMEZONE) }}"
+                        disabled
+                    {% else %}
+                        value="{{ contest.reg_end.astimezone(config.TIMEZONE) }}"
+                    {% end %}
+                >
                 <span class="input-group-text" data-td-target="#datepickerRegEnd" data-td-toggle="datepickerRegEnd">
                     <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg>
                 </span>

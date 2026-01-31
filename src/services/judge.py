@@ -9,6 +9,7 @@ from typing import Dict, List, Literal, Union
 from tornado.websocket import websocket_connect
 
 import config
+from services.rate import RateService
 from services.log import LogService
 
 update_chal_task_running_cnt = 0
@@ -187,8 +188,7 @@ class JudgeServerService:
                 await self.rs.hdel(f'contest_{contest_id}_scores', str(pro_id))
 
             # NOTE: Recalculate problem rate
-            await self.rs.hdel('pro_rate', f"pro_id_{pro_id}_contest_id_{contest_id}")
-            await self.rs.hdel('pro_topcoder', str(pro_id))
+            await RateService.inst.refresh_pro_ac_rate(pro_id, contest_id)
             self.chal_map.pop(res['chal_id'])
 
         global update_chal_task_running_cnt

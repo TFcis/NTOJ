@@ -14,8 +14,12 @@ source scripts/.docker-init.env set
 
 cp -r static-tmp/* static/
 rm -rf static-tmp/
-mv config-tmp.py config/config.py
-ln -s config/config.py config.py
+if [ -f docker-dev ]; then
+    mv config-tmp.py config.py
+else
+    mv config-tmp.py config/config.py
+    ln -s config/config.py config.py
+fi
 cp config.py scripts/
 
 until pg_isready -h ${DB_CONTAINER_NAME} -p 5432; do

@@ -1,13 +1,12 @@
-import decimal
 import datetime
 from collections import defaultdict
 
 from msgpack import packb, unpackb
 
+from services.pro import ProConst
 from services.chal import ChalConst
 from services.user import Account
 from services.contests import UserStatus
-from services.pro import ProConst
 
 
 class RateService:
@@ -15,81 +14,6 @@ class RateService:
         self.db = db
         self.rs = rs
         RateService.inst = self
-
-    async def get_acct_rate_and_chal_cnt(self, acct: Account):
-        key = 'rate'
-        acct_id = acct.acct_id
-
-        if (rate_data := await self.rs.hget(key, acct_id)) is None:
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    f'''
-                        SELECT
-                            COUNT(*) AS all_chal_cnt,
-                            COUNT(CASE WHEN cs.state = {ChalConst.STATE_AC} THEN 1 END) AS ac_chal_cnt
-                        FROM
-                            challenge c
-                        INNER JOIN problem
-                            ON c.pro_id = problem.pro_id
-                        INNER JOIN total_result cs
-                            ON c.chal_id = cs.chal_id
-                        WHERE
-                            c.acct_id = $1 AND
-                            problem.status = {ProConst.STATUS_ONLINE} AND
-                            c.contest_id = 0;
-                    ''',
-                    acct_id,
-                )
-                if len(result) != 1:
-                    return ('Eunk', 'Unknown error'), None
-                result = result[0]
-
-                ac_chal_cnt, all_chal_cnt = (
-                    result['ac_chal_cnt'],
-                    result['all_chal_cnt'],
-                )
-
-                result = await con.fetch(
-                    f'''
-                    WITH accepted_tests AS (
-                        SELECT DISTINCT
-                            c.acct_id, t.pro_id, t.subtask_id, t.rate
-                        FROM
-                            subtask_result t
-                        INNER JOIN problem p
-                            ON t.pro_id = p.pro_id
-                        INNER JOIN challenge c
-                            ON t.chal_id = c.chal_id AND c.contest_id = 0
-                        WHERE
-                            p.status = {ProConst.STATUS_ONLINE}
-                            AND t.state IN ({ChalConst.STATE_AC}, {ChalConst.STATE_PC})
-                            AND c.acct_id = $1
-                    )
-                    SELECT
-                        SUM(at.rate) AS total_rate
-                    FROM
-                        accepted_tests at;
-                    ''',
-                    acct_id
-                )
-                if len(result) != 1:
-                    return ('Eunk', 'Unknown error'), None
-                rate = result[0]['total_rate']
-                if rate is None:
-                    rate = 0
-
-                rate_data = {
-                    'rate': str(rate),
-                    'ac_cnt': ac_chal_cnt,
-                    'all_cnt': all_chal_cnt,
-                }
-                await self.rs.hset(key, acct_id, packb(rate_data))
-        else:
-            rate_data = unpackb(rate_data)
-
-        rate_data['rate'] = decimal.Decimal(rate_data['rate'])
-
-        return None, rate_data
 
     async def get_pro_ac_rate(self, pro_id, contest_id: int = 0):
         # problem submission ac rate
@@ -167,82 +91,14 @@ class RateService:
 
         return None, rate_data
 
-    async def get_pro_topcoder(self, pro_id: int) -> tuple[None, int | None]:
-        """
-        Get the top coder for a given problem ID based on challenge performance.
-
-        The topcoder is determined from non-contest (`contest_id = 0`) accepted (`state = AC`) challenges
-        by selecting each user's best challenge, ranked primarily by:
-        - highest rate
-        - lowest time
-        - lowest memory usage
-        - earliest chal_id (tie-breaker)
-        This algorithm same as `ProRankHandler`.
-
-        The best among all users is then selected as the topcoder.
-
-        This result is cached in Redis (under the hash key 'pro_topcoder') to avoid repeated database queries.
-
-        Args:
-            pro_id (int): The problem ID to retrieve topcoder for.
-
-        Returns:
-            Tuple[None, Optional[int]]: A tuple where the first element is always None (reserved for Error),
-            and the second element is either:
-                - topcoder account id.
-                - None, if no valid submission was found.
-        """
-
-        if (topcoder := await self.rs.hget('pro_topcoder', str(pro_id))) is None:
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    f'''
-                    SELECT temp2.acct_id
-                    FROM (
-                        SELECT *
-                        FROM (
-                            SELECT DISTINCT ON ("challenge"."acct_id")
-                                "challenge"."chal_id",
-                                "challenge"."acct_id",
-                                "total_result"."time",
-                                "total_result"."memory",
-                                "total_result"."rate"
-
-                                FROM "challenge"
-
-                                INNER JOIN "total_result"
-                                ON "challenge"."chal_id"="total_result"."chal_id"
-
-                                WHERE "total_result"."state"={ChalConst.STATE_AC} AND "challenge"."contest_id"=0 AND "challenge"."pro_id"=$1
-
-                                ORDER BY "challenge"."acct_id" ASC, "total_result"."rate" DESC,
-                                "total_result"."time" ASC, "total_result"."memory" ASC,
-                                "challenge"."chal_id" ASC
-                        ) temp
-
-                        ORDER BY "rate" DESC, "time" ASC, "memory" ASC,
-                        "chal_id" ASC, "acct_id" ASC LIMIT 1
-                        ) temp2
-
-                    INNER JOIN "account"
-                    ON temp2."acct_id"="account"."acct_id";
-                    ''',
-                    pro_id,
-                )
-            if len(result) == 0:
-                topcoder = None
-            else:
-                topcoder = result[0]['acct_id']
-            await self.rs.hset('pro_topcoder', str(pro_id), packb(topcoder))
-            return None, topcoder
-        else:
-            return None, unpackb(topcoder)
+    async def refresh_pro_ac_rate(self, pro_id: int, contest_id: int = 0):
+        await self.rs.hdel('pro_rate', f'pro_id_{pro_id}_contest_id_{contest_id}')
+        return None, None
 
     async def map_rate_acct(
             self, acct: Account, contest_id: int = 0, starttime='1970-01-01 00:00:00.000',
             endtime='2100-01-01 00:00:00.000'
     ):
-        from services.pro import ProConst
         if isinstance(starttime, str):
             starttime = datetime.datetime.fromisoformat(starttime)
 

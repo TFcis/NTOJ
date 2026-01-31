@@ -1,9 +1,7 @@
 import tornado.web
 
-from handlers.acct import AcctConfigHandler, AcctHandler, AcctProClassHandler, SignHandler
+from handlers.acct import AcctConfigHandler, AcctHandler, SignHandler
 from handlers.base import UnifiedWebSocketHandler
-from handlers.board import BoardHandler
-from handlers.bulletin import BulletinHandler
 from handlers.chal import (
     ChalHandler,
     ChalListHandler,
@@ -14,15 +12,13 @@ from handlers.index import (
     AbouotHandler,
     DevInfoHandler,
     IndexHandler,
+    InfoHandler,
 )
 from handlers.log import LogHandler
 from handlers.manage.url import get_manage_url
 from handlers.pack import PackHandler
 
-from handlers.pro import ProHandler, ProsetHandler, ProStaticHandler, ProTagsHandler
-from handlers.ques import QuestionHandler
-from handlers.rank import ProRankHandler, UserRankHandler
-from handlers.report import ReportHandler
+from handlers.pro import ProHandler, ProsetHandler, ProStaticHandler
 from handlers.submit import SubmitHandler
 
 
@@ -38,13 +34,9 @@ def get_url(db, rs, pool):
     }
 
     return [
-        (r'/be/info', BulletinHandler, args),
-        (r'/be/bulletin/(\d+)', BulletinHandler, args),
-        (r'/be/board', BoardHandler, args),
-        (r'/be/board/(\d+)', BoardHandler, args),
+        (r'/be/info', InfoHandler, args),
         (r'/be/sign', SignHandler, args),
         (r'/be/acct/(\d+)', AcctHandler, args),
-        (r'/be/acct/proclass/(\d+)', AcctProClassHandler, args),
         (r'/be/acctedit', AcctConfigHandler, args),
         (r'/be/acctedit/(\d+)', AcctConfigHandler, args),
         (r'/be/proset', ProsetHandler, args),
@@ -57,15 +49,10 @@ def get_url(db, rs, pool):
         (r'/be/ws', UnifiedWebSocketHandler, unified_ws_args),
         (r'/be/pack', PackHandler, args),
         (r'/be/about', AbouotHandler, args),
-        (r'/be/question', QuestionHandler, args),
-        (r'/be/set-tags', ProTagsHandler, args),
         (r'/be/log', LogHandler, args),
         (r'/be/log/(\d+)', LogHandler, args),
-        (r'/be/rank/(\d+)', ProRankHandler, args),
-        (r'/be/users', UserRankHandler, args),
         (r'/be/code', CodeHandler, args),
         (r'/be/dev-info', DevInfoHandler, args),
-        (r'/be/report', ReportHandler, args),
 
         (r'/src/(.*)', tornado.web.StaticFileHandler, {"path": "./static"}),
 

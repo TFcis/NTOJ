@@ -31,6 +31,8 @@ class ContestRegHandler(RequestHandler):
             status = UserStatus.APPROVED
         elif self.contest.reg_mode is RegMode.REG_APPROVAL:
             status = UserStatus.REQUESTED
+        elif self.contest.reg_mode is RegMode.PASSWORD:
+            status = UserStatus.APPROVED
 
         if (
             acct_id in self.contest.user_list
@@ -48,6 +50,13 @@ class ContestRegHandler(RequestHandler):
 
         if self.contest.reg_mode is RegMode.INVITED:
             return self.error(("Eacces", "Invited mode do not allow register"))
+
+        elif self.contest.reg_mode is RegMode.PASSWORD:
+            password = self.get_argument("password", "")
+            if password != self.contest.contest_password:
+                return self.error(("Eacces", "Invalid password"))
+
+            self.contest.user_list[acct_id] = {"status": UserStatus.APPROVED}
 
         elif self.contest.reg_mode is RegMode.FREE_REG:
             self.contest.user_list[acct_id] = {"status": UserStatus.APPROVED}
@@ -69,6 +78,9 @@ class ContestRegHandler(RequestHandler):
 
         if self.contest.reg_mode is RegMode.INVITED:
             return self.error(("Eacces", "Invited mode do not allow register"))
+
+        if self.contest.reg_mode is RegMode.PASSWORD:
+            return self.error(("Eacces", "Password mode do not allow unregister"))
 
         if acct_id not in self.contest.user_list:
             return self.error(("Enoext", "You have not registered yet"))

@@ -2,6 +2,7 @@ import enum
 import json
 import os
 import re
+import asyncio
 from dataclasses import asdict, dataclass
 from typing import Sequence
 
@@ -449,6 +450,7 @@ class ProService:
             - Related Redis cache (`rate`, `pro_rate`) will be invalidated.
         """
         from services.prospec.batch import batch_spec
+        from services.rate import RateService
 
         insert_subtask_config_values = []
         insert_testdatas_values = []
@@ -537,13 +539,13 @@ class ProService:
 
             # NOTE: Remove cache
             res = await con.fetch("SELECT contest_id FROM contest_problem_joints WHERE pro_id = $1;", pro_id)
+            refresh_tasks = []
             for r in res:
                 contest_id = r['contest_id']
+                task = RateService.inst.refresh_pro_ac_rate(pro_id, contest_id)
+                refresh_tasks.append(task)
 
-                key2 = f"pro_id_{pro_id}_contest_id_{contest_id}"
-                await self.rs.hdel("pro_rate", key2)
-            await self.rs.delete("rate")
-            await self.rs.hdel("pro_topcoder", str(pro_id))
+            await asyncio.gather(*refresh_tasks)
 
         return None, None
 

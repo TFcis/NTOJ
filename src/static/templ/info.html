@@ -57,42 +57,6 @@
     {% if judge_server_status == False %}
 	<h1 style="color: #F0F280;">目前NTOJ不能Judge，造成不便之處，敬請見諒</h1>
     {% end %}
-  <table border="2" class="table">
-    <thead>
-      <tr>
-        <td style="width:71%;">
-          <span class="material-symbols-outlined">push_pin</span>
-          Title
-        </td>
-        <td style="width:15%;">Time</td>
-        <td style="width:15%;">Author</td>
-      </tr>
-    </thead>
-    <tbody>
-    {% for bulletin in bulletin_list %}
-      <tr>
-        <td>
-          <a href="{{ url(f'/bulletin/{ bulletin['bulletin_id'] }/') }}" style="color: {{ bulletin['color'] }}">
-            <font size=5>
-              {% if bulletin['pinned'] %}
-                <span class="material-symbols-outlined">push_pin</span>
-              {% end %}
-              {{ bulletin['title'] }}
-            </font>
-          </a>
-        </td>
-        <td>
-          <font size=4>{{ bulletin['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d') }}</font>
-        </td>
-        <td>
-          <font size=4>
-            <a href="{{ url(f'/acct/{ bulletin['acct_id'] }/') }}">{{ bulletin['name'] }}</a>
-          </font>
-        </td>
-      </tr>
-    {% end %}
-    </tbody>
-  </table>
 
   <h1 style="font-weight: bolder;">NTOJ Guide</h1>
   <hr>
@@ -129,9 +93,9 @@
             <td class="col-3">Wrong Answer</td>
             <td class="col-8">
               Your program didn't output the correct answer, but it terminated normally. <br>
-              If you truly think your code is correct, contact the administrator through Question page. <br>
+              If you truly think your code is correct, contact the teacher. <br>
               你的程式輸出了錯誤的答案，但有正常結束。<br>
-              如果你認為你的程式碼真的正確，可以透過Question頁面聯絡管理員。
+              如果你認為你的程式碼真的正確，請向老師反應。
             </td>
           </tr>
           <tr class="purple-row">
@@ -139,9 +103,9 @@
             <td class="col-3">Time Limit Exceeded</td>
             <td class="col-8">
               Your program tried to run for too much time. <br>
-              If you are sure that the problem needs more time, please contact the administrator through Question page. <br>
+              If you are sure that the problem needs more time, please contact the teacher. <br>
               你的程式嘗試運行的時間太久。 <br>
-              如果你認為題目需要更長的時間限制，可以透過Question頁面聯絡管理員。
+              如果你認為題目需要更長的時間限制，請向老師反應。
             </td>
           </tr>
           <tr class="red-row">
@@ -149,9 +113,9 @@
             <td class="col-3">Memory Limit Exceeded</td>
             <td class="col-8">
               Your program tried to use more memory than the judge allows. <br>
-              If you are sure that the problem needs more memory, please contact the administrator through Question page. <br>
+              If you are sure that the problem needs more memory, please contact the teacher. <br>
               你的程式試圖使用的記憶體超出了題目的允許範圍。 <br>
-              如果你認為題目需要更大的記憶體範圍，可以透過Question頁面聯絡管理員。
+              如果你認為題目需要更大的記憶體範圍，請向老師反應。
             </td>
           </tr>
           <tr class="light-blue-row">
@@ -205,36 +169,13 @@
             <td class="col-3">Internal Error</td>
             <td class="col-8">
               The judge is in a state of collapse. <br>
-              Please contact the administrator through Question page. <br>
+              Please contact the teacher. <br>
               評測系統處於崩潰狀態。 <br>
-              請透過Question頁面聯絡管理員。
-            </td>
-          </tr>
-          <tr class="white-row">
-            <td class="col-1">PE</td>
-            <td class="col-3">Presentation Error</td>
-            <td class="col-8">
-              Your output does not match with the test cases. <br>
-              There may be extra blank lines and spaces. <br>
-              你的輸出與測試案例不符。<br>
-              可能會有多餘的空白行和空格。
+              務必向老師反應。
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
-  </div>
-
-  <!-- Question -->
-  <div class="row">
-    <h3 class="col" style="font-weight: bolder;">Question Page</h3>
-  </div>
-  <div class="card border-0">
-    <div class="card-body">
-      <ul>
-        <li> 提供使用者與管理員溝通的管道 </li>
-        <li> 同時最多10筆發問，超過10筆會刪除最早的一筆發問 </li>
-      </ul>
     </div>
   </div>
 
@@ -247,34 +188,6 @@
       <ul>
         <li> Problem ID: 題號間以 <b>,</b> 分隔, 例如: 1,2,3 </li>
         <li> Account ID: 使用者編號間以 <b>,</b> 隔開，例如: 1,2,3 </li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- Rank -->
-  <div class="row">
-    <h3 class="col" style="font-weight: bolder;">Rank</h3>
-  </div>
-  <div class="card border-0">
-    <div class="card-body">
-      <ul>
-        <li> rank 僅顯示每個user <b>最佳的submission</b> </li>
-        <li> 先依照 <b>Time</b> 排序再依照 <b>Memory</b> 排序 </li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- Scoreboard -->
-  <div class="row">
-    <h3 class="col" style="font-weight: bolder;">Scoreboard</h3>
-  </div>
-  <div class="card border-0">
-    <div class="card-body">
-      <ul>
-        <li> 記分板分數的顏色根據分數，以10分為一區間遞增 </li>
-        <li> 滿分時(即AC)分數會以 <b>粗體</b> 顯示 </li>
-        <li> 名次排序方式: 以分數為優先，若分數相同，以 <b>AC submission count</b> 較少者名次較前 </li>
-        <li> 若想進入其他板塊，可透過Question頁面向管理員申請 </li>
       </ul>
     </div>
   </div>

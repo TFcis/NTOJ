@@ -18,25 +18,19 @@ class ProsetHandler(RequestHandler):
     @reqenv
     async def get(self):
         pageoff = int(self.get_argument("pageoff", default=0))
-        order = self.get_argument("order", default=None)
         problem_show = self.get_argument("show", default="all")
         show_only_online_pro = self.get_argument("online", default=False)
         order_reverse = self.get_argument("reverse", default=False)
         search_name = self.get_argument("name", default=None)
-        search_tags = self.get_argument("tags", default=None)
 
         flt = {
-            "order": order,
             "problem_show": problem_show,
             "online": show_only_online_pro,
             "reverse": order_reverse,
             "name": search_name,
-            "tags": search_tags,
         }
         if search_name:
             search_name = search_name.lower()
-        if search_tags:
-            search_tags = search_tags.lower()
 
         proclass_id = int(self.get_argument("proclass_id", default=0))
         if proclass_id == 0:
@@ -49,21 +43,13 @@ class ProsetHandler(RequestHandler):
 
         proclass = None
         if proclass_id:
+            if not self.acct.is_kernel():
+                return self.error(PERMISSION_DENIED_ERROR)
+
             err, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if err:
                 return self.error(err)
             proclass = dict(proclass)
-
-            if (
-                proclass["type"] == ProClassConst.OFFICIAL_HIDDEN
-                and not self.acct.is_kernel()
-            ):
-                return self.error(PERMISSION_DENIED_ERROR)
-            elif (
-                proclass["type"] == ProClassConst.USER_HIDDEN
-                and proclass["acct_id"] != self.acct.acct_id
-            ):
-                return self.error(PERMISSION_DENIED_ERROR)
 
             p_list = proclass["list"]
             prolist = list(filter(lambda pro: pro.pro_id in p_list, prolist))
@@ -92,57 +78,10 @@ class ProsetHandler(RequestHandler):
             if search_name and pro.name.lower().find(search_name) == -1:
                 continue
 
-            if (self.acct.is_guest()) or (
-                not self.acct.is_kernel() and pro_state != ChalConst.STATE_AC
-            ):
-                pro.tags = ""
-
-            if search_tags and pro.tags.lower().find(search_tags) == -1:
-                continue
-
-            rate = None
-            if order is not None:
-                _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
-            score_map[pro_id] = {"state": pro_state, "rate_data": rate}
+            score_map[pro_id] = {"state": pro_state}
             new_prolist.append(pro)
 
         prolist = new_prolist
-
-        def user_ac_cmp(pro: Problem):
-            pro_id = pro.pro_id
-            user_ac_chal_cnt = score_map[pro_id]["rate_data"]["user_ac_chal_cnt"]
-            user_all_chal_cnt = score_map[pro_id]["rate_data"]["user_all_chal_cnt"]
-
-            if user_ac_chal_cnt and user_all_chal_cnt:
-                return user_ac_chal_cnt / user_all_chal_cnt
-            else:
-                return -1
-
-        def chal_ac_cmp(pro: Problem):
-            pro_id = pro.pro_id
-            ac_chal_cnt = score_map[pro_id]["rate_data"]["ac_chal_cnt"]
-            all_chal_cnt = score_map[pro_id]["rate_data"]["all_chal_cnt"]
-
-            if ac_chal_cnt and all_chal_cnt:
-                return ac_chal_cnt / all_chal_cnt
-            else:
-                return -1
-
-        def cmp(pro: Problem, key: str):
-            return score_map[pro.pro_id]["rate_data"][key]
-
-        if order == "chal":
-            prolist = sorted(prolist, key=chal_ac_cmp)
-        elif order == "user":
-            prolist = sorted(prolist, key=user_ac_cmp)
-        elif order == "chalcnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "all_chal_cnt"))
-        elif order == "chalaccnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "ac_chal_cnt"))
-        elif order == "usercnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "user_all_chal_cnt"))
-        elif order == "useraccnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "user_ac_chal_cnt"))
 
         if order_reverse:
             prolist = reversed(prolist)
@@ -150,24 +89,6 @@ class ProsetHandler(RequestHandler):
         prolist = list(prolist)
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff : pageoff + 40]
-
-        for pro in prolist:
-            pro_id = pro.pro_id
-
-            topcoder = None
-            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
-            if err:
-                return self.error(err)
-
-            if topcoder_id:
-                err, topcoder = await UserService.inst.info_acct(topcoder_id)
-                if err:
-                    return self.error(err)
-
-            score_map[pro_id]["topcoder"] = topcoder
-            if order is None:
-                _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
-                score_map[pro_id]["rate_data"] = rate
 
         await self.render(
             "proset",
@@ -185,6 +106,10 @@ class ProsetHandler(RequestHandler):
     async def post(self):
         reqtype = self.get_argument("reqtype")
         if reqtype == "listproclass":
+            if not self.acct.is_kernel():
+                self.error(PERMISSION_DENIED_ERROR)
+                return
+
             proclass_type = self.get_argument("proclass_type")
             _, proclass_list = await ProClassService.inst.get_proclass_list()
 
@@ -211,32 +136,6 @@ class ProsetHandler(RequestHandler):
                             proclass_list,
                         )
                     )
-
-            elif proclass_type == "shared":
-                proclass_list = list(
-                    filter(
-                        lambda proclass: proclass["type"] == ProClassConst.USER_PUBLIC,
-                        proclass_list,
-                    )
-                )
-
-            elif proclass_type == "collection":
-                proclass_list = list(
-                    filter(
-                        lambda proclass: proclass["proclass_id"]
-                        in self.acct.proclass_collection,
-                        proclass_list,
-                    )
-                )
-
-            elif proclass_type == "own":
-                proclass_list = list(
-                    filter(
-                        lambda proclass: proclass["acct_id"] == self.acct.acct_id,
-                        proclass_list,
-                    )
-                )
-
             else:
                 self.error(("Eparam", "Wrong proclass_type"))
                 return
@@ -260,35 +159,6 @@ class ProsetHandler(RequestHandler):
                 proclass["total_cnt"] = len(p["list"])
 
             self.error(("S", proclass_list))
-
-        elif reqtype == "collect":
-            if self.acct.is_guest():
-                return self.error(("Eacces", "Please login"))
-
-            proclass_id = int(self.get_argument("proclass_id"))
-
-            if proclass_id in self.acct.proclass_collection:
-                return self.error(("Eexist", "Problem class is already collected"))
-
-            self.acct.proclass_collection.append(proclass_id)
-            self.acct.proclass_collection.sort()
-            await UserService.inst.update_acct(self.acct)
-            self.error(("S", ""))
-
-        elif reqtype == "decollect":
-            if self.acct.is_guest():
-                return self.error(("Eacces", "Please login"))
-
-            proclass_id = int(self.get_argument("proclass_id"))
-
-            if proclass_id not in self.acct.proclass_collection:
-                return self.error(("Enoext", "Problem class is not in your collection"))
-
-            self.acct.proclass_collection.remove(proclass_id)
-            self.acct.proclass_collection.sort()
-            await UserService.inst.update_acct(self.acct)
-            self.error(("S", ""))
-
 
 class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
     @reqenv
@@ -379,77 +249,10 @@ class ProHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        # NOTE: Guest cannot see tags
-        # NOTE: Admin can see tags
-        # NOTE: User get ac can see tags
-
-        if self.acct.is_guest():
-            pro.tags = ""
-
-        elif not self.acct.is_kernel():
-            from services.chal import ChalService
-
-            err, state = await ChalService.inst.check_acct_pro_state(
-                self.acct.acct_id, pro.pro_id
-            )
-            if err:
-                return self.error(err)
-
-            if state is None or state != ChalConst.STATE_AC:
-                pro.tags = ""
-
         can_submit = JudgeServerClusterService.inst.is_server_online()
-        topcoder = None
-        if not self.contest:
-            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
-            if err:
-                return self.error(err)
-
-            if topcoder_id:
-                err, topcoder = await UserService.inst.info_acct(topcoder_id)
-                if err:
-                    return self.error(err)
-
         await self.render(
             "pro",
             pro=pro,
             can_submit=can_submit,
             contest=self.contest,
-            topcoder=topcoder,
         )
-
-
-class ProTagsHandler(RequestHandler):
-    @reqenv
-    @require_permission(UserConst.ACCTTYPE_KERNEL)
-    async def post(self):
-        tags = self.get_argument("tags")
-        pro_id = int(self.get_argument("pro_id"))
-
-        allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
-        if self.contest:
-            allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
-
-        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
-        if err:
-            return self.error(err)
-
-        await LogService.inst.add_log(
-            (
-                self.acct.name
-                + " updated the tag of problem #"
-                + str(pro_id)
-                + ' to: "'
-                + str(tags)
-                + '".'
-            ),
-            "manage.pro.update.tag",
-        )
-
-        pro.tags = tags
-        err, _ = await ProService.inst.update_pro(pro)
-
-        if err:
-            return self.error(err)
-
-        self.error(("S", ""))

@@ -184,6 +184,22 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(pro.status, ProConst.STATUS_CONTEST)
 
+            res = admin_session.post('contests/1/manage/pro' , data={
+                'reqtype': 'add_set',
+                'pro_id': '5-7'
+            })
+            self.assertAPIReturnValue(res.text, ('Emod', 'Cannot add problem set to non-random set contests'))
+            res = admin_session.post('contests/1/manage/pro' , data={
+                'reqtype': 'remove_set',
+                'pro_id': '1'
+            })
+            self.assertAPIReturnValue(res.text, ('Emod', 'Cannot remove problem set from non-random set contests'))
+            res = admin_session.post('contests/1/manage/pro' , data={
+                'reqtype': 'update_order',
+                'pro_id': '1'
+            })
+            self.assertAPIReturnValue(res.text, ('Emod', 'Cannot update problem order in non-random set contests'))
+
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'add',
@@ -405,253 +421,6 @@ class ContestTest(AsyncTest):
                     self.assertEqual(score['score'], 100)
             ws2.close()
 
-        with AccountContext('test1@test', 'test') as user_session:
-            res = user_session.post('contests/1/qa', data={
-                'reqtype': 'ask',
-                'subject': 'subject',
-                'content': 'content',
-            })
-            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
-
-        with AccountContext('contest1@test', 'test') as user_session:
-            def _message(msg):
-                if msg is None:
-                    return
-                data = json.loads(msg)
-                if data.get('type') == 'contestnewquessub':
-                    self.assertEqual(int(data['data']), 1)
-            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
-            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewquessub'}))
-            await ws.write_message(json.dumps({
-                'type': 'contestnewquessub_init',
-                'data': '1'
-            }))
-
-            self.assertTable(
-                'contests/1/qa',
-                {
-                    'reqtype': 'ask',
-                    'subject': 'subject',
-                    'content': 'content',
-                },
-                [
-                    {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
-                    {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
-                    {'content': '', 'equal_value': ('Eparam', 'Content too short')},
-                    {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
-                ],
-                user_session
-            )
-
-            res = user_session.post('contests/1/qa', data={
-                'reqtype': 'ask',
-                'subject': 'subject',
-                'content': 'content',
-            })
-            self.assertAPIReturnSuccess(res.text)
-
-            res = user_session.post('contests/1/qa', data={
-                'reqtype': 'ask',
-                'subject': 'subject',
-                'content': 'content',
-            })
-            res = json.loads(res.text)
-            self.assertEqual(res['status'], 'Einternal')
-
-            ws.close()
-
-        with AccountContext('admin@test', 'testtest') as admin_session:
-            _, count = await ContestService.inst.get_need_reply_question_cnt(1)
-            self.assertEqual(count, 1)
-
-            _, queslist = await ContestService.inst.get_all_question(contest_id=1, ask_acct_id=4)
-            self.assertEqual(len(queslist), 1)
-            ques = queslist[0]
-            self.assertEqual(ques['ask_subject'], 'subject')
-            self.assertEqual(ques['ask_content'], 'content')
-            self.assertEqual(ques['ask_acct_id'], 4)
-            self.assertEqual(ques['reply_content'], None)
-            self.assertEqual(ques['reply_acct_id'], None)
-            question_id = ques['question_id']
-
-            def _message(msg):
-                if msg is None:
-                    return
-
-                data = json.loads(msg)
-                if data.get('type') == 'contestnewqasub':
-                    j = json.loads(data['data'])
-                    self.assertEqual(j['contest_id'], 1)
-                    self.assertEqual(j['type'], 'reply')
-                    self.assertEqual(j['ask_acct_id'], 4)
-            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
-            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
-            await ws.write_message(json.dumps({
-                'type': 'contestnewqasub_init',
-                'data': json.dumps({
-                    "contest_id": 1,
-                    "acct_id": 4,
-                })
-            }))
-
-            res = admin_session.post('contests/1/manage/question', data={
-                'reqtype': 'reply',
-                'content': 'answer',
-                'question_id': question_id
-            })
-            self.assertAPIReturnSuccess(res.text)
-            err, ques = await ContestService.inst.get_question(1, question_id)
-            self.assertIsNone(err)
-            self.assertEqual(ques['reply_content'], 'answer')
-            self.assertEqual(ques['reply_acct_id'], 1)
-
-            _, count = await ContestService.inst.get_need_reply_question_cnt(1)
-            self.assertEqual(count, 0)
-
-            ws.close()
-            res = admin_session.post('contests/1/manage/question', data={
-                'reqtype': 'reply',
-                'content': '',
-                'question_id': question_id
-            })
-            self.assertAPIReturnValue(res.text, ('Eparam', 'Content too short'))
-            res = admin_session.post('contests/1/manage/question', data={
-                'reqtype': 'reply',
-                'content': 'a' * 5000,
-                'question_id': question_id
-            })
-            self.assertAPIReturnValue(res.text, ('Eparam', 'Content too long'))
-
-        with AccountContext('admin@test', 'testtest') as admin_session:
-            def _message(msg):
-                if msg is None:
-                    return
-
-                data = json.loads(msg)
-                if data.get('type') == 'contestnewqasub':
-                    j = json.loads(data['data'])
-                    self.assertEqual(j['contest_id'], 1)
-                    self.assertEqual(j['type'], 'add-announce')
-
-            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
-            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
-            await ws.write_message(json.dumps({
-                'type': 'contestnewqasub_init',
-                'data': json.dumps({
-                    "contest_id": 1,
-                    "acct_id": 4,
-                })
-            }))
-            res = admin_session.post('contests/1/manage/announce', data={
-                'reqtype': 'add-announce',
-                'subject': 'subject',
-                'content': 'content',
-            })
-            self.assertAPIReturnSuccess(res.text)
-            ws.close()
-
-            _, announces = await ContestService.inst.get_all_announce(1)
-            self.assertEqual(len(announces), 1)
-            announce = announces[0]
-            self.assertEqual(announce['subject'], 'subject')
-            self.assertEqual(announce['content'], 'content')
-            self.assertEqual(announce['acct_id'], 1)
-            err, a = await ContestService.inst.get_announce(1, announce['announce_id'])
-            self.assertIsNone(err)
-            self.assertEqual(a, announce)
-
-            self.assertTable(
-                'contests/1/manage/announce',
-                {
-                    'reqtype': 'add-announce',
-                    'subject': 'subject',
-                    'content': 'content',
-                },
-                [
-                    {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
-                    {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
-                    {'content': '', 'equal_value': ('Eparam', 'Content too short')},
-                    {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
-                ],
-                admin_session
-            )
-            self.assertTable(
-                'contests/1/manage/announce',
-                {
-                    'reqtype': 'edit-announce',
-                    'announce_id': announce['announce_id'],
-                    'subject': 'subject',
-                    'content': 'content',
-                },
-                [
-                    {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
-                    {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
-                    {'content': '', 'equal_value': ('Eparam', 'Content too short')},
-                    {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
-                ],
-                admin_session
-            )
-
-        with AccountContext('admin@test', 'testtest') as admin_session:
-            def _message(msg):
-                if msg is None:
-                    return
-
-                data = json.loads(msg)
-                if data.get('type') == 'contestnewqasub':
-                    j = json.loads(data['data'])
-                    self.assertEqual(j['contest_id'], 1)
-                    self.assertEqual(j['type'], 'edit-announce')
-
-            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
-            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
-            await ws.write_message(json.dumps({
-                'type': 'contestnewqasub_init',
-                'data': json.dumps({
-                    "contest_id": 1,
-                    "acct_id": 4,
-                })
-            }))
-            res = admin_session.post('contests/1/manage/announce', data={
-                'reqtype': 'edit-announce',
-                'subject': 'subject2',
-                'content': 'content2',
-                'announce_id': 1,
-            })
-            self.assertAPIReturnSuccess(res.text)
-            ws.close()
-            _, announces = await ContestService.inst.get_all_announce(1)
-            self.assertEqual(len(announces), 1)
-            announce = announces[0]
-            self.assertEqual(announce['subject'], 'subject2')
-            self.assertEqual(announce['content'], 'content2')
-            self.assertEqual(announce['acct_id'], 1)
-            err, a = await ContestService.inst.get_announce(1, announce['announce_id'])
-            self.assertIsNone(err)
-            self.assertEqual(a, announce)
-
-        with AccountContext('admin@test', 'testtest') as admin_session:
-            def _message(msg):
-                if msg is None:
-                    return
-
-                j = json.loads(msg)
-                self.assertEqual(j['contest_id'], 1)
-                self.assertEqual(j['type'], 'popup-announce')
-
-            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
-            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
-            await ws.write_message(json.dumps({'type': 'contestnewqasub_init', 'data': json.dumps({"contest_id": 1, "acct_id": 4})}))
-            res = admin_session.post('contests/1/manage/announce', data={
-                'reqtype': 'popup-announce',
-                'announce_id': 1,
-            })
-            self.assertAPIReturnSuccess(res.text)
-            ws.close()
-
-            res = admin_session.get('contests/1/qa')
-            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
-
         # NOTE: contest end
         with AccountContext('admin@test', 'testtest') as admin_session:
             contest_end = now - datetime.timedelta(days=1)
@@ -687,3 +456,356 @@ class ContestTest(AsyncTest):
         # test scoreboard, challist
         # hide_admin: bool = True
         # test rechal
+
+class RandomContestTest(AsyncTest):
+    async def main(self):
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
+                'name': 'random contest 1'
+            })
+            self.assertEqual(json.loads(res.text)['data'], 2)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(contest.name, 'random contest 1')
+
+            # update general
+            now = datetime.datetime.now()
+            contest_start = now + datetime.timedelta(days=1)
+            contest_end = now + datetime.timedelta(days=4)
+            reg_end = now + datetime.timedelta(days=1) - datetime.timedelta(hours=8)
+            default_config = {
+                'reqtype': 'update',
+                'name': 'random contest 1',
+
+                'contest_mode': ContestMode.IOI,
+                'contest_start': self.get_isoformat(contest_start),
+                'contest_end': self.get_isoformat(contest_end),
+
+                'reg_mode': RegMode.INVITED,
+                'reg_end': self.get_isoformat(reg_end),
+
+                'allow_compilers[]': [Compiler.GPP, Compiler.CLANGPP],
+                'is_public_scoreboard': 'true',
+                'allow_view_other_page': 'true',
+                'hide_admin': 'true',
+
+                'submission_cd_time': 60,
+                'freeze_scoreboard_period': 0
+            }
+            res = admin_session.post('contests/2/manage/general', data=default_config)
+            self.assertAPIReturnSuccess(res.text)
+
+            # add problem
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': 5
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertIn(5, contest.pro_list)
+
+            random_set_config = {
+                'reqtype': 'update',
+                'name': 'random contest 1',
+
+                'contest_mode': ContestMode.RANDOM_SET,
+                'contest_start': self.get_isoformat(contest_start),
+                'contest_end': self.get_isoformat(contest_end),
+
+                'reg_mode': RegMode.INVITED,
+                'reg_end': self.get_isoformat(reg_end),
+
+                'allow_compilers[]': [Compiler.GPP, Compiler.CLANGPP],
+                'is_public_scoreboard': 'true',
+                'allow_view_other_page': 'true',
+                'hide_admin': 'true',
+
+                'submission_cd_time': 60,
+                'freeze_scoreboard_period': 0
+            }
+            res = admin_session.post('contests/2/manage/general', data=random_set_config)
+            self.assertAPIReturnValue(res.text, ('Echmod', 'Cannot change contest mode when problem list is not empty'))
+
+            # Remove problem and try again
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'remove',
+                'pro_id': 5
+            })
+            res = admin_session.post('contests/2/manage/general', data=random_set_config)
+            self.assertAPIReturnSuccess(res.text)
+
+            err, contest = await ContestService.inst.get_contest(2)
+            assert contest
+            self.assertIsNone(err)
+            self.assertEqual(contest.contest_mode, ContestMode.RANDOM_SET)
+
+            _, contest_list = await ContestService.inst.get_contest_list()
+            self.assertEqual(len(contest_list), 2)
+            self.assertEqual(contest_list[1]['name'], 'random contest 1')
+            self.assertEqual(contest_list[1]['contest_mode'], ContestMode.RANDOM_SET)
+            self.assertTrue(contest_list[1]['is_public_scoreboard'])
+
+            res = admin_session.post('contests/2/manage/acct', data={
+                'reqtype': 'update_ip',
+                'start_ip': '255.255.193.256',
+                'end_ip': '192.168.1.16'
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid IP address format.'))
+
+            res = admin_session.post('contests/2/manage/acct', data={
+                'reqtype': 'update_ip',
+                'start_ip': '192.168.1.16',
+                'end_ip': '192.168.1.1'
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid IP range'))
+
+            res = admin_session.post('contests/2/manage/acct', data={
+                'reqtype': 'update_ip',
+                'start_ip': '192.168.1.1',
+                'end_ip': '192.168.1.16'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(str(contest.start_ip), '192.168.1.1')
+            self.assertEqual(str(contest.end_ip), '192.168.1.16')
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '8,7,9,11'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            pre_pro = None
+            self.assertEqual(len(contest.pro_list), 4)
+            self.assertEqual(len(contest.ip_pro_list), 16)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[0], [7,8,9,11])
+                self.assertNotEqual(ip_pro[0], pre_pro)
+                pre_pro = ip_pro[0]
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '5,10'
+            })
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 6)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[1], [5,10])
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '6'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 7)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertEqual(ip_pro[2], 6)
+
+            res = admin_session.post('contests/2/manage/acct', data={
+                'reqtype': 'update_ip',
+                'start_ip': '192.168.2.1',
+                'end_ip': '192.168.2.16'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(str(contest.start_ip), '192.168.2.1')
+            self.assertEqual(str(contest.end_ip), '192.168.2.16')
+            self.assertEqual(len(contest.ip_pro_list), 16)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[0], [8,7,9,11])
+                self.assertIn(ip_pro[1], [5,10])
+                self.assertEqual(ip_pro[2], 6)
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'update_order',
+                'pro_id': '1,0,2'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 7)
+            self.assertEqual(len(contest.ip_pro_list), 16)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[0], [5,10])
+                self.assertIn(ip_pro[1], [8,7,9,11])
+                self.assertEqual(ip_pro[2], 6)
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'remove_set',
+                'pro_id': '1'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.ip_pro_list), 16)
+            self.assertEqual(len(contest.pro_list), 3)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[0], [5,10])
+                self.assertEqual(ip_pro[1], 6)
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '11,6'
+            })
+            self.assertAPIReturnValue(res.text, ('Eexist', 'Problem 6 already in contest'))
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '7,20,8'
+            })
+            self.assertAPIReturnValue(res.text, ('Enoext', 'One or more problem IDs do not exist'))
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': '11'
+            })
+            self.assertAPIReturnValue(res.text,('Emod', 'Cannot add problems to random set contests'))
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'multi_add',
+                'pro_id': '7-8'
+            })
+            self.assertAPIReturnValue(res.text,('Emod', 'Cannot add problems to random set contests'))
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.ip_pro_list), 16)
+            self.assertEqual(len(contest.pro_list), 3)
+
+            invalid_order = ['1,1', '0,2', '2,0', 'a,b', '1', '1,2,3']
+            for order in invalid_order:
+                res = admin_session.post('contests/2/manage/pro', data={
+                    'reqtype': 'update_order',
+                    'pro_id': order
+                })
+                self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid new indexes for problem sets'))
+            self.assertEqual(len(contest.ip_pro_list), 16)
+            self.assertEqual(len(contest.pro_list), 3)
+            for ip_pro in contest.ip_pro_list.values():
+                self.assertIn(ip_pro[0], [5,10])
+                self.assertEqual(ip_pro[1], 6)
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'remove_set',
+                'pro_id': '2'
+            })
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Problem set index out of range'))
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'remove',
+                'pro_id': '6'
+            })
+            self.assertAPIReturnValue(res.text,('Emod', 'Cannot remove problems from random set contests'))
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'multi_remove',
+                'pro_id': '5-6'
+            })
+            self.assertAPIReturnValue(res.text,('Emod', 'Cannot remove problems from random set contests'))
+            err, contest = await ContestService.inst.get_contest(2)
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.ip_pro_list), 16)
+            self.assertEqual(len(contest.pro_list), 3)
+
+class ContestRegistrationPasswordModeTest(AsyncTest):
+    async def main(self):
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            now = datetime.datetime.now()
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
+                'name': 'password contest'
+            })
+            password_contest_id = json.loads(res.text)['data']
+            self.assertEqual(password_contest_id, 3)
+
+            # Setup password mode contest
+            contest_start = now + datetime.timedelta(days=1)
+            contest_end = now + datetime.timedelta(days=2)
+
+            password_config = {
+                'reqtype': 'update',
+                'name': 'password contest',
+
+                'contest_mode': ContestMode.IOI,
+                'contest_start': self.get_isoformat(contest_start),
+                'contest_end': self.get_isoformat(contest_end),
+
+                'reg_mode': RegMode.PASSWORD,
+                'reg_end': self.get_isoformat(contest_end),  # reg_end should be equal to contest_end
+                'contest_password': 'test_password_123',
+
+                'allow_compilers[]': [Compiler.GPP],
+                'is_public_scoreboard': 'true',
+                'allow_view_other_page': 'false',
+                'hide_admin': 'false',
+
+                'submission_cd_time': 30,
+                'freeze_scoreboard_period': 0
+            }
+            res = admin_session.post(f'contests/{password_contest_id}/manage/general', data=password_config)
+            self.assertAPIReturnSuccess(res.text)
+
+            # Verify password is saved
+            err, contest = await ContestService.inst.get_contest(password_contest_id)
+            self.assertIsNone(err)
+            assert contest
+            self.assertEqual(contest.reg_mode, RegMode.PASSWORD)
+            self.assertEqual(contest.contest_password, 'test_password_123')
+            self.assertEqual(contest.reg_end, to_utc(contest_end))
+
+        # Test password registration
+        with AccountContext('contest1@test', 'test') as user_session:
+            # Try to register without password
+            res = user_session.post(f'contests/{password_contest_id}/reg', data={
+                'reqtype': 'reg',
+                'password': '',
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Invalid password'))
+
+            # Try with wrong password
+            res = user_session.post(f'contests/{password_contest_id}/reg', data={
+                'reqtype': 'reg',
+                'password': 'wrong_password',
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Invalid password'))
+
+            # Register with correct password
+            res = user_session.post(f'contests/{password_contest_id}/reg', data={
+                'reqtype': 'reg',
+                'password': 'test_password_123',
+            })
+            self.assertAPIReturnSuccess(res.text, 'Register Successfully')
+
+            # Verify user is registered
+            err, contest = await ContestService.inst.get_contest(password_contest_id)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)  # contest1 is acct_id 4
+
+            # Try to unregister - should fail
+            res = user_session.post(f'contests/{password_contest_id}/reg', data={
+                'reqtype': 'unreg',
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Password mode do not allow unregister'))
+
+            # Verify user is still registered
+            err, contest = await ContestService.inst.get_contest(password_contest_id)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
+        # Test another user with PASSWORD mode
+        with AccountContext('contest2@test', 'test') as user_session:
+            # Register with correct password
+            res = user_session.post(f'contests/{password_contest_id}/reg', data={
+                'reqtype': 'reg',
+                'password': 'test_password_123',
+            })
+            self.assertAPIReturnSuccess(res.text, 'Register Successfully')
+
+            # Verify this user is also registered
+            err, contest = await ContestService.inst.get_contest(password_contest_id)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[5]['status'], UserStatus.APPROVED)  # contest2 is acct_id 5
+

@@ -5,8 +5,10 @@
 <script>
     function init() {
         $("button.reg").on('click', e => {
+            let password = $("#contestPassword").val();
             $.post(`{{ url(f'/be/contests/{ contest.contest_id }/reg') }}`, {
                 'reqtype': 'reg',
+                'password': password,
             }, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
@@ -41,6 +43,12 @@
     {% else %}
         {% set status = "Not Invited" %}
     {% end %}
+{% elif contest.reg_mode is RegMode.PASSWORD %}
+    {% if user.acct_id in contest.user_list %}
+        {% set status = "Registered" %}
+    {% else %}
+        {% set status = "Not Registered" %}
+    {% end %}
 {% elif contest.reg_mode is RegMode.FREE_REG %}
     {% if user.acct_id in contest.user_list %}
         {% set status = "Registered" %}
@@ -71,10 +79,17 @@
                 <h4 class="form-label">Registration Ended</h4>
             {% end %}
 
+            {% if contest.reg_mode is RegMode.PASSWORD and not is_reged and now < contest.reg_end %}
+                <div class="mb-2">
+                    <label for="contestPassword" class="form-label">Contest Password</label>
+                    <input type="password" id="contestPassword" class="form-control" placeholder="Enter contest password">
+                </div>
+            {% end %}
+
             {% if contest.reg_mode is not RegMode.INVITED %}
                 {% if not is_reged and now < contest.reg_end %}
                     <button class="btn btn-primary reg form-control">Register</button>
-                {% elif is_reged %}
+                {% elif is_reged and contest.reg_mode is not RegMode.PASSWORD %}
                     <button class="btn btn-primary unreg form-control">Unregister</button>
                 {% end %}
             {% end %}
