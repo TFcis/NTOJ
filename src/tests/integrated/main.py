@@ -22,6 +22,7 @@ from .chal import ChalTest, ChalListTest
 from .contest import ContestTest, ContestRegistrationPasswordModeTest, RandomContestTest
 from .proclass import ProClassTest
 from .submit import SubmitTest
+from .holiday import HolidayTest
 
 
 class IntegratedTest(AsyncTest):
@@ -188,6 +189,7 @@ class IntegratedTest(AsyncTest):
             ManageProFileManagerTest().main,
             ManagePackTest().main,
             ContestTest().main,
+            HolidayTest().main,
             RandomContestTest().main,
             ContestRegistrationPasswordModeTest().main,
         ]

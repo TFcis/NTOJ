@@ -1,10 +1,12 @@
 from decimal import Decimal
 import hashlib
 import requests
+import datetime
 
 from services.chal import ChalConst
 from services.user import UserService
 from services.rate import RateService
+import config
 
 from .util import AsyncTest, AccountContext
 from tornado.websocket import websocket_connect
@@ -13,6 +15,13 @@ from tornado.httpclient import HTTPRequest
 
 class SignTest(AsyncTest):
     async def main(self):
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            admin_session.post('manage/holiday', data={
+                'reqtype': 'add',
+                'new_start': datetime.datetime.now().astimezone(config.TIMEZONE).strftime('%Y/%m/%d %H:%M'),
+                'new_end': (datetime.datetime.now().astimezone(config.TIMEZONE) + datetime.timedelta(hours=2)).strftime('%Y/%m/%d %H:%M'),
+                'is_weekday': '1',
+            })
         # signup but failed
         res = requests.post('http://localhost:5501/be/sign', data={
             'reqtype': 'signup',

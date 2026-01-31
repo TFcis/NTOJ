@@ -1,0 +1,354 @@
+{% extends 'manage.html' %}
+{% block head %}
+<style>
+    #calendar {
+        width: 100%;
+        min-height: 600px;
+        max-height: 60vw;
+        height: 100%;
+    }
+    .svg-inline--fa {
+        display: var(--fa-display, inline-block);
+        height: 1em;
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/css/tempus-dominus.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@toast-ui/calendar@2.1.3/dist/toastui-calendar.min.css" integrity="sha512-SC7JPM+sgrtQtRKCQtT+JZPmIMdSdTd8joTgPeKplwEk8+iV8SE3aycyLguZ/yeXpxzZpEWIeY1pZrfD9dkqjA==" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/@toast-ui/calendar@2.1.3/dist/toastui-calendar.min.js" integrity="sha512-dlTaFmZBirs/DTgsmFzRSA9ViGpl38z+0dcuqn5jEfnyMvt21/6D3Cpqe+wihPvmN9xx7zqOqK8cf4OKdTEU7A==" crossorigin="anonymous"></script>
+<script type="text/javascript" id="contjs">
+    var info_start_date_picker = null;
+    var info_end_date_picker = null;
+    var calendar = null;
+    function init() {
+        const modal = new bootstrap.Modal(document.getElementById('modal'));
+        const Calendar = tui.Calendar;
+        calendar = new Calendar('#calendar', {
+            defaultView: 'month',
+            template: {
+                time(event) {
+                    return `<span style="color: #f8f8f2;">${event.title}</span>`;
+                },
+                monthMoreTitleDate(e) {
+                    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    return `<span class="toastui-calendar-more-title-date" style="color: #f8f8f2">${e.date}</span><span class="toastui-calendar-more-title-day" style="color: #f8f8f2">${days[e.day]}</span>`;
+                }
+            },
+            theme: {
+                common: {
+                    backgroundColor: '#282a36',
+                    dayName: {
+                        color: '#f8f8f2',
+                    },
+                    saturday: {
+                        color: '#bd93f9',
+                    },
+                },
+                month: {
+                    dayExceptThisMonth: {
+                        color: '#6272a4',
+                    },
+                    moreView: {
+                        backgroundColor: '#44475a',
+                    }
+                }
+            },
+        });
+
+        const options = {
+            display: {
+                calendarWeeks: true,
+            },
+
+            localization: {
+                locale: 'zh-tw',
+                format: 'yyyy/MM/dd HH:mm',
+            },
+        };
+        info_start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerInfoStart'), options);
+        info_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerInfoEnd'), options);
+        calendar.on({
+            clickEvent: function(e) {
+                const event = e.event;
+                const start = new tempusDominus.DateTime(event.start.toDate());
+                const end = new tempusDominus.DateTime(event.end.toDate());
+                info_start_date_picker.dates.setValue(start);
+                info_end_date_picker.dates.setValue(end);
+                if(event.backgroundColor == '#ff5555') {
+                    $('input[name="info-type"][value="holiday"]').prop('checked', true);
+                } else {
+                    $('input[name="info-type"][value="weekday"]').prop('checked', true);
+                }
+                $('#modal-title').text('Event Info');
+                $('button.add').hide();
+                $('button.update').show();
+                $('button.delete').show();
+                $('#modal').data('old-start', start.format('yyyy/MM/dd HH:mm'));
+                $('#modal').data('old-end', end.format('yyyy/MM/dd HH:mm'));
+                modal.show();
+            },
+            selectDateTime: function(e) {
+                const start = new tempusDominus.DateTime(e.start);
+                const end = new tempusDominus.DateTime(e.end.setHours(23,59));
+                info_start_date_picker.dates.setValue(start);
+                info_end_date_picker.dates.setValue(end);
+                $('#modal-title').text('Add Event');
+                $('input[name="info-type"][value="weekday"]').prop('checked', true);
+                $('button.add').show();
+                $('button.update').hide();
+                $('button.delete').hide();
+                modal.show();
+            }
+        });
+
+        $('button.to-add').on('click', function() {
+            calendar.clearGridSelections();
+            const now = new tempusDominus.DateTime();
+            info_start_date_picker.dates.setValue(now);
+            info_end_date_picker.dates.setValue(now);
+            $('#modal-title').text('Add Event');
+            $('input[name="info-type"][value="weekday"]').prop('checked', true);
+            $('button.add').show();
+            $('button.update').hide();
+            $('button.delete').hide();
+            modal.show();
+        });
+
+        $('button.add').on('click', function() {
+            const start = info_start_date_picker.viewDate;
+            const end = info_end_date_picker.viewDate;
+            const type = $('input[name="info-type"]:checked').val();
+            $.post(`{{ url('/be/manage/holiday') }}`, {
+                reqtype: 'add',
+                new_start: start.format('yyyy/MM/dd HH:mm'),
+                new_end: end.format('yyyy/MM/dd HH:mm'),
+                is_weekday: type == 'weekday' ? 1 : 0
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Event added successfully', index.DIALOG_TYPE.success);
+                    updateMonth();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+                modal.hide();
+            });
+        });
+
+        $('button.update').on('click', function() {
+            const start = info_start_date_picker.viewDate;
+            const end = info_end_date_picker.viewDate;
+            const type = $('input[name="info-type"]:checked').val();
+            $.post(`{{ url('/be/manage/holiday') }}`, {
+                reqtype: 'update',
+                old_start: $('#modal').data('old-start'),
+                old_end: $('#modal').data('old-end'),
+                new_start: start.format('yyyy/MM/dd HH:mm'),
+                new_end: end.format('yyyy/MM/dd HH:mm'),
+                is_weekday: type == 'weekday' ? 1 : 0
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Event updated successfully', index.DIALOG_TYPE.success);
+                    updateMonth();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+                modal.hide();
+            });
+        });
+
+        $('button.delete').on('click', function() {
+            $.post(`{{ url('/be/manage/holiday') }}`, {
+                reqtype: 'delete',
+                old_start: $('#modal').data('old-start'),
+                old_end: $('#modal').data('old-end'),
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Event deleted successfully', index.DIALOG_TYPE.success);
+                    updateMonth();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+                modal.hide();
+            });
+        });
+
+        $('#modal').on('hidden.bs.modal', function () {
+            calendar.clearGridSelections();
+        });
+
+        $('#prev-month').on('click', function() {
+            calendar.prev();
+            updateMonth();
+        });
+
+        $('#next-month').on('click', function() {
+            calendar.next();
+            updateMonth();
+        });
+        updateMonth();
+
+        function updateMonth() {
+            const date = calendar.getDate();
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            $('#current-month').text(
+                `${year}/${month}`
+            );
+
+            $.get(`{{ url('/be/manage/holiday') }}`, {
+                action: `events`,
+                year: year,
+                month: month
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    calendar.clear();
+                    calendar.createEvents(res.data);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        }
+
+        let month_picker_visible = false;
+        $('#current-month').on('click', function(e) {
+            if (month_picker_visible) {
+                $('#month-picker').hide();
+                month_picker_visible = false;
+                return;
+            }
+
+            const $this = $(this);
+            const offset = $this.offset();
+            const height = $this.outerHeight();
+            $('#month-picker').css({
+                top: offset.top + height + 5,
+                left: offset.left
+            }).show();
+            month_picker_visible = true;
+
+            let html = '';
+            for(let y = 2022; y <= 2050; y++) {
+                html += `<option value="${y}">${y}</option>`;
+            }
+            $('#picker-year').html(html);
+
+            $('#picker-year').val(calendar.getDate().getFullYear());
+            $('#picker-month').val(calendar.getDate().getMonth() + 1);
+
+            e.stopPropagation();
+        });
+
+        $('#picker-confirm').on('click', function() {
+            const year = parseInt($('#picker-year').val());
+            const month = parseInt($('#picker-month').val());
+            calendar.setDate(new Date(year, month - 1));
+            $('#month-picker').hide();
+            updateMonth();
+        });
+
+        // click any where to close month picker
+        $('#month-picker').on('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    $(document).on('click', function() {
+        $('#month-picker').hide();
+    });
+
+    function destroy() {
+        info_start_date_picker.dispose();
+        info_end_date_picker.dispose();
+        calendar.destroy();
+    }
+</script>
+{% end %}
+
+{% block content %}
+<div class="modal fade" id="modal" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="modal-title">Event Info</h5>
+			</div>
+
+			<div class="modal-body">
+                <form id="info-form" class="form-horizontal">
+                    <div class="mb-3 row">
+                        <label for="datepickerInfoStart" class="form-label">Start Time</label>
+                        <div class="input-group" id="datepickerInfoStart">
+                            <input id="datepickerInfoStartInput" class="form-control">
+                            <span class="input-group-text" data-td-target="#datepickerInfoStart" data-td-toggle="datepickerInfoStart">
+                                <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg><!-- <span class="fa-solid fa-calendar"></span> Font Awesome fontawesome.com -->
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label for="datepickerInfoEnd" class="form-label">End Time</label>
+                        <div class="input-group" id="datepickerInfoEnd">
+                            <input id="datepickerInfoEndInput" class="form-control">
+                            <span class="input-group-text" data-td-target="#datepickerInfoEnd" data-td-toggle="datepickerInfoEnd">
+                                <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg><!-- <span class="fa-solid fa-calendar"></span> Font Awesome fontawesome.com -->
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-2 form-label">Type</label>
+                        <div class="col-sm-10">
+                          <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" value="holiday" name="info-type" />
+                            <label class="form-check-label">Hoilday</label>
+                          </div>
+                          <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" value="weekday" name="info-type" />
+                            <label class="form-check-label">Weekday</label>
+                          </div>
+                        </div>
+                    </div>
+                </form>
+			</div>
+
+			<div class="modal-footer">
+                <button class="btn btn-primary add">Add</button>
+				<button class="btn btn-primary update">Update</button>
+				<button class="btn btn-danger delete">Delete</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <div id="calendar-menu" class="d-flex justify-content-center align-items-center mb-3">
+        <div class="position-absolute start-50 translate-middle-x">
+            <button id="prev-month" class="btn btn-primary">&lt;</button>
+            <span id="current-month" class="mx-3" style="cursor:pointer; user-select: none;"></span>
+            <button id="next-month" class="btn btn-primary">&gt;</button>
+        </div>
+        <button  class="btn btn-primary ms-auto to-add">+</button>
+    </div>
+    <div id="month-picker" style="display:none; position:absolute; z-index:1000; background:#fff; border:1px solid #ccc; padding:10px;">
+        <select id="picker-year"></select>
+        <span style="color: black;">/</span>
+        <select id="picker-month">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+        </select>
+        <button id="picker-confirm">Go</button>
+    </div>
+    <div id="calendar"></div>
+</div>
+{% end %}
