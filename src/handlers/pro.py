@@ -8,6 +8,7 @@ from services.log import LogService
 from services.pro import ProClassService, ProClassConst, ProConst, ProService, Problem
 from services.rate import RateService
 from services.user import UserService, UserConst
+from services.contests import ContestMode
 
 PERMISSION_DENIED_ERROR = ("Eacces", "Permission denied")
 
@@ -175,6 +176,13 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
             if not self.contest.is_admin(self.acct) and not self.contest.is_running():
                 return self.error(PERMISSION_DENIED_ERROR)
 
+            if self.contest.contest_mode == ContestMode.RANDOM_SET:
+                contest_prolist = self.contest.get_randomset_prolist_from_acct_by_ip(self.acct)
+                if contest_prolist is None:
+                    return self.error(('Etodo', 'TODO: Assign problem set for out of range IP not implemented. Call Yushiuan9499.'))
+                if pro_id not in contest_prolist:
+                    return self.error(("Enoext", "Problem not in your problem set"))
+
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
         else:
             if self.acct.is_kernel():
@@ -238,6 +246,13 @@ class ProHandler(RequestHandler):
 
             if not self.contest.is_admin(self.acct) and not self.contest.is_running():
                 return self.error(PERMISSION_DENIED_ERROR)
+
+            if self.contest.contest_mode == ContestMode.RANDOM_SET:
+                contest_prolist = self.contest.get_randomset_prolist_from_acct_by_ip(self.acct)
+                if contest_prolist is None:
+                    return self.error(('Etodo', 'TODO: Assign problem set for out of range IP not implemented. Call Yushiuan9499.'))
+                if pro_id not in contest_prolist:
+                    return self.error(PERMISSION_DENIED_ERROR)
 
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
 
