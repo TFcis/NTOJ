@@ -186,6 +186,8 @@ class JudgeServerService:
             if contest_id != 0:
                 await self.rs.publish('contestnewchalsub', contest_id)
                 await self.rs.hdel(f'contest_{contest_id}_scores', str(pro_id))
+                from services.contests import ContestService
+                await ContestService.inst.update_randomset_scoreboard(chal_id)
 
             # NOTE: Recalculate problem rate
             await RateService.inst.refresh_pro_ac_rate(pro_id, contest_id)

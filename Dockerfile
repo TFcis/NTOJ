@@ -8,7 +8,7 @@ SHELL ["/bin/bash", "-c"]
 WORKDIR /ntoj
 ENV PATH="/root/.local/bin:$PATH"
 COPY pyproject.toml .
-RUN apt update \
+RUN apt update -y \
     && apt upgrade -y \
     && apt install git curl dos2unix xz-utils gcc postgresql-client libpq-dev libc-dev --no-install-suggests --no-install-recommends -y \
     && curl -sSL https://install.python-poetry.org | python3 - \
@@ -60,27 +60,31 @@ CMD bash
 # == release image ==
 
 FROM python:3.14-alpine AS builder
-COPY pyproject.toml .
-COPY .git .
 
-RUN apk add --no-cache curl gcc musl-dev libpq-dev build-base python3-dev linux-headers git \
+# build python requirements
+RUN apk add --no-cache curl gcc musl-dev libpq-dev build-base python3-dev linux-headers \
     && curl -sSL https://install.python-poetry.org | python3 - \
-    && /root/.local/bin/poetry self add poetry-plugin-export \
-    && /root/.local/bin/poetry export --without-hashes --output requirements.txt \
+    && /root/.local/bin/poetry self add poetry-plugin-export
+COPY pyproject.toml .
+RUN /root/.local/bin/poetry export --without-hashes --output requirements.txt \
     && curl -sSL https://install.python-poetry.org | python3 - --uninstall \
-    && pip install --user -r requirements.txt \
+    && pip install --user -r requirements.txt
+
+# get git info
+COPY .git .
+RUN apk add --no-cache git \
     && git rev-parse HEAD > /root/version.txt \
     && git branch --show-current >> /root/version.txt
 
 FROM python:3.14-alpine AS release
+RUN apk add --no-cache postgresql17-client dos2unix tar xz
 COPY --from=builder /root/.local /root/.local
 COPY --from=builder /root/version.txt /ntoj/version.txt
-RUN apk add --no-cache postgresql17-client dos2unix tar xz
 
 COPY pyproject.toml /ntoj/pyproject.toml
-COPY src /ntoj
-COPY migration /ntoj/migration
 COPY scripts /ntoj/scripts
+COPY migration /ntoj/migration
+COPY src /ntoj
 WORKDIR /ntoj
 
 ARG DB_PASSWORD

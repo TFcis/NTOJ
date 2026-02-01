@@ -10,6 +10,7 @@ from msgpack import unpackb
 
 from services.log import LogService
 from services.chal import Compiler
+from services.holiday import HolidayService
 from utils.dbg import dbg_print
 
 
@@ -90,7 +91,8 @@ class UserService:
         hpw = result[0]['password']
         specific_ip = result[0]['specific_ip']
 
-        if specific_ip and ip and specific_ip != ip:
+        if (specific_ip and ip and 
+            specific_ip != ip and await HolidayService.inst.is_weekday_now()):
             return ('Esignip', 'Login failed'), None
 
         hpw = base64.b64decode(hpw.encode('utf-8'))

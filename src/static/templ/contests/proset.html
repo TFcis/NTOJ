@@ -73,9 +73,10 @@ font-weight: bolder;
                 </tr>
             </thead>
             <tbody>
-            {% for idx, pro in enumerate(prolist) %}
+            {% for pro in prolist %}
                 <tr>
                     {% set pro_id = pro.pro_id %}
+                    {% set idx = pro_idx_map[pro_id] %}
                     <td class="id">{{ pro_id }}</td>
                     {% if score_map[pro_id]['state'] is None %}
                         <td>Todo</td>
