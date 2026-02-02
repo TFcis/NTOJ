@@ -97,7 +97,11 @@ h3{color:#fcfaf2}
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Success, reloading...', index.DIALOG_TYPE.success);
-		            index.go(`{{ url('/info/') }}`);
+                    if (index.prev_url == null) {
+                        location.href = `{{ url('/info/') }}`;
+                        return;
+                    }
+                    location.href = index.prev_url;
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
