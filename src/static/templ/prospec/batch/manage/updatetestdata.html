@@ -98,6 +98,7 @@
 					'pro_id': pro_id,
                     'filename': filename,
 				}, function (res) {
+                    index.remove_progress_bar();
                     let msg = '';
 					let dialog_type = null;
 
@@ -144,7 +145,6 @@
 
                         pack.send(output_token, outputfile).done(function() {
                             index.update_progress_bar_progress(100);
-                            index.remove_progress_bar();
                             _update(input_token, output_token, filename);
 
                             j_add_single_file.find("input.inputfile").val("");
@@ -172,6 +172,7 @@
                     'testdata_id': testdata_id,
 					'type': type,
 				}, function (res) {
+                    index.remove_progress_bar();
                     let msg = '';
 					let dialog_type = null;
 
@@ -213,7 +214,6 @@
 
 					pack.send(token, file).done(function () {
 						index.update_progress_bar_progress(100);
-						index.remove_progress_bar();
 						_update(token, testdata_id, group);
 						j_input.val(''); // for the same file upload
 
