@@ -344,7 +344,8 @@ var index = new function() {
         }
 
         let progressbar_modal = bootstrap.Modal.getInstance(progressbar);
-        progressbar_modal.hide();
+        progressbar_modal.dispose();
+        progressbar.remove();
     };
 
     that.DIALOG_TYPE = newEnum({
