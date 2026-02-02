@@ -200,6 +200,65 @@ class ContestTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('Emod', 'Cannot update problem order in non-random set contests'))
 
+            # NOTE: Contest problem status
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_HIDDEN,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': 1
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'multi_add',
+                'pro_id': '1'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(1, contest.pro_list)
+
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_ONLINE,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': 1
+            })
+            self.assertAPIReturnSuccess(res.text)
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_HIDDEN,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(1, contest.pro_list)
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_ONLINE,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'add',
@@ -444,6 +503,20 @@ class ContestTest(AsyncTest):
             err, pro = await ProService.inst.get_pro(8, allow_statuses=ProConst.PRO_STATUS_FULL)
             self.assertIsNone(err)
             self.assertEqual(pro.status, ProConst.STATUS_CONTEST)
+
+            # NOTE: Make sure account removed in Cache && DB
+            res = admin_session.post('contests/1/manage/acct', data={
+                'reqtype': 'remove',
+                'acct_id': 4,
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
 
         with AccountContext('test1@test', 'test') as user_session:
             res = user_session.get('pro/5')
