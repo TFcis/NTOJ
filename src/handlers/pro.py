@@ -297,13 +297,19 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.contest:
             if not self.contest.is_pro(pro_id):
-                return self.error(("Enoext", "Problem not in contest"))
+                self.set_status(404)
+                self.finish("Problem not in contest")
+                return
 
             if not self.contest.is_member(self.acct):
-                return self.error(PERMISSION_DENIED_ERROR)
+                self.set_status(403)
+                self.finish(PERMISSION_DENIED_ERROR[1])
+                return
 
             if not self.contest.is_admin(self.acct) and not self.contest.is_running():
-                return self.error(PERMISSION_DENIED_ERROR)
+                self.set_status(403)
+                self.finish(PERMISSION_DENIED_ERROR[1])
+                return
 
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
         else:
@@ -312,11 +318,15 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
 
         err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
-            return self.error(err)
+            self.set_status(404)
+            self.finish(err[1])
+            return
 
         if pro.status == ProConst.STATUS_CONTEST:
             if not (self.contest.is_running() or self.contest.is_admin(self.acct)):
-                return self.error(PERMISSION_DENIED_ERROR)
+                self.set_status(403)
+                self.finish(PERMISSION_DENIED_ERROR[1])
+                return
 
         if path.endswith("pdf"):
             self.set_header("Pragma", "public")
@@ -335,7 +345,9 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
                 self.set_header("Content-Disposition", "inline")
 
         if not self._is_file_access_safe(f"problem/{pro_id}/http/", path):
-            return self.error(PERMISSION_DENIED_ERROR)
+            self.set_status(403)
+            self.finish(PERMISSION_DENIED_ERROR[1])
+            return
 
         await super().get(f"{pro_id}/http/{path}")
 
