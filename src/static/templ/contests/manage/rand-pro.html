@@ -34,28 +34,98 @@
 		};
 
         function swapRows(ord1, ord2) {
-            let tbody = document.querySelector("table tbody");
-            let rows = tbody.querySelectorAll("tr");
-            if (ord1 < 0 || ord2 < 0 || ord1 >= rows.length || ord2 >= rows.length) return;
+            if (ord1 < 0 || ord2 < 0) return;
             if (ord1 === ord2) return;
 
             // Swap contents of Problem Set & Operation columns
             let row1 = rows[ord1];
             let row2 = rows[ord2];
 
-            let placeholder = document.createElement("tr");
+            let tbody = document.querySelector("table tbody");
+            let allRows = tbody.querySelectorAll("tr");
 
-            row1.parentNode.insertBefore(placeholder, row1);
-            row2.parentNode.insertBefore(row1, row2);
+            // Find all Problem Set groups (rows with th[rowspan])
+            let problemSets = [];
+            let currentSet = [];
 
-            placeholder.parentNode.insertBefore(row2, placeholder);
-            placeholder.remove();
+            allRows.forEach((row) => {
+                let th = row.querySelector("th[rowspan]");
+                if (th) {
+                    // Start of a new problem set
+                    if (currentSet.length > 0) {
+                        problemSets.push(currentSet);
+                    }
+                    currentSet = [row];
+                } else {
+                    currentSet.push(row);
+                }
+            });
+            if (currentSet.length > 0) {
+                problemSets.push(currentSet);
+            }
 
-            rows = tbody.querySelectorAll("tr");
-            rows.forEach((row, index) => {
-                row.querySelector("th").textContent = index + 1;
+            if (ord1 >= problemSets.length || ord2 >= problemSets.length) return;
+
+            // Swap the two problem sets
+            let set1 = problemSets[ord1];
+            let set2 = problemSets[ord2];
+
+            // Determine which set comes first in DOM
+            let firstSet, secondSet;
+            if (ord1 < ord2) {
+                firstSet = set1;
+                secondSet = set2;
+            } else {
+                firstSet = set2;
+                secondSet = set1;
+            }
+
+            // Create two placeholders
+            let placeholder1 = document.createElement("tr");
+            let placeholder2 = document.createElement("tr");
+
+            // Mark positions
+            firstSet[0].parentNode.insertBefore(placeholder1, firstSet[0]);
+            secondSet[0].parentNode.insertBefore(placeholder2, secondSet[0]);
+
+            // Remove both sets from DOM
+            let firstSetRows = [];
+            firstSet.forEach(row => {
+                firstSetRows.push(row);
+                row.parentNode.removeChild(row);
             });
 
+            let secondSetRows = [];
+            secondSet.forEach(row => {
+                secondSetRows.push(row);
+                row.parentNode.removeChild(row);
+            });
+
+            // Insert in swapped positions
+            secondSetRows.forEach(row => {
+                placeholder1.parentNode.insertBefore(row, placeholder1);
+            });
+
+            firstSetRows.forEach(row => {
+                placeholder2.parentNode.insertBefore(row, placeholder2);
+            });
+
+            // Remove placeholders
+            placeholder1.remove();
+            placeholder2.remove();
+
+            // Update order numbers
+            allRows = tbody.querySelectorAll("tr");
+            let setIndex = 1;
+            allRows.forEach((row) => {
+                let th = row.querySelector("th[rowspan]");
+                if (th) {
+                    th.textContent = setIndex;
+                    setIndex++;
+                }
+            });
+
+            // Update pro_set_ids and pro_set_ord
             const idx1 = pro_set_ids[ord1];
             const idx2 = pro_set_ids[ord2];
             pro_set_ids[ord1] = idx2;
@@ -88,12 +158,279 @@
         $("button.cancelOrder").on('click', function() {
             index.reload();
         });
+
+		// RandomSet reallocate functions
+		const reallocate_func = (reqtype, pro_set_idx = null) => {
+			let data = { reqtype: reqtype };
+			if (pro_set_idx !== null) data.pro_set_idx = pro_set_idx;
+
+			$.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/acct') }}`, data, res => {
+				res = JSON.parse(res);
+				if (res.status == 'S') {
+					index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+					setTimeout(() => index.reload(), 1000);
+				} else {
+					index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+				}
+			});
+		};
+
+		document.querySelectorAll('button.reallocate-pro-set').forEach(el => {
+			el.addEventListener('click', () => {
+				if (confirm('Reallocate this problem set for ALL accounts?')) {
+					reallocate_func('reallocate_all_accounts_pro_set', parseInt($(el).attr('pro_set_id')));
+				}
+			});
+		});
+
+		// Add/Remove problem from set
+		document.querySelectorAll('button.add-to-set').forEach(el => {
+			el.addEventListener('click', () => {
+				const pro_set_idx = parseInt($(el).attr('pro_set_id'));
+				const input = document.querySelector(`input.add-pro-input[data-set-idx="${pro_set_idx}"]`);
+				const pro_id = input.value.trim();
+
+				if (pro_id !== '') {
+					$.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
+						reqtype: 'add_to_set',
+						pro_set_idx: pro_set_idx,
+						pro_id: pro_id
+					}, res => {
+						res = JSON.parse(res);
+						if (res.status == 'S') {
+							index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+							setTimeout(() => index.reload(), 1000);
+						} else {
+							index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+						}
+					});
+				} else {
+					index.show_notify_dialog('Please enter a problem ID', index.DIALOG_TYPE.error);
+				}
+			});
+		});
+
+		document.querySelectorAll('button.remove-from-set').forEach(el => {
+			el.addEventListener('click', () => {
+				const pro_set_idx = parseInt($(el).attr('pro_set_idx'));
+				const pro_id = parseInt($(el).attr('pro_id'));
+
+				if (confirm(`Remove problem ${pro_id} from Problem Set ${pro_set_idx + 1}?`)) {
+					$.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
+						reqtype: 'remove_from_set',
+						pro_set_idx: pro_set_idx,
+						pro_id: pro_id
+					}, res => {
+						res = JSON.parse(res);
+						if (res.status == 'S') {
+							index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+							setTimeout(() => index.reload(), 1000);
+						} else {
+							index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+						}
+					});
+				}
+			});
+		});
+
+		// ProClass selector functionality
+		let proclass_cache = {};
+		let proclass_full_data = {}; // Store full ProClass data including problem lists
+		let proclass_modal = new bootstrap.Modal(document.getElementById('proclassSelectDialog'));
+		let selected_proclasses = new Set();
+
+		function render_proclass_selector(proclass_type) {
+			function _internal() {
+				let proclass_table = $("#proclassSelectDialog tbody");
+				let search_term = $("#proclassSearch").val().toLowerCase();
+
+				proclass_table.html("");
+				let filtered_list = proclass_cache[proclass_type].filter(pc =>
+					pc.name.toLowerCase().includes(search_term) ||
+					pc.proclass_id.toString().includes(search_term)
+				);
+
+				for (let proclass of filtered_list) {
+					let tr = $("<tr></tr>");
+
+					// Checkbox column
+					let checkbox = $(`<input type="checkbox" class="form-check-input proclass-checkbox" data-proclass-id="${proclass.proclass_id}">`);
+					if (selected_proclasses.has(proclass.proclass_id)) {
+						checkbox.prop('checked', true);
+					}
+					tr.append($("<td></td>").append(checkbox));
+
+					tr.append($("<td></td>").text(proclass.proclass_id));
+					tr.append($("<td></td>").text(proclass.name));
+					tr.append($("<td></td>").text(`${proclass.ac_cnt} / ${proclass.total_cnt}`));
+
+					if (proclass.acct_id != null) {
+						tr.append($("<td></td>").text(proclass.creator_name));
+					} else {
+						tr.append($("<td></td>").text("Official"));
+					}
+
+					proclass_table.append(tr);
+
+					// Store full data for later use
+					proclass_full_data[proclass.proclass_id] = proclass;
+				}
+
+				// Update checkbox event listeners
+				$(".proclass-checkbox").on('change', function() {
+					let proclass_id = parseInt($(this).data('proclass-id'));
+					if ($(this).is(':checked')) {
+						selected_proclasses.add(proclass_id);
+					} else {
+						selected_proclasses.delete(proclass_id);
+					}
+					updateSelectedCount();
+				});
+			}
+
+			if (proclass_cache[proclass_type] === undefined) {
+				$.post(`{{ url('/be/proset') }}`, {
+					"reqtype": "listproclass",
+					"proclass_type": proclass_type,
+				}, function (e) {
+					let result = JSON.parse(e);
+					if (result.status === 'S') {
+						proclass_cache[proclass_type] = result.data;
+						_internal();
+					} else {
+						index.show_notify_dialog('載入 ProClass 失敗: ' + result.data, index.DIALOG_TYPE.error);
+					}
+				});
+			} else {
+				_internal();
+			}
+		}
+
+		function updateSelectedCount() {
+			$("#selectedProclassCount").text(`已選擇 ${selected_proclasses.size} 個 ProClass`);
+		}
+
+		// Select all checkbox functionality
+		$("#selectAllProclass").on('change', function() {
+			let isChecked = $(this).is(':checked');
+			$(".proclass-checkbox").each(function() {
+				$(this).prop('checked', isChecked);
+				let proclass_id = parseInt($(this).data('proclass-id'));
+				if (isChecked) {
+					selected_proclasses.add(proclass_id);
+				} else {
+					selected_proclasses.delete(proclass_id);
+				}
+			});
+			updateSelectedCount();
+		});
+
+		$("#selectFromProclass").on('click', function() {
+			selected_proclasses.clear();
+			proclass_cache = {};
+			proclass_full_data = {};
+			render_proclass_selector("official");
+			document.querySelectorAll('.proclass-tab').forEach(el => el.classList.remove('active'));
+			document.querySelector('.proclass-tab[data-type="official"]').classList.add('active');
+			updateSelectedCount();
+			$("#selectAllProclass").prop('checked', false);
+			proclass_modal.show();
+		});
+
+		document.querySelectorAll('.proclass-tab').forEach(el => {
+			el.addEventListener('click', function(e) {
+				document.querySelectorAll('.proclass-tab').forEach(el => el.classList.remove('active'));
+				el.classList.add('active');
+				let proclass_type = el.getAttribute('data-type');
+				render_proclass_selector(proclass_type);
+				$("#selectAllProclass").prop('checked', false);
+			});
+		});
+
+		$("#proclassSearch").on('input', function() {
+			let active_tab = document.querySelector('.proclass-tab.active');
+			let proclass_type = active_tab ? active_tab.getAttribute('data-type') : 'official';
+			render_proclass_selector(proclass_type);
+			$("#selectAllProclass").prop('checked', false);
+		});
+
+		$("#confirmProclassSelection").on('click', function() {
+			if (selected_proclasses.size === 0) {
+				index.show_notify_dialog('請至少選擇一個 ProClass', index.DIALOG_TYPE.warning);
+				return;
+			}
+
+			// Collect all problem IDs from selected ProClasses
+			let all_pro_ids = new Set();
+
+			for (let proclass_id of selected_proclasses) {
+				// Get full data from cache
+				if (proclass_full_data[proclass_id] && proclass_full_data[proclass_id].list) {
+					proclass_full_data[proclass_id].list.forEach(pro_id => all_pro_ids.add(pro_id));
+				}
+			}
+
+			if (all_pro_ids.size > 0) {
+				let pro_id_string = Array.from(all_pro_ids).sort((a, b) => a - b).join(',');
+				$("#proSet").val(pro_id_string);
+				proclass_modal.hide();
+				index.show_notify_dialog(`已選擇 ${all_pro_ids.size} 個題目`, index.DIALOG_TYPE.success);
+			} else {
+				index.show_notify_dialog('選擇的 ProClass 沒有包含任何題目', index.DIALOG_TYPE.warning);
+			}
+		});
     }
 </script>
 {% end %}
 
 {% block content %}
 {% from services.pro import ProConst %}
+
+<!-- ProClass Selection Modal -->
+<div class="modal fade" id="proclassSelectDialog" tabindex="-1" aria-hidden="true">
+<div class="modal-dialog modal-dialog-scrollable modal-xl">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">選擇 ProClass</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <input type="text" class="form-control" id="proclassSearch" placeholder="搜尋 ProClass 名稱或 ID...">
+            </div>
+            <ul class="nav nav-tabs mb-3">
+                <li class="nav-item">
+                    <a class="nav-link proclass-tab active" data-type="official">Official</a>
+                </li>
+            </ul>
+            <div class="alert alert-info" role="alert">
+                <span id="selectedProclassCount">已選擇 0 個 ProClass</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th scope="col">
+                                <input type="checkbox" class="form-check-input" id="selectAllProclass" title="全選/取消全選">
+                            </th>
+                            <th scope="col">#</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Progress</th>
+                            <th scope="col">Creator</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary" id="confirmProclassSelection">確認選擇</button>
+        </div>
+    </div>
+</div>
+</div>
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
 
@@ -111,29 +448,53 @@
 						<label for="#name" class="form-label">Problem ID Set</label>
 						<div class="input-group mb-1">
 							<input type="text" class="form-control" placeholder="pro id set" id="proSet">
+							<button class="btn btn-info" id="selectFromProclass" type="button">
+								📁 從 ProClass 選擇
+							</button>
 							<button class="btn btn-primary" id="addProSet" type="button">Add</button>
 						</div>
+						<small class="form-text text-muted">輸入題目 ID（用逗號分隔），或點擊「從 ProClass 選擇」來批量添加題目</small>
 					</form>
 
 					<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
 					<thead>
 						<tr>
-							<th scope="col">Pro Order</th>
-							<th scope="col">Problem Set</th>
+							<th scope="col">Set Order</th>
+							<th scope="col">Problem ID</th>
+							<th scope="col">Problem Name</th>
 							<th scope="col">Operation</th>
 						</tr>
 					</thead>
 					<tbody>
-					{% for id, pro_set in enumerate(pro_sets) %}
+					{% for set_idx, pro_info_list in enumerate(pro_sets_with_info) %}
+						<!-- Problem Set Header Row -->
 						<tr>
-                            <th scope="row">{{ id + 1 }}</th>
-                            <td>
-                                {{ ','.join(str(pro_id) for pro_id in pro_set) }}
-                            </td>
+							<th scope="row" rowspan="{{ len(pro_info_list) + 2 }}">{{ set_idx + 1 }}</th>
+							<td colspan="3">
+								<strong>Problem Set {{ set_idx + 1 }}</strong>
+								<button class="btn btn-sm btn-primary ms-2 moveUp" pro_set_id="{{ set_idx }}">Move Up</button>
+								<button class="btn btn-sm btn-primary ms-1 moveDown" pro_set_id="{{ set_idx }}">Move Down</button>
+								<button class="btn btn-sm btn-warning ms-1 remove" pro_set_id="{{ set_idx }}">Remove Set</button>
+								<button class="btn btn-sm btn-info ms-1 reallocate-pro-set" pro_set_id="{{ set_idx }}">Reallocate Set</button>
+							</td>
+						</tr>
+						<!-- Problems in this set -->
+						{% for pro in pro_info_list %}
+						<tr>
+							<td>{{ pro.pro_id }}</td>
+							<td>{{ pro.name }}</td>
 							<td>
-								<button class="btn btn-primary me-2 moveUp" pro_set_id="{{ id }}">Move Up</button>
-                                <button class="btn btn-primary me-2 moveDown" pro_set_id="{{ id }}">Move Down</button>
-								<button class="btn btn-warning me-2 remove" pro_set_id="{{ id }}">Remove</button>
+								<button class="btn btn-sm btn-danger remove-from-set" pro_set_idx="{{ set_idx }}" pro_id="{{ pro.pro_id }}">Remove</button>
+							</td>
+						</tr>
+						{% end %}
+						<!-- Add problem row -->
+						<tr>
+							<td colspan="2">
+								<input type="text" class="form-control form-control-sm add-pro-input" placeholder="Enter Problem IDs" data-set-idx="{{ set_idx }}">
+							</td>
+							<td>
+								<button class="btn btn-sm btn-success add-to-set" pro_set_id="{{ set_idx }}">Add to Set</button>
 							</td>
 						</tr>
 					{% end %}

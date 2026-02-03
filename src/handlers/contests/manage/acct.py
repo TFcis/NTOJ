@@ -1,13 +1,10 @@
 from handlers.base import reqenv, RequestHandler, ActionDispatcher
 from handlers.contests.base import contest_require_permission
-from services.contests import ContestService, UserStatus
+from services.contests import ContestService, UserStatus, ContestMode
 from services.user import UserService
 from utils.numeric import parse_str_to_list
 
-from ipaddress import IPv4Address, AddressValueError
-
 contest_manage_acct_dispatcher = ActionDispatcher()
-
 
 class ContestManageAcctHandler(RequestHandler):
     @reqenv
@@ -26,10 +23,9 @@ class ContestManageAcctHandler(RequestHandler):
             "contests/manage/acct",
             page="acct",
             contest_id=self.contest.contest_id,
+            contest=self.contest,
             acct_list=acct_list,
             admin_list=admin_list,
-            start_ip=str(self.contest.start_ip),
-            end_ip=str(self.contest.end_ip)
         )
 
     @contest_manage_acct_dispatcher.action("add")
@@ -56,6 +52,9 @@ class ContestManageAcctHandler(RequestHandler):
             self.acct, self.contest, userlist_updated=True
         )
 
+        if self.contest.contest_mode == ContestMode.RANDOM_SET and status != UserStatus.ADMIN:
+            await ContestService.inst.allocate_new_accounts(self.contest)
+
         if list_type == "normal" or (
             list_type == "admin" and not self.contest.hide_admin
         ):
@@ -80,6 +79,10 @@ class ContestManageAcctHandler(RequestHandler):
             return self.error(("Enoext", "User is not in contest"))
 
         self.contest.user_list.pop(acct_id)
+
+        if self.contest.contest_mode == ContestMode.RANDOM_SET and acct_id in self.contest.acct_pro_list:
+            self.contest.acct_pro_list.pop(acct_id)
+
         await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
@@ -120,6 +123,9 @@ class ContestManageAcctHandler(RequestHandler):
             self.acct, self.contest, userlist_updated=True
         )
 
+        if self.contest.contest_mode == ContestMode.RANDOM_SET and status != UserStatus.ADMIN:
+            await ContestService.inst.allocate_new_accounts(self.contest)
+
         if list_type == "normal" or (
             list_type == "admin" and not self.contest.hide_admin
         ):
@@ -144,6 +150,8 @@ class ContestManageAcctHandler(RequestHandler):
                 continue
             try:
                 self.contest.user_list.pop(a_id)
+                if self.contest.contest_mode == ContestMode.RANDOM_SET and a_id in self.contest.acct_pro_list:
+                    self.contest.acct_pro_list.pop(a_id)
             except KeyError:
                 continue
 
@@ -160,29 +168,63 @@ class ContestManageAcctHandler(RequestHandler):
             ("S", f"Accounts(#{acct_list} successfully removed from user list.")
         )
 
-    @contest_manage_acct_dispatcher.action("update_ip")
-    async def update_ip_action(self):
-        start_ip = self.get_argument("start_ip")
-        end_ip = self.get_argument("end_ip")
+    @contest_manage_acct_dispatcher.action("reallocate_account_pro_set")
+    async def reallocate_account_pro_set_action(self):
+        acct_id = int(self.get_argument("acct_id"))
+        pro_set_idx = int(self.get_argument("pro_set_idx"))
+        if self.contest.is_running():
+            return self.error(("Etime", "Cannot reallocate problem set during contest running"))
 
-        try:
-            start_ip = IPv4Address(start_ip)
-            end_ip = IPv4Address(end_ip)
-        except AddressValueError:
-            return self.error(("Eparam", "Invalid IP address format."))
+        err, _ = await ContestService.inst.reallocate_randomset_account_pro_set(
+            self.contest, acct_id, pro_set_idx
+        )
+        if err:
+            return self.error(err)
 
-        if start_ip > end_ip:
-            return self.error(('Eparam', 'Invalid IP range'))
+        return self.error(("S", f"Successfully reallocated problem set {pro_set_idx} for account {acct_id}."))
 
-        self.contest.start_ip = start_ip
-        self.contest.end_ip = end_ip
-        await ContestService.inst.update_ip(
+    @contest_manage_acct_dispatcher.action("reallocate_all_accounts_pro_set")
+    async def reallocate_all_accounts_pro_set_action(self):
+        if self.contest.is_running():
+            return self.error(("Etime", "Cannot reallocate problem set during contest running"))
+
+        pro_set_idx = int(self.get_argument("pro_set_idx"))
+
+        err, _ = await ContestService.inst.reallocate_randomset_all_accounts_pro_set(
+            self.contest, pro_set_idx
+        )
+        if err:
+            return self.error(err)
+
+        return self.error(("S", f"Successfully reallocated problem set {pro_set_idx} for all accounts."))
+
+    @contest_manage_acct_dispatcher.action("reallocate_account_all_pro_sets")
+    async def reallocate_account_all_pro_sets_action(self):
+        if self.contest.is_running():
+            return self.error(("Etime", "Cannot reallocate problem set during contest running"))
+
+        acct_id = int(self.get_argument("acct_id"))
+
+        err, _ = await ContestService.inst.reallocate_randomset_account_all_pro_sets(
+            self.contest, acct_id
+        )
+        if err:
+            return self.error(err)
+
+        return self.error(("S", f"Successfully reallocated all problem sets for account {acct_id}."))
+
+    @contest_manage_acct_dispatcher.action("reallocate_all_accounts_all_pro_sets")
+    async def reallocate_all_accounts_all_pro_sets_action(self):
+        if self.contest.is_running():
+            return self.error(("Etime", "Cannot reallocate problem set during contest running"))
+
+        err, _ = await ContestService.inst.reallocate_randomset_all_accounts_all_pro_sets(
             self.contest
         )
+        if err:
+            return self.error(err)
 
-        return self.error(
-            ("S", f"Contest IP range successfully updated.")
-        )
+        return self.error(("S", "Successfully reallocated all problem sets for all accounts."))
 
     @reqenv
     @contest_require_permission("admin")

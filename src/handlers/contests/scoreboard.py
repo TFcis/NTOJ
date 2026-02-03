@@ -108,7 +108,7 @@ class ContestScoreboardHandler(RequestHandler):
         contest = self.contest
         acct = self.acct
         if contest.is_member(acct) and not contest.is_admin(acct) and not contest.is_randomset_pro_allocated(acct):
-            return self.error(('Etodo', 'TODO: Assign problem set for out of range IP not implemented. Call Yushiuan9499.'))
+            return self.error(('Enopro', 'Problem set not allocated yet. Please contact admin.'))
 
         if self.contest.is_public_scoreboard:
             acct_list = [acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.APPROVED]
@@ -125,7 +125,7 @@ class ContestScoreboardHandler(RequestHandler):
         for acct_cnt, acct_id in enumerate(acct_list):
             _, acct = await UserService.inst.info_acct(acct_id)
             assert acct
-            prolist = self.contest.get_randomset_prolist_from_acct_by_ip(acct)
+            prolist = self.contest.get_randomset_prolist(acct)
             if prolist is None:
                 continue
 

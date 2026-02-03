@@ -158,6 +158,7 @@ class ProsetHandler(RequestHandler):
 
                 proclass["ac_cnt"] = ac_cnt
                 proclass["total_cnt"] = len(p["list"])
+                proclass["list"] = p["list"]  # Include problem list for frontend use
 
             self.error(("S", proclass_list))
 
@@ -182,12 +183,17 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
                 self.finish(PERMISSION_DENIED_ERROR[1])
                 return
 
-            if self.contest.contest_mode == ContestMode.RANDOM_SET:
-                contest_prolist = self.contest.get_randomset_prolist_from_acct_by_ip(self.acct)
+            if self.contest.contest_mode == ContestMode.RANDOM_SET and not self.contest.is_admin(self.acct):
+                contest_prolist = self.contest.get_randomset_prolist(self.acct)
                 if contest_prolist is None:
-                    return self.error(('Etodo', 'TODO: Assign problem set for out of range IP not implemented. Call Yushiuan9499.'))
+                    self.set_status(500)
+                    self.finish("Problem set not allocated yet. Please contact admin.")
+                    return
+
                 if pro_id not in contest_prolist:
-                    return self.error(("Enoext", "Problem not in your problem set"))
+                    self.set_status(403)
+                    self.finish(PERMISSION_DENIED_ERROR[1])
+                    return
 
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
         else:
@@ -258,10 +264,10 @@ class ProHandler(RequestHandler):
             if not self.contest.is_admin(self.acct) and not self.contest.is_running():
                 return self.error(PERMISSION_DENIED_ERROR)
 
-            if self.contest.contest_mode == ContestMode.RANDOM_SET:
-                contest_prolist = self.contest.get_randomset_prolist_from_acct_by_ip(self.acct)
+            if self.contest.contest_mode == ContestMode.RANDOM_SET and not self.contest.is_admin(self.acct):
+                contest_prolist = self.contest.get_randomset_prolist(self.acct)
                 if contest_prolist is None:
-                    return self.error(('Etodo', 'TODO: Assign problem set for out of range IP not implemented. Call Yushiuan9499.'))
+                    return self.error(('Enopro', 'Problem set not allocated yet. Please contact admin.'))
                 if pro_id not in contest_prolist:
                     return self.error(PERMISSION_DENIED_ERROR)
 

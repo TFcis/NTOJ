@@ -91,13 +91,8 @@ class BatchSubmitHandler(RequestHandler):
         except ValueError:
             return self.error(("Ecomp", "The compiler is not allowed"))
 
-        if hasattr(self, "contest") and self.contest:
+        if self.contest:
             priority = ChalConst.CONTEST_PRI
-            if not self.contest.is_running() and not self.contest.is_admin(self.acct):
-                return self.error(("Eacces", "Permission denied"))
-
-            if not self.contest.is_pro(pro_id):
-                return self.error(("Enoext", "Problem not in contest"))
         else:
             priority = ChalConst.NORMAL_PRI
             if self.acct.is_kernel():
