@@ -885,11 +885,10 @@ class ContestRegistrationPasswordModeTest(AsyncTest):
 
 class ContestProblemPermissionTest(AsyncTest):
     async def main(self):
-        for mail, password in (('admin@test', 'testtest'), ('test1@test', 'test'), ('contest1@test', 'test')):
+        for mail, password in (('test1@test', 'test'), ('contest1@test', 'test')):
             with AccountContext(mail, password) as user_session:
                 for pro_id in range(6, 11 + 1): # 5 already public after contest
                     res = user_session.get(f'pro/{pro_id}')
-                    print(res.text)
                     self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
                     res = user_session.get(url='', full_url=f'http://localhost:5501/pro/{pro_id}/cont.pdf')
                     self.assertEqual(res.status_code, 403)
@@ -901,3 +900,20 @@ class ContestProblemPermissionTest(AsyncTest):
                         'compiler_type': Compiler.GPP,
                     })
                     self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+        with AccountContext('admin@test', 'testtest') as user_session:
+            for pro_id in range(6, 11 + 1): # 5 already public after contest
+                res = user_session.get(f'pro/{pro_id}')
+                self.assertNotIn('Permission denied', res.text)
+                res = user_session.get(url='', full_url=f'http://localhost:5501/pro/{pro_id}/cont.pdf')
+                self.assertEqual(res.status_code, 200)
+                self.assertEqual(res.headers['Content-Type'], 'application/pdf')
+                res = user_session.post('submit', data={
+                    'reqtype': 'submit',
+                    'pro_id': pro_id,
+                    'code': 'code',
+                    'compiler_type': Compiler.GPP,
+                })
+                self.assertAPIReturnSuccess(res.text)
+
+
