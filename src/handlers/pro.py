@@ -316,17 +316,16 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
             if self.acct.is_kernel():
                 allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
-        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
+        err, _ = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
-            self.set_status(404)
+            if err[0] == 'Enoext':
+                self.set_status(404)
+            elif err[0] == 'Eacces':
+                self.set_status(403)
+            else:
+                self.set_status(500)
             self.finish(err[1])
             return
-
-        if pro.status == ProConst.STATUS_CONTEST:
-            if not (self.contest.is_running() or self.contest.is_admin(self.acct)):
-                self.set_status(403)
-                self.finish(PERMISSION_DENIED_ERROR[1])
-                return
 
         if path.endswith("pdf"):
             self.set_header("Pragma", "public")

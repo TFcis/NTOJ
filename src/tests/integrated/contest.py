@@ -760,3 +760,22 @@ class ContestTest(AsyncTest):
         # test scoreboard, challist
         # hide_admin: bool = True
         # test rechal
+
+class ContestProblemPermissionTest(AsyncTest):
+    async def main(self):
+        for mail, password in (('admin@test', 'testtest'), ('test1@test', 'test'), ('contest1@test', 'test')):
+            with AccountContext(mail, password) as user_session:
+                for pro_id in range(6, 11 + 1): # 5 already public after contest
+                    res = user_session.get(f'pro/{pro_id}')
+                    print(res.text)
+                    self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+                    res = user_session.get(url='', full_url=f'http://localhost:5501/pro/{pro_id}/cont.pdf')
+                    self.assertEqual(res.status_code, 403)
+                    self.assertIn('Permission denied', res.text)
+                    res = user_session.post('submit', data={
+                        'reqtype': 'submit',
+                        'pro_id': pro_id,
+                        'code': 'code',
+                        'compiler_type': Compiler.GPP,
+                    })
+                    self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
