@@ -165,6 +165,25 @@
                 }
             });
         });
+        $("#download").on('click', function(e) {
+            let url = '';
+            {% if chal.contest_id == 0 %}
+                url = `{{ url(f'/be/chal/{ chal.chal_id }') }}`;
+            {% else %}
+                url = `{{ url(f'/be/contests/{ chal.contest_id }/chal/{ chal.chal_id }') }}`;
+            {% end %}
+            const form = $("<form>")
+                .attr("method", "POST")
+                .attr("action", url);
+
+            form.append(
+                $("<input>").attr("type", "hidden").attr("name", "reqtype").attr("value", "download_output"),
+            );
+
+            $("body").append(form);
+            form.submit();
+            form.remove();
+        });
         {% end %}
 
         let code_txt = '';
@@ -240,6 +259,7 @@
     {% if rechal == True %}
         <button id="rechal" class="btn btn-warning">Rechallenge</button>
         <button id="reject" class="btn btn-danger">Reject</button>
+        <button id="download" class="btn btn-primary">Download User Answer Zip</button>
     {% end %}
     </div>
 

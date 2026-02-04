@@ -1,3 +1,4 @@
+import os
 import decimal
 import json
 from dataclasses import asdict, is_dataclass
@@ -525,6 +526,33 @@ class ChalHandler(RequestHandler):
         self.path_args = [chal_id]  # Store for action methods
         reqtype = self.get_argument("reqtype")
         return await chal_dispatcher.dispatch(self, reqtype)
+
+    @chal_dispatcher.action("download_output")
+    async def download_output(self):
+        chal_id = (
+            self.path_args[0]
+            if hasattr(self, "path_args")
+            else int(self.get_argument("chal_id"))
+        )
+
+        output_zip_path = f'code/{chal_id}/output.zip'
+        if not os.path.exists(output_zip_path):
+            return self.error(("Enoext", "Output file not found"))
+
+        self.set_header("Content-Type", "application/octet-stream")
+        self.set_header("Content-Disposition", 'attachment; filename="output.zip"')
+        self.set_header("Content-Length", os.path.getsize(output_zip_path))
+        with open(output_zip_path, "rb") as f:
+            try:
+                while True:
+                    buffer = f.read(65536)
+                    if buffer:
+                        self.write(buffer)
+                    else:
+                        self.finish()
+                        return
+            except Exception:
+                self.error(("Eunk", "Unknown error"))
 
     @chal_dispatcher.action("reject")
     async def reject_challenge(self):
