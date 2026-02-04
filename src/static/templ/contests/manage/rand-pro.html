@@ -38,7 +38,7 @@
             let rows = tbody.querySelectorAll("tr");
             if (ord1 < 0 || ord2 < 0 || ord1 >= rows.length || ord2 >= rows.length) return;
             if (ord1 === ord2) return;
-            
+
             // Swap contents of Problem Set & Operation columns
             let row1 = rows[ord1];
             let row2 = rows[ord2];
@@ -81,16 +81,6 @@
 			el.addEventListener('click', () => post_func('remove_set', $(el).attr('pro_set_id')));
 		});
 
-        $("button.publicall").on('click', function(e) {
-            document.querySelectorAll('button.public').forEach(el => {
-                let pro_id = $(el).attr('pro_id');
-                $.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
-                    reqtype: "public",
-                    pro_id: pro_id
-                });
-            });
-        });
-
 		$("#addProSet").on('click', () => post_func('add_set', $("#proSet").val(), () => $("#proSet").val('')));
 
         // Send new ids order as csv to backend
@@ -124,11 +114,6 @@
 							<button class="btn btn-primary" id="addProSet" type="button">Add</button>
 						</div>
 					</form>
-
-                    <button
-                        class="btn btn-danger me-2 publicall"
-                        {% if not contest.is_end() %} disabled {% end %}
-                    >Public All Problem</button>
 
 					<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
 					<thead>

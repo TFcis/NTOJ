@@ -34,20 +34,6 @@
 			el.addEventListener('click', () => post_func('rechal', $(el).attr('pro_id')));
 		});
 
-        document.querySelectorAll('button.public').forEach(el => {
-            el.addEventListener('click', () => post_func('public', $(el).attr('pro_id')));
-        });
-
-        $("button.publicall").on('click', function(e) {
-            document.querySelectorAll('button.public').forEach(el => {
-                let pro_id = $(el).attr('pro_id');
-                $.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
-                    reqtype: "public",
-                    pro_id: pro_id
-                });
-            });
-        });
-
 		$("#addPro").on('click', () => post_func('add', $("#proId").val(), () => $("#proID").val('')));
 		$("#removePro").on('click', () => post_func('remove', $("#proId").val(), () => $("#proID").val('')));
 		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), () => $("#proList").val('')));
@@ -87,11 +73,6 @@
 						</div>
 					</form>
 
-                    <button
-                        class="btn btn-danger me-2 publicall"
-                        {% if not contest.is_end() %} disabled {% end %}
-                    >Public All Problem</button>
-
 					<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
 					<thead>
 						<tr>
@@ -108,11 +89,6 @@
 							<td>
 								<button class="btn btn-warning me-2 remove" pro_id="{{ pro.pro_id }}">Remove</button>
 								<button class="btn btn-danger me-2 rechal" pro_id="{{ pro.pro_id }}">Rechallenge</button>
-                                <button
-                                    class="btn btn-danger me-2 public"
-                                    pro_id="{{ pro.pro_id }}"
-                                    {% if not contest.is_end() or pro.status != ProConst.STATUS_CONTEST %} disabled {% end %}
-                                >Public Problem</button>
 							</td>
 						</tr>
 					{% end %}
