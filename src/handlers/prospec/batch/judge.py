@@ -54,14 +54,6 @@ class BatchJudgeHandler(RequestHandler):
                 filter(lambda compiler: int(compiler) in Compiler._value2member_map_, allow_compilers)
             ))
 
-            chalmeta = ''
-            if checker_type == CheckerType.IOREDIR:
-                chalmeta = self.get_argument('chalmeta')
-                try:
-                    json.loads(chalmeta)
-                except json.JSONDecodeError:
-                    return self.error(('Econf', 'Challenge metadata json syntax error'))
-
             err, pro = await ProService.inst.get_pro(pro_id, ALLOW_STATUSES)
             if err:
                 return self.error(err)
@@ -114,7 +106,7 @@ class BatchJudgeHandler(RequestHandler):
             batch_config.summary_compiler = summary_compiler
             batch_config.summary_compile_args = summary_compile_args
             batch_config.allow_compilers = {int(c) for c in allow_compilers}
-            batch_config.chalmeta = chalmeta
+            batch_config.chalmeta = ''
 
             config.rate_precision = rate_precision
 

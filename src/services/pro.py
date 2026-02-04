@@ -18,12 +18,9 @@ class CheckerType(enum.IntEnum):
     DIFF_FLOAT9 = 5
     CMS_TPS_TESTLIB = 6
     STD_TESTLIB = 7
-    IOREDIR = 8
-    TOJ = 9
-
     @classmethod
     def need_build_checkers(cls):
-        return [cls.CMS_TPS_TESTLIB, cls.STD_TESTLIB, cls.IOREDIR, cls.TOJ]
+        return (cls.CMS_TPS_TESTLIB, cls.STD_TESTLIB)
 
 class SummaryType(enum.IntEnum):
     GROUPMIN = 1
@@ -61,7 +58,6 @@ class ProConst:
         "diff": CheckerType.DIFF,
         "diff-strict": CheckerType.DIFF_STRICT,
         "diff-float": CheckerType.DIFF_FLOAT6,
-        "ioredir": CheckerType.IOREDIR,
         "cms": CheckerType.CMS_TPS_TESTLIB,
     }
 
@@ -74,8 +70,6 @@ class ProConst:
         CheckerType.DIFF_FLOAT9: "diff-float, max error 1e-9",
         CheckerType.CMS_TPS_TESTLIB: "CMS/TPS Testlib",
         CheckerType.STD_TESTLIB: "Standard Testlib (Polygon)",
-        CheckerType.IOREDIR: "IORedir (WIP)",
-        CheckerType.TOJ: "TOJ (WIP)",
     }
 
     SUMMARY_TYPE_2_STR = {

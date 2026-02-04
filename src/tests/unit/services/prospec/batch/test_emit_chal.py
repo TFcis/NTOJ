@@ -257,38 +257,6 @@ class TestBatchProblemSpecEmitChal(unittest.IsolatedAsyncioTestCase):
 
     @patch('services.judge.JudgeServerClusterService')
     @patch('os.path.isfile')
-    async def test_emit_chal_with_custom_checker(self, mock_isfile, mock_judge_service):
-        """Test emit_chal with custom checker configuration."""
-        mock_isfile.return_value = True
-        mock_judge_instance = MagicMock()
-        mock_judge_instance.send = AsyncMock()
-        mock_judge_service.inst = mock_judge_instance
-
-        # Update config with custom checker
-        self.batch_config.checker_type = CheckerType.TOJ
-        self.batch_config.checker_compiler = Compiler.GPP
-        self.batch_config.checker_compile_args = '-O2 -std=c++17'
-
-        await self.spec.emit_chal(
-            db=self.fake_db,
-            rs=self.fake_rs,
-            chal_id=100,
-            pro_id=1,
-            acct_id=42,
-            contest_id=0,
-            compiler_type=Compiler.GPP,
-            config=self.problem_config,
-            priority=ChalConst.NORMAL_PRI,
-        )
-
-        send_args = mock_judge_instance.send.call_args[0][0]
-
-        self.assertEqual(send_args['checker_type'], CheckerType.TOJ)
-        self.assertEqual(send_args['checker_compiler'], Compiler.GPP)
-        self.assertEqual(send_args['checker_compile_args'], '-O2 -std=c++17')
-
-    @patch('services.judge.JudgeServerClusterService')
-    @patch('os.path.isfile')
     async def test_emit_chal_with_skip_nonac(self, mock_isfile, mock_judge_service):
         """Test emit_chal with skip_nonac enabled."""
         mock_isfile.return_value = True
