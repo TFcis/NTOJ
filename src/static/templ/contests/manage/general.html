@@ -52,7 +52,6 @@
             let freeze_period = parseInt($("#freezeScoreboardPeriod").val());
             let hide_admin = $("#hideAdmin").is(":checked");
             let public_scoreboard = $("#publicScoreboard").is(":checked");
-            let allow_view_other_page = $("#allowViewOtherPage").is(":checked");
 
             // Allow Compilers
             let allow_compilers = [];
@@ -112,7 +111,6 @@
 
                 allow_compilers: allow_compilers,
                 is_public_scoreboard: public_scoreboard,
-                allow_view_other_page: allow_view_other_page,
                 hide_admin: hide_admin,
                 submission_cd_time: submit_cd_time,
                 freeze_scoreboard_period: freeze_period,
@@ -257,11 +255,6 @@
         <div class="mb-1 form-check">
             <label for="publicScoreboard" class="form-check-label">Public Scoreboard</label>
             <input type="checkbox" id="publicScoreboard" class="form-check-input" {% if contest.is_public_scoreboard %} checked {% end %}>
-        </div>
-
-        <div class="mb-1 form-check">
-            <label for="allowViewOtherPage" class="form-check-label">Allow View Other Page During Contest (WIP)</label>
-            <input type="checkbox" id="allowViewOtherPage" class="form-check-input" {% if contest.allow_view_other_page %} checked {% end %}>
         </div>
 
         <div class="mb-1">
