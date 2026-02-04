@@ -37,6 +37,7 @@
                     'pro_id': pro_id,
                     'pack_token': token,
                 }, function(res) {
+                    index.remove_progress_bar();
                     res = JSON.parse(res);
                     if (res.status == 'S') {
                         index.show_notify_dialog('Update problem by uploading package successfully', index.DIALOG_TYPE.success);
@@ -58,7 +59,6 @@
                 pack.send(token, files[0]).done(function() {
                     index.update_progress_bar_progress(100);
                     index.update_progress_bar_title('Decompressing...');
-                    index.remove_progress_bar();
                     _update(token);
                 }).progress(function(prog) {
                     index.update_progress_bar_progress(prog * 100);
