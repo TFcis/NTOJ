@@ -19,7 +19,7 @@ from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
 from .chal import ChalTest, ChalListTest
-from .contest import ContestTest, ContestRegistrationPasswordModeTest, RandomContestTest
+from .contest import ContestTest, ContestRegistrationPasswordModeTest, RandomContestTest,  ContestProblemPermissionTest
 from .proclass import ProClassTest
 from .submit import SubmitTest
 from .holiday import HolidayTest
@@ -192,6 +192,7 @@ class IntegratedTest(AsyncTest):
             HolidayTest().main,
             RandomContestTest().main,
             ContestRegistrationPasswordModeTest().main,
+            ContestProblemPermissionTest().main,
         ]
         for f in s:
             r = await f()
