@@ -178,8 +178,6 @@ class TestBatchProblemSpecAddChal(unittest.IsolatedAsyncioTestCase):
             (Compiler.GCC, 'c'),
             (Compiler.GPP, 'cpp'),
             (Compiler.PYTHON3, 'py'),
-            (Compiler.RUST, 'rs'),
-            (Compiler.JAVA, 'java'),
         ]
 
         for idx, (compiler, expected_ext) in enumerate(test_cases):

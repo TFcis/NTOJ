@@ -194,7 +194,7 @@ class TestBatchProblemSpecToJson(unittest.TestCase):
             summary_compiler=Compiler.PYTHON3,
             summary_compile_args='',
             has_grader=False,
-            allow_compilers={Compiler.GPP, Compiler.RUST},
+            allow_compilers={Compiler.GPP},
         )
 
         result = self.spec.to_json(config)

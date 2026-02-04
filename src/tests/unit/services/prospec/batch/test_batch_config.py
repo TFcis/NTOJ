@@ -85,7 +85,6 @@ class TestBatchConfig(unittest.TestCase):
         # Test set contains
         self.assertIn(Compiler.GPP, config.allow_compilers)
         self.assertIn(Compiler.PYTHON3, config.allow_compilers)
-        self.assertNotIn(Compiler.RUST, config.allow_compilers)
 
         # Test set length
         self.assertEqual(len(config.allow_compilers), 2)
