@@ -85,13 +85,11 @@
   <!-- style="background-color: #314783;" -->
   <nav class="navbar navbar-expand-lg">
     <div id="index-navlist" class="container-fluid">
-      {% import datetime %}
-      {% if datetime.datetime.now().month in (12, 1, 2) or (datetime.datetime.now().month == 11 and datetime.datetime.now().day >= 10) %}
-          <!-- nitrogen -->
-          <a class="navbar-brand" href="{{ url('/info/') }}"><img src="{{ url('/src/logo.png') }}" /></a>
+      {% if is_in_contest %}
+        <a class="navbar-brand" href="{{ url(f'/contests/{ contest_id }/info/') }}">NTOJ</a>
       {% else %}
-          <a class="navbar-brand" href="{{ url('/info/') }}">NTOJ</a>
-      {% else %}
+        <a class="navbar-brand" href="{{ url('/info/') }}">NTOJ</a>
+      {% end %}
 
       <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
         class="navbar-toggler" data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
@@ -149,8 +147,8 @@
   <div class="container-fluid" id="index-cont" style="min-height:100%;">
   </div>
 
-  <footer id="footer" class="text-muted py-3 me-3 position-fixed bottom-0 end-0">
-    <small>Developed By TOJ Dev Group @ <a href="https://github.com/TFcis/NTOJ/tree/tnfsh">Github</a></small>
+  <footer class="text-muted py-3 me-3 float-end">
+    <small>New TNFSH Online Judge - Go-Judge</small>
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.8/umd/popper.min.js"
