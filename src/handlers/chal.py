@@ -531,8 +531,8 @@ class ChalHandler(RequestHandler):
         reqtype = self.get_argument("reqtype")
         return await chal_dispatcher.dispatch(self, reqtype)
 
-    def _download(self, filename: str, filesize: int, content_type, reader: IO):
-        self.set_header("Content-Type", "application/octet-stream")
+    def _download(self, filename: str, filesize: int, content_type: str, reader: IO):
+        self.set_header("Content-Type", content_type)
         self.set_header("Content-Disposition", f'attachment; filename="{filename}"')
         self.set_header("Content-Length", filesize)
         try:
@@ -621,12 +621,16 @@ class ChalHandler(RequestHandler):
         )
 
         with zipfile.ZipFile(output_zip_path, 'r') as zipf:
-            with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
-                size = zipf.getinfo(f'{testdata_id}.ans').file_size
-                if size > 1024 * 1024:
-                    return self.error(("Eparam", "Output file too large to preview"))
+            try:
+                with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
+                    size = zipf.getinfo(f'{testdata_id}.ans').file_size
+                    if size > 1024 * 1024:
+                        return self.error(("Eparam", "Output file too large to preview"))
 
-                return self.error(("S", tornado.escape.xhtml_escape(ansf.read().decode('utf-8', errors='replace'))))
+                    return self.error(("S", tornado.escape.xhtml_escape(ansf.read().decode('utf-8', errors='replace'))))
+            except KeyError:
+                import sys
+                print(zipf.namelist(), file=sys.stderr)
 
     @chal_dispatcher.action("reject")
     async def reject_challenge(self):

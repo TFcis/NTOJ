@@ -72,7 +72,7 @@ jobs:
         id: get-judge-commit
         run: |
           set -euo pipefail
-          commit=$(git ls-remote "${JUDGE_REPO}" HEAD | cut -f1)
+          commit=$(git ls-remote "${JUDGE_REPO%%#*}" refs/heads/tnfsh | cut -f1)
           echo "judge_commit=$commit" >> $GITHUB_OUTPUT
 
       - name: Checkout
@@ -163,7 +163,7 @@ jobs:
               image: judge:${{ steps.get-judge-commit.outputs.judge_commit }}
               volumes:
                 - backend_problem:/problem:ro
-                - backend_code:/code:ro
+                - backend_code:/code:rw
           volumes:
             backend_static:
             backend_problem:
@@ -183,10 +183,14 @@ jobs:
         run: |
           set -o pipefail
           set +e
-          docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml run --rm -T "$TEST_SERVICE" bash -c "./runintegratedtest.sh"
+          docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml run -T "$TEST_SERVICE" bash -c "./runintegratedtest.sh"
           rc=$?
           echo "exit_code=$rc" >> $GITHUB_OUTPUT
         continue-on-error: true
+
+      - name: Show Judge log
+        run: |
+          docker compose -f docker-compose.dev.yml logs judge
 
       - name: Upload test reports
         if: always()
