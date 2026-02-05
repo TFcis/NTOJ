@@ -188,9 +188,9 @@ jobs:
           echo "exit_code=$rc" >> $GITHUB_OUTPUT
         continue-on-error: true
 
-      - name: Show Judge log
+      - name: Collect judge log
         run: |
-          docker compose -f docker-compose.dev.yml logs judge
+          docker compose -f docker-compose.dev.yml logs judge > judge.log
 
       - name: Upload test reports
         if: always()
@@ -198,6 +198,13 @@ jobs:
         with:
           name: integration-reports
           path: ${{ env.REPORTS_DIR_ON_RUNNER }}
+
+      - name: Upload judge log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: judge-log
+          path: judge.log
 
       - name: Tear down compose
         if: always()

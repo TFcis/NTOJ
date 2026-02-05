@@ -592,17 +592,20 @@ class ChalHandler(RequestHandler):
         )
 
         with zipfile.ZipFile(output_zip_path, 'r') as zipf:
-            with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
-                err = self._download(
-                    f'{testdata_id}.ans',
-                    zipf.getinfo(f'{testdata_id}.ans').file_size,
-                    "text/plain",
-                    ansf,
-                )
-                if err:
-                    self.error(err)
-                else:
-                    self.finish()
+            try:
+                with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
+                    err = self._download(
+                        f'{testdata_id}.ans',
+                        zipf.getinfo(f'{testdata_id}.ans').file_size,
+                        "text/plain",
+                        ansf,
+                    )
+                    if err:
+                        self.error(err)
+                    else:
+                        self.finish()
+            except KeyError:
+                self.error(("Enoext", "Specific output file not found"))
 
     @chal_dispatcher.action("preview_single_output")
     async def preview_single_output(self):
@@ -629,8 +632,7 @@ class ChalHandler(RequestHandler):
 
                     return self.error(("S", tornado.escape.xhtml_escape(ansf.read().decode('utf-8', errors='replace'))))
             except KeyError:
-                import sys
-                print(zipf.namelist(), file=sys.stderr)
+                self.error(("Enoext", "Specific output file not found"))
 
     @chal_dispatcher.action("reject")
     async def reject_challenge(self):

@@ -376,6 +376,11 @@ class ChalUserAnswerTest(AsyncTest):
             with zipfile.ZipFile('code/1/output.zip') as zf:
                 with zf.open(f'{testdata_id+1}.ans') as f:
                     self.assertEqual(res.content, f.read())
+            res = admin_session.post('chal/1', data={
+                'reqtype': 'download_single_output',
+                'testdata_id': 1110,
+            })
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Specific output file not found'))
 
             res = admin_session.post('chal/1', data={
                 'reqtype': 'preview_single_output',
@@ -384,6 +389,11 @@ class ChalUserAnswerTest(AsyncTest):
             with zipfile.ZipFile('code/1/output.zip') as zf:
                 with zf.open(f'{testdata_id+1}.ans', 'r') as f:
                     self.assertAPIReturnValue(res.text, ('S', f.read().decode()))
+            res = admin_session.post('chal/1', data={
+                'reqtype': 'preview_single_output',
+                'testdata_id': 1110,
+            })
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Specific output file not found'))
 
             chal_id = -1
             def callback():
@@ -393,7 +403,7 @@ class ChalUserAnswerTest(AsyncTest):
 
             self.assertNotEqual(chal_id, -1)
             self.assertTrue(os.path.exists(f'code/{chal_id}/output.zip'))
-            await asyncio.sleep(1) # HACK: ensure file is ready
+            await asyncio.sleep(2) # HACK: ensure file is ready
             res = admin_session.post(f'chal/{chal_id}', data={
                 'reqtype': 'preview_single_output',
                 'testdata_id': testdata_id,
@@ -410,7 +420,7 @@ class ChalUserAnswerTest(AsyncTest):
                 })
                 self.assertAPIReturnValue(res.text, ('S', chal_id))
             await self.wait_for_judge_finish(callback)
-            await asyncio.sleep(1) # HACK: ensure file is ready
+            await asyncio.sleep(2) # HACK: ensure file is ready
             res = admin_session.post(f'chal/{chal_id}', data={
                 'reqtype': 'preview_single_output',
                 'testdata_id': testdata_id,
@@ -423,7 +433,6 @@ class ChalUserAnswerTest(AsyncTest):
             res = user_session.post('code', data={
                 'chal_id': 10
             })
-            res = json.loads(res.text)
             self.assertAPIReturnSuccess(res.text)
             res = user_session.post('chal/10', data={
                 'reqtype': 'download_output'
