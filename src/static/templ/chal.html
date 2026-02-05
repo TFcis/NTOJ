@@ -145,15 +145,15 @@
                 }
             });
         });
+        let chal_be_url = '';
+        {% if chal.contest_id == 0 %}
+            chal_be_url = `{{ url(f'/be/chal/{ chal.chal_id }') }}`;
+        {% else %}
+            chal_be_url = `{{ url(f'/be/contests/{ chal.contest_id }/chal/{ chal.chal_id }') }}`;
+        {% end %}
         $('#reject').on('click', function(e) {
-            let url = '';
-            {% if chal.contest_id == 0 %}
-                url = `{{ url(f'/be/chal/{ chal.chal_id }') }}`;
-            {% else %}
-                url = `{{ url(f'/be/contests/{ chal.contest_id }/chal/{ chal.chal_id }') }}`;
-            {% end %}
             let reason = prompt('Reject Reason: ');
-            $.post(url, {
+            $.post(chal_be_url, {
                 'reqtype': 'reject',
                 'reason': reason,
             }, function(res) {
@@ -164,6 +164,73 @@
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
+        });
+        $("#download").on('click', function(e) {
+            const form = $("<form>")
+                .attr("method", "POST")
+                .attr("action", chal_be_url);
+
+            form.append(
+                $("<input>").attr("type", "hidden").attr("name", "reqtype").attr("value", "download_output"),
+            );
+
+            $("body").append(form);
+            form.submit();
+            form.remove();
+        });
+        let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
+        let file_cache = {};
+        $(".preview-single").each(function(_, button) {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                let testdata_id = parseInt($(this).attr('testdata_id'));
+                if (file_cache.hasOwnProperty(testdata_id)) {
+                    let file_content = file_cache[testdata_id];
+                    $("#previewcode").find("code").html(file_content);
+                    $("#preview-title").text(`#${testdata_id + 1} - Preview User Answer`);
+                    $("#preview-title").attr("testdata_id", testdata_id);
+                    Prism.highlightAll();
+                    preview_modal.show();
+                    return;
+                }
+
+                let file_content = '';
+                $.post(chal_be_url, {
+                    'reqtype': 'preview_single_output',
+                    'testdata_id': testdata_id,
+                }, function (res) {
+                    res = JSON.parse(res);
+                    file_content = res.data;
+                    file_cache[testdata_id] = file_content;
+
+                    $("#previewCode").find("code").html(file_content);
+                    $("#preview-title").text(`#${testdata_id + 1} - Preview User Answer`);
+                    $("#preview-title").attr("testdata_id", testdata_id);
+                    Prism.highlightAll();
+                    preview_modal.show();
+                }).fail(function(jqXHR, textStatus, errorThrown) {
+                    index.show_notify_dialog("Failed to load the preview. Please try again later.", index.DIALOG_TYPE.error);
+                    if (window.console && console.error) {
+                        console.error("Error loading preview_single_output:", textStatus, errorThrown);
+                    }
+                });
+            });
+        });
+        $("#previewModal").find("button.download-single").on('click', function(e) {
+            let testdata_id = $("#preview-title").attr("testdata_id");
+            const form = $("<form>")
+                .attr("method", "POST")
+                .attr("action", chal_be_url);
+
+            form.append(
+                $("<input>").attr("type", "hidden").attr("name", "reqtype").attr("value", "download_single_output"),
+                $("<input>").attr("type", "hidden").attr("name", "testdata_id").attr("value", testdata_id),
+            );
+
+            $("body").append(form);
+            form.submit();
+            form.remove();
         });
         {% end %}
 
@@ -187,6 +254,29 @@
         index.ws_send('unregister', 'chalstatesub');
     }
 </script>
+
+<div class="modal fade" id="previewModal" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="preview-title">Preview User Answer</h5>
+            </div>
+
+            <div class="modal-body">
+                <pre id="previewCode"
+                    data-language="markup"
+                    data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"
+                >
+                <code class="language-markup"></code>
+                </pre>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-primary download-single">Download</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="row">
     <div class="col-lg-4">
@@ -240,6 +330,7 @@
     {% if rechal == True %}
         <button id="rechal" class="btn btn-warning">Rechallenge</button>
         <button id="reject" class="btn btn-danger">Reject</button>
+        <button id="download" class="btn btn-primary">Download Answer Zip</button>
     {% end %}
     </div>
 
@@ -325,6 +416,9 @@
                                 <th>State</th>
                                 <th>Time</th>
                                 <th>Memory</th>
+                                {% if rechal %}
+                                    <th>Preview</th>
+                                {% end %}
                             </tr>
                         </thead>
                         <tbody>
@@ -344,12 +438,17 @@
                                 role="button"
                                 data-bs-target="#challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
                             >
-                            <td class="idx">{{ '%04d' % (testdata_result.testdata_id + 1) }}
-                                    <span {% if not show_message %} style="display: none;" {% end %}> (Expand)<span>
-                            </td>
+                                <td class="idx">{{ '%04d' % (testdata_result.testdata_id + 1) }}
+                                        <span {% if not show_message %} style="display: none;" {% end %}> (Expand)<span>
+                                </td>
                                 <td class="state state-{{ testdata_result.state }}">{{ ChalConst.STATE_LONG_STR[testdata_result.state] }}</td>
                                 <td class="time">{{ testdata_result.time }}</td>
                                 <td class="memory">{{ testdata_result.memory }}</td>
+                                {% if rechal %}
+                                    <td>
+                                        <button class="btn btn-sm btn-primary preview-single" testdata_id="{{ testdata_result.testdata_id }}">Preview User Answer</button>
+                                    </td>
+                                {% end %}
                             </tr>
                             <tr
                                 class="collapse"

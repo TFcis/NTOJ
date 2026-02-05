@@ -18,7 +18,7 @@ from .manage.prospec.batch.test_subtask import BatchSubtaskTest
 from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
-from .chal import ChalTest, ChalListTest
+from .chal import ChalTest, ChalListTest, ChalUserAnswerTest
 from .contest import ContestTest, ContestRegistrationPasswordModeTest, RandomContestTest,  ContestProblemPermissionTest
 from .proclass import ProClassTest
 from .submit import SubmitTest
@@ -193,6 +193,7 @@ class IntegratedTest(AsyncTest):
             RandomContestTest().main,
             ContestRegistrationPasswordModeTest().main,
             ContestProblemPermissionTest().main,
+            ChalUserAnswerTest().main,
         ]
         for f in s:
             r = await f()

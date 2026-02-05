@@ -59,7 +59,7 @@ services:
       - app
 
   judge:
-    build: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git#main
+    build: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git#tnfsh
     cap_add:
       - MKNOD
       - SYS_ADMIN
@@ -74,7 +74,7 @@ services:
       - /dev/shm:rw,exec,size=755,size=4G
     volumes:
       - /srv/ntoj-dev/problem:/problem:ro
-      - /srv/ntoj-dev/code:/code:ro
+      - /srv/ntoj-dev/code:/code:rw
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
     networks:
       - judge_net

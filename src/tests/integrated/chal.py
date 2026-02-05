@@ -1,3 +1,6 @@
+import re
+import os
+import zipfile
 import asyncio
 from decimal import Decimal
 import json
@@ -347,3 +350,133 @@ class ChalListTest(AsyncTest):
             err, count = await ChalService.inst.get_chals_count(flt)
             self.assertIsNone(err)
             self.assertEqual(count, 2)
+
+class ChalUserAnswerTest(AsyncTest):
+    async def main(self):
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            self.assertTrue(os.path.exists('code/1/output.zip'))
+
+            res = admin_session.post('chal/1', data={
+                'reqtype': 'download_output'
+            })
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res.headers['Content-Type'], 'application/zip')
+            self.assertEqual(re.findall(r'filename="?([^";]+)"?', res.headers.get("content-disposition"))[0], "output.zip")
+            with open('code/1/output.zip', 'rb') as f:
+                self.assertEqual(res.content, f.read())
+
+            testdata_id = 0
+            res = admin_session.post('chal/1', data={
+                'reqtype': 'download_single_output',
+                'testdata_id': testdata_id,
+            })
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res.headers['Content-Type'], 'text/plain')
+            self.assertEqual(re.findall(r'filename="?([^";]+)"?', res.headers.get("content-disposition"))[0], f"{testdata_id+1}.ans")
+            with zipfile.ZipFile('code/1/output.zip') as zf:
+                with zf.open(f'{testdata_id+1}.ans') as f:
+                    self.assertEqual(res.content, f.read())
+            res = admin_session.post('chal/1', data={
+                'reqtype': 'download_single_output',
+                'testdata_id': 1110,
+            })
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Specific output file not found'))
+
+            res = admin_session.post('chal/1', data={
+                'reqtype': 'preview_single_output',
+                'testdata_id': testdata_id,
+            })
+            with zipfile.ZipFile('code/1/output.zip') as zf:
+                with zf.open(f'{testdata_id+1}.ans', 'r') as f:
+                    self.assertAPIReturnValue(res.text, ('S', f.read().decode()))
+            res = admin_session.post('chal/1', data={
+                'reqtype': 'preview_single_output',
+                'testdata_id': 1110,
+            })
+            self.assertAPIReturnValue(res.text, ('Enoext', 'Specific output file not found'))
+
+            chal_id = -1
+            def callback():
+                nonlocal chal_id
+                chal_id = self.submit_problem(1, "print(1110)", Compiler.PYTHON3, admin_session)
+            await self.wait_for_judge_finish(callback)
+
+            self.assertNotEqual(chal_id, -1)
+            self.assertTrue(os.path.exists(f'code/{chal_id}/output.zip'))
+            await asyncio.sleep(2) # HACK: ensure file is ready
+            res = admin_session.post(f'chal/{chal_id}', data={
+                'reqtype': 'preview_single_output',
+                'testdata_id': testdata_id,
+            })
+            self.assertAPIReturnValue(res.text, ('S', '1110\n'))
+
+            with open(f'code/{chal_id}/main.py', 'w') as f:
+                f.write('print(3227)')
+            def callback():
+                nonlocal chal_id
+                res = admin_session.post('submit', data={
+                    'reqtype': 'rechal',
+                    'chal_id': chal_id
+                })
+                self.assertAPIReturnValue(res.text, ('S', chal_id))
+            await self.wait_for_judge_finish(callback)
+            await asyncio.sleep(2) # HACK: ensure file is ready
+            res = admin_session.post(f'chal/{chal_id}', data={
+                'reqtype': 'preview_single_output',
+                'testdata_id': testdata_id,
+            })
+            self.assertAPIReturnValue(res.text, ('S', '3227\n'))
+
+
+        with AccountContext('test1@test', 'test') as user_session:
+            # NOTE: User cannot preview/download its own output
+            res = user_session.post('code', data={
+                'chal_id': 10
+            })
+            self.assertAPIReturnSuccess(res.text)
+            res = user_session.post('chal/10', data={
+                'reqtype': 'download_output'
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+            res = user_session.post('chal/10', data={
+                'reqtype': 'download_single_output',
+                'testdata_id': testdata_id,
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+            res = user_session.post('chal/10', data={
+                'reqtype': 'preview_single_output',
+                'testdata_id': testdata_id,
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+            # NOTE: User cannot preview/download other user output
+            res = user_session.post('chal/1', data={
+                'reqtype': 'download_output'
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+            res = user_session.post('chal/1', data={
+                'reqtype': 'download_single_output',
+                'testdata_id': testdata_id,
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+            res = user_session.post('chal/1', data={
+                'reqtype': 'preview_single_output',
+                'testdata_id': testdata_id,
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+            # NOTE: User cannot preview/download contest challenge output
+            res = user_session.post('contests/1/chal/13', data={
+                'reqtype': 'download_output'
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+            res = user_session.post('contests/1/chal/13', data={
+                'reqtype': 'download_single_output',
+                'testdata_id': testdata_id,
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+            res = user_session.post('contests/1/chal/13', data={
+                'reqtype': 'preview_single_output',
+                'testdata_id': testdata_id,
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
