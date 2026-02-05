@@ -1,7 +1,9 @@
+import zipfile
 import os
 import decimal
 import json
 from dataclasses import asdict, is_dataclass
+from typing import IO
 
 from handlers.base import (
     ActionDispatcher,
@@ -527,6 +529,20 @@ class ChalHandler(RequestHandler):
         reqtype = self.get_argument("reqtype")
         return await chal_dispatcher.dispatch(self, reqtype)
 
+    def _download(self, filename: str, filesize: int, reader: IO):
+        self.set_header("Content-Type", "application/octet-stream")
+        self.set_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.set_header("Content-Length", filesize)
+        try:
+            while True:
+                buffer = reader.read(65536)
+                if buffer:
+                    self.write(buffer)
+                else:
+                    return None
+        except Exception:
+            return ("Eunk", "Unknown error")
+
     @chal_dispatcher.action("download_output")
     async def download_output(self):
         chal_id = (
@@ -539,20 +555,39 @@ class ChalHandler(RequestHandler):
         if not os.path.exists(output_zip_path):
             return self.error(("Enoext", "Output file not found"))
 
-        self.set_header("Content-Type", "application/octet-stream")
-        self.set_header("Content-Disposition", 'attachment; filename="output.zip"')
-        self.set_header("Content-Length", os.path.getsize(output_zip_path))
-        with open(output_zip_path, "rb") as f:
-            try:
-                while True:
-                    buffer = f.read(65536)
-                    if buffer:
-                        self.write(buffer)
-                    else:
-                        self.finish()
-                        return
-            except Exception:
-                self.error(("Eunk", "Unknown error"))
+        with open(output_zip_path, 'rb') as f:
+            err = self._download('output.zip', os.path.getsize(output_zip_path), f)
+            if err:
+                self.error(err)
+            else:
+                self.finish()
+
+    @chal_dispatcher.action("download_single_output")
+    async def download_single_output(self):
+        chal_id = (
+            self.path_args[0]
+            if hasattr(self, "path_args")
+            else int(self.get_argument("chal_id"))
+        )
+        testdata_id = int(self.get_argument("testdata_id"))
+        testdata_id += 1
+
+        output_zip_path = f'code/{chal_id}/output.zip'
+        if not os.path.exists(output_zip_path):
+            return self.error(("Enoext", "Output file not found"))
+
+        with zipfile.ZipFile(output_zip_path, 'r') as zipf:
+            with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
+                err = self._download(
+                    f'{testdata_id}.ans',
+                    zipf.getinfo(f'{testdata_id}.ans').file_size,
+                    ansf,
+                )
+                if err:
+                    self.error(err)
+                else:
+                    self.finish()
+
 
     @chal_dispatcher.action("reject")
     async def reject_challenge(self):

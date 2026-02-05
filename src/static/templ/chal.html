@@ -184,6 +184,29 @@
             form.submit();
             form.remove();
         });
+        $(".download-single").each(function(_, button) {
+            $(button).on('click', function(e) {
+                let testdata_id = $(this).attr('testdata_id');
+                let url = '';
+                {% if chal.contest_id == 0 %}
+                    url = `{{ url(f'/be/chal/{ chal.chal_id }') }}`;
+                {% else %}
+                    url = `{{ url(f'/be/contests/{ chal.contest_id }/chal/{ chal.chal_id }') }}`;
+                {% end %}
+                const form = $("<form>")
+                    .attr("method", "POST")
+                    .attr("action", url);
+
+                form.append(
+                    $("<input>").attr("type", "hidden").attr("name", "reqtype").attr("value", "download_single_output"),
+                    $("<input>").attr("type", "hidden").attr("name", "testdata_id").attr("value", testdata_id),
+                );
+
+                $("body").append(form);
+                form.submit();
+                form.remove();
+            });
+        });
         {% end %}
 
         let code_txt = '';
@@ -259,7 +282,7 @@
     {% if rechal == True %}
         <button id="rechal" class="btn btn-warning">Rechallenge</button>
         <button id="reject" class="btn btn-danger">Reject</button>
-        <button id="download" class="btn btn-primary">Download User Answer Zip</button>
+        <button id="download" class="btn btn-primary">Download Answer Zip</button>
     {% end %}
     </div>
 
@@ -345,6 +368,9 @@
                                 <th>State</th>
                                 <th>Time</th>
                                 <th>Memory</th>
+                                {% if rechal %}
+                                    <th>Download</th>
+                                {% end %}
                             </tr>
                         </thead>
                         <tbody>
@@ -364,12 +390,17 @@
                                 role="button"
                                 data-bs-target="#challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
                             >
-                            <td class="idx">{{ '%04d' % (testdata_result.testdata_id + 1) }}
-                                    <span {% if not show_message %} style="display: none;" {% end %}> (Expand)<span>
-                            </td>
+                                <td class="idx">{{ '%04d' % (testdata_result.testdata_id + 1) }}
+                                        <span {% if not show_message %} style="display: none;" {% end %}> (Expand)<span>
+                                </td>
                                 <td class="state state-{{ testdata_result.state }}">{{ ChalConst.STATE_LONG_STR[testdata_result.state] }}</td>
                                 <td class="time">{{ testdata_result.time }}</td>
                                 <td class="memory">{{ testdata_result.memory }}</td>
+                                {% if rechal %}
+                                    <td>
+                                        <button class="btn btn-sm btn-primary download-single" testdata_id="{{ testdata_result.testdata_id }}">Download User Answer</button>
+                                    </td>
+                                {% end %}
                             </tr>
                             <tr
                                 class="collapse"
