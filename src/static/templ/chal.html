@@ -178,16 +178,16 @@
             form.submit();
             form.remove();
         });
-		let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
+        let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
         let file_cache = {};
         $(".preview-single").each(function(_, button) {
             button.addEventListener('click', function(e) {
                 e.stopPropagation();
                 e.preventDefault();
-                let testdata_id = $(this).attr('testdata_id');
+                let testdata_id = parseInt($(this).attr('testdata_id'));
                 if (file_cache.hasOwnProperty(testdata_id)) {
                     let file_content = file_cache[testdata_id];
-                    $("#code").find("code").html(file_content);
+                    $("#previewcode").find("code").html(file_content);
                     $("#preview-title").text(`#${testdata_id + 1} - Preview User Answer`);
                     $("#preview-title").attr("testdata_id", testdata_id);
                     Prism.highlightAll();
@@ -204,11 +204,16 @@
                     file_content = res.data;
                     file_cache[testdata_id] = file_content;
 
-                    $("#code").find("code").html(file_content);
+                    $("#previewCode").find("code").html(file_content);
                     $("#preview-title").text(`#${testdata_id + 1} - Preview User Answer`);
                     $("#preview-title").attr("testdata_id", testdata_id);
                     Prism.highlightAll();
                     preview_modal.show();
+                }).fail(function(jqXHR, textStatus, errorThrown) {
+                    index.show_notify_dialog("Failed to load the preview. Please try again later.", index.DIALOG_TYPE.error);
+                    if (window.console && console.error) {
+                        console.error("Error loading preview_single_output:", textStatus, errorThrown);
+                    }
                 });
             });
         });
@@ -251,27 +256,26 @@
 </script>
 
 <div class="modal fade" id="previewModal" aria-hidden="true">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-content">
-			<div class="modal-header">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title" id="preview-title">Preview User Answer</h5>
-			</div>
+            </div>
 
-			<div class="modal-body">
-				<pre id="code"
-					data-language="markup"
-					data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"
-				>
-					<code class="language-markup"></code>
-				</pre>
-			</div>
+            <div class="modal-body">
+                <pre id="previewCode"
+                    data-language="markup"
+                    data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"
+                >
+                <code class="language-markup"></code>
+                </pre>
+            </div>
 
-			<div class="modal-footer">
-				<button class="btn btn-primary download-single">Download</button>
-			</div>
-		</div>
-
-	</div>
+            <div class="modal-footer">
+                <button class="btn btn-primary download-single">Download</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="row">

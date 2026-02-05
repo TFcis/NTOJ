@@ -5,6 +5,7 @@ import json
 from dataclasses import asdict, is_dataclass
 from typing import IO
 
+import structlog
 import tornado.escape
 
 from handlers.base import (
@@ -531,7 +532,7 @@ class ChalHandler(RequestHandler):
         reqtype = self.get_argument("reqtype")
         return await chal_dispatcher.dispatch(self, reqtype)
 
-    def _download(self, filename: str, filesize: int, content_type: str, reader: IO):
+    def _download(self, filename: str, filesize: int, content_type: str, reader: IO) -> bool:
         self.set_header("Content-Type", content_type)
         self.set_header("Content-Disposition", f'attachment; filename="{filename}"')
         self.set_header("Content-Length", filesize)
@@ -541,12 +542,16 @@ class ChalHandler(RequestHandler):
                 if buffer:
                     self.write(buffer)
                 else:
-                    return None
-        except Exception:
-            return ("Eunk", "Unknown error")
+                    return False
+        except Exception as e:
+            log = structlog.get_logger()
+            log.warning("Download interrupted", filename=filename, error=str(e))
+            return True
 
-    def _download_check(self, chal_id: int) -> tuple[str, str] | None:
+    async def _download_check(self, chal_id: int) -> tuple[str, str] | None:
         if not self.contest and not self.acct.is_kernel():
+            await LogService.inst.add_log(f"{self.acct.name}(#{self.acct.acct_id}) attempted to access output zip from chal#{chal_id} without permission.",
+                                          "manage.chal.download_output_denied", {"chal_id": chal_id})
             return ("Eacces", "Permission denied")
 
         output_zip_path = f'code/{chal_id}/output.zip'
@@ -559,7 +564,7 @@ class ChalHandler(RequestHandler):
     async def download_output(self):
         chal_id = self.path_args[0]
 
-        if err := self._download_check(chal_id):
+        if err := (await self._download_check(chal_id)):
             return self.error(err)
         output_zip_path = f'code/{chal_id}/output.zip'
 
@@ -568,12 +573,15 @@ class ChalHandler(RequestHandler):
             "manage.chal.download_output",
         )
 
-        with open(output_zip_path, 'rb') as f:
-            err = self._download('output.zip', os.path.getsize(output_zip_path), "application/zip", f)
-            if err:
-                self.error(err)
-            else:
-                self.finish()
+        try:
+            with open(output_zip_path, 'rb') as f:
+                err = self._download('output.zip', os.path.getsize(output_zip_path), "application/zip", f)
+                if not err:
+                    self.finish()
+        except Exception as e:
+            log = structlog.get_logger()
+            log.error("Failed to open output zip", chal_id=chal_id, error=str(e))
+            return self.error(("Eio", "Failed to open output file"))
 
     @chal_dispatcher.action("download_single_output")
     async def download_single_output(self):
@@ -581,7 +589,7 @@ class ChalHandler(RequestHandler):
         testdata_id = int(self.get_argument("testdata_id"))
         testdata_id += 1
 
-        if err := self._download_check(chal_id):
+        if err := (await self._download_check(chal_id)):
             return self.error(err)
         output_zip_path = f'code/{chal_id}/output.zip'
 
@@ -591,21 +599,24 @@ class ChalHandler(RequestHandler):
             {"testdata_id": testdata_id-1},
         )
 
-        with zipfile.ZipFile(output_zip_path, 'r') as zipf:
-            try:
-                with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
-                    err = self._download(
-                        f'{testdata_id}.ans',
-                        zipf.getinfo(f'{testdata_id}.ans').file_size,
-                        "text/plain",
-                        ansf,
-                    )
-                    if err:
-                        self.error(err)
-                    else:
-                        self.finish()
-            except KeyError:
-                self.error(("Enoext", "Specific output file not found"))
+        try:
+            with zipfile.ZipFile(output_zip_path, 'r') as zipf:
+                try:
+                    with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
+                        err = self._download(
+                            f'{testdata_id}.ans',
+                            zipf.getinfo(f'{testdata_id}.ans').file_size,
+                            "text/plain",
+                            ansf,
+                        )
+                        if not err:
+                            self.finish()
+                except KeyError:
+                    return self.error(("Enoext", "Specific output file not found"))
+        except Exception as e:
+            log = structlog.get_logger()
+            log.error("Failed to open output zip", chal_id=chal_id, error=str(e))
+            return self.error(("Eio", "Failed to open output file"))
 
     @chal_dispatcher.action("preview_single_output")
     async def preview_single_output(self):
@@ -613,7 +624,7 @@ class ChalHandler(RequestHandler):
         testdata_id = int(self.get_argument("testdata_id"))
         testdata_id += 1
 
-        if err := self._download_check(chal_id):
+        if err := (await self._download_check(chal_id)):
             return self.error(err)
         output_zip_path = f'code/{chal_id}/output.zip'
 
@@ -623,16 +634,21 @@ class ChalHandler(RequestHandler):
             {"testdata_id": testdata_id-1},
         )
 
-        with zipfile.ZipFile(output_zip_path, 'r') as zipf:
-            try:
-                with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
-                    size = zipf.getinfo(f'{testdata_id}.ans').file_size
-                    if size > 1024 * 1024:
-                        return self.error(("Eparam", "Output file too large to preview"))
+        try:
+            with zipfile.ZipFile(output_zip_path, 'r') as zipf:
+                try:
+                    with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
+                        size = zipf.getinfo(f'{testdata_id}.ans').file_size
+                        if size > 1024 * 1024:
+                            return self.error(("Eparam", "Output file too large to preview"))
 
-                    return self.error(("S", tornado.escape.xhtml_escape(ansf.read().decode('utf-8', errors='replace'))))
-            except KeyError:
-                self.error(("Enoext", "Specific output file not found"))
+                        return self.error(("S", tornado.escape.xhtml_escape(ansf.read().decode('utf-8', errors='replace'))))
+                except KeyError:
+                    return self.error(("Enoext", "Specific output file not found"))
+        except Exception as e:
+            log = structlog.get_logger()
+            log.error("Failed to open output zip", chal_id=chal_id, error=str(e))
+            return self.error(("Eio", "Failed to open output file"))
 
     @chal_dispatcher.action("reject")
     async def reject_challenge(self):

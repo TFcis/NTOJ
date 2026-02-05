@@ -429,7 +429,7 @@ class ChalUserAnswerTest(AsyncTest):
 
 
         with AccountContext('test1@test', 'test') as user_session:
-            # NOTE: User cannot preview/download it own output
+            # NOTE: User cannot preview/download its own output
             res = user_session.post('code', data={
                 'chal_id': 10
             })
