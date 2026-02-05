@@ -179,9 +179,22 @@
             form.remove();
         });
 		let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
+        let file_cache = {};
         $(".preview-single").each(function(_, button) {
             button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
                 let testdata_id = $(this).attr('testdata_id');
+                if (file_cache.hasOwnProperty(testdata_id)) {
+                    let file_content = file_cache[testdata_id];
+                    $("#code").find("code").html(file_content);
+                    $("#preview-title").text(`#${testdata_id + 1} - Preview User Answer`);
+                    $("#preview-title").attr("testdata_id", testdata_id);
+                    Prism.highlightAll();
+                    preview_modal.show();
+                    return;
+                }
+
                 let file_content = '';
                 $.post(chal_be_url, {
                     'reqtype': 'preview_single_output',
@@ -189,6 +202,7 @@
                 }, function (res) {
                     res = JSON.parse(res);
                     file_content = res.data;
+                    file_cache[testdata_id] = file_content;
 
                     $("#code").find("code").html(file_content);
                     $("#preview-title").text(`#${testdata_id + 1} - Preview User Answer`);
