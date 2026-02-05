@@ -11,11 +11,7 @@ class Compiler(enum.IntEnum):
     CLANG = 2
     GPP = 3
     CLANGPP = 4
-    RUST = 5
     PYTHON3 = 6
-    JAVA = 7
-    ASMC = 8
-    ASMCPP = 9
 
 @dataclass(slots=True, frozen=True)
 class CompilerInfo:
@@ -30,11 +26,7 @@ COMPILER_INFOS[Compiler.GCC] = CompilerInfo(Compiler.GCC, "c", "GCC 12.2.0 GNU11
 COMPILER_INFOS[Compiler.CLANG] = CompilerInfo(Compiler.CLANG, "c", "Clang 15.0.6 C11", "clang", "c")
 COMPILER_INFOS[Compiler.GPP] = CompilerInfo(Compiler.GPP, "cpp", "G++ 12.2.0 GNU++17", "g++", "cpp")
 COMPILER_INFOS[Compiler.CLANGPP] = CompilerInfo(Compiler.CLANGPP, "cpp", "Clang++ 15.0.6 C++17", "clang++", "cpp")
-COMPILER_INFOS[Compiler.RUST] = CompilerInfo(Compiler.RUST, "rust", "Rustc 1.63", "rust", "rs")
 COMPILER_INFOS[Compiler.PYTHON3] = CompilerInfo(Compiler.PYTHON3, "python", "CPython 3.11.2", "python3", "py")
-COMPILER_INFOS[Compiler.JAVA] = CompilerInfo(Compiler.JAVA, "java", "OpenJDK 17.0.8", "java", "java")
-COMPILER_INFOS[Compiler.ASMC] = CompilerInfo(Compiler.ASMC, "asm", "Gas x86_64 Linux 2.42 w/ libc", "asmc", "s")
-COMPILER_INFOS[Compiler.ASMCPP] = CompilerInfo(Compiler.ASMCPP, "asm", "Gas x86_64 Linux 2.42 w/ libstdc++", "asmcpp", "s")
 
 class ChalConst:
     STATE_AC = 1
@@ -97,11 +89,7 @@ class ChalConst:
         "clang++": Compiler.CLANGPP,
         "gcc": Compiler.GCC,
         "clang": Compiler.CLANG,
-        "rustc": Compiler.RUST,
         "python3": Compiler.PYTHON3,
-        "java": Compiler.JAVA,
-        "asmc": Compiler.ASMC,
-        "asmcpp": Compiler.ASMCPP,
     }
 
     NORMAL_PRI = 0

@@ -48,12 +48,8 @@ class BatchCodeHandler(RequestHandler):
         # Map compiler type to prism.js language
         if compiler_type in (Compiler.GCC, Compiler.CLANG, Compiler.GPP, Compiler.CLANGPP):
             language = 'cpp'
-        elif compiler_type == Compiler.RUST:
-            language = 'rust'
         elif compiler_type == Compiler.PYTHON3:
             language = 'python'
-        elif compiler_type == Compiler.JAVA:
-            language = 'java'
         else:
             language = 'cpp'
 

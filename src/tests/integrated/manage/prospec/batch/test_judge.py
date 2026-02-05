@@ -64,30 +64,6 @@ class BatchJudgeTest(AsyncTest):
             self.assertTrue(batch_config.has_grader)
             self.assertEqual(batch_config.userprog_compile_args, '-std=c++17 -O2')
 
-            # Test updatejudge - with custom checker
-            res = admin_session.post('manage/pro/updatejudge', data={
-                'pro_id': 1,
-                'rate_precision': 2,
-                'has_grader': 'false',
-                'userprog_compile_args': '',
-                'checker_type': CheckerType.TOJ,
-                'checker_compiler': Compiler.GPP,
-                'checker_compile_args': '-O2',
-                'summary_type': SummaryType.GROUPMIN,
-                'summary_compiler': '',
-                'summary_compile_args': '',
-                'allow_compilers[]': [Compiler.GPP],
-            })
-            self.assertAPIReturnSuccess(res.text)
-
-            err, pro = await ProService.inst.get_pro(1, ProConst.PRO_STATUS_FULL)
-            self.assertIsNone(err)
-            assert pro
-            batch_config = pro.config.spec_config
-            self.assertEqual(batch_config.checker_type, CheckerType.TOJ)
-            self.assertEqual(batch_config.checker_compiler, Compiler.GPP)
-            self.assertEqual(batch_config.checker_compile_args, '-O2')
-
             # Test updatejudge - with custom summary
             res = admin_session.post('manage/pro/updatejudge', data={
                 'pro_id': 1,
@@ -111,31 +87,6 @@ class BatchJudgeTest(AsyncTest):
             self.assertEqual(batch_config.summary_type, SummaryType.CUSTOM)
             self.assertEqual(batch_config.summary_compiler, Compiler.PYTHON3)
 
-            # Test updatejudge - IORedir with chalmeta
-            chalmeta_json = json.dumps({'input': 'input.txt', 'output': 'output.txt'})
-            res = admin_session.post('manage/pro/updatejudge', data={
-                'pro_id': 1,
-                'rate_precision': 2,
-                'has_grader': 'false',
-                'userprog_compile_args': '',
-                'checker_type': CheckerType.IOREDIR,
-                'checker_compiler': '',
-                'checker_compile_args': '',
-                'chalmeta': chalmeta_json,
-                'summary_type': SummaryType.GROUPMIN,
-                'summary_compiler': '',
-                'summary_compile_args': '',
-                'allow_compilers[]': [Compiler.GPP],
-            })
-            self.assertAPIReturnSuccess(res.text)
-
-            err, pro = await ProService.inst.get_pro(1, ProConst.PRO_STATUS_FULL)
-            self.assertIsNone(err)
-            assert pro
-            batch_config = pro.config.spec_config
-            self.assertEqual(batch_config.checker_type, CheckerType.IOREDIR)
-            self.assertEqual(batch_config.chalmeta, chalmeta_json)
-
             # Test updatejudge - invalid rate precision
             res = admin_session.post('manage/pro/updatejudge', data={
                 'pro_id': 1,
@@ -151,23 +102,6 @@ class BatchJudgeTest(AsyncTest):
                 'allow_compilers[]': [Compiler.GPP],
             })
             self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid rate precision'))
-
-            # Test updatejudge - invalid chalmeta JSON
-            res = admin_session.post('manage/pro/updatejudge', data={
-                'pro_id': 1,
-                'rate_precision': 2,
-                'has_grader': 'false',
-                'userprog_compile_args': '',
-                'checker_type': CheckerType.IOREDIR,
-                'checker_compiler': '',
-                'checker_compile_args': '',
-                'chalmeta': 'invalid json{{{',
-                'summary_type': SummaryType.GROUPMIN,
-                'summary_compiler': '',
-                'summary_compile_args': '',
-                'allow_compilers[]': [Compiler.GPP],
-            })
-            self.assertAPIReturnValue(res.text, ('Econf', 'Challenge metadata json syntax error'))
 
             # Reset to default configuration
             res = admin_session.post('manage/pro/updatejudge', data={

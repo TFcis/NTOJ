@@ -11,11 +11,6 @@
 
         judge_form.find('select#checkerType').on('change', function(e) {
             let checker_type = $(this).val();
-            if (checker_type == "{{ CheckerType.IOREDIR }}") {
-                judge_form.find("div#chalmetaLabel").show();
-            } else {
-                judge_form.find("div#chalmetaLabel").hide();
-            }
 
             const need_build_checkers = {% raw [v.value for v in CheckerType.need_build_checkers()] %};
             if (need_build_checkers.find(ele => ele == checker_type)) {
@@ -62,10 +57,6 @@
                     allow_compilers.push($(el).val());
                 }
             });
-            let chalmeta = '';
-            if (checker_type == "{{ CheckerType.IOREDIR }}") {
-                chalmeta = judge_form.find('textarea#chalmeta').val();
-            }
 
             $.post(`{{ url('/be/manage/pro/updatejudge') }}`, {
                 'pro_id': pro_id,
@@ -79,7 +70,6 @@
                 summary_compile_args: summary_compile_args,
                 has_grader: has_grader,
                 allow_compilers: allow_compilers,
-                chalmeta: chalmeta,
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
@@ -191,12 +181,6 @@
                     <input id="checkerCompileArgs" type="text" class="form-control"
                            placeholder="-O2 -std=c++17"
                            value="{{ pro.config.spec_config.checker_compile_args }}">
-                </div>
-
-                <div id="chalmetaLabel" class="mb-3" {% if pro.config.spec_config.checker_type != CheckerType.IOREDIR %} style="display: none;" {% end %}>
-                    <label for="chalmeta" class="form-label fw-bold">IORedir Settings (JSON)</label>
-                    <textarea rows="10" id="chalmeta" class="form-control font-monospace">{{ json.dumps(pro.config.spec_config.chalmeta, indent=4) if pro.config.spec_config.chalmeta else '{}' }}</textarea>
-                    <div class="form-text">Advanced: JSON configuration for IO redirection</div>
                 </div>
             </div>
         </div>

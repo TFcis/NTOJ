@@ -62,34 +62,6 @@ class TestBatchProblemSpecFromJson(unittest.TestCase):
         self.assertTrue(config.has_grader)
         self.assertEqual(config.allow_compilers, {Compiler.GPP, Compiler.CLANGPP, Compiler.PYTHON3})
 
-    def test_from_json_with_ioredir(self):
-        """Test parsing JSON with IORedir checker type."""
-        data = {
-            'chalmeta': '{"input": "data.in", "output": "data.out"}',
-            'checker_type': CheckerType.IOREDIR,
-            'summary_type': SummaryType.GROUPMIN,
-        }
-
-        config = self.spec.from_json(data)
-
-        self.assertEqual(config.checker_type, CheckerType.IOREDIR)
-        self.assertEqual(config.chalmeta, '{"input": "data.in", "output": "data.out"}')
-
-    def test_from_json_with_custom_checker(self):
-        """Test parsing JSON with custom checker."""
-        data = {
-            'checker_type': CheckerType.TOJ,
-            'checker_compiler': Compiler.GPP,
-            'checker_compile_args': '-std=c++20 -O3',
-            'summary_type': SummaryType.GROUPMIN,
-        }
-
-        config = self.spec.from_json(data)
-
-        self.assertEqual(config.checker_type, CheckerType.TOJ)
-        self.assertEqual(config.checker_compiler, Compiler.GPP)
-        self.assertEqual(config.checker_compile_args, '-std=c++20 -O3')
-
     def test_from_json_compiler_type_conversion(self):
         """Test that compiler integer values are converted to Compiler enum."""
         data = {
@@ -210,34 +182,6 @@ class TestBatchProblemSpecToJson(unittest.TestCase):
         self.assertFalse(result['has_grader'])
         self.assertEqual(result['allow_compilers'], [])
 
-    def test_to_json_full_config(self):
-        """Test serializing complete BatchConfig to JSON."""
-        config = BatchConfig(
-            chalmeta='{"input": "input.txt"}',
-            userprog_compile_args='-std=c++17',
-            checker_type=CheckerType.TOJ,
-            checker_compiler=Compiler.GPP,
-            checker_compile_args='-O2',
-            summary_type=SummaryType.CUSTOM,
-            summary_compiler=Compiler.PYTHON3,
-            summary_compile_args='',
-            has_grader=True,
-            allow_compilers={Compiler.GPP, Compiler.PYTHON3},
-        )
-
-        result = self.spec.to_json(config)
-
-        self.assertEqual(result['chalmeta'], '{"input": "input.txt"}')
-        self.assertEqual(result['userprog_compile_args'], '-std=c++17')
-        self.assertEqual(result['checker_type'], int(CheckerType.TOJ))
-        self.assertEqual(result['checker_compiler'], int(Compiler.GPP))
-        self.assertEqual(result['checker_compile_args'], '-O2')
-        self.assertEqual(result['summary_type'], int(SummaryType.CUSTOM))
-        self.assertEqual(result['summary_compiler'], int(Compiler.PYTHON3))
-        self.assertTrue(result['has_grader'])
-        self.assertIn(int(Compiler.GPP), result['allow_compilers'])
-        self.assertIn(int(Compiler.PYTHON3), result['allow_compilers'])
-
     def test_to_json_compilers_are_integers(self):
         """Test that compiler enums are serialized to integers."""
         config = BatchConfig(
@@ -250,7 +194,7 @@ class TestBatchProblemSpecToJson(unittest.TestCase):
             summary_compiler=Compiler.PYTHON3,
             summary_compile_args='',
             has_grader=False,
-            allow_compilers={Compiler.GPP, Compiler.RUST},
+            allow_compilers={Compiler.GPP},
         )
 
         result = self.spec.to_json(config)

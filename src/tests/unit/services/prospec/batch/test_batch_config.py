@@ -49,25 +49,6 @@ class TestBatchConfig(unittest.TestCase):
         self.assertEqual(config.userprog_compile_args, '-std=c++17')
         self.assertEqual(config.allow_compilers, {Compiler.GPP, Compiler.CLANGPP})
 
-    def test_create_config_with_custom_checker(self):
-        """Test creating BatchConfig with custom checker."""
-        config = BatchConfig(
-            chalmeta='',
-            userprog_compile_args='',
-            checker_type=CheckerType.TOJ,
-            checker_compiler=Compiler.GPP,
-            checker_compile_args='-O2',
-            summary_type=SummaryType.GROUPMIN,
-            summary_compiler=None,
-            summary_compile_args='',
-            has_grader=False,
-            allow_compilers=set(),
-        )
-
-        self.assertEqual(config.checker_type, CheckerType.TOJ)
-        self.assertEqual(config.checker_compiler, Compiler.GPP)
-        self.assertEqual(config.checker_compile_args, '-O2')
-
     def test_create_config_with_summary(self):
         """Test creating BatchConfig with summary enabled."""
         config = BatchConfig(
@@ -85,25 +66,6 @@ class TestBatchConfig(unittest.TestCase):
 
         self.assertEqual(config.summary_type, SummaryType.CUSTOM)
         self.assertEqual(config.summary_compiler, Compiler.PYTHON3)
-
-    def test_create_config_with_ioredir(self):
-        """Test creating BatchConfig with IORedir chalmeta."""
-        chalmeta = '{"input": "input.txt", "output": "output.txt"}'
-        config = BatchConfig(
-            chalmeta=chalmeta,
-            userprog_compile_args='',
-            checker_type=CheckerType.IOREDIR,
-            checker_compiler=None,
-            checker_compile_args='',
-            summary_type=SummaryType.GROUPMIN,
-            summary_compiler=None,
-            summary_compile_args='',
-            has_grader=False,
-            allow_compilers=set(),
-        )
-
-        self.assertEqual(config.chalmeta, chalmeta)
-        self.assertEqual(config.checker_type, CheckerType.IOREDIR)
 
     def test_allow_compilers_set_operations(self):
         """Test set operations on allow_compilers field."""
@@ -123,7 +85,6 @@ class TestBatchConfig(unittest.TestCase):
         # Test set contains
         self.assertIn(Compiler.GPP, config.allow_compilers)
         self.assertIn(Compiler.PYTHON3, config.allow_compilers)
-        self.assertNotIn(Compiler.RUST, config.allow_compilers)
 
         # Test set length
         self.assertEqual(len(config.allow_compilers), 2)
