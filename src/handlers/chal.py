@@ -5,6 +5,8 @@ import json
 from dataclasses import asdict, is_dataclass
 from typing import IO
 
+import tornado.escape
+
 from handlers.base import (
     ActionDispatcher,
     RequestHandler,
@@ -555,6 +557,11 @@ class ChalHandler(RequestHandler):
         if not os.path.exists(output_zip_path):
             return self.error(("Enoext", "Output file not found"))
 
+        await LogService.inst.add_log(
+            f"{self.acct.name}(#{self.acct.acct_id}) download output zip from chal#{chal_id}.",
+            "manage.chal.download_output",
+        )
+
         with open(output_zip_path, 'rb') as f:
             err = self._download('output.zip', os.path.getsize(output_zip_path), f)
             if err:
@@ -576,6 +583,12 @@ class ChalHandler(RequestHandler):
         if not os.path.exists(output_zip_path):
             return self.error(("Enoext", "Output file not found"))
 
+        await LogService.inst.add_log(
+            f"{self.acct.name}(#{self.acct.acct_id}) download a single output #{testdata_id-1} from chal#{chal_id}.",
+            "manage.chal.download_single_output",
+            {"testdata_id": testdata_id-1},
+        )
+
         with zipfile.ZipFile(output_zip_path, 'r') as zipf:
             with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
                 err = self._download(
@@ -588,6 +601,33 @@ class ChalHandler(RequestHandler):
                 else:
                     self.finish()
 
+    @chal_dispatcher.action("preview_single_output")
+    async def preview_single_output(self):
+        chal_id = (
+            self.path_args[0]
+            if hasattr(self, "path_args")
+            else int(self.get_argument("chal_id"))
+        )
+        testdata_id = int(self.get_argument("testdata_id"))
+        testdata_id += 1
+
+        output_zip_path = f'code/{chal_id}/output.zip'
+        if not os.path.exists(output_zip_path):
+            return self.error(("Enoext", "Output file not found"))
+
+        await LogService.inst.add_log(
+            f"{self.acct.name}(#{self.acct.acct_id}) preview a single output #{testdata_id-1} from chal#{chal_id}.",
+            "manage.chal.preview_single_output",
+            {"testdata_id": testdata_id-1},
+        )
+
+        with zipfile.ZipFile(output_zip_path, 'r') as zipf:
+            with zipf.open(f'{testdata_id}.ans', 'r') as ansf:
+                size = zipf.getinfo(f'{testdata_id}.ans').file_size
+                if size > 1024 * 1024:
+                    return self.error(("Eparam", "Output file too large to preview"))
+
+                return self.error(("S", tornado.escape.xhtml_escape(ansf.read().decode('utf-8', errors='replace'))))
 
     @chal_dispatcher.action("reject")
     async def reject_challenge(self):
