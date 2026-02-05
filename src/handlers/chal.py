@@ -527,11 +527,11 @@ class ChalHandler(RequestHandler):
     @contest_require_permission("admin")
     async def post(self, chal_id):
         chal_id = int(chal_id)
-        self.path_args = [chal_id]  # Store for action methods
+        self.path_args = (chal_id, )  # Store for action methods
         reqtype = self.get_argument("reqtype")
         return await chal_dispatcher.dispatch(self, reqtype)
 
-    def _download(self, filename: str, filesize: int, reader: IO):
+    def _download(self, filename: str, filesize: int, content_type, reader: IO):
         self.set_header("Content-Type", "application/octet-stream")
         self.set_header("Content-Disposition", f'attachment; filename="{filename}"')
         self.set_header("Content-Length", filesize)
@@ -545,17 +545,23 @@ class ChalHandler(RequestHandler):
         except Exception:
             return ("Eunk", "Unknown error")
 
-    @chal_dispatcher.action("download_output")
-    async def download_output(self):
-        chal_id = (
-            self.path_args[0]
-            if hasattr(self, "path_args")
-            else int(self.get_argument("chal_id"))
-        )
+    def _download_check(self, chal_id: int) -> tuple[str, str] | None:
+        if not self.contest and not self.acct.is_kernel():
+            return ("Eacces", "Permission denied")
 
         output_zip_path = f'code/{chal_id}/output.zip'
         if not os.path.exists(output_zip_path):
-            return self.error(("Enoext", "Output file not found"))
+            return ("Enoext", "Output file not found")
+
+        return None
+
+    @chal_dispatcher.action("download_output")
+    async def download_output(self):
+        chal_id = self.path_args[0]
+
+        if err := self._download_check(chal_id):
+            return self.error(err)
+        output_zip_path = f'code/{chal_id}/output.zip'
 
         await LogService.inst.add_log(
             f"{self.acct.name}(#{self.acct.acct_id}) download output zip from chal#{chal_id}.",
@@ -563,7 +569,7 @@ class ChalHandler(RequestHandler):
         )
 
         with open(output_zip_path, 'rb') as f:
-            err = self._download('output.zip', os.path.getsize(output_zip_path), f)
+            err = self._download('output.zip', os.path.getsize(output_zip_path), "application/zip", f)
             if err:
                 self.error(err)
             else:
@@ -571,17 +577,13 @@ class ChalHandler(RequestHandler):
 
     @chal_dispatcher.action("download_single_output")
     async def download_single_output(self):
-        chal_id = (
-            self.path_args[0]
-            if hasattr(self, "path_args")
-            else int(self.get_argument("chal_id"))
-        )
+        chal_id = self.path_args[0]
         testdata_id = int(self.get_argument("testdata_id"))
         testdata_id += 1
 
+        if err := self._download_check(chal_id):
+            return self.error(err)
         output_zip_path = f'code/{chal_id}/output.zip'
-        if not os.path.exists(output_zip_path):
-            return self.error(("Enoext", "Output file not found"))
 
         await LogService.inst.add_log(
             f"{self.acct.name}(#{self.acct.acct_id}) download a single output #{testdata_id-1} from chal#{chal_id}.",
@@ -594,6 +596,7 @@ class ChalHandler(RequestHandler):
                 err = self._download(
                     f'{testdata_id}.ans',
                     zipf.getinfo(f'{testdata_id}.ans').file_size,
+                    "text/plain",
                     ansf,
                 )
                 if err:
@@ -603,17 +606,13 @@ class ChalHandler(RequestHandler):
 
     @chal_dispatcher.action("preview_single_output")
     async def preview_single_output(self):
-        chal_id = (
-            self.path_args[0]
-            if hasattr(self, "path_args")
-            else int(self.get_argument("chal_id"))
-        )
+        chal_id = self.path_args[0]
         testdata_id = int(self.get_argument("testdata_id"))
         testdata_id += 1
 
+        if err := self._download_check(chal_id):
+            return self.error(err)
         output_zip_path = f'code/{chal_id}/output.zip'
-        if not os.path.exists(output_zip_path):
-            return self.error(("Enoext", "Output file not found"))
 
         await LogService.inst.add_log(
             f"{self.acct.name}(#{self.acct.acct_id}) preview a single output #{testdata_id-1} from chal#{chal_id}.",
