@@ -12,6 +12,7 @@ from msgpack import packb, unpackb
 
 from services.chal import ChalService, Compiler, ChalConst
 from services.user import Account, UserService
+from services.pro import ProConst
 
 logger = tornado.log.app_log
 
@@ -393,18 +394,44 @@ class ContestService:
             contest.pro_list[pro_id] = {} # Add dummy dict for avoiding repeated problem id
 
         pro_order = len(contest.pro_sets)
+        pro_ids = [pro_id for pro_id, _ in pro_set]
+        score_types = [int(score_type) for _, score_type in pro_set]
+        orders = [pro_order for _ in pro_set]
         async with self.db.acquire() as con:
             try:
-                # Insert problems into contest_problem_joints
-                await con.executemany(
-                    '''
-                    INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
-                    VALUES ($1, $2, $3, $4)
+                await con.execute(
+                    f'''
+                    DO $$
+                    BEGIN
+                        IF EXISTS (
+                            SELECT 1
+                            FROM problem
+                            WHERE pro_id = ANY($1)
+                            AND status = {ProConst.STATUS_HIDDEN}
+                        ) THEN
+                            RAISE EXCEPTION 'Hidden problem detected';
+                        END IF;
+
+                        INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
+                        SELECT $2, v.pro_id, v.score_type, v.order
+                        FROM UNNEST($1::int[], $3::int[], $4::int[]) AS v(pro_id, score_type, order)
+                        JOIN problem p ON p.pro_id = v.pro_id;
+                    END
+                    $$;
                     ''',
-                    [(contest.contest_id, pro_id, int(score_type), pro_order) for pro_id, score_type in pro_set]
+                    pro_ids,                  # $1: list of pro_id
+                    contest.contest_id,       # $2: contest_id
+                    score_types,              # $3: list of score_type
+                    orders                    # $4: list of order
                 )
             except asyncpg.ForeignKeyViolationError:
                 return ('Enoext', 'One or more problem IDs do not exist'), None
+            except asyncpg.PostgresError as e:
+                if 'Hidden problem detected' in str(e):
+                    return ("Eacces", 'Cannot add hidden problems to contest'), None
+                else:
+                    logger.error(f'Unexpected error when adding problem set to contest {contest.contest_id}: {e}')
+                    return ('Eunk', 'Unknown error'), None
 
         contest.pro_sets.append([pro_id for pro_id, _ in pro_set])
 

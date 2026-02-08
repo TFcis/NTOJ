@@ -685,6 +685,36 @@ class RandomContestTest(AsyncTest):
             # No accounts yet, so acct_pro_list should be empty
             self.assertEqual(len(contest.acct_pro_list), 0)
 
+            # NOTE: Should not add hidden problem to contest
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_HIDDEN,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
+            res = admin_session.post('contests/2/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '1,10'
+            })
+            self.assertAPIReturnValue(res.text, ("Eacces", 'Cannot add hidden problems to contest'))
+            err, contest = await ContestService.inst.get_contest(2)
+            assert contest
+            self.assertIsNone(err)
+            self.assertEqual(len(contest.pro_list), 4)
+            self.assertEqual(len(contest.pro_sets), 1)
+
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_ONLINE,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
             # Add accounts
             res = admin_session.post('contests/2/manage/acct', data={
                 'reqtype': 'multi_add',
@@ -823,7 +853,7 @@ class RandomContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(len(contest.pro_sets), 2)
             self.assertEqual(len(contest.pro_list), 3)
-            for acct_id in [4, 5, 6, 7, 8, 9]:
+            for acct_id in (4, 5, 6, 7, 8, 9):
                 self.assertEqual(len(contest.acct_pro_list[acct_id]), 2)
                 self.assertIn(contest.acct_pro_list[acct_id][0], [5, 10])
                 self.assertEqual(contest.acct_pro_list[acct_id][1], 6)
