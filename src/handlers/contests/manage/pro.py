@@ -237,9 +237,6 @@ class ContestManageProHandler(RequestHandler):
 
     @contest_manage_pro_dispatcher.action("remove_set")
     async def remove_proset_action(self):
-        if self.contest.contest_mode != ContestMode.RANDOM_SET:
-            return self.error(('Emod', 'Cannot remove problem set from non-random set contests'))
-
         pro_set_idx = int(self.get_argument("pro_id"))
         if pro_set_idx < 0 or pro_set_idx > len(self.contest.pro_sets) - 1:
             return self.error(('Eparam', 'Problem set index out of range'))
