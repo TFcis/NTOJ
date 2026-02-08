@@ -7,7 +7,7 @@
 
 		const post_func = (reqtype, acct_id, target_type) => {
 			if (acct_id.length == 0) {
-				index.show_notify_dialog('Input cannot empty.', index.DIALOG_TYPE.warning);
+				index.show_notify_dialog('Input invalid.', index.DIALOG_TYPE.warning);
 				return;
 			}
 

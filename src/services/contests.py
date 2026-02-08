@@ -366,6 +366,9 @@ class ContestService:
                     contest.pro_list.pop(failed_pro_id)
 
             if userlist_updated:
+                contest.user_list[contest.contest_creator] = {
+                    "status": UserStatus.ADMIN
+                }
                 await con.execute('''
                     WITH input_data AS (
                         SELECT
