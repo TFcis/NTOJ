@@ -34,15 +34,14 @@
 		};
 
         function swapRows(ord1, ord2) {
+            let tbody = document.querySelector("table#proSetTable tbody");
+            let allRows = tbody.querySelectorAll("tr");
             if (ord1 < 0 || ord2 < 0) return;
             if (ord1 === ord2) return;
 
             // Swap contents of Problem Set & Operation columns
-            let row1 = rows[ord1];
-            let row2 = rows[ord2];
-
-            let tbody = document.querySelector("table tbody");
-            let allRows = tbody.querySelectorAll("tr");
+            let row1 = allRows[ord1];
+            let row2 = allRows[ord2];
 
             // Find all Problem Set groups (rows with th[rowspan])
             let problemSets = [];
@@ -456,7 +455,7 @@
 						<small class="form-text text-muted">輸入題目 ID（用逗號分隔或是用 1-3 來表示 1,2,3），或點擊「從 ProClass 選擇」來批量添加題目</small>
 					</form>
 
-					<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+					<table class="table table-hover table-sm table-responsive-sm col mx-lg-3" id="proSetTable">
 					<thead>
 						<tr>
 							<th scope="col">Set Order</th>
