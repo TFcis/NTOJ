@@ -90,7 +90,11 @@ class ContestManageAcctHandler(RequestHandler):
         if list_type == "normal" or (
             list_type == "admin" and not self.contest.hide_admin
         ):
-            await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+            if self.contest.contest_mode == ContestMode.RANDOM_SET:
+                await self.rs.hdel(f"contest_{self.contest.contest_id}_randomset_scoreboard", *[f'{acct_id}_{pro_order}' for pro_order in range(len(self.contest.pro_sets))])
+            else:
+                await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
 
         return self.error(
             ("S", f"Account(#{acct_id} successfully removed from user list.")
@@ -162,7 +166,14 @@ class ContestManageAcctHandler(RequestHandler):
         if list_type == "normal" or (
             list_type == "admin" and not self.contest.hide_admin
         ):
-            await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+            if self.contest.contest_mode == ContestMode.RANDOM_SET:
+                async with self.rs.pipeline() as pipe:
+                    for a_id in acct_list:
+                        for pro_order in range(len(self.contest.pro_sets)):
+                            await pipe.hdel(f"contest_{self.contest.contest_id}_randomset_scoreboard", f'{a_id}_{pro_order}')
+                    await pipe.execute()
+            else:
+                await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
         return self.error(
             ("S", f"Accounts(#{acct_list} successfully removed from user list.")
