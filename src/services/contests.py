@@ -387,24 +387,34 @@ class ContestService:
         return None, None
 
     async def add_pro_set(self, contest: Contest , pro_set: list[tuple[int, ProblemScoreType]]):
+        from services.pro import ProConst
         for pro_id, _ in pro_set:
             if pro_id in contest.pro_list:
                 return ('Eexist', f'Problem {pro_id} already in contest'), None
             contest.pro_list[pro_id] = {} # Add dummy dict for avoiding repeated problem id
 
         pro_order = len(contest.pro_sets)
+        pro_values = [(pro_id, int(score_type), pro_order) for pro_id, score_type in pro_set]
+
         async with self.db.acquire() as con:
             try:
-                # Insert problems into contest_problem_joints
-                await con.executemany(
+                await con.execute(
                     '''
                     INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
-                    VALUES ($1, $2, $3, $4)
+                    SELECT $1, p.pro_id, v.score_type, v.order
+                    FROM UNNEST($2::int[], $3::int[], $4::int[]) AS v(pro_id, score_type, order)
+                    JOIN problem p ON p.pro_id = v.pro_id
+                    WHERE p.status != $5
                     ''',
-                    [(contest.contest_id, pro_id, int(score_type), pro_order) for pro_id, score_type in pro_set]
+                    contest.contest_id,
+                    [pro_id for pro_id, _, _ in pro_values],
+                    [score_type for _, score_type, _ in pro_values],
+                    [order for _, _, order in pro_values],
+                    ProConst.STATUS_HIDDEN
                 )
             except asyncpg.ForeignKeyViolationError:
                 return ('Enoext', 'One or more problem IDs do not exist'), None
+
 
         contest.pro_sets.append([pro_id for pro_id, _ in pro_set])
 
