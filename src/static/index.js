@@ -307,10 +307,10 @@ var index = new function() {
         if (acct_id != '0') {
             that.acct_id = parseInt(acct_id);
             j_navlist.find('li.leave').show();
-            j_navlist.find('li.account').show();
+            j_navlist.find('a.account').show();
         } else {
             j_navlist.find('li.sign').show();
-            j_navlist.find('li.account').hide();
+            j_navlist.find('a.account').hide();
         }
 
         update(false);
