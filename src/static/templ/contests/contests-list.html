@@ -5,7 +5,7 @@
 </script>
 
 <div class="col-lg-12 ms-lg-2">
-    {% for contest_name, contest_list in contest_category %}
+    {% for contest_name, contest_list in contest_category.items() %}
         <h4 class="mt-3 d-inline-block">{{ contest_name.capitalize() }} Contests</h4>
         {% if contest_name == "upcoming" and user.is_kernel() %}
             <a class="btn btn-primary d-inline-block" href="{{ url('/contests/manage/add/') }}">&#x271a;</a>
