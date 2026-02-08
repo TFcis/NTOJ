@@ -255,7 +255,7 @@ class SignHandler(RequestHandler):
             f"{self.acct.name}(#{self.acct.acct_id}) sign out",
             "signout",
             {
-                "type": "signin.failure",
+                "type": "signout",
                 "name": self.acct.name,
                 "acct_id": self.acct.acct_id,
             },
