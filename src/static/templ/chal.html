@@ -330,7 +330,10 @@
     {% if rechal == True %}
         <button id="rechal" class="btn btn-warning">Rechallenge</button>
         <button id="reject" class="btn btn-danger">Reject</button>
-        <button id="download" class="btn btn-primary">Download Answer Zip</button>
+        {% set should_not_show_download_output_zip = (ChalConst.STATE_CE, ChalConst.STATE_CLE, ChalConst.STATE_ERR, ChalConst.STATE_JE, ChalConst.STATE_JUDGE, ChalConst.STATE_NOTSTARTED, ChalConst.STATE_SKIPPED) %}
+        {% if chal.total_result.state not in should_not_show_download_output_zip %}
+            <button id="download" class="btn btn-primary">Download Answer Zip</button>
+        {% end %}
     {% end %}
     </div>
 
@@ -444,7 +447,7 @@
                                 <td class="state state-{{ testdata_result.state }}">{{ ChalConst.STATE_LONG_STR[testdata_result.state] }}</td>
                                 <td class="time">{{ testdata_result.time }}</td>
                                 <td class="memory">{{ testdata_result.memory }}</td>
-                                {% if rechal %}
+                                {% if rechal and testdata_result.state not in should_not_show_download_output_zip %}
                                     <td>
                                         <button class="btn btn-sm btn-primary preview-single" testdata_id="{{ testdata_result.testdata_id }}">Preview User Answer</button>
                                     </td>
