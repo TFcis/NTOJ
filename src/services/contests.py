@@ -398,40 +398,43 @@ class ContestService:
         score_types = [int(score_type) for _, score_type in pro_set]
         orders = [pro_order for _ in pro_set]
         async with self.db.acquire() as con:
+            tr = con.transaction()
+            await tr.start()
             try:
-                await con.execute(
+                res = await con.execute(
                     f'''
-                    DO $$
-                    BEGIN
-                        IF EXISTS (
-                            SELECT 1
-                            FROM problem
-                            WHERE pro_id = ANY($1)
-                            AND status = {ProConst.STATUS_HIDDEN}
-                        ) THEN
-                            RAISE EXCEPTION 'Hidden problem detected';
-                        END IF;
-
-                        INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
-                        SELECT $2, v.pro_id, v.score_type, v.order
-                        FROM UNNEST($1::int[], $3::int[], $4::int[]) AS v(pro_id, score_type, order)
-                        JOIN problem p ON p.pro_id = v.pro_id;
-                    END
-                    $$;
+                    WITH hidden_check AS (
+                        SELECT 1
+                        FROM problem
+                        WHERE pro_id = ANY($2)
+                        AND status = {ProConst.STATUS_HIDDEN}
+                        LIMIT 1
+                    )
+                    INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
+                    SELECT
+                        $1,
+                        v.pro_id,
+                        v.score_type,
+                        v.order
+                    FROM UNNEST($2::int[], $3::int[], $4::int[]) AS v(pro_id, score_type, "order")
+                    JOIN problem p ON p.pro_id = v.pro_id
+                    WHERE NOT EXISTS (SELECT 1 FROM hidden_check);
                     ''',
-                    pro_ids,                  # $1: list of pro_id
-                    contest.contest_id,       # $2: contest_id
-                    score_types,              # $3: list of score_type
-                    orders                    # $4: list of order
+                    contest.contest_id,
+                    pro_ids,
+                    score_types,
+                    orders,
                 )
-            except asyncpg.ForeignKeyViolationError:
-                return ('Enoext', 'One or more problem IDs do not exist'), None
-            except asyncpg.PostgresError as e:
-                if 'Hidden problem detected' in str(e):
-                    return ("Eacces", 'Cannot add hidden problems to contest'), None
-                else:
-                    logger.error(f'Unexpected error when adding problem set to contest {contest.contest_id}: {e}')
-                    return ('Eunk', 'Unknown error'), None
+                inserted_count = res.split(' ')[2]
+                if inserted_count != str(len(pro_set)):
+                    tr.rollback()
+                    return ('Eparam', 'Cannot add proset due to problem not found or problem is hidden'), None
+
+            except Exception as e:
+                logger.error(f'Error adding pro set to contest {contest.contest_id}: {e}')
+                tr.rollback()
+            else:
+                tr.commit()
 
         contest.pro_sets.append([pro_id for pro_id, _ in pro_set])
 

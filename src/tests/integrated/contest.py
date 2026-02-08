@@ -699,7 +699,7 @@ class RandomContestTest(AsyncTest):
                 'reqtype': 'add_set',
                 'pro_id': '1,10'
             })
-            self.assertAPIReturnValue(res.text, ("Eacces", 'Cannot add hidden problems to contest'))
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Cannot add proset due to problem not found or problem is hidden'))
             err, contest = await ContestService.inst.get_contest(2)
             assert contest
             self.assertIsNone(err)
@@ -947,7 +947,7 @@ class RandomContestTest(AsyncTest):
                 'reqtype': 'add_set',
                 'pro_id': '7,20,8'
             })
-            self.assertAPIReturnValue(res.text, ('Enoext', 'One or more problem IDs do not exist'))
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Cannot add proset due to problem not found or problem is hidden'))
 
             res = admin_session.post('contests/2/manage/pro', data={
                 'reqtype': 'add',
