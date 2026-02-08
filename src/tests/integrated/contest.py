@@ -88,6 +88,7 @@ class ContestTest(AsyncTest):
             self.assertEqual(contest.contest_start, to_utc(contest_start))
             self.assertEqual(contest.contest_end, to_utc(contest_end))
             self.assertEqual(contest.reg_end, to_utc(reg_end))
+            self.assertEqual(contest.contest_creator, 1)
 
             # test desc
             res = admin_session.post('contests/1/manage/desc', data={
@@ -244,6 +245,56 @@ class ContestTest(AsyncTest):
             })
 
         with AccountContext('admin@test', 'testtest') as admin_session:
+            # NOTE: Should not remove contest_creator or change contest_creator permission
+            for list_type in ('admin', 'normal'):
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'remove',
+                    'acct_id': 1,
+                    'type': list_type,
+                })
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Cannot remove contest creator'))
+                err, contest = await ContestService.inst.get_contest(1)
+                self.assertIsNone(err)
+                assert contest
+                self.assertIn(1, contest.user_list)
+                self.assertEqual(contest.user_list[1]['status'], UserStatus.ADMIN)
+
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'multi_remove',
+                    'acct_id': 1,
+                    'type': list_type,
+                })
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Cannot remove contest creator'))
+                err, contest = await ContestService.inst.get_contest(1)
+                self.assertIsNone(err)
+                assert contest
+                self.assertIn(1, contest.user_list)
+                self.assertEqual(contest.user_list[1]['status'], UserStatus.ADMIN)
+
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'add',
+                    'acct_id': 1,
+                    'type': list_type,
+                })
+                self.assertAPIReturnValue(res.text, ("Eexist", "Contest creator already exists"))
+                err, contest = await ContestService.inst.get_contest(1)
+                self.assertIsNone(err)
+                assert contest
+                self.assertIn(1, contest.user_list)
+                self.assertEqual(contest.user_list[1]['status'], UserStatus.ADMIN)
+
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'multi_add',
+                    'acct_id': 1,
+                    'type': list_type,
+                })
+                self.assertAPIReturnValue(res.text, ("Eexist", "Contest creator already exists"))
+                err, contest = await ContestService.inst.get_contest(1)
+                self.assertIsNone(err)
+                assert contest
+                self.assertIn(1, contest.user_list)
+                self.assertEqual(contest.user_list[1]['status'], UserStatus.ADMIN)
+
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'add',
                 'acct_id': 4,
@@ -254,7 +305,6 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
 
-        with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'remove',
                 'acct_id': 4,
