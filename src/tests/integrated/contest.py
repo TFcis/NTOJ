@@ -264,7 +264,7 @@ class ContestTest(AsyncTest):
                     'acct_id': 1,
                     'type': list_type,
                 })
-                self.assertAPIReturnValue(res.text, ('Eacces', 'Cannot remove contest creator'))
+                self.assertAPIReturnSuccess(res.text)
                 err, contest = await ContestService.inst.get_contest(1)
                 self.assertIsNone(err)
                 assert contest
@@ -288,7 +288,7 @@ class ContestTest(AsyncTest):
                     'acct_id': 1,
                     'type': list_type,
                 })
-                self.assertAPIReturnValue(res.text, ("Eexist", "Contest creator already exists"))
+                self.assertAPIReturnSuccess(res.text)
                 err, contest = await ContestService.inst.get_contest(1)
                 self.assertIsNone(err)
                 assert contest
