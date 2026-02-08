@@ -25,19 +25,19 @@ class ContestProsetHandler(RequestHandler):
         prolist = sorted(filter(lambda pro: pro.pro_id in randomset_prolist_set, prolist),
                                 key=lambda pro: prolist_order[pro.pro_id])
 
-        keys = [f'{self.acct.acct_id}_{pro_order}' for pro_order in range(len(prolist))]
+        keys = [f'{self.acct.acct_id}_{pro_order}' for pro_order in range(len(randomset_prolist))]
         score_values = await self.rs.hmget(scoreboard_key, keys)
 
         score_map: dict[int, dict] = {}
-        for pro_order, pro in enumerate(prolist):
-            score_map[pro.pro_id] = {'score': Decimal('0'), 'state': None}
+        for pro_order, pro_id in enumerate(randomset_prolist):
+            score_map[pro_id] = {'score': Decimal('0'), 'state': None}
             assert 0 <= pro_order < len(score_values)
 
             best_record = score_values[pro_order]
             if best_record is not None:
                 best_record = unpackb(best_record)
-                score_map[pro.pro_id]['score'] += Decimal(best_record['score'])
-                score_map[pro.pro_id]['state'] = best_record['state']
+                score_map[pro_id]['score'] += Decimal(best_record['score'])
+                score_map[pro_id]['state'] = best_record['state']
 
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff: pageoff + 40]
