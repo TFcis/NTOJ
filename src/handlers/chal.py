@@ -1,5 +1,6 @@
 import decimal
 import json
+from collections import defaultdict
 from dataclasses import asdict, is_dataclass
 
 from handlers.base import (
@@ -514,7 +515,12 @@ class ChalHandler(RequestHandler):
         if self.contest:
             rechal = rechal and self.contest.is_admin(self.acct)
 
-        await self.render("chal", pro=pro, chal=chal, rechal=rechal)
+        testdata_to_subtasks = defaultdict(list)
+        for subtask_config in pro.config.subtask_configs.values():
+            for testdata_id in pro.config.testdatas.keys():
+                testdata_to_subtasks[testdata_id].append(subtask_config.subtask_id)
+
+        await self.render("chal", pro=pro, chal=chal, rechal=rechal, testdata_to_subtasks=testdata_to_subtasks)
         return
 
     @reqenv
