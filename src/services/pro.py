@@ -185,7 +185,6 @@ class ProService:
         ProService.inst = self
 
     async def get_pro(self, pro_id: int, allow_statuses: Sequence[int]) -> tuple[None, Problem] | ErrorType:
-        from services.chal import Compiler
         from services.prospec.batch import batch_spec
         """
         Fetch problem configuration and metadata by ID, ensuring it's in the allowed status.
@@ -387,6 +386,18 @@ class ProService:
             os.mkdir(f"problem/{pro_id}/res")
             os.mkdir(f"problem/{pro_id}/http")
             os.mkdir(f"problem/{pro_id}/res/testdata")
+            from services.prospec.batch import batch_spec
+
+            config_json = batch_spec.to_json(batch_spec.get_default_config())
+
+            await con.execute(
+                '''
+                UPDATE problem SET config = $1
+                WHERE pro_id = $2;
+                ''',
+                json.dumps(config_json),
+                pro_id,
+            )
 
         await self.rs.delete("prolist")
 
