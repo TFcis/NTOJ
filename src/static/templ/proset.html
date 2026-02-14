@@ -39,11 +39,11 @@
             }
 
             if (search_name != '') {
-                url += `&name=${search_name}`;
+                url += `&name=${encodeURIComponent(search_name)}`;
             }
 
             if (search_tags != '') {
-                url += `&tags=${search_tags}`;
+                url += `&tags=${encodeURIComponent(search_tags)}`;
             }
 
             return url;
