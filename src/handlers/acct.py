@@ -23,8 +23,11 @@ if base_url == "":
 
 class AcctHandler(RequestHandler):
     @reqenv
-    async def get(self, acct_id):
-        acct_id = int(acct_id)
+    async def get(self, acct_id: int = None):
+        try:
+            acct_id = int(acct_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid account ID"))
         err, acct = await UserService.inst.info_acct(acct_id)
         if err:
             return self.error(err)
@@ -79,10 +82,12 @@ config_dispatcher = ActionDispatcher()
 
 class AcctConfigHandler(RequestHandler):
     @reqenv
-    async def get(self, acct_id=None):
-        if acct_id is None:
-            return self.error(("Enoext", "Missing parameter acct_id"))
-        acct_id = int(acct_id)
+    async def get(self, acct_id: int = None):
+        try:
+            acct_id = int(acct_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid account ID"))
+
         err, acct = await UserService.inst.info_acct(acct_id)
         if err:
             return self.error(err)
@@ -106,6 +111,10 @@ class AcctConfigHandler(RequestHandler):
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def post(self):
         reqtype = self.get_argument("reqtype")
+        try:
+            self.target_acct_id = int(self.get_argument("acct_id"))
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid account ID"))
         return await config_dispatcher.dispatch(self, reqtype)
 
     @config_dispatcher.action("profile")
@@ -114,9 +123,8 @@ class AcctConfigHandler(RequestHandler):
         photo = self.get_argument("photo")
         cover = self.get_argument("cover")
         motto = self.get_argument("motto")
-        target_acct_id = self.get_argument("acct_id")
 
-        if target_acct_id != str(self.acct.acct_id):
+        if self.target_acct_id != self.acct.acct_id:
             return self.error(PERMISSION_DENIED_ERROR)
 
         self.acct.name = name
@@ -133,19 +141,18 @@ class AcctConfigHandler(RequestHandler):
     async def reset_password(self):
         old = self.get_argument("old")
         pw = self.get_argument("pw")
-        target_acct_id = int(self.get_argument("acct_id"))
 
-        if not (self.acct.acct_id == target_acct_id or self.acct.is_kernel()):
+        if not (self.acct.acct_id == self.target_acct_id or self.acct.is_kernel()):
             return self.error(PERMISSION_DENIED_ERROR)
 
-        isadmin = self.acct.is_kernel() and (self.acct.acct_id != target_acct_id)
-        err, _ = await UserService.inst.update_pw(target_acct_id, old, pw, isadmin)
+        isadmin = self.acct.is_kernel() and (self.acct.acct_id != self.target_acct_id)
+        err, _ = await UserService.inst.update_pw(self.target_acct_id, old, pw, isadmin)
         if err:
             return self.error(err)
 
-        if not err and target_acct_id != self.acct.acct_id:
+        if not err and self.target_acct_id != self.acct.acct_id:
             await LogService.inst.add_log(
-                f"{self.acct.name} was changing the password of user #{target_acct_id}.",
+                f"{self.acct.name} was changing the password of user #{self.target_acct_id}.",
                 "manage.acct.update.pwd",
             )
 
@@ -153,17 +160,15 @@ class AcctConfigHandler(RequestHandler):
 
     @config_dispatcher.action("remote-logout")
     async def remote_logout(self):
-        target_acct_id = self.get_argument("acct_id")
-
-        if target_acct_id != str(self.acct.acct_id):
+        if self.target_acct_id != self.acct.acct_id:
             return self.error(PERMISSION_DENIED_ERROR)
 
         hashed_session_key = self.get_argument("hashed_session_key")
         found = False
-        for session_key in await self.rs.hgetall(f"account_session@{target_acct_id}"):
+        for session_key in await self.rs.hgetall(f"account_session@{self.target_acct_id}"):
             if hashlib.md5(session_key).hexdigest() == hashed_session_key:
                 found = True
-                await self.rs.hdel(f"account_session@{target_acct_id}", session_key)
+                await self.rs.hdel(f"account_session@{self.target_acct_id}", session_key)
                 # notify websocket handlers to close connections matching this session
                 await self.rs.publish(UnifiedWebSocketHandler._LOGOUT_EVENT_CHANNEL, session_key)
                 break
@@ -175,15 +180,13 @@ class AcctConfigHandler(RequestHandler):
 
     @config_dispatcher.action("remote-logout-all")
     async def remote_logout_all(self):
-        target_acct_id = self.get_argument("acct_id")
-
-        if target_acct_id != str(self.acct.acct_id):
+        if self.target_acct_id != self.acct.acct_id:
             return self.error(PERMISSION_DENIED_ERROR)
 
         # publish all session keys to logout channel so websocket connections close
-        for session_key in await self.rs.hgetall(f"account_session@{target_acct_id}"):
+        for session_key in await self.rs.hgetall(f"account_session@{self.target_acct_id}"):
             await self.rs.publish(UnifiedWebSocketHandler._LOGOUT_EVENT_CHANNEL, session_key.decode())
-        await self.rs.delete(f"account_session@{target_acct_id}")
+        await self.rs.delete(f"account_session@{self.target_acct_id}")
         self.clear_cookie("id")
         return self.error(("S", ""))
 
@@ -194,8 +197,11 @@ proclass_dispatcher = ActionDispatcher()
 class AcctProClassHandler(RequestHandler):
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
-    async def get(self, acct_id):
-        acct_id = int(acct_id)
+    async def get(self, acct_id: int = None):
+        try:
+            acct_id = int(acct_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid account ID"))
         page = self.get_argument("page", default=None)
 
         if page is None:
@@ -209,7 +215,10 @@ class AcctProClassHandler(RequestHandler):
             await self.render("acct/proclass-add", user=self.acct)
 
         elif page == "update":
-            proclass_id = int(self.get_argument("proclassid"))
+            try:
+                proclass_id = int(self.get_argument("proclassid"))
+            except (ValueError, TypeError):
+                return self.error(("Eparam", "Invalid proclass ID"))
             _, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if proclass["acct_id"] != self.acct.acct_id:
                 return self.error(PERMISSION_DENIED_ERROR)
@@ -220,34 +229,38 @@ class AcctProClassHandler(RequestHandler):
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
-    async def post(self, acct_id):
+    async def post(self, acct_id: int = None):
         reqtype = self.get_argument("reqtype")
-        acct_id = int(acct_id)
+        try:
+            acct_id = int(acct_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid account ID"))
         return await proclass_dispatcher.dispatch(self, reqtype)
 
     @proclass_dispatcher.action("add")
     async def add_proclass(self):
-        name = self.get_argument("name").strip()
-        desc = self.get_argument("desc").strip()
-        proclass_type = int(self.get_argument("type"))
-        p_list_str = self.get_argument("list")
-        p_list = parse_str_to_list(p_list_str)
+        try:
+            proclass_type = int(self.get_argument("type"))
+            if proclass_type not in (ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN):
+                return self.error(("Eparam", "Invalid problem class type"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem class type"))
 
+        p_list = parse_str_to_list(self.get_argument("list"))
+        if len(p_list) == 0:
+            return self.error(("Eparam", "Problem list should not be empty"))
+
+        name = self.get_argument("name").strip()
         if err := self.len_check(
             name, ProClassConst.NAME_MIN, ProClassConst.NAME_MAX, "Name"
         ):
             return self.error(err)
 
+        desc = self.get_argument("desc").strip()
         if err := self.len_check(
             desc, ProClassConst.DESC_MIN, ProClassConst.DESC_MAX, "Desc"
         ):
             return self.error(err)
-
-        if proclass_type not in (ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN):
-            return self.error(("Eparam", "Invalid problem class type"))
-
-        if len(p_list) == 0:
-            return self.error(("Eparam", "Problem list should not be empty"))
 
         await LogService.inst.add_log(
             f"{self.acct.name} add proclass name={name}",
@@ -268,29 +281,33 @@ class AcctProClassHandler(RequestHandler):
 
     @proclass_dispatcher.action("update")
     async def update_proclass(self):
-        name = self.get_argument("name").strip()
-        desc = self.get_argument("desc").strip()
-        proclass_type = int(self.get_argument("type"))
-        p_list_str = self.get_argument("list")
-        p_list = parse_str_to_list(p_list_str)
+        try:
+            proclass_id = int(self.get_argument("proclass_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid proclass ID"))
 
+        try:
+            proclass_type = int(self.get_argument("type"))
+            if proclass_type not in (ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN):
+                return self.error(("Eparam", "Invalid problem class type"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem class type"))
+
+        p_list = parse_str_to_list(self.get_argument("list"))
+        if len(p_list) == 0:
+            return self.error(("Eparam", "Problem list should not be empty"))
+
+        name = self.get_argument("name").strip()
         if err := self.len_check(
             name, ProClassConst.NAME_MIN, ProClassConst.NAME_MAX, "Name"
         ):
             return self.error(err)
 
+        desc = self.get_argument("desc").strip()
         if err := self.len_check(
             desc, ProClassConst.DESC_MIN, ProClassConst.DESC_MAX, "Desc"
         ):
             return self.error(err)
-
-        if proclass_type not in (ProClassConst.USER_PUBLIC, ProClassConst.USER_HIDDEN):
-            return self.error(("Eparam", "Invalid problem class type"))
-
-        if len(p_list) == 0:
-            return self.error(("Eparam", "Problem list should not be empty"))
-
-        proclass_id = int(self.get_argument("proclass_id"))
 
         _, proclass = await ProClassService.inst.get_proclass(proclass_id)
         if proclass["acct_id"] != self.acct.acct_id:
@@ -318,9 +335,12 @@ class AcctProClassHandler(RequestHandler):
 
     @proclass_dispatcher.action("remove")
     async def remove_proclass(self):
-        proclass_id = int(self.get_argument("proclass_id"))
-        err, proclass = await ProClassService.inst.get_proclass(proclass_id)
+        try:
+            proclass_id = int(self.get_argument("proclass_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid proclass ID"))
 
+        err, proclass = await ProClassService.inst.get_proclass(proclass_id)
         if err:
             return self.error(err)
 

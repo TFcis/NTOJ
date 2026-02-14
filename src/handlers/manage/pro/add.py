@@ -21,7 +21,10 @@ class ManageProAddHandler(RequestHandler):
     @add_dispatcher.action("addpro")
     async def add_pro(self):
         name = self.get_argument("name")
-        status = int(self.get_argument("status"))
+        try:
+            status = int(self.get_argument("status"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid status"))
         mode = self.get_argument("mode")
 
         pack_token = None

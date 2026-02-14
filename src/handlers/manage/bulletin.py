@@ -16,7 +16,10 @@ class ManageBulletinHandler(RequestHandler):
             await self.render('manage/bulletin/bulletin-list', page='bulletin', bulletin_list=bulletin_list)
 
         elif page == "update":
-            bulletin_id = int(self.get_argument('bulletin_id'))
+            try:
+                bulletin_id = int(self.get_argument('bulletin_id'))
+            except ValueError:
+                return self.error(('Eparam', 'Invalid bulletin ID'))
             _, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
 
             await self.render('manage/bulletin/update', page='bulletin', bulletin_id=bulletin_id, bulletin=bulletin)
@@ -65,6 +68,11 @@ class ManageBulletinHandler(RequestHandler):
 
     @bulletin_dispatcher.action('update')
     async def update_bulletin(self):
+        try:
+            bulletin_id = int(self.get_argument('bulletin_id'))
+        except ValueError:
+            return self.error(('Eparam', 'Invalid bulletin ID'))
+
         title = self.get_argument('title')
         content = self.get_argument('content')
         pinned = self.get_argument('pinned')
@@ -80,8 +88,6 @@ class ManageBulletinHandler(RequestHandler):
 
         if err := self.len_check(content, BulletinConst.CONTENT_MIN, BulletinConst.CONTENT_MAX, 'Content'):
             return self.error(err)
-
-        bulletin_id = int(self.get_argument('bulletin_id'))
 
         await LogService.inst.add_log(
             f"{self.acct.name} updated a line on bulletin: \"{title}\" which id is #{bulletin_id}.",
@@ -101,7 +107,11 @@ class ManageBulletinHandler(RequestHandler):
 
     @bulletin_dispatcher.action('remove')
     async def remove_bulletin(self):
-        bulletin_id = int(self.get_argument('bulletin_id'))
+        try:
+            bulletin_id = int(self.get_argument('bulletin_id'))
+        except ValueError:
+            return self.error(('Eparam', 'Invalid bulletin ID'))
+
         await LogService.inst.add_log(
             f"{self.acct.name} removed a line on bulletin which id is #{bulletin_id}.", 'manage.inform.remove'
         )

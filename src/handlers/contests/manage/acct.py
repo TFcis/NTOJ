@@ -30,7 +30,11 @@ class ContestManageAcctHandler(RequestHandler):
 
     @contest_manage_acct_dispatcher.action("add")
     async def add_action(self):
-        acct_id = int(self.get_argument("acct_id"))
+        try:
+            acct_id = int(self.get_argument('acct_id'))
+        except ValueError:
+            return self.error(("Eparam", "Invalid account ID"))
+
         list_type = self.get_argument("type")
 
         status = None
@@ -63,7 +67,11 @@ class ContestManageAcctHandler(RequestHandler):
 
     @contest_manage_acct_dispatcher.action("remove")
     async def remove_action(self):
-        acct_id = int(self.get_argument("acct_id"))
+        try:
+            acct_id = int(self.get_argument('acct_id'))
+        except ValueError:
+            return self.error(("Eparam", "Invalid account ID"))
+
         list_type = self.get_argument("type")
 
         if acct_id not in self.contest.user_list:

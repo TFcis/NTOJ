@@ -13,7 +13,12 @@ class ManageAcctHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page=None):
         if page is None:
-            pageoff = int(self.get_argument("pageoff", default=0))
+            try:
+                pageoff = int(self.get_argument("pageoff", default="0"))
+                if pageoff < 0:
+                    pageoff = 0
+            except ValueError:
+                return self.error(("Eparam", "Invalid page offset"))
 
             _, acctlist = await UserService.inst.list_acct(
                 UserConst.ACCTTYPE_KERNEL, True
@@ -29,7 +34,10 @@ class ManageAcctHandler(RequestHandler):
             )
 
         elif page == "update":
-            acct_id = int(self.get_argument("acctid"))
+            try:
+                acct_id = int(self.get_argument("acctid"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid account ID"))
 
             _, acct = await UserService.inst.info_acct(acct_id)
             await self.render("manage/acct/update", page="acct", acct=acct)
@@ -42,8 +50,15 @@ class ManageAcctHandler(RequestHandler):
 
     @acct_dispatcher.action("update")
     async def update_acct(self):
-        acct_id = int(self.get_argument("acct_id"))
-        acct_type = int(self.get_argument("acct_type"))
+        try:
+            acct_id = int(self.get_argument("acct_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid account ID"))
+        try:
+            acct_type = int(self.get_argument("acct_type"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid account type"))
+
         acct_specific_ip = self.get_argument('specific_ip', default='').strip()
         err, acct = await UserService.inst.info_acct(acct_id)
 

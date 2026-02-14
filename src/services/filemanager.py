@@ -6,9 +6,12 @@ ensuring all operations stay within a designated base path and only operate on r
 """
 
 import os
+import logging
 from typing import Literal
 
 from services.pack import PackService
+
+logger = logging.getLogger("tornado.application")
 
 ErrorType = tuple[tuple[str, str], None]
 
@@ -74,7 +77,6 @@ class FileManager:
             return ('Eacces', 'Access denied: invalid file path'), None
 
         filepath = os.path.join(self.basepath, filename)
-
         if not os.path.exists(filepath):
             return ('Enoext', 'File not found'), None
 
@@ -82,6 +84,7 @@ class FileManager:
             os.remove(filepath)
             return None, None
         except OSError as e:
+            logger.error(f"Failed to delete file {filepath}: {e}", exc_info=True)
             return ('Eunk', f'Failed to delete file: {str(e)}'), None
 
     def rename(self, old_filename: str, new_filename: str) -> tuple[None, None] | ErrorType:
@@ -111,6 +114,7 @@ class FileManager:
             os.rename(old_filepath, new_filepath)
             return None, None
         except OSError as e:
+            logger.error(f"Failed to rename file from {old_filepath} to {new_filepath}: {e}", exc_info=True)
             return ('Eunk', f'Failed to rename file: {str(e)}'), None
 
     async def update_from_pack(self, filename: str, pack_token: str) -> tuple[None, None] | ErrorType:
@@ -197,6 +201,7 @@ class FileManager:
                 os.remove(filepath)
                 deleted.append(filename)
             except OSError as e:
+                logger.error(f"Failed to delete file {filepath}: {e}", exc_info=True)
                 return ('Eunk', f'Failed to delete {filename}: {str(e)}'), None
 
         return None, deleted
@@ -227,6 +232,7 @@ class FileManager:
         except UnicodeDecodeError:
             return ('Eunicode', 'File contains invalid unicode characters'), None
         except OSError as e:
+            logger.error(f"Failed to read file {filepath}: {e}", exc_info=True)
             return ('Eunk', f'Failed to read file: {str(e)}'), None
 
     def get_filepath(self, filename: str) -> str | None:

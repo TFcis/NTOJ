@@ -19,8 +19,16 @@ class ManageProListHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        pageoff = int(self.get_argument("pageoff", default=0))
+        try:
+            pageoff = int(self.get_argument("pageoff", default="0"))
+            if pageoff < 0:
+                pageoff = 0
+        except ValueError:
+            return self.error(("Eparam", "Invalid page offset"))
+
         err, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_FULL)
+        if err:
+            return self.error(err)
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff : pageoff + 40]
 
@@ -40,7 +48,11 @@ class ManageProListHandler(RequestHandler):
 
     @prolist_dispatcher.action("rechal")
     async def rechal_pro(self):
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         can_submit = JudgeServerClusterService.inst.is_server_online()
         if not can_submit:
             return self.error(("Ejudge", "No available judge"))
@@ -87,7 +99,11 @@ class ManageProListHandler(RequestHandler):
         if config.unlock_pwd != base64.b64encode(packb(pwd)):
             return self.error(("Eacces", "Wrong password"))
 
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         can_submit = JudgeServerClusterService.inst.is_server_online()
         if not can_submit:
             return self.error(("Ejudge", "No available judge"))

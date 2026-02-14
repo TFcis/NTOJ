@@ -2,6 +2,7 @@ import json
 import decimal
 import asyncio
 import smtplib
+import logging
 from email.header import Header
 from email.mime.text import MIMEText
 from typing import Dict, List, Literal, Union
@@ -11,6 +12,8 @@ from tornado.websocket import websocket_connect
 import config
 from services.rate import RateService
 from services.log import LogService
+
+logger = logging.getLogger("tornado.application")
 
 update_chal_task_running_cnt = 0
 MAX_UPDATE_CHAL_TASK_CNT = 32
@@ -54,6 +57,7 @@ class JudgeServerService:
             self.ws = await websocket_connect(self.server_url)
         except:
             self.status = False
+            logger.error(f"Failed to connect to judge server {self.server_name} at {self.server_url}", exc_info=True)
             return
 
         self.status = True
@@ -70,8 +74,7 @@ class JudgeServerService:
                 await self.queue.put(self.response_handle(ret))
                 self.event.set()
             except Exception as e:
-                import traceback
-                traceback.print_exception(e)
+                logger.error(f"Error handling response from judge server {self.server_name}: {e}", exc_info=True)
 
     async def response_handle(self, ret: str):
         from services.chal import ChalService, ChalConst, TotalResult, SubtaskResult, TestdataResult, MessageType
@@ -209,6 +212,7 @@ class JudgeServerService:
             self.main_task = None
             self.loop_task = None
         except:
+            logger.error(f"Failed to disconnect judge server {self.server_name}", exc_info=True)
             return ('Ejudge', 'Disconnect judge failed')
 
         return None

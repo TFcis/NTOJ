@@ -13,7 +13,11 @@ class ManageProSubtaskHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        pro_id = int(self.get_argument("proid"))
+        try:
+            pro_id = int(self.get_argument("proid"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)
@@ -24,9 +28,18 @@ class ManageProSubtaskHandler(RequestHandler):
 
     @subtask_dispatcher.action("updaterate")
     async def update_rate_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        subtask_id = int(self.get_argument("subtask"))
-        rate = int(self.get_argument("rate"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            subtask_id = int(self.get_argument("subtask"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid subtask ID"))
+        try:
+            rate = int(self.get_argument("rate"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid rate"))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
@@ -47,8 +60,14 @@ class ManageProSubtaskHandler(RequestHandler):
 
     @subtask_dispatcher.action("setdepsubtasks")
     async def set_dep_subtasks_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        subtask_id = int(self.get_argument("subtask"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            subtask_id = int(self.get_argument("subtask"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid subtask ID"))
         dep_subtasks = set(
             map(lambda x: x - 1, parse_str_to_list(self.get_argument("dep_subtasks")))
         )
@@ -76,8 +95,14 @@ class ManageProSubtaskHandler(RequestHandler):
 
     @subtask_dispatcher.action("addsubtask")
     async def add_subtask_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        rate = int(self.get_argument("rate"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            rate = int(self.get_argument("rate"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid rate"))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
@@ -98,8 +123,14 @@ class ManageProSubtaskHandler(RequestHandler):
 
     @subtask_dispatcher.action("deletesubtask")
     async def delete_subtask_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        subtask_id = int(self.get_argument("subtask"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            subtask_id = int(self.get_argument("subtask"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid subtask ID"))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
@@ -125,8 +156,14 @@ class ManageProSubtaskHandler(RequestHandler):
 
     @subtask_dispatcher.action("settestdata")
     async def set_testdata_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        subtask_id = int(self.get_argument("subtask"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            subtask_id = int(self.get_argument("subtask"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid subtask ID"))
         testdatas = parse_str_to_list(self.get_argument("testdatas"))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)

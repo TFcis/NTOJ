@@ -14,7 +14,7 @@ class ContestListHandler(RequestHandler):
     @reqenv
     async def get(self):
         try:
-            pageoff = int(self.get_argument("pageoff", default=0))
+            pageoff = int(self.get_argument("pageoff", default="0"))
             if pageoff < 0:
                 pageoff = 0
         except ValueError:

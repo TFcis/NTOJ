@@ -17,11 +17,17 @@ pro_dispatcher = ActionDispatcher()
 class ProsetHandler(RequestHandler):
     @reqenv
     async def get(self):
-        pageoff = int(self.get_argument("pageoff", default=0))
+        try:
+            pageoff = int(self.get_argument("pageoff", default="0"))
+            if pageoff < 0:
+                pageoff = 0
+        except ValueError:
+            return self.error(("Eparam", "Invalid page offset"))
+
         order = self.get_argument("order", default=None)
         problem_show = self.get_argument("show", default="all")
-        show_only_online_pro = self.get_argument("online", default=False)
-        order_reverse = self.get_argument("reverse", default=False)
+        show_only_online_pro = self.get_argument("online", default=None)
+        order_reverse = self.get_argument("reverse", default=None)
         search_name = self.get_argument("name", default=None)
         search_tags = self.get_argument("tags", default=None)
 
@@ -38,9 +44,13 @@ class ProsetHandler(RequestHandler):
         if search_tags:
             search_tags = search_tags.lower()
 
-        proclass_id = int(self.get_argument("proclass_id", default=0))
-        if proclass_id == 0:
-            proclass_id = None
+        proclass_id = self.get_argument("proclass_id", default=None)
+        try:
+            proclass_id = int(proclass_id)
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem class ID"))
+        except TypeError:
+            pass
 
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.acct.is_kernel():
@@ -265,7 +275,10 @@ class ProsetHandler(RequestHandler):
             if self.acct.is_guest():
                 return self.error(("Eacces", "Please login"))
 
-            proclass_id = int(self.get_argument("proclass_id"))
+            try:
+                proclass_id = int(self.get_argument("proclass_id"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid problem class ID"))
 
             if proclass_id in self.acct.proclass_collection:
                 return self.error(("Eexist", "Problem class is already collected"))
@@ -279,7 +292,10 @@ class ProsetHandler(RequestHandler):
             if self.acct.is_guest():
                 return self.error(("Eacces", "Please login"))
 
-            proclass_id = int(self.get_argument("proclass_id"))
+            try:
+                proclass_id = int(self.get_argument("proclass_id"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid problem class ID"))
 
             if proclass_id not in self.acct.proclass_collection:
                 return self.error(("Enoext", "Problem class is not in your collection"))
@@ -292,8 +308,15 @@ class ProsetHandler(RequestHandler):
 
 class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
     @reqenv
-    async def get(self, pro_id: int, path: str):
-        pro_id = int(pro_id)
+    async def get(self, pro_id: int = None, path: str = None):
+        if path is None:
+            return self.error(("Eparam", "Path is required"))
+
+        try:
+            pro_id = int(pro_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid problem ID"))
+
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.contest:
             if not self.contest.is_pro(pro_id):
@@ -366,8 +389,11 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
 
 class ProHandler(RequestHandler):
     @reqenv
-    async def get(self, pro_id):
-        pro_id = int(pro_id)
+    async def get(self, pro_id: int = None):
+        try:
+            pro_id = int(pro_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid problem ID"))
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
 
         if self.contest:
