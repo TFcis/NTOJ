@@ -339,6 +339,7 @@ class ManageProFileManagerTest(AsyncTest):
                 'new_filename': 'other.md',
                 'path': 'http',
             })
+            self.assertAPIReturnSuccess(res.text)
             # 6.2 刪除 cont.html (確保乾淨)
             admin_session.post('manage/pro/filemanager?proid=4', data={
                 'reqtype': 'deletesinglefile',
@@ -346,6 +347,7 @@ class ManageProFileManagerTest(AsyncTest):
                 'filename': 'cont.html',
                 'path': 'http',
             })
+            self.assertAPIReturnSuccess(res.text)
             self.assertFalse(os.path.exists('problem/4/http/cont.html'))
 
             # 6.3 改名 other.md 回 cont.md
@@ -360,5 +362,7 @@ class ManageProFileManagerTest(AsyncTest):
             self.assertTrue(os.path.exists('problem/4/http/cont.html')) # Should be generated
 
             # 清理暫存檔案
-            if os.path.exists(md_path): os.remove(md_path)
-            if os.path.exists(md_update_path): os.remove(md_update_path)
+            if os.path.exists(md_path):
+                os.remove(md_path)
+            if os.path.exists(md_update_path):
+                os.remove(md_update_path)
