@@ -31,7 +31,7 @@ class ManageProFileManagerTest(AsyncTest):
             res = json.loads(res.text)
             with open('tests/static_file/toj3/http/cont.html') as f:
                 self.assertEqual(tornado.escape.xhtml_unescape(res['data']),
-                                f.read())
+                                 f.read())
 
             self.assertTable(
                 'manage/pro/filemanager',
@@ -268,3 +268,97 @@ class ManageProFileManagerTest(AsyncTest):
                 'pack_token': pack_token,
             })
             self.assertAPIReturnSuccess(res.text)
+
+            # test markdown support
+
+            # 1. 準備一個測試用的 markdown 檔案
+            md_path = 'tests/static_file/temp_cont.md'
+            with open(md_path, 'w') as f:
+                f.write('# Hello Markdown\n| A | B |\n|---|---|\n| 1 | 2 |\n*wonderhoi* **[k](wow)** $\\frac{mv^2}{r}$')
+
+            # 2. Add: 上傳 cont.md，檢查是否生成 cont.html
+            pack_token = await self._upload_file(md_path, admin_session)
+            res = admin_session.post('manage/pro/filemanager?proid=4', data={
+                'reqtype': 'addsinglefile',
+                'pro_id': 4,
+                'filename': 'cont.md',
+                'path': 'http',
+                'pack_token': pack_token,
+            })
+            self.assertAPIReturnSuccess(res.text)
+            self.assertTrue(os.path.exists('problem/4/http/cont.md'))
+            self.assertTrue(os.path.exists('problem/4/http/cont.html'))
+
+            # 3. Delete: 刪除 cont.html，檢查是否自動還原 (因為 cont.md 存在)
+            res = admin_session.post('manage/pro/filemanager?proid=4', data={
+                'reqtype': 'deletesinglefile',
+                'pro_id': 4,
+                'filename': 'cont.html',
+                'path': 'http',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            self.assertTrue(os.path.exists('problem/4/http/cont.html')) # Should be restored
+
+            # 4. Rename: 將 cont.html 改名，檢查是否自動還原
+            res = admin_session.post('manage/pro/filemanager?proid=4', data={
+                'reqtype': 'renamesinglefile',
+                'pro_id': 4,
+                'old_filename': 'cont.html',
+                'new_filename': 'cont.html.bak',
+                'path': 'http',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            self.assertTrue(os.path.exists('problem/4/http/cont.html')) # Should be restored
+            self.assertTrue(os.path.exists('problem/4/http/cont.html.bak'))
+
+            # 5. Update: 更新 cont.md，檢查 cont.html 內容是否變更
+            md_update_path = 'tests/static_file/temp_cont_update.md'
+            with open(md_update_path, 'w') as f:
+                f.write('# Updated Content')
+
+            pack_token = await self._upload_file(md_update_path, admin_session)
+            res = admin_session.post('manage/pro/filemanager?proid=4', data={
+                'reqtype': 'updatesinglefile',
+                'pro_id': 4,
+                'filename': 'cont.md',
+                'path': 'http',
+                'pack_token': pack_token,
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            with open('problem/4/http/cont.html') as f:
+                content = f.read()
+                self.assertIn('Updated Content', content)
+
+            # 6. Rename to cont.md: 將其他檔案改名為 cont.md，檢查是否生成 cont.html
+            # 6.1 先把原本的 cont.md 改名為 other.md (cont.html 應該不會被動到)
+            admin_session.post('manage/pro/filemanager?proid=4', data={
+                'reqtype': 'renamesinglefile',
+                'pro_id': 4,
+                'old_filename': 'cont.md',
+                'new_filename': 'other.md',
+                'path': 'http',
+            })
+            # 6.2 刪除 cont.html (確保乾淨)
+            admin_session.post('manage/pro/filemanager?proid=4', data={
+                'reqtype': 'deletesinglefile',
+                'pro_id': 4,
+                'filename': 'cont.html',
+                'path': 'http',
+            })
+            self.assertFalse(os.path.exists('problem/4/http/cont.html'))
+
+            # 6.3 改名 other.md 回 cont.md
+            res = admin_session.post('manage/pro/filemanager?proid=4', data={
+                'reqtype': 'renamesinglefile',
+                'pro_id': 4,
+                'old_filename': 'other.md',
+                'new_filename': 'cont.md',
+                'path': 'http',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            self.assertTrue(os.path.exists('problem/4/http/cont.html')) # Should be generated
+
+            # 清理暫存檔案
+            if os.path.exists(md_path): os.remove(md_path)
+            if os.path.exists(md_update_path): os.remove(md_update_path)
