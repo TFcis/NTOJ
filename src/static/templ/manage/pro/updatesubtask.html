@@ -186,9 +186,9 @@
                         <button class="btn btn-primary edit-rate">Update Rate</button>
                     </div>
 
-                    <label for="testdatas" class="form-label">Testdata id. Starts from 0, for examples: <code>0</code>, <code>1-4</code>, <code>2,4,9-11,13-18</code></label>
+                    <label for="testdatas" class="form-label">Testdata id. Starts from 0, for examples: <code>1</code>, <code>1-4</code>, <code>2,4,9-11,13-18</code></label>
                     <div class="input-group mb-3">
-                        <input id="testdatas" class="form-control mb-1" type="text" value="{{ merge_list_to_str([testdata.testdata_id for testdata in subtask_config.testdatas]) }}" placeholder="Testdata">
+                        <input id="testdatas" class="form-control mb-1" type="text" value="{{ merge_list_to_str([testdata.testdata_id + 1 for testdata in subtask_config.testdatas]) }}" placeholder="Testdata">
                         <button class="btn btn-primary set-testdatas">Update Testdatas</button>
                     </div>
 
