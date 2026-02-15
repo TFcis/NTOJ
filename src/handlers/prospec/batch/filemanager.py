@@ -1,4 +1,5 @@
 import tornado.escape
+import markdown
 
 from handlers.base import RequestHandler, reqenv, require_permission, ActionDispatcher
 from services.log import LogService
