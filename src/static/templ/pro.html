@@ -2,13 +2,6 @@
 {% from utils.numeric import merge_list_to_str %}
 <link rel="stylesheet" type="text/css" href="{{ url('/src/pro.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf_viewer.min.css" integrity="sha512-8LkkqbXJPviYJENC5Z8qC2uKz27x0tNgrZbzsAzt7zkw0/2lXtSdrslVhfrkcR+6LRmxjZxlqniSyWXimoaH5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        tex2jax:{
-            inlineMath:[['$','$'],['\\(','\\)']]
-        }
-    });
-</script>
 <script type="text/javascript">
     var pdf_url = '';
     var html_url = '';
@@ -71,11 +64,6 @@
         let j_cont = $('#cont');
 
         function _load_html() {
-            scriptTag = document.createElement('script');
-            // TODO: docker
-            scriptTag.src = 'https://toj.tfcis.org/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
-            document.head.appendChild(scriptTag);
-
             j_cont.load(html_url, function(res, status, xhr) {
                 if (status == 'error') {
                     $('#pdfbtn').show();
@@ -88,7 +76,7 @@
                         viewer = 2;
                     }
                 } else {
-                    MathJax.Hub.Queue(["Typeset",MathJax.Hub,j_cont[0]]);
+                    MathJax.typeset();
                     j_cont.find('pre > code').each(function(i, e) {
                         $(e).addClass('html');
                         hljs.highlightBlock(e);
