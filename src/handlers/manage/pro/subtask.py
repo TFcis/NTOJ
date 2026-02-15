@@ -127,7 +127,7 @@ class ManageProSubtaskHandler(RequestHandler):
     async def set_testdata_action(self):
         pro_id = int(self.get_argument("pro_id"))
         subtask_id = int(self.get_argument("subtask"))
-        testdatas = parse_str_to_list(self.get_argument("testdatas"))
+        testdatas = list(map(lambda x: x - 1, parse_str_to_list(self.get_argument("testdatas"))))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
