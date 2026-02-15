@@ -219,6 +219,7 @@ var index = new function() {
                 } else {
                     that.cont_destroy = null;
                 }
+                MathJax.typesetPromise();
                 that.containerLoadDone = true;
             });
 
