@@ -219,6 +219,11 @@ var index = new function() {
                 } else {
                     that.cont_destroy = null;
                 }
+                try {
+                    MathJax.typesetPromise();
+                } catch (e) {
+                    console.warn('MathJax typeset error', e);
+                }
                 that.containerLoadDone = true;
             });
 
