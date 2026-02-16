@@ -22,7 +22,7 @@
   <script src="{{ url('/src/pack.js') }}"></script>
   <script type="module"> import pdfjsDist from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/+esm' </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-chtml.js" async></script>
-  <script type="text/x-mathjax-config">
+  <script>
     window.MathJax = {
       tex: {
         inlineMath: [
@@ -34,9 +34,6 @@
           ['$$', '$$'],
           ['$$$$$$', '$$$$$$']
         ]
-      },
-      svg: {
-        fontCache: 'global'
       }
     };
   </script>
