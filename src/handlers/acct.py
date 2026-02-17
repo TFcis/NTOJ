@@ -340,12 +340,26 @@ class AcctProClassHandler(RequestHandler):
         self.error(("S", ""))
 
 
+GOTO_PREV_PAGE = f"""
+<script type="text/javascript" id="contjs">
+function init() {{
+    if (index.prev_url)
+        index.go('{base_url}/' + index.prev_url);
+    else
+        index.go('{base_url}/info');
+}}
+</script>
+"""
+
 sign_dispatcher = ActionDispatcher()
 
 
 class SignHandler(RequestHandler):
     @reqenv
     async def get(self):
+        if not self.acct.is_guest():
+            return self.write(GOTO_PREV_PAGE)
+
         await self.render("sign")
 
     @reqenv
@@ -355,6 +369,9 @@ class SignHandler(RequestHandler):
 
     @sign_dispatcher.action("signin")
     async def sign_in(self):
+        if not self.acct.is_guest():
+            return self.error(("Esign", "Already signed in"))
+
         mail = self.get_argument("mail")
         pw = self.get_argument("pw")
 
@@ -397,6 +414,9 @@ class SignHandler(RequestHandler):
 
     @sign_dispatcher.action("signup")
     async def sign_up(self):
+        if not self.acct.is_guest():
+            return self.error(("Esign", "Already signed in"))
+
         mail = self.get_argument("mail")
         pw = self.get_argument("pw")
         name = self.get_argument("name")
@@ -425,6 +445,9 @@ class SignHandler(RequestHandler):
 
     @sign_dispatcher.action("signout")
     async def sign_out(self):
+        if self.acct.is_guest():
+            return self.error(("Esign", "Not signed in"))
+
         await LogService.inst.add_log(
             f"{self.acct.name}(#{self.acct.acct_id}) sign out",
             "signout",
