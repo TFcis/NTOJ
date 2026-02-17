@@ -203,6 +203,9 @@ class BatchFilemanagerHandler(RequestHandler):
         if old_filename == 'cont.html' and file_mgr.exists('cont.md'):
             render_err = await self._render_cont_md(pro_id, basepath)
             if render_err:
+                if file_mgr.exists(old_filename):
+                    file_mgr.delete(old_filename)
+
                 rollback_err, _ = file_mgr.rename(new_filename, old_filename)
                 if rollback_err:
                     await LogService.inst.add_log(

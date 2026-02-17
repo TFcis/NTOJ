@@ -332,7 +332,7 @@ class ManageProFileManagerTest(AsyncTest):
 
             # 6. Rename to cont.md: 將其他檔案改名為 cont.md，檢查是否生成 cont.html
             # 6.1 先把原本的 cont.md 改名為 other.md (cont.html 應該不會被動到)
-            admin_session.post('manage/pro/filemanager?proid=4', data={
+            res = admin_session.post('manage/pro/filemanager?proid=4', data={
                 'reqtype': 'renamesinglefile',
                 'pro_id': 4,
                 'old_filename': 'cont.md',
@@ -341,7 +341,7 @@ class ManageProFileManagerTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
             # 6.2 刪除 cont.html (確保乾淨)
-            admin_session.post('manage/pro/filemanager?proid=4', data={
+            res = admin_session.post('manage/pro/filemanager?proid=4', data={
                 'reqtype': 'deletesinglefile',
                 'pro_id': 4,
                 'filename': 'cont.html',
