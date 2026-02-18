@@ -89,6 +89,7 @@ class ContestManageGeneralHandler(RequestHandler):
             return self.error(err)
         assert contest_end
         err, reg_end = trantime(reg_end)
+        assert reg_end
         if err:
             return self.error(err)
 
@@ -110,7 +111,10 @@ class ContestManageGeneralHandler(RequestHandler):
                     self.contest.user_list[acct_id]["status"] = UserStatus.APPROVED
 
         self.contest.reg_mode = reg_mode
-        self.contest.reg_end = reg_end
+        if reg_mode is RegMode.INVITED:
+            self.contest.reg_end = contest_end
+        else:
+            self.contest.reg_end = reg_end
 
         self.contest.allow_compilers = allow_compilers
         self.contest.is_public_scoreboard = is_public_scoreboard

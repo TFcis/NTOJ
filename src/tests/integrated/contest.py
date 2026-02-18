@@ -87,7 +87,8 @@ class ContestTest(AsyncTest):
             self.assertEqual(contest.freeze_scoreboard_period, 0)
             self.assertEqual(contest.contest_start, to_utc(contest_start))
             self.assertEqual(contest.contest_end, to_utc(contest_end))
-            self.assertEqual(contest.reg_end, to_utc(reg_end))
+            # NOTE: If reg_mode is INVITED, reg_end should be the same as contest_start
+            self.assertEqual(contest.reg_end, to_utc(contest_end))
             self.assertEqual(contest.contest_creator, 1)
 
             # NOTE: Should not let contest_end <= contest_start
