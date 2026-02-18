@@ -90,6 +90,12 @@ class ContestTest(AsyncTest):
             self.assertEqual(contest.reg_end, to_utc(reg_end))
             self.assertEqual(contest.contest_creator, 1)
 
+            # NOTE: Should not let contest_end <= contest_start
+            config = copy.deepcopy(default_config)
+            config['contest_start'] = self.get_isoformat(contest_end + datetime.timedelta(days=1))
+            res = admin_session.post('contests/1/manage/general', data=config)
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Contest end time should be later than start time'))
+
             # test desc
             res = admin_session.post('contests/1/manage/desc', data={
                 'reqtype': 'update',
@@ -763,8 +769,10 @@ class ContestTest(AsyncTest):
 
         # NOTE: contest end
         with AccountContext('admin@test', 'testtest') as admin_session:
+            contest_start = now - datetime.timedelta(days=2)
             contest_end = now - datetime.timedelta(days=1)
             config = copy.deepcopy(default_config)
+            config['contest_start'] = self.get_isoformat(contest_start)
             config['contest_end'] = self.get_isoformat(contest_end)
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)

@@ -83,9 +83,11 @@ class ContestManageGeneralHandler(RequestHandler):
         err, contest_start = trantime(contest_start)
         if err:
             return self.error(err)
+        assert contest_start
         err, contest_end = trantime(contest_end)
         if err:
             return self.error(err)
+        assert contest_end
         err, reg_end = trantime(reg_end)
         if err:
             return self.error(err)
@@ -93,6 +95,8 @@ class ContestManageGeneralHandler(RequestHandler):
         self.contest.name = name
 
         self.contest.contest_mode = contest_mode
+        if contest_end <= contest_start:
+            return self.error(("Eparam", "Contest end time should be later than start time"))
         self.contest.contest_start = contest_start
         self.contest.contest_end = contest_end
 
