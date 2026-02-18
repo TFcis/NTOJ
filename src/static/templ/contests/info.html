@@ -66,7 +66,7 @@
                     {% else %}
                         {% set now = datetime.datetime.now(datetime.UTC) %}
                         {% set can_reg = True %}
-                        {% if now >= contest.reg_end %}
+                        {% if now >= contest.reg_end and contest.reg_mode is not RegMode.INVITED %}
                             {% set can_reg = False %}
                             <h5>Registration Ended</h5>
                         {% end %}
@@ -91,6 +91,8 @@
                                 <h5>Waiting Approval</h5>
                             {% elif contest.member_is_status(user, UserStatus.APPROVED) %}
                                 <h5>Registered</h5>
+                            {% elif contest.member_is_status(user, UserStatus.REJECTED) %}
+                                <h5>Rejected</h5>
                             {% else %}
                                 <h5>Not Registered</h5>
                             {% end %}

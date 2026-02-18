@@ -34,7 +34,6 @@
     }
 </script>
 
-<!-- TODO: Show reject -->
 {% if contest.reg_mode is RegMode.INVITED %}
     {% if user.acct_id in contest.user_list %}
         {% set status = "Invited" %}
@@ -52,6 +51,8 @@
         {% set status = "Waiting Approval" %}
     {% elif contest.member_is_status(user, UserStatus.APPROVED) %}
         {% set status = "Registered" %}
+    {% elif contest.member_is_status(user, UserStatus.REJECTED) %}
+        {% set status = "Rejected" %}
     {% else %}
         {% set status = "Not Registered" %}
     {% end %}
