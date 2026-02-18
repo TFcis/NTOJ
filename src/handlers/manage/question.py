@@ -33,7 +33,11 @@ class ManageQuestionHandler(RequestHandler):
             )
 
         elif page == "reply":
-            qacct_id = int(self.get_argument("qacct"))
+            try:
+                qacct_id = int(self.get_argument("qacct"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid question account ID"))
+
             _, ques_list = await QuestionService.inst.get_queslist(acct_id=qacct_id)
             await self.render(
                 "manage/question/reply",
@@ -63,8 +67,16 @@ class ManageQuestionHandler(RequestHandler):
             {"reply_message": rtext},
         )
 
-        index = self.get_argument("index")
-        qacct_id = int(self.get_argument("qacct_id"))
+        try:
+            index = int(self.get_argument("index"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid index"))
+
+        try:
+            qacct_id = int(self.get_argument("qacct_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid question account ID"))
+
         await QuestionService.inst.reply(qacct_id, index, rtext)
         self.error(("S", ""))
 
@@ -82,7 +94,15 @@ class ManageQuestionHandler(RequestHandler):
             {"reply_message": rtext},
         )
 
-        index = self.get_argument("index")
-        qacct_id = int(self.get_argument("qacct_id"))
+        try:
+            index = int(self.get_argument("index"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid index"))
+
+        try:
+            qacct_id = int(self.get_argument("qacct_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid question account ID"))
+
         await QuestionService.inst.reply(qacct_id, index, rtext)
         self.error(("S", ""))

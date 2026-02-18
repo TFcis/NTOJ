@@ -1,7 +1,6 @@
 from handlers.manage.acct import ManageAcctHandler
 from handlers.manage.board import ManageBoardHandler
 from handlers.manage.bulletin import ManageBulletinHandler
-from handlers.manage.contest import ManageContestHandler
 from handlers.manage.dash import ManageDashHandler
 from handlers.manage.info import ManageInfoHandler
 from handlers.manage.judge import ManageJudgeHandler
@@ -27,7 +26,6 @@ def get_manage_url(db, rs, pool):
         ('/be/manage/acct/(.+)', ManageAcctHandler, args),
         ('/be/manage/board', ManageBoardHandler, args),
         ('/be/manage/board/(.+)', ManageBoardHandler, args),
-        ('/be/manage/contest', ManageContestHandler, args),
         ('/be/manage/bulletin', ManageBulletinHandler, args),
         ('/be/manage/bulletin/(.+)', ManageBulletinHandler, args),
         ('/be/manage/proclass', ManageProClassHandler, args),

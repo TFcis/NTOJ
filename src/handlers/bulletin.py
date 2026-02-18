@@ -34,7 +34,11 @@ class BulletinHandler(RequestHandler):
             await self.render('info', bulletin_list=bulletin_list, judge_server_status=can_submit)
             return
 
-        bulletin_id = int(bulletin_id)
+        try:
+            bulletin_id = int(bulletin_id)
+        except ValueError:
+            return self.error(('Eparam', 'Invalid bulletin id'))
+
         err, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
         if err:
             return self.error(err)

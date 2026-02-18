@@ -20,7 +20,10 @@ class BatchTestdataHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        pro_id = int(self.get_argument("proid"))
+        try:
+            pro_id = int(self.get_argument("proid"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)
@@ -76,9 +79,18 @@ class BatchTestdataHandler(RequestHandler):
 
     @batch_testdata_dispatcher.action("preview")
     async def preview_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        testdata_id = int(self.get_argument("testdata_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            testdata_id = int(self.get_argument("testdata_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid testdata ID"))
+
         testdata_type = self.get_argument("type")
+        if testdata_type not in ("input", "output"):
+            return self.error(("Eparam", "Invalid testdata file type"))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
@@ -118,9 +130,18 @@ class BatchTestdataHandler(RequestHandler):
 
     @batch_testdata_dispatcher.action("updatesinglefile")
     async def update_single_file_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        testdata_id = int(self.get_argument("testdata_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            testdata_id = int(self.get_argument("testdata_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid testdata ID"))
+
         testdata_type = self.get_argument("type")
+        if testdata_type not in ("input", "output"):
+            return self.error(("Eparam", "Invalid testdata file type"))
         pack_token = self.get_argument("pack_token")
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
@@ -164,7 +185,10 @@ class BatchTestdataHandler(RequestHandler):
 
     @batch_testdata_dispatcher.action("addsinglefile")
     async def add_single_file_action(self):
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
         filename = self.get_argument("filename")
         input_pack_token = self.get_argument("input_pack_token")
         output_pack_token = self.get_argument("output_pack_token")
@@ -216,8 +240,14 @@ class BatchTestdataHandler(RequestHandler):
 
     @batch_testdata_dispatcher.action("deletesinglefile")
     async def delete_single_file_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        testdata_id = int(self.get_argument("testdata_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            testdata_id = int(self.get_argument("testdata_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid testdata ID"))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:

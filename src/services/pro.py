@@ -2,11 +2,14 @@ import enum
 import json
 import os
 import re
+import logging
 import asyncio
 from dataclasses import asdict, dataclass
 from typing import Sequence
 
 from msgpack import packb, unpackb
+
+logger = logging.getLogger("tornado.application")
 
 ErrorType = tuple[tuple[str, str], None]
 
@@ -242,9 +245,13 @@ class ProService:
 
             # TODO: Support different problem types, for now only Batch
             if problem_type == ProType.BATCH:
-                spec = batch_spec
-                for id, files_json in result:
-                    testdatas[id] = spec.parse_testdata_files(id, json.loads(files_json))
+                try:
+                    spec = batch_spec
+                    for id, files_json in result:
+                        testdatas[id] = spec.parse_testdata_files(id, json.loads(files_json))
+                except Exception as e:
+                    logger.error(f"Error parsing testdata for problem {pro_id}: {e}", exc_info=True)
+                    return ("Eunk", "Unknown error"), None
 
             result = await con.fetch(
                 """
@@ -267,7 +274,11 @@ class ProService:
         proconfig: ProblemConfig | None = None
         if problem_type == ProType.BATCH:
             spec = batch_spec
-            spec_config = spec.from_json(config_json)
+            try:
+                spec_config = spec.from_json(config_json)
+            except Exception as e:
+                logger.error(f"Error parsing problem config for problem {pro_id}: {e}", exc_info=True)
+                return ("Eunk", "Unknown error"), None
 
             # Build common ProblemConfig
             proconfig = ProblemConfig(
@@ -287,7 +298,7 @@ class ProService:
         # TODO: get_pro_config
         pass
 
-    async def list_pro(self, allow_pro_statuses: Sequence[int]) -> tuple[None, list[Problem]]:
+    async def list_pro(self, allow_pro_statuses: Sequence[int]) -> tuple[None, list[Problem]] | ErrorType:
         """
         List problems with statuses in `allow_pro_statuses`, with Redis caching.
 
@@ -303,22 +314,26 @@ class ProService:
         for status in allow_pro_statuses:
             assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
 
-        field = f"{allow_pro_statuses}"
+        field = str(allow_pro_statuses)
         if (prolist := (await self.rs.hget("prolist", field))) is not None:
             prolist = unpackb(prolist)
             for i in range(len(prolist)):
                 prolist[i] = Problem(**prolist[i], config=None)
 
         else:
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    f"""
-                        SELECT p.pro_id, p.name, p.status, p.tags, p.allow_submit, p.problem_type
-                        FROM "problem" p
-                        WHERE p."status" IN ({",".join(map(str, allow_pro_statuses))})
-                        ORDER BY pro_id ASC;
-                    """
-                )
+            try:
+                async with self.db.acquire() as con:
+                    result = await con.fetch(
+                        f"""
+                            SELECT p.pro_id, p.name, p.status, p.tags, p.allow_submit, p.problem_type
+                            FROM "problem" p
+                            WHERE p."status" IN ({",".join(map(str, allow_pro_statuses))})
+                            ORDER BY pro_id ASC;
+                        """
+                    )
+            except Exception as e:
+                logger.error(f"Error listing problems with statuses {allow_pro_statuses}: {e}", exc_info=True)
+                return ("Eunk", "Unknown error"), None
 
             prolist = []
             for pro_id, name, status, tags, allow_submit, problem_type in result:
@@ -366,40 +381,52 @@ class ProService:
         if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                """
-                    INSERT INTO "problem"
-                    ("name", "status")
-                    VALUES ($1, $2) RETURNING "pro_id";
-                """,
-                name,
-                status,
-            )
-            if len(result) != 1:
-                return ("Eunk", "Unknown error"), None
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    """
+                        INSERT INTO "problem"
+                        ("name", "status")
+                        VALUES ($1, $2) RETURNING "pro_id";
+                    """,
+                    name,
+                    status,
+                )
+                if len(result) != 1:
+                    return ("Eunk", "Unknown error"), None
 
-            pro_id = int(result[0]["pro_id"])
+                pro_id = int(result[0]["pro_id"])
+                from services.prospec.batch import batch_spec
 
-            os.mkdir(f"problem/{pro_id}")
-            os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-            os.mkdir(f"problem/{pro_id}/res")
-            os.mkdir(f"problem/{pro_id}/http")
-            os.mkdir(f"problem/{pro_id}/res/testdata")
-            from services.prospec.batch import batch_spec
+                config_json = batch_spec.to_json(batch_spec.get_default_config())
 
-            config_json = batch_spec.to_json(batch_spec.get_default_config())
+                await con.execute(
+                    '''
+                    UPDATE problem SET config = $1
+                    WHERE pro_id = $2;
+                    ''',
+                    json.dumps(config_json),
+                    pro_id,
+                )
 
-            await con.execute(
-                '''
-                UPDATE problem SET config = $1
-                WHERE pro_id = $2;
-                ''',
-                json.dumps(config_json),
-                pro_id,
-            )
+                try:
+                    for folder in (f"problem/{pro_id}", f"problem/{pro_id}/res", f"problem/{pro_id}/res/testdata", f"problem/{pro_id}/http"):
+                        os.mkdir(folder)
+                    os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
+                except OSError as e:
+                    # NOTE: rollback database entry if directory creation fails
+                    for folder in (f"problem/{pro_id}/res/testdata", f"problem/{pro_id}/res", f"problem/{pro_id}/http", f"problem/{pro_id}"):
+                        try:
+                            os.rmdir(folder)
+                        except:
+                            pass
+                    logger.error(f"Error creating directories for problem {pro_id}: {e}", exc_info=True)
+                    raise
+            await self.rs.delete("prolist")
 
-        await self.rs.delete("prolist")
+        except Exception as e:
+            logger.error(f"Error adding problem '{name}': {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         return None, pro_id
 
@@ -427,26 +454,31 @@ class ProService:
         if pro.tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", pro.tags):
             return ("Etags", "Invalid problem tag"), None
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                """
-                    UPDATE "problem"
-                    SET "name" = $1, "status" = $2, "tags" = $3, "allow_submit" = $4
-                    WHERE "pro_id" = $5 RETURNING "pro_id";
-                """,
-                pro.name, pro.status, pro.tags, pro.allow_submit, pro.pro_id
-            )
-            if len(result) != 1:
-                return ("Enoext", "Problem not found"), None
+        try:
+            async with self.db.acquire() as con:
+                async with con.transaction():
+                    result = await con.fetch(
+                        """
+                            UPDATE "problem"
+                            SET "name" = $1, "status" = $2, "tags" = $3, "allow_submit" = $4
+                            WHERE "pro_id" = $5 RETURNING "pro_id";
+                        """,
+                        pro.name, pro.status, pro.tags, pro.allow_submit, pro.pro_id
+                    )
+                    if len(result) != 1:
+                        return ("Enoext", "Problem not found"), None
 
-            if pro.status == ProConst.STATUS_HIDDEN:
-                res = await con.fetch('DELETE FROM contest_problem_joints WHERE pro_id = $1 RETURNING contest_id;', pro.pro_id)
-                async with self.rs.pipeline() as pipe:
-                    for r in res:
-                        contest_id = r['contest_id']
-                        await pipe.hdel(f"contest_{contest_id}_scores", str(pro.pro_id))
-                        await pipe.hdel("contest", str(contest_id))
-                    await pipe.execute()
+                    if pro.status == ProConst.STATUS_HIDDEN:
+                        res = await con.fetch('DELETE FROM contest_problem_joints WHERE pro_id = $1 RETURNING contest_id;', pro.pro_id)
+                        async with self.rs.pipeline() as pipe:
+                            for r in res:
+                                contest_id = r['contest_id']
+                                await pipe.hdel(f"contest_{contest_id}_scores", str(pro.pro_id))
+                                await pipe.hdel("contest", str(contest_id))
+                            await pipe.execute()
+        except Exception as e:
+            logger.error(f"Error updating problem {pro.pro_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         await self.rs.delete("prolist")
 
@@ -492,82 +524,87 @@ class ProService:
                     (pro_id, testdata.testdata_id, json.dumps(files_json))
                 )
 
-        async with self.db.acquire() as con:
-            await con.execute(
-                'DELETE FROM "subtask_config" WHERE "pro_id" = $1;', int(pro_id)
-            )
-            await con.execute(
-                'DELETE FROM "testdata" WHERE "pro_id" = $1;', int(pro_id)
-            )
+        try:
+            async with self.db.acquire() as con:
+                async with con.transaction():
+                    await con.execute(
+                        'DELETE FROM "subtask_config" WHERE "pro_id" = $1;', int(pro_id)
+                    )
+                    await con.execute(
+                        'DELETE FROM "testdata" WHERE "pro_id" = $1;', int(pro_id)
+                    )
 
-            # Update problem config using ProSpec
-            # TODO: Support different problem types, for now only Batch
-            if problem_type == ProType.BATCH:
-                from services.prospec.batch import BatchConfig
-                spec = batch_spec
-                # Type assertion: we know spec_config is BatchConfig for BATCH type
-                assert isinstance(config.spec_config, BatchConfig)
-                config_json = spec.to_json(config.spec_config)
+                    # Update problem config using ProSpec
+                    # TODO: Support different problem types, for now only Batch
+                    if problem_type == ProType.BATCH:
+                        from services.prospec.batch import BatchConfig
+                        spec = batch_spec
+                        # Type assertion: we know spec_config is BatchConfig for BATCH type
+                        assert isinstance(config.spec_config, BatchConfig)
+                        config_json = spec.to_json(config.spec_config)
 
-                await con.execute(
-                    '''
-                    UPDATE problem SET config = $1, limits = $2, rate_precision = $3
-                    WHERE pro_id = $4;
-                    ''',
-                    json.dumps(config_json),
-                    json.dumps({
-                        comp: asdict(limit)
-                        for comp, limit in config.limits.items()
-                    }),
-                    config.rate_precision,
-                    pro_id,
-                )
+                        await con.execute(
+                            '''
+                            UPDATE problem SET config = $1, limits = $2, rate_precision = $3
+                            WHERE pro_id = $4;
+                            ''',
+                            json.dumps(config_json),
+                            json.dumps({
+                                comp: asdict(limit)
+                                for comp, limit in config.limits.items()
+                            }),
+                            config.rate_precision,
+                            pro_id,
+                        )
 
-            await con.executemany(
-                """INSERT INTO "subtask_config"
-                    ("pro_id", "subtask_id", "rate", "testdatas", "dep_subtasks")
-                    VALUES ($1, $2, $3, $4, $5);""",
-                insert_subtask_config_values,
-            )
+                    await con.executemany(
+                        """INSERT INTO "subtask_config"
+                            ("pro_id", "subtask_id", "rate", "testdatas", "dep_subtasks")
+                            VALUES ($1, $2, $3, $4, $5);""",
+                        insert_subtask_config_values,
+                    )
 
-            await con.executemany(
-                """
-                    INSERT INTO "testdata" ("pro_id", "id", "files")
-                    VALUES ($1, $2, $3);
-                """,
-                insert_testdatas_values,
-            )
+                    await con.executemany(
+                        """
+                            INSERT INTO "testdata" ("pro_id", "id", "files")
+                            VALUES ($1, $2, $3);
+                        """,
+                        insert_testdatas_values,
+                    )
 
-            res = await con.fetch("SELECT chal_id FROM challenge WHERE pro_id=$1;", pro_id)
+                    res = await con.fetch("SELECT chal_id FROM challenge WHERE pro_id=$1;", pro_id)
 
-            insert_testdata_values = []
-            for testdata_id in config.testdatas:
-                for chal_id in res:
-                    insert_testdata_values.append((chal_id['chal_id'], pro_id, testdata_id))
+                    insert_testdata_values = []
+                    for testdata_id in config.testdatas:
+                        for chal_id in res:
+                            insert_testdata_values.append((chal_id['chal_id'], pro_id, testdata_id))
 
-            insert_subtask_values = []
-            for subtask_id in config.subtask_configs:
-                for chal_id in res:
-                    insert_subtask_values.append((chal_id['chal_id'], pro_id, subtask_id))
+                    insert_subtask_values = []
+                    for subtask_id in config.subtask_configs:
+                        for chal_id in res:
+                            insert_subtask_values.append((chal_id['chal_id'], pro_id, subtask_id))
 
-            for chal_id in res:
-                await con.execute('UPDATE total_result SET state=DEFAULT, time=DEFAULT, memory=DEFAULT, rate=DEFAULT WHERE chal_id=$1;',
-                                  chal_id['chal_id'])
+                    for chal_id in res:
+                        await con.execute('UPDATE total_result SET state=DEFAULT, time=DEFAULT, memory=DEFAULT, rate=DEFAULT WHERE chal_id=$1;',
+                                        chal_id['chal_id'])
 
-            await con.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id) VALUES ($1, $2, $3);', insert_subtask_values)
-            await con.executemany('INSERT INTO testdata_result (chal_id, pro_id, id) VALUES ($1, $2, $3);', insert_testdata_values)
+                    await con.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id) VALUES ($1, $2, $3);', insert_subtask_values)
+                    await con.executemany('INSERT INTO testdata_result (chal_id, pro_id, id) VALUES ($1, $2, $3);', insert_testdata_values)
 
-            # NOTE: Remove cache
-            res = await con.fetch("SELECT contest_id FROM contest_problem_joints WHERE pro_id = $1;", pro_id)
-            refresh_tasks = []
-            for r in res:
-                contest_id = r['contest_id']
-                task = RateService.inst.refresh_pro_ac_rate(pro_id, contest_id)
-                refresh_tasks.append(task)
+                    # NOTE: Remove cache
+                    res = await con.fetch("SELECT contest_id FROM contest_problem_joints WHERE pro_id = $1;", pro_id)
+                    refresh_tasks = []
+                    for r in res:
+                        contest_id = r['contest_id']
+                        task = RateService.inst.refresh_pro_ac_rate(pro_id, contest_id)
+                        refresh_tasks.append(task)
 
-            await RateService.inst.refresh_acct_rate(all_account=True)
-            await RateService.inst.refresh_pro_topcoder(pro_id)
-            await asyncio.gather(*refresh_tasks)
+                    await RateService.inst.refresh_acct_rate(all_account=True)
+                    await RateService.inst.refresh_pro_topcoder(pro_id)
+                    await asyncio.gather(*refresh_tasks)
+        except Exception as e:
+            logger.error(f"Error updating problem config for problem {pro_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         return None, None
 
@@ -614,57 +651,77 @@ class ProClassService:
         ProClassService.inst = self
 
     async def get_proclass(self, proclass_id: int):
-        async with self.db.acquire() as con:
-            res = await con.fetch(
-                'SELECT "proclass_id", "name", "desc", "list", "acct_id", "type" FROM "proclass" WHERE "proclass_id" = $1;',
-                int(proclass_id),
-            )
+        try:
+            async with self.db.acquire() as con:
+                res = await con.fetch(
+                    'SELECT "proclass_id", "name", "desc", "list", "acct_id", "type" FROM "proclass" WHERE "proclass_id" = $1;',
+                    int(proclass_id),
+                )
 
-            if len(res) != 1:
-                return ("Enoext", "Problem class not found"), None
-            res = res[0]
+                if len(res) != 1:
+                    return ("Enoext", "Problem class not found"), None
+                res = res[0]
+        except Exception as e:
+            logger.error(f"Error fetching problem class {proclass_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         return None, res
 
     async def get_proclass_list(self):
-        async with self.db.acquire() as con:
-            res = await con.fetch('SELECT "proclass_id", "name", "acct_id", "type" FROM "proclass" ORDER BY "proclass_id" ASC;')
+        try:
+            async with self.db.acquire() as con:
+                res = await con.fetch('SELECT "proclass_id", "name", "acct_id", "type" FROM "proclass" ORDER BY "proclass_id" ASC;')
+        except Exception as e:
+            logger.error(f"Error fetching problem class list: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         return None, res
 
     async def add_proclass(self, name: str, p_list: list[int], desc: str, acct_id: int, proclass_type: int):
-        async with self.db.acquire() as con:
-            res = await con.fetchrow(
-                """
-                    INSERT INTO "proclass" ("name", "list", "desc", "acct_id", "type")
-                    VALUES ($1, $2, $3, $4, $5) RETURNING "proclass_id";
-                """,
-                name,
-                p_list,
-                desc,
-                acct_id,
-                proclass_type,
-            )
+        try:
+            async with self.db.acquire() as con:
+                res = await con.fetchrow(
+                    """
+                        INSERT INTO "proclass" ("name", "list", "desc", "acct_id", "type")
+                        VALUES ($1, $2, $3, $4, $5) RETURNING "proclass_id";
+                    """,
+                    name,
+                    p_list,
+                    desc,
+                    acct_id,
+                    proclass_type,
+                )
+        except Exception as e:
+            logger.error(f"Error adding problem class '{name}': {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         return None, res[0]
 
     async def remove_proclass(self, proclass_id: int):
-        async with self.db.acquire() as con:
-            result: str = await con.execute(
-                'DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id)
-            )
-            affected_row_cnt = int(result.split(" ")[1])  # NOTE: DELETE \d+
-            if affected_row_cnt == 0:
-                return ("Enoext", "Bulletin not found"), None
+        try:
+            async with self.db.acquire() as con:
+                result: str = await con.execute(
+                    'DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id)
+                )
+                affected_row_cnt = int(result.split(" ")[1])  # NOTE: DELETE \d+
+                if affected_row_cnt == 0:
+                    return ("Enoext", "Bulletin not found"), None
+        except Exception as e:
+            logger.error(f"Error removing problem class {proclass_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
     async def update_proclass(self, proclass_id, name, p_list, desc, proclass_type):
         proclass_id = int(proclass_id)
-        async with self.db.acquire() as con:
-            await con.execute(
-                'UPDATE "proclass" SET "name" = $1, "list" = $2, "desc" = $3, "type" = $4 WHERE "proclass_id" = $5',
-                name,
-                p_list,
-                desc,
-                proclass_type,
-                proclass_id,
-            )
+        try:
+            async with self.db.acquire() as con:
+                await con.execute(
+                    'UPDATE "proclass" SET "name" = $1, "list" = $2, "desc" = $3, "type" = $4 WHERE "proclass_id" = $5',
+                    name,
+                    p_list,
+                    desc,
+                    proclass_type,
+                    proclass_id,
+                )
+        except Exception as e:
+            logger.error(f"Error updating problem class {proclass_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
