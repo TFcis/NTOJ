@@ -322,6 +322,22 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertNotIn(4, contest.user_list)
 
+        with AccountContext('contest1@test', 'test') as user_session:
+            # NOTE: Should not allow register in INVITED mode
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
+            })
+            self.assertAPIReturnValue(res.text, ("Eacces", "Invited mode do not allow register"))
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
+
+            # NOTE: Should not allow unregister in INVITED mode
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnValue(res.text, ("Eacces", "Invited mode do not allow unregister"))
+
         with AccountContext('admin@test', 'testtest') as admin_session:
             config = copy.deepcopy(default_config)
             config['reg_mode'] = RegMode.FREE_REG
@@ -339,6 +355,29 @@ class ContestTest(AsyncTest):
             err, contest = await ContestService.inst.get_contest(1)
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
+            # NOTE: Should not register again when already approved
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
+            })
+            self.assertAPIReturnValue(res.text, ("Eexist", "Your registration has been approved, you cannot register again"))
+
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            # NOTE: Should not unregister again when not registered
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnValue(res.text, ("Enoext", "You have not registered yet"))
+
+            # NOTE: Restore
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
+            })
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
@@ -368,12 +407,46 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.REQUESTED)
 
+            # NOTE: Should not register again when already requested
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
+            })
+            self.assertAPIReturnValue(res.text, ("Eacces", "Your registration is in request status, please wait for approval"))
+
+            # NOTE: Should allow cancel register when in request status
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            # NOTE: Should not unregister again when not registered or requested
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnValue(res.text, ("Enoext", "You have not registered yet"))
+
+            # NOTE: Restore
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
+            })
+            self.assertAPIReturnSuccess(res.text)
+
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/reg', data={
                 'reqtype': 'approval',
                 'acct_id': 4,
             })
             self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
+            # NOTE: Should not allow reject when already approved
+            res = admin_session.post('contests/1/manage/reg', data={
+                'reqtype': 'reject',
+                'acct_id': 4,
+            })
+            self.assertAPIReturnValue(res.text, ("Enoext", "Account(#4) should be in the request status"))
             err, contest = await ContestService.inst.get_contest(1)
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
@@ -387,7 +460,6 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertNotIn(4, contest.user_list)
 
-        with AccountContext('contest1@test', 'test') as user_session:
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
             })
@@ -396,15 +468,28 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.REQUESTED)
 
-        with AccountContext('admin@test', 'testtest') as admin_session:
-            res = admin_session.post('contests/1/manage/reg', data={
-                'reqtype': 'reject',
-                'acct_id': 4,
+            with AccountContext('admin@test', 'testtest') as admin_session:
+                res = admin_session.post('contests/1/manage/reg', data={
+                    'reqtype': 'reject',
+                    'acct_id': 4,
+                })
+                self.assertAPIReturnSuccess(res.text)
+                err, contest = await ContestService.inst.get_contest(1)
+                self.assertIsNone(err)
+                self.assertEqual(contest.user_list[4]['status'], UserStatus.REJECTED)
+
+            # NOTE: Should not allow request register when already rejected
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
             })
-            self.assertAPIReturnSuccess(res.text)
-            err, contest = await ContestService.inst.get_contest(1)
-            self.assertIsNone(err)
-            self.assertEqual(contest.user_list[4]['status'], UserStatus.REJECTED)
+            self.assertAPIReturnValue(res.text, ("Eacces", "Your registration has been rejected, you cannot register"))
+
+            # NOTE: Should not allow cancel register request when already rejected
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnValue(res.text, ("Eacces", "Your registration has been rejected, you cannot unregister"))
+
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={

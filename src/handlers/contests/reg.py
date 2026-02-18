@@ -26,17 +26,8 @@ class ContestRegHandler(RequestHandler):
         if self.contest.is_admin(self.acct):
             return self.error(("Eacces", "Contest admin do not need to register"))
 
-        status = None
-        if self.contest.reg_mode is RegMode.FREE_REG:
-            status = UserStatus.APPROVED
-        elif self.contest.reg_mode is RegMode.REG_APPROVAL:
-            status = UserStatus.REQUESTED
-
-        if (
-            acct_id in self.contest.user_list
-            and self.contest.user_list[acct_id]["status"] == status
-        ):
-            return self.error(("Eexist", "Already registered"))
+        if self.contest.reg_mode is RegMode.INVITED:
+            return self.error(("Eacces", "Invited mode do not allow register"))
 
         if datetime.datetime.now(datetime.UTC) > self.contest.reg_end:
             return self.error(
@@ -46,10 +37,18 @@ class ContestRegHandler(RequestHandler):
                 )
             )
 
-        if self.contest.reg_mode is RegMode.INVITED:
-            return self.error(("Eacces", "Invited mode do not allow register"))
+        if self.contest.member_is_status(acct_id, UserStatus.REJECTED):
+            assert self.contest.reg_mode is RegMode.REG_APPROVAL
+            return self.error(("Eacces", "Your registration has been rejected, you cannot register"))
 
-        elif self.contest.reg_mode is RegMode.FREE_REG:
+        if self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
+            assert self.contest.reg_mode is RegMode.REG_APPROVAL
+            return self.error(("Eacces", "Your registration is in request status, please wait for approval"))
+
+        if self.contest.member_is_status(acct_id, UserStatus.APPROVED):
+            return self.error(("Eexist", "Your registration has been approved, you cannot register again"))
+
+        if self.contest.reg_mode is RegMode.FREE_REG:
             self.contest.user_list[acct_id] = {"status": UserStatus.APPROVED}
 
         elif self.contest.reg_mode is RegMode.REG_APPROVAL:
@@ -65,20 +64,35 @@ class ContestRegHandler(RequestHandler):
         acct_id = self.acct.acct_id
 
         if self.contest.is_admin(self.acct):
-            return self.error(("Eacces", "Contest admin do not need to register"))
+            return self.error(("Eacces", "Contest admin cannot unregister"))
 
         if self.contest.reg_mode is RegMode.INVITED:
-            return self.error(("Eacces", "Invited mode do not allow register"))
+            return self.error(("Eacces", "Invited mode do not allow unregister"))
+
+        if datetime.datetime.now(datetime.UTC) >= self.contest.contest_start:
+            return self.error(
+                ("Etime", "Contest has started, you cannot unregister now")
+            )
 
         if acct_id not in self.contest.user_list:
             return self.error(("Enoext", "You have not registered yet"))
 
+        if self.contest.member_is_status(acct_id, UserStatus.REJECTED):
+            assert self.contest.reg_mode is RegMode.REG_APPROVAL
+            return self.error(("Eacces", "Your registration has been rejected, you cannot unregister"))
+
         self.contest.user_list.pop(acct_id)
+
 
         await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
-        return self.error(("S", "Unregister Successfully"))
+
+        if self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
+            assert self.contest.reg_mode is RegMode.REG_APPROVAL
+            return self.error(("S", "Cancel Register Successfully"))
+        else:
+            return self.error(("S", "Unregister Successfully"))
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
