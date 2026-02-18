@@ -164,8 +164,8 @@ class ManageProSubtaskHandler(RequestHandler):
             subtask_id = int(self.get_argument("subtask"))
         except ValueError:
             return self.error(("Eparam", "Invalid subtask ID"))
-        testdatas = parse_str_to_list(self.get_argument("testdatas"))
 
+        testdatas = list(map(lambda x: x - 1, parse_str_to_list(self.get_argument("testdatas"))))
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)

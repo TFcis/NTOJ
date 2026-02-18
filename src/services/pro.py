@@ -188,7 +188,6 @@ class ProService:
         ProService.inst = self
 
     async def get_pro(self, pro_id: int, allow_statuses: Sequence[int]) -> tuple[None, Problem] | ErrorType:
-        from services.chal import Compiler
         from services.prospec.batch import batch_spec
         """
         Fetch problem configuration and metadata by ID, ensuring it's in the allowed status.
@@ -382,7 +381,6 @@ class ProService:
         if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
 
-
         try:
             async with self.db.acquire() as con:
                 result = await con.fetch(
@@ -398,6 +396,18 @@ class ProService:
                     return ("Eunk", "Unknown error"), None
 
                 pro_id = int(result[0]["pro_id"])
+                from services.prospec.batch import batch_spec
+
+                config_json = batch_spec.to_json(batch_spec.get_default_config())
+
+                await con.execute(
+                    '''
+                    UPDATE problem SET config = $1
+                    WHERE pro_id = $2;
+                    ''',
+                    json.dumps(config_json),
+                    pro_id,
+                )
 
                 try:
                     for folder in (f"problem/{pro_id}", f"problem/{pro_id}/res", f"problem/{pro_id}/res/testdata", f"problem/{pro_id}/http"):
@@ -412,12 +422,11 @@ class ProService:
                             pass
                     logger.error(f"Error creating directories for problem {pro_id}: {e}", exc_info=True)
                     raise
+            await self.rs.delete("prolist")
 
         except Exception as e:
             logger.error(f"Error adding problem '{name}': {e}", exc_info=True)
             return ("Eunk", "Unknown error"), None
-
-        await self.rs.delete("prolist")
 
         return None, pro_id
 

@@ -39,11 +39,11 @@
             }
 
             if (search_name != '') {
-                url += `&name=${search_name}`;
+                url += `&name=${encodeURIComponent(search_name)}`;
             }
 
             if (search_tags != '') {
-                url += `&tags=${search_tags}`;
+                url += `&tags=${encodeURIComponent(search_tags)}`;
             }
 
             return url;
@@ -347,7 +347,7 @@
 
             <div class="mb-1">
                 <label for="select_prob" class="form-label">Go to Problem</label>
-                <input type="text" id="select_prob" class="form-control" placeholder="problem number">
+                <input type="number" id="select_prob" class="form-control" placeholder="problem number">
             </div>
 
             <div class="mb-1">

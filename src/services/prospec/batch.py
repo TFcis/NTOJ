@@ -43,6 +43,21 @@ class BatchTestdata(BaseTestdata):
 class BatchProblemSpec(ProSpec):
     """Specification for Batch-type problems."""
 
+    def get_default_config(self) -> BatchConfig:
+        from services.chal import Compiler
+        return BatchConfig(
+            chalmeta='',
+            userprog_compile_args='',
+            checker_type=CheckerType.DIFF,
+            checker_compiler=None,
+            checker_compile_args='',
+            summary_type=SummaryType.GROUPMIN,
+            summary_compiler=None,
+            summary_compile_args='',
+            has_grader=False,
+            allow_compilers=set(compiler for compiler in Compiler),
+        )
+
     def from_json(self, data: dict[str, Any]) -> BatchConfig:
         """Parse JSON data into BatchConfig."""
         from services.chal import Compiler

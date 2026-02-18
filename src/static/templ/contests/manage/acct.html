@@ -7,7 +7,7 @@
 
 		const post_func = (reqtype, acct_id, target_type) => {
 			if (acct_id.length == 0) {
-				index.show_notify_dialog('Input cannot empty.', index.DIALOG_TYPE.warning);
+				index.show_notify_dialog('Input invalid.', index.DIALOG_TYPE.warning);
 				return;
 			}
 
@@ -39,7 +39,7 @@
 		$("#addAcctNormal").on('click', () => post_func('add', $("#acctIdNormal").val(), 'normal'));
 		$("#removeAcctNormal").on('click', () => post_func('remove', $("#acctIdNormal").val(), 'normal'));
 		$("#addAcctListNormal").on('click', () => post_func('multi_add', $("#acctListNormal").val(), 'normal'));
-		$("#removeAcctListNormal").on('click', () => post_func('mulit_remove', $("#acctListNormal").val(), 'normal'));
+		$("#removeAcctListNormal").on('click', () => post_func('multi_remove', $("#acctListNormal").val(), 'normal'));
 
 		$("#addAcctAdmin").on('click', () => post_func('add', $("#acctIdAdmin").val(), 'admin'));
 		$("#removeAcctAdmin").on('click', () => post_func('remove', $("#acctIdAdmin").val(), 'admin'));

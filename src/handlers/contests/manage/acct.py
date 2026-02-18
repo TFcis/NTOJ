@@ -37,6 +37,9 @@ class ContestManageAcctHandler(RequestHandler):
 
         list_type = self.get_argument("type")
 
+        if acct_id == self.contest.contest_creator:
+            return self.error(("Eexist", "Contest creator already exists"))
+
         status = None
         if list_type == "normal":
             status = UserStatus.APPROVED
@@ -74,6 +77,9 @@ class ContestManageAcctHandler(RequestHandler):
 
         list_type = self.get_argument("type")
 
+        if acct_id == self.contest.contest_creator:
+            return self.error(("Eacces", "Cannot remove contest creator"))
+
         if acct_id not in self.contest.user_list:
             return self.error(("Enoext", "User is not in contest"))
 
@@ -107,6 +113,9 @@ class ContestManageAcctHandler(RequestHandler):
         acct_list = parse_str_to_list(acct_id)
 
         for a_id in acct_list:
+            if a_id == self.contest.contest_creator:
+                continue
+
             self.contest.user_list[a_id] = {
                 "status": status,
             }
@@ -135,6 +144,8 @@ class ContestManageAcctHandler(RequestHandler):
         acct_list = parse_str_to_list(acct_id)
 
         for a_id in acct_list:
+            if a_id == self.contest.contest_creator:
+                continue
             try:
                 self.contest.user_list.pop(a_id)
             except KeyError:
