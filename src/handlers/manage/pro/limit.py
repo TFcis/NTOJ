@@ -70,7 +70,7 @@ class ManageProLimitHandler(RequestHandler):
         pro.config.limits = new_limits
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to update the problem #{pro_id} limit config",
             "manage.pro.update.limit",
             {

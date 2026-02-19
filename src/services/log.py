@@ -17,23 +17,39 @@ class LogService:
         self.rs = rs
         LogService.inst = self
 
-    async def add_log(self, message, log_type=None, params=None):
+    async def add_log(self, message, log_type=None, params=None, handler=None):
         if isinstance(params, dict):
             params = json.dumps(params, ensure_ascii=False, cls=_Encoder)
 
         message = str(message)
+
+        # Extract context from handler if provided
+        operator_acct_id = None
+        operator_ip = None
+        contest_id = 0
+
+        if handler is not None:
+            if hasattr(handler, 'acct') and handler.acct and handler.acct.acct_id != 0:
+                operator_acct_id = handler.acct.acct_id
+            if hasattr(handler, 'request'):
+                operator_ip = handler.request.remote_ip
+            if hasattr(handler, 'contest') and handler.contest:
+                contest_id = handler.contest.contest_id
 
         try:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     '''
                         INSERT INTO "log"
-                        ("message", "type", "params")
-                        VALUES ($1, $2, $3) RETURNING "log_id";
+                        ("message", "type", "params", "operator_acct_id", "operator_ip", "contest_id")
+                        VALUES ($1, $2, $3, $4, $5, $6) RETURNING "log_id";
                     ''',
                     message,
                     log_type,
                     params,
+                    operator_acct_id,
+                    operator_ip,
+                    contest_id,
                 )
         except Exception as e:
             logger.error(f"Error adding log: {e}", exc_info=True)
@@ -44,7 +60,10 @@ class LogService:
     async def view_log(self, log_id: int):
         try:
             async with self.db.acquire() as con:
-                res = await con.fetch('SELECT log_id, "type", message, "timestamp", params FROM log WHERE log_id = $1', int(log_id))
+                res = await con.fetch(
+                    'SELECT log_id, "type", message, "timestamp", params, operator_acct_id, operator_ip, contest_id FROM log WHERE log_id = $1',
+                    int(log_id)
+                )
                 if len(res) == 0:
                     return ('Enoext', 'Log not found'), None
                 res = res[0]
@@ -58,20 +77,23 @@ class LogService:
                     'log_type': res['type'],
                     'message': res['message'],
                     'timestamp': res['timestamp'],
-                    'params': params
+                    'params': params,
+                    'operator_acct_id': res['operator_acct_id'],
+                    'operator_ip': res['operator_ip'],
+                    'contest_id': res['contest_id'],
                 }
         except Exception as e:
             logger.error(f"Error viewing log {log_id}: {e}", exc_info=True)
             return ('Eunk', 'Unknown error'), None
 
 
-    async def list_log(self, off, num, log_type=None):
+    async def list_log(self, off, num, log_type=None, contest_id=None):
         try:
             async with self.db.acquire() as con:
-                if log_type is None:
+                if log_type is None and contest_id is None:
                     result = await con.fetch(
                         '''
-                            SELECT "log"."log_id", "log"."message", "log"."timestamp"
+                            SELECT "log"."log_id", "log"."message", "log"."timestamp", "log"."operator_acct_id", "log"."contest_id"
                             FROM "log"
                             ORDER BY "log"."timestamp" DESC OFFSET $1 LIMIT $2;
                         ''',
@@ -82,10 +104,10 @@ class LogService:
                     count = await con.fetch('SELECT COUNT(*) FROM "log"')
                     count = count[0]['count']
 
-                else:
+                elif log_type is not None and contest_id is None:
                     result = await con.fetch(
                         '''
-                            SELECT "log"."log_id", "log"."message", "log"."timestamp"
+                            SELECT "log"."log_id", "log"."message", "log"."timestamp", "log"."operator_acct_id", "log"."contest_id"
                             FROM "log"
                             WHERE "log"."type" = $1
                             ORDER BY "log"."timestamp" DESC OFFSET $2 LIMIT $3;
@@ -98,13 +120,52 @@ class LogService:
                     count = await con.fetch('SELECT COUNT(*) FROM "log" WHERE "log"."type" = $1', log_type)
                     count = count[0]['count']
 
+                elif log_type is None and contest_id is not None:
+                    result = await con.fetch(
+                        '''
+                            SELECT "log"."log_id", "log"."message", "log"."timestamp", "log"."operator_acct_id", "log"."contest_id"
+                            FROM "log"
+                            WHERE "log"."contest_id" = $1
+                            ORDER BY "log"."timestamp" DESC OFFSET $2 LIMIT $3;
+                        ''',
+                        contest_id,
+                        off,
+                        num,
+                    )
+
+                    count = await con.fetch('SELECT COUNT(*) FROM "log" WHERE "log"."contest_id" = $1', contest_id)
+                    count = count[0]['count']
+
+                else:  # Both log_type and contest_id are provided
+                    result = await con.fetch(
+                        '''
+                            SELECT "log"."log_id", "log"."message", "log"."timestamp", "log"."operator_acct_id", "log"."contest_id"
+                            FROM "log"
+                            WHERE "log"."type" = $1 AND "log"."contest_id" = $2
+                            ORDER BY "log"."timestamp" DESC OFFSET $3 LIMIT $4;
+                        ''',
+                        log_type,
+                        contest_id,
+                        off,
+                        num,
+                    )
+
+                    count = await con.fetch(
+                        'SELECT COUNT(*) FROM "log" WHERE "log"."type" = $1 AND "log"."contest_id" = $2',
+                        log_type,
+                        contest_id
+                    )
+                    count = count[0]['count']
+
                 loglist = []
-                for log_id, message, timestamp in result:
+                for log_id, message, timestamp, operator_acct_id, contest_id_val in result:
                     loglist.append(
                         {
                             'log_id': log_id,
                             'message': message,
                             'timestamp': timestamp,
+                            'operator_acct_id': operator_acct_id,
+                            'contest_id': contest_id_val,
                         }
                     )
         except Exception as e:

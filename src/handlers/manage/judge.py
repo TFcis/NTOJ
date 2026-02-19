@@ -65,13 +65,13 @@ class ManageJudgeHandler(RequestHandler):
             server_name = f"server-{index}"
 
         if err := await JudgeServerClusterService.inst.connect_server(index):
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried connected {server_name} but failed.",
                 "manage.judge.connect.failure",
             )
             return self.error(err)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} had been connected {server_name} succesfully.",
             "manage.judge.connect",
         )
@@ -91,7 +91,7 @@ class ManageJudgeHandler(RequestHandler):
             server_name = f"server-{index}"
 
         if config.unlock_pwd != base64.b64encode(packb(pwd)):
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried to disconnect {server_name} but failed.",
                 "manage.judge.disconnect.failure",
             )
@@ -99,7 +99,7 @@ class ManageJudgeHandler(RequestHandler):
 
         if err := await JudgeServerClusterService.inst.disconnect_server(index):
             return self.error(err)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} had been disconnected {server_name} succesfully.",
             "manage.judge.disconnect",
         )

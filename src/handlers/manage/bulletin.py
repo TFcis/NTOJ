@@ -55,7 +55,7 @@ class ManageBulletinHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} added a line on bulletin: \"{title}\".", 'manage.inform.add',
             {
                 "content": content,
@@ -89,7 +89,7 @@ class ManageBulletinHandler(RequestHandler):
         if err := self.len_check(content, BulletinConst.CONTENT_MIN, BulletinConst.CONTENT_MAX, 'Content'):
             return self.error(err)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} updated a line on bulletin: \"{title}\" which id is #{bulletin_id}.",
             'manage.inform.update',
             {
@@ -112,7 +112,7 @@ class ManageBulletinHandler(RequestHandler):
         except ValueError:
             return self.error(('Eparam', 'Invalid bulletin ID'))
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} removed a line on bulletin which id is #{bulletin_id}.", 'manage.inform.remove'
         )
         err, _ = await BulletinService.inst.del_bulletin(bulletin_id)

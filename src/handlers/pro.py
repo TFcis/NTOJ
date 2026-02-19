@@ -471,7 +471,7 @@ class ProTagsHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             (
                 self.acct.name
                 + " updated the tag of problem #"

@@ -32,7 +32,7 @@ class ManageProAddHandler(RequestHandler):
             pack_token = self.get_argument("pack_token")
 
         err, pro_id = await ProService.inst.add_pro(name, status)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to add the problem #{pro_id}",
             "manage.pro.add.pro",
             {"acct_id": self.acct.acct_id},

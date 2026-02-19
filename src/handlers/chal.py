@@ -594,7 +594,7 @@ class ChalHandler(RequestHandler):
 
         await RateService.inst.refresh_pro_topcoder(chal.pro_id)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name}(#{self.acct.acct_id}) reject chal#{chal_id}.",
             "manage.chal.reject",
             {"reason": reason},

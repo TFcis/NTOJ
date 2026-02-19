@@ -47,7 +47,7 @@ class BatchFilemanagerHandler(RequestHandler):
 
         # Check if file exists and is safe to access
         if not file_mgr.exists(filename):
-            await LogService.inst.add_log(
+            await self.add_log(
                 f'{self.acct.name} tried to download {filename} for problem #{pro_id} but not found',
                 'manage.pro.update.filemanager.download.failed'
             )
@@ -56,13 +56,13 @@ class BatchFilemanagerHandler(RequestHandler):
         # Get safe filepath
         filepath = file_mgr.get_filepath(filename)
         if filepath is None:
-            await LogService.inst.add_log(
+            await self.add_log(
                 f'{self.acct.name} tried to download {filename} for problem #{pro_id}, but it was suspicious',
                 'manage.pro.update.filemanager.download.failed'
             )
             return self.error(PERMISSION_DENIED_ERROR)
 
-        await LogService.inst.add_log(f'{self.acct.name} download {filename} for problem #{pro_id}',
+        await self.add_log(f'{self.acct.name} download {filename} for problem #{pro_id}',
                                       'manage.pro.update.filemanager.download')
 
         self.set_header('Content-Type', 'application/octet-stream')
@@ -79,7 +79,7 @@ class BatchFilemanagerHandler(RequestHandler):
                         self.finish()
                         return
             except Exception as e:
-                await LogService.inst.add_log(
+                await self.add_log(
                     f'{self.acct.name} download {filename} for problem #{pro_id} failed: {str(e)}',
                     'manage.pro.update.filemanager.download.failed'
                 )
@@ -123,13 +123,13 @@ class BatchFilemanagerHandler(RequestHandler):
 
         err, content = file_mgr.read(filename, 'r')
         if err:
-            await LogService.inst.add_log(
+            await self.add_log(
                 f'{self.acct.name} tried to preview {filename} for problem #{pro_id}, failed with {err[0]}',
                 'manage.pro.update.filemanager.preview.failed'
             )
             return self.error(err)
 
-        await LogService.inst.add_log(f'{self.acct.name} preview {filename} for problem #{pro_id}',
+        await self.add_log(f'{self.acct.name} preview {filename} for problem #{pro_id}',
                                       'manage.pro.update.filemanager.preview')
         return self.error(('S', content))
 
@@ -160,13 +160,13 @@ class BatchFilemanagerHandler(RequestHandler):
 
         err, _ = file_mgr.rename(old_filename, new_filename)
         if err:
-            await LogService.inst.add_log(
+            await self.add_log(
                 f'{self.acct.name} tried to rename {old_filename} to {new_filename} for problem #{pro_id}, failed with {err[0]}',
                 'manage.pro.update.filemanager.renamesinglefile.failed'
             )
             return self.error(err)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f'{self.acct.name} has sent a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
             'manage.pro.update.filemanager.renamesinglefile',
         )
@@ -199,13 +199,13 @@ class BatchFilemanagerHandler(RequestHandler):
 
         err, _ = await file_mgr.update_from_pack(filename, pack_token)
         if err:
-            await LogService.inst.add_log(
+            await self.add_log(
                 f'{self.acct.name} tried to update {filename} for problem #{pro_id}, failed with {err[0]}',
                 'manage.pro.update.filemanager.updatesinglefile.failed'
             )
             return self.error(err)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f'{self.acct.name} has sent a request to update {filename} for problem #{pro_id}',
             'manage.pro.update.filemanager.updatesinglefile',
         )
@@ -239,13 +239,13 @@ class BatchFilemanagerHandler(RequestHandler):
 
         err, _ = await file_mgr.copy_from_pack(filename, pack_token)
         if err:
-            await LogService.inst.add_log(
+            await self.add_log(
                 f'{self.acct.name} tried to add {filename} for problem #{pro_id}, failed with {err[0]}',
                 'manage.pro.update.filemanager.addsinglefile.failed'
             )
             return self.error(err)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f'{self.acct.name} has sent a request to add {filename} for problem #{pro_id}',
             'manage.pro.update.filemanager.addsinglefile',
         )
@@ -278,13 +278,13 @@ class BatchFilemanagerHandler(RequestHandler):
 
         err, _ = file_mgr.delete(filename)
         if err:
-            await LogService.inst.add_log(
+            await self.add_log(
                 f'{self.acct.name} tried to delete {filename} for problem #{pro_id}, failed with {err[0]}',
                 'manage.pro.update.filemanager.deletesinglefile.failed'
             )
             return self.error(err)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f'{self.acct.name} has sent a request to delete {filename} for problem #{pro_id}',
             'manage.pro.update.filemanager.deletesinglefile',
         )

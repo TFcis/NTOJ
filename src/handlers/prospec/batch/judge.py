@@ -157,7 +157,7 @@ class BatchJudgeHandler(RequestHandler):
         err, _ = await ProService.inst.update_pro_config(pro_id, ProType(pro.problem_type), config)
         if err:
             return self.error(err)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has updated Batch problem #{pro_id} judge config",
             'manage.pro.update.judge.batch',
             {

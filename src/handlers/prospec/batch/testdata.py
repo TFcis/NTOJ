@@ -50,7 +50,7 @@ class BatchTestdataHandler(RequestHandler):
             if not os.path.exists(filepath):
                 return self.error(("Enoext", "Testdata file not found"))
 
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} download testdata {testdata_id} with {testdata_type} type for problem #{pro_id}",
                 "manage.pro.update.testdata.download",
             )
@@ -111,13 +111,13 @@ class BatchTestdataHandler(RequestHandler):
         filepath = os.path.join(basepath, filename)
 
         if not os.path.exists(filepath):
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried to preview file:{filename} for problem #{pro_id} but not found",
                 "manage.pro.update.testdata.preview.failed",
             )
             return self.error(("Enoext", "File not found"))
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} preview testdata {testdata_id} with {testdata_type} type for problem #{pro_id}",
             "manage.pro.update.testdata.preview",
         )
@@ -168,7 +168,7 @@ class BatchTestdataHandler(RequestHandler):
         file_mgr = FileManager(f"problem/{pro_id}/res/testdata")
         err, _ = await file_mgr.update_from_pack(filename, pack_token)
         if err:
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried to update testdata {testdata_id} with {testdata_type} type for problem #{pro_id}, failed with {err[0]}",
                 "manage.pro.update.testdata.updatesinglefile.failed",
                 {"testdata": testdatas[testdata_id]},
@@ -176,7 +176,7 @@ class BatchTestdataHandler(RequestHandler):
             return self.error(err)
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to update testdata {testdata_id} with {testdata_type} type for problem #{pro_id}",
             "manage.pro.update.testdata.updatesinglefile",
         )
@@ -209,7 +209,7 @@ class BatchTestdataHandler(RequestHandler):
         err, _ = await file_mgr.copy_from_pack(f"{filename}.in", input_pack_token)
         if err:
             await PackService.inst.clear(output_pack_token)
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried to add input file:{filename}.in for problem #{pro_id}, failed with {err[0]}",
                 "manage.pro.update.testdata.addsinglefile.failed",
             )
@@ -220,7 +220,7 @@ class BatchTestdataHandler(RequestHandler):
         if err:
             # Clean up input file if output file fails
             file_mgr.delete(f"{filename}.in")
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried to add output file:{filename}.out for problem #{pro_id}, failed with {err[0]}",
                 "manage.pro.update.testdata.addsinglefile.failed",
             )
@@ -231,7 +231,7 @@ class BatchTestdataHandler(RequestHandler):
         )
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to add testdata {new_testdata_id} named {filename} for problem #{pro_id}",
             "manage.pro.update.testdata.addsinglefile",
         )
@@ -268,7 +268,7 @@ class BatchTestdataHandler(RequestHandler):
         # Try to delete both files
         err, _ = file_mgr.multiple_delete([inputfile, outputfile])
         if err:
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried to delete testdata {testdata_id} for problem #{pro_id}, failed with {err[0]}",
                 "manage.pro.update.testdata.deletesinglefile.failed",
                 {"testdata": testdatas[testdata_id]},
@@ -284,7 +284,7 @@ class BatchTestdataHandler(RequestHandler):
         deleted_testdata = pro.config.testdatas.pop(testdata_id)
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to delete testdata {testdata_id} for problem #{pro_id}",
             "manage.pro.update.testdata.deletesinglefile",
             {"testdata": asdict(deleted_testdata)},
