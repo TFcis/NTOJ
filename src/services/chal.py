@@ -3,8 +3,11 @@ import datetime
 import enum
 import decimal
 from typing import Sequence
+import logging
 
 from services.pro import ProService, ProConst, ProblemConfig
+
+logger = logging.getLogger("tornado.application")
 
 class Compiler(enum.IntEnum):
     GCC = 1
@@ -401,7 +404,7 @@ class ChalService:
 
         return ('Eunk', 'Unsupported problem type'), None
 
-    async def reset_chal(self, chal_id: int) -> tuple[None, None]:
+    async def reset_chal(self, chal_id: int) -> tuple[None | str, None | str]:
         # TODO: docstring
         """
 
@@ -409,37 +412,44 @@ class ChalService:
             chal_id (int): Challenge ID to reset.
 
         Returns:
-            tuple[None, None]: Always returns (None, None).
+            tuple[Optional[str], Optional[str]]:
+                On success, (None, None).
+                On failure, (error_code, error_message).
         """
 
         chal_id = int(chal_id)
-        async with self.db.acquire() as con:
-            await con.execute(
-                '''
-                    UPDATE total_result SET state=DEFAULT, time=DEFAULT, memory=DEFAULT, rate=DEFAULT,
-                                            message=DEFAULT, message_type=DEFAULT WHERE chal_id=$1;
-                ''',
-                chal_id
-            )
+        try:
+            async with self.db.acquire() as con:
+                async with con.transaction():
+                    await con.execute(
+                        '''
+                            UPDATE total_result SET state=DEFAULT, time=DEFAULT, memory=DEFAULT, rate=DEFAULT,
+                                                    message=DEFAULT, message_type=DEFAULT WHERE chal_id=$1;
+                        ''',
+                        chal_id
+                    )
 
-            await con.execute(
-                '''
-                    UPDATE subtask_result SET state=$1, time=DEFAULT, memory=DEFAULT, rate=DEFAULT WHERE chal_id=$2;
-                ''',
-                ChalConst.STATE_NOTSTARTED, chal_id
-            )
+                    await con.execute(
+                        '''
+                            UPDATE subtask_result SET state=$1, time=DEFAULT, memory=DEFAULT, rate=DEFAULT WHERE chal_id=$2;
+                        ''',
+                        ChalConst.STATE_NOTSTARTED, chal_id
+                    )
 
-            await con.execute(
-                '''
-                    UPDATE testdata_result SET state=$1, time=DEFAULT, memory=DEFAULT,
-                    message=DEFAULT, message_type=DEFAULT WHERE chal_id=$2;
-                ''',
-                ChalConst.STATE_NOTSTARTED, chal_id
-            )
+                    await con.execute(
+                        '''
+                            UPDATE testdata_result SET state=$1, time=DEFAULT, memory=DEFAULT,
+                            message=DEFAULT, message_type=DEFAULT WHERE chal_id=$2;
+                        ''',
+                        ChalConst.STATE_NOTSTARTED, chal_id
+                    )
+        except Exception as e:
+            logger.error(f"Error resetting challenge {chal_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error')
 
         return None, None
 
-    async def get_subtask_results(self, chal_id: int) -> tuple[None, dict[int, SubtaskResult]]:
+    async def get_subtask_results(self, chal_id: int) -> tuple[None | tuple[str, str], dict[int, SubtaskResult] | None]:
         """
         Retrieve detailed subtask results of a challenge.
 
@@ -452,18 +462,22 @@ class ChalService:
                 On failure, (error_code, None).
         """
         chal_id = int(chal_id)
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    SELECT subtask_result.subtask_id, state, time, memory,
-                    ROUND(subtask_result.rate, problem.rate_precision)
-                    FROM subtask_result
-                    INNER JOIN problem
-                    ON subtask_result.pro_id = problem.pro_id
-                    WHERE "chal_id" = $1 ORDER BY "subtask_id" ASC;
-                ''',
-                chal_id,
-            )
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        SELECT subtask_result.subtask_id, state, time, memory,
+                        ROUND(subtask_result.rate, problem.rate_precision)
+                        FROM subtask_result
+                        INNER JOIN problem
+                        ON subtask_result.pro_id = problem.pro_id
+                        WHERE "chal_id" = $1 ORDER BY "subtask_id" ASC;
+                    ''',
+                    chal_id,
+                )
+        except Exception as e:
+            logger.error(f"Error fetching subtask results for challenge {chal_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         subtask_results: dict[int, SubtaskResult] = {}
         for subtask_id, state, time, memory, rate in result:
@@ -471,7 +485,7 @@ class ChalService:
 
         return None, subtask_results
 
-    async def get_testdata_results(self, chal_id: int) -> tuple[None, dict[int, TestdataResult]]:
+    async def get_testdata_results(self, chal_id: int) -> tuple[None | tuple[str, str], dict[int, TestdataResult] | None]:
         """
         Retrieve detailed testdata results of a challenge.
 
@@ -484,14 +498,18 @@ class ChalService:
                 On failure, (error_code, None).
         """
         chal_id = int(chal_id)
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    SELECT id, state, time, memory, message, message_type
-                    FROM testdata_result WHERE chal_id = $1 ORDER BY id;
-                ''',
-                chal_id
-            )
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        SELECT id, state, time, memory, message, message_type
+                        FROM testdata_result WHERE chal_id = $1 ORDER BY id;
+                    ''',
+                    chal_id
+                )
+        except Exception as e:
+            logger.error(f"Error fetching testdata results for challenge {chal_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         testdata_results: dict[int, TestdataResult] = {}
         for testdata_id, state, time, memory, message, message_type in result:
@@ -515,18 +533,22 @@ class ChalService:
         """
 
         chal_id = int(chal_id)
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    SELECT "challenge"."pro_id", "challenge"."acct_id",
-                    "challenge"."timestamp", "challenge"."compiler_type", "challenge"."contest_id", "account"."name" AS "acct_name"
-                    FROM "challenge"
-                    INNER JOIN "account"
-                    ON "challenge"."acct_id" = "account"."acct_id"
-                    WHERE "chal_id" = $1;
-                ''',
-                chal_id,
-            )
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        SELECT "challenge"."pro_id", "challenge"."acct_id",
+                        "challenge"."timestamp", "challenge"."compiler_type", "challenge"."contest_id", "account"."name" AS "acct_name"
+                        FROM "challenge"
+                        INNER JOIN "account"
+                        ON "challenge"."acct_id" = "account"."acct_id"
+                        WHERE "chal_id" = $1;
+                    ''',
+                    chal_id,
+                )
+        except Exception as e:
+            logger.error(f"Error fetching challenge {chal_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
         if len(result) != 1:
             return ('Enoext', 'Challenge Not Found'), None
         result = result[0]
@@ -598,7 +620,7 @@ class ChalService:
 
         return ('Eunk', 'Unsupported problem type'), None
 
-    async def list_chal(self, off: int, num: int, flt: ChalSearchingParam) -> tuple[None, list[Challenge]]:
+    async def list_chal(self, off: int, num: int, flt: ChalSearchingParam) -> tuple[None | tuple[str, str], list[Challenge] | None]:
         """
         List challenges with filtering, pagination, and joined related info.
 
@@ -608,28 +630,34 @@ class ChalService:
             flt (ChalSearchingParam): Filter parameters.
 
         Returns:
-            tuple[None, list[Challenge]]: On success, returns (None, list[Challenge]) but Challenge without subtask_results:
+            tuple[None | tuple[str, str], list[Challenge] | None]:
+                On success, returns (None, list[Challenge]) but Challenge without subtask_results and testdata_results:
+                On failure, returns (error_code, None).
         """
         fltquery = flt.get_sql_query_str()
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                f'''
-                    SELECT "challenge"."chal_id", "challenge"."pro_id", "challenge"."acct_id", "challenge"."contest_id",
-                    "challenge"."compiler_type", "challenge"."timestamp", "account"."name" AS "acct_name",
-                    "total_result"."state", "total_result"."time", "total_result"."memory",
-                    ROUND("total_result"."rate", problem.rate_precision), "total_result"."message", "total_result"."message_type"
-                    FROM "challenge"
-                    INNER JOIN "account"
-                    ON "challenge"."acct_id" = "account"."acct_id"
-                    INNER JOIN "problem"
-                    ON "challenge"."pro_id" = "problem"."pro_id"
-                    INNER JOIN "total_result"
-                    ON "challenge"."chal_id" = "total_result"."chal_id"
-                    WHERE 1=1 {fltquery}
-                    ORDER BY "challenge"."chal_id" DESC OFFSET {off} LIMIT {num};
-                '''
-            )
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    f'''
+                        SELECT "challenge"."chal_id", "challenge"."pro_id", "challenge"."acct_id", "challenge"."contest_id",
+                        "challenge"."compiler_type", "challenge"."timestamp", "account"."name" AS "acct_name",
+                        "total_result"."state", "total_result"."time", "total_result"."memory",
+                        ROUND("total_result"."rate", problem.rate_precision), "total_result"."message", "total_result"."message_type"
+                        FROM "challenge"
+                        INNER JOIN "account"
+                        ON "challenge"."acct_id" = "account"."acct_id"
+                        INNER JOIN "problem"
+                        ON "challenge"."pro_id" = "problem"."pro_id"
+                        INNER JOIN "total_result"
+                        ON "challenge"."chal_id" = "total_result"."chal_id"
+                        WHERE 1=1 {fltquery}
+                        ORDER BY "challenge"."chal_id" DESC OFFSET {off} LIMIT {num};
+                    '''
+                )
+        except Exception as e:
+            logger.error(f"Error listing challenges with offset {off}, num {num}, filter {flt}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         challist: list[Challenge] = []
         for chal_id, pro_id, acct_id, contest_id, compiler_type, timestamp, acct_name, state, time, memory, rate, message, message_type in result:
@@ -653,27 +681,31 @@ class ChalService:
 
         chal_id = int(chal_id)
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    SELECT
-                        cs.state,
-                        cs.time,
-                        cs.memory,
-                        ROUND(cs.rate, p.rate_precision) AS rate,
-                        cs.message,
-                        cs.message_type
-                    FROM
-                        challenge c
-                    INNER JOIN
-                        total_result cs ON c.chal_id = cs.chal_id
-                    INNER JOIN
-                        problem p ON p.pro_id = c.pro_id
-                    WHERE
-                        cs.chal_id = $1;
-                ''',
-                chal_id,
-            )
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        SELECT
+                            cs.state,
+                            cs.time,
+                            cs.memory,
+                            ROUND(cs.rate, p.rate_precision) AS rate,
+                            cs.message,
+                            cs.message_type
+                        FROM
+                            challenge c
+                        INNER JOIN
+                            total_result cs ON c.chal_id = cs.chal_id
+                        INNER JOIN
+                            problem p ON p.pro_id = c.pro_id
+                        WHERE
+                            cs.chal_id = $1;
+                    ''',
+                    chal_id,
+                )
+        except Exception as e:
+            logger.error(f"Error fetching total result for challenge {chal_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         if len(result) != 1:
             return ('Enoext', 'Challenge not found'), None
@@ -682,7 +714,7 @@ class ChalService:
         return None, TotalResult(result['state'], result['time'], result['memory'], result['rate'], result['message'], result['message_type'])
 
 
-    async def check_acct_pro_state(self, acct_id: int, pro_id: int) -> tuple[None, int | None]:
+    async def check_acct_pro_state(self, acct_id: int, pro_id: int) -> tuple[None | tuple[str, str], int | None]:
         """Check the best challenge state of a user on a specific problem.
 
         Args:
@@ -692,20 +724,24 @@ class ChalService:
         Returns:
             tuple: (err, state) where err is None on success, and state is the best challenge state or None if no challenge exists.
         """
-        async with self.db.acquire() as con:
-            result = await con.fetchrow(
-                '''
-                    SELECT MIN("total_result"."state") AS "state"
-                    FROM "challenge"
-                    INNER JOIN "total_result"
-                    ON "challenge"."chal_id" = "total_result"."chal_id"
-                    AND "challenge"."acct_id" = $1
-                    INNER JOIN "problem"
-                    ON "challenge"."pro_id" = $2;
-                ''',
-                acct_id,
-                pro_id
-            )
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetchrow(
+                    '''
+                        SELECT MIN("total_result"."state") AS "state"
+                        FROM "challenge"
+                        INNER JOIN "total_result"
+                        ON "challenge"."chal_id" = "total_result"."chal_id"
+                        AND "challenge"."acct_id" = $1
+                        INNER JOIN "problem"
+                        ON "challenge"."pro_id" = $2;
+                    ''',
+                    acct_id,
+                    pro_id
+                )
+        except Exception as e:
+            logger.error(f"Error checking account {acct_id} problem {pro_id} state: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         return None, result['state'] if result else None
 
@@ -724,19 +760,23 @@ class ChalService:
 
         fltquery = flt.get_sql_query_str()
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                f'''
-                    SELECT COUNT(1) FROM "challenge"
-                    INNER JOIN "account"
-                    ON "challenge"."acct_id" = "account"."acct_id"
-                    INNER JOIN "problem"
-                    ON "challenge"."pro_id" = "problem"."pro_id"
-                    INNER JOIN "total_result"
-                    ON "challenge"."chal_id"="total_result"."chal_id"
-                    WHERE 1=1 {fltquery};
-                '''
-            )
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    f'''
+                        SELECT COUNT(1) FROM "challenge"
+                        INNER JOIN "account"
+                        ON "challenge"."acct_id" = "account"."acct_id"
+                        INNER JOIN "problem"
+                        ON "challenge"."pro_id" = "problem"."pro_id"
+                        INNER JOIN "total_result"
+                        ON "challenge"."chal_id"="total_result"."chal_id"
+                        WHERE 1=1 {fltquery};
+                    '''
+                )
+        except Exception as e:
+            logger.error(f"Error counting challenges with filter {flt}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         if len(result) != 1:
             return ('Eunk', 'Unknown error'), None

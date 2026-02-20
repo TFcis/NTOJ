@@ -2,6 +2,7 @@ import zipfile
 import os
 import decimal
 import json
+from collections import defaultdict
 from dataclasses import asdict, is_dataclass
 from typing import IO
 
@@ -20,6 +21,7 @@ from services.chal import (
     ChalService,
     ChalSearchingParamBuilder,
     ChalConst,
+    Compiler,
     COMPILER_INFOS,
     MessageType,
     Challenge,
@@ -373,11 +375,29 @@ UnifiedWebSocketHandler.register_channel_callback("chalstatesub", _chal_state_ca
 class ChalListHandler(RequestHandler):
     @reqenv
     async def get(self):
-        pageoff = int(self.get_argument("pageoff", default=0))
-        ppro_id = str(self.get_argument("proid", default=""))
-        pacct_id = str(self.get_argument("acctid", default=""))
-        state = int(self.get_argument("state", default=0))
-        compiler_type = int(self.get_argument("compiler_type", default=-1))
+        try:
+            pageoff = int(self.get_argument("pageoff", default="0"))
+            if pageoff < 0:
+                pageoff = 0
+        except ValueError:
+            return self.error(("Eparam", "Invalid page offset"))
+        try:
+            state = int(self.get_argument("state", default="0"))
+            if state not in ChalConst.STATE_STR:
+                raise ValueError()
+        except ValueError:
+            return self.error(("Eparam", "Invalid state"))
+
+        try:
+            compiler_type = int(self.get_argument("compiler_type", default="-1"))
+            if compiler_type != -1:
+                Compiler(compiler_type)
+        except ValueError:
+            return self.error(("Eparam", "Invalid compiler type"))
+
+        ppro_id = self.get_argument("proid", default="")
+        pacct_id = self.get_argument("acctid", default="")
+
 
         query_pros = self._parse_problem_filter(ppro_id)
         query_accts = self._parse_account_filter(pacct_id)
@@ -472,8 +492,11 @@ class ChalListHandler(RequestHandler):
 class ChalHandler(RequestHandler):
     @reqenv
     @contest_require_permission("all")
-    async def get(self, chal_id):
-        chal_id = int(chal_id)
+    async def get(self, chal_id: int = None):
+        try:
+            chal_id = int(chal_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid challenge id"))
 
         err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
         if err:
@@ -520,15 +543,24 @@ class ChalHandler(RequestHandler):
         if self.contest:
             rechal = rechal and self.contest.is_admin(self.acct)
 
-        await self.render("chal", pro=pro, chal=chal, rechal=rechal)
+        testdata_to_subtasks = defaultdict(list)
+        for subtask_config in pro.config.subtask_configs.values():
+            for testdata_id in pro.config.testdatas.keys():
+                testdata_to_subtasks[testdata_id].append(subtask_config.subtask_id)
+
+        await self.render("chal", pro=pro, chal=chal, rechal=rechal, testdata_to_subtasks=testdata_to_subtasks)
         return
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     @contest_require_permission("admin")
-    async def post(self, chal_id):
-        chal_id = int(chal_id)
-        self.path_args = (chal_id, )  # Store for action methods
+    async def post(self, chal_id: int = None):
+        try:
+            chal_id = int(chal_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid challenge id"))
+
+        self.path_args = [chal_id]  # Store for action methods
         reqtype = self.get_argument("reqtype")
         return await chal_dispatcher.dispatch(self, reqtype)
 

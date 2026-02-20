@@ -141,7 +141,7 @@ class BatchSubtaskTest(AsyncTest):
             res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'settestdata',
                 'pro_id': 1,
-                'testdatas': '0-2',
+                'testdatas': '1-3',
                 'subtask': 2,
             })
             self.assertAPIReturnSuccess(res.text)
@@ -241,7 +241,7 @@ class BatchSubtaskTest(AsyncTest):
             res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
                 'reqtype': 'settestdata',
                 'pro_id': 1,
-                'testdatas': '0-1, 3',
+                'testdatas': '1-2, 4',
                 'subtask': 2,
             })
             self.assertAPIReturnSuccess(res.text)

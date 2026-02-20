@@ -3,16 +3,19 @@ import os
 import platform
 import sys
 import time
+import logging
 
 import psutil
 
 import config
 from handlers.base import ActionDispatcher, RequestHandler, UnifiedWebSocketHandler, reqenv, require_permission
 from services.user import UserConst, UserService
+from services.log import LogService
 
 info_dispatcher = ActionDispatcher()
 server_start_time = time.time()
 
+logger = logging.getLogger("tornado.application")
 
 class ManageInfoHandler(RequestHandler):
     @reqenv
@@ -172,6 +175,11 @@ class ManageInfoHandler(RequestHandler):
             finally:
                 await con.release()
 
+            await LogService.inst.add_log(
+                f"{self.acct.name} performed a VACUUM ANALYZE on the database.",
+                "manage.info.vacuum",
+            )
             return self.error(("S", ""))
         except Exception as e:
-            return self.error(("E", f"VACUUM Failed: {str(e)}"))
+            logger.error(f"Failed to perform VACUUM ANALYZE: {e}", exc_info=True)
+            return self.error(("E", "VACUUM Failed"))

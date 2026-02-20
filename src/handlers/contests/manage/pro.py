@@ -46,7 +46,10 @@ class ContestManageProHandler(RequestHandler):
         if self.contest.contest_mode == ContestMode.RANDOM_SET:
             return self.error(('Emod', 'Cannot add problems to random set contests'))
 
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
 
         if self.contest.is_pro(pro_id):
             return self.error(("Eexist", f"Problem(#{pro_id}) is already in contest"))
@@ -72,7 +75,10 @@ class ContestManageProHandler(RequestHandler):
         if self.contest.contest_mode == ContestMode.RANDOM_SET:
             return self.error(('Emod', 'Cannot remove problems from random set contests'))
 
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
 
         if not self.contest.is_pro(pro_id):
             return self.error(("Enoext", f"Problem(#{pro_id}) not in contest"))
@@ -134,7 +140,11 @@ class ContestManageProHandler(RequestHandler):
 
     @contest_manage_pro_dispatcher.action("rechal")
     async def rechal_action(self):
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         can_submit = JudgeServerClusterService.inst.is_server_online()
         if not can_submit:
             return self.error(("Ejudge", "No judge available"))
@@ -183,8 +193,11 @@ class ContestManageProHandler(RequestHandler):
 
     @contest_manage_pro_dispatcher.action("public")
     async def public_action(self):
-        """公開題目"""
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         if not self.contest.is_pro(pro_id):
             return self.error(("Enoext", f"Problem(#{pro_id}) not in contest"))
 

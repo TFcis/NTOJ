@@ -49,7 +49,12 @@ class ContestProsetHandler(RequestHandler):
 
     @reqenv
     async def get(self):
-        pageoff = int(self.get_argument('pageoff', default=0))
+        try:
+            pageoff = int(self.get_argument("pageoff", default="0"))
+            if pageoff < 0:
+                pageoff = 0
+        except ValueError:
+            return self.error(("Eparam", "Invalid page offset"))
 
         show_ac_ratio = False
 

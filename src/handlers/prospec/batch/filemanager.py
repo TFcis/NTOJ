@@ -17,7 +17,11 @@ class BatchFilemanagerHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        pro_id = int(self.get_argument('proid'))
+        try:
+            pro_id = int(self.get_argument("proid"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)
@@ -134,7 +138,11 @@ class BatchFilemanagerHandler(RequestHandler):
 
     @batch_filemanager_dispatcher.action('preview')
     async def preview_action(self):
-        pro_id = int(self.get_argument('pro_id'))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         basepath = self.get_argument('path')
         filename = self.get_argument('filename')
 
@@ -168,7 +176,11 @@ class BatchFilemanagerHandler(RequestHandler):
 
     @batch_filemanager_dispatcher.action('renamesinglefile')
     async def rename_single_file_action(self):
-        pro_id = int(self.get_argument('pro_id'))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         basepath = self.get_argument('path')
         old_filename = self.get_argument('old_filename')
         new_filename = self.get_argument('new_filename')
@@ -227,7 +239,11 @@ class BatchFilemanagerHandler(RequestHandler):
 
     @batch_filemanager_dispatcher.action('updatesinglefile')
     async def update_single_file_action(self):
-        pro_id = int(self.get_argument('pro_id'))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         basepath = self.get_argument('path')
         filename = self.get_argument('filename')
         pack_token = self.get_argument('pack_token')
@@ -268,7 +284,11 @@ class BatchFilemanagerHandler(RequestHandler):
 
     @batch_filemanager_dispatcher.action('addsinglefile')
     async def add_single_file_action(self):
-        pro_id = int(self.get_argument('pro_id'))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         basepath = self.get_argument('path')
         filename = self.get_argument('filename')  # TODO: os.path.basename()
         pack_token = self.get_argument('pack_token')
@@ -309,7 +329,11 @@ class BatchFilemanagerHandler(RequestHandler):
 
     @batch_filemanager_dispatcher.action('deletesinglefile')
     async def delete_single_file_action(self):
-        pro_id = int(self.get_argument('pro_id'))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         basepath = self.get_argument('path')
         filename = self.get_argument('filename')
 

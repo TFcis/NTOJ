@@ -1,8 +1,8 @@
 import time
 import base64
 import pickle
+import logging
 from dataclasses import dataclass
-from typing import List, Tuple
 
 import asyncpg
 import bcrypt
@@ -11,8 +11,8 @@ from msgpack import unpackb
 from services.log import LogService
 from services.chal import Compiler
 from services.holiday import HolidayService
-from utils.dbg import dbg_print
 
+logger = logging.getLogger("tornado.application")
 
 class UserConst:
     MAIL_MAX = 1024
@@ -76,14 +76,18 @@ class UserService:
         UserService.inst = self
 
     async def sign_in(self, mail, pw, ip = ''):
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    SELECT "acct_id","password","specific_ip" FROM "account"
-                    WHERE "mail" = $1;
-                ''',
-                mail,
-            )
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        SELECT "acct_id","password","specific_ip" FROM "account"
+                        WHERE "mail" = $1;
+                    ''',
+                    mail,
+                )
+        except Exception as e:
+            logger.error(f"Error during sign in for mail {mail}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
         if len(result) != 1:
             return ('Esign', 'Login failed'), None
 
@@ -91,7 +95,7 @@ class UserService:
         hpw = result[0]['password']
         specific_ip = result[0]['specific_ip']
 
-        if (specific_ip and ip and 
+        if (specific_ip and ip and
             specific_ip != ip and await HolidayService.inst.is_weekday_now()):
             return ('Esignip', 'Login failed'), None
 
@@ -134,14 +138,21 @@ class UserService:
                     name,
                     UserConst.ACCTTYPE_USER,
                 )
-
         except (asyncpg.IntegrityConstraintViolationError, asyncpg.UniqueViolationError):
-            async with self.db.acquire() as con:
-                result = await con.fetch("SELECT last_value FROM account_acct_id_seq;")
-                cur_acct_id = int(result[0]['last_value'])
-                await con.execute(f"SELECT setval('account_acct_id_seq', {cur_acct_id - 1}, true);")
+            try:
+                async with self.db.acquire() as con:
+                    result = await con.fetch("SELECT last_value FROM account_acct_id_seq;")
+                    cur_acct_id = int(result[0]['last_value'])
+                    await con.execute(f"SELECT setval('account_acct_id_seq', {cur_acct_id - 1}, true);")
+            except Exception as e:
+                logger.error(f"Error rolling back account ID sequence after integrity violation: {e}", exc_info=True)
+                return ('Eunk', 'Unknown error'), None
 
             return ('Eexist', 'Account already exists'), None
+
+        except Exception as e:
+            logger.error(f"Error during sign up for mail {mail}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         if len(result) != 1:
             return ('Eexist', 'Account already exists'), None
@@ -168,12 +179,10 @@ class UserService:
 
         try:
             ip = req.request.remote_ip
-
         except Exception:
             ip = ''
+
         session_data['ip'] = ip
-
-
         acct_cache = await self.rs.get(f'account@{acct_id}')
         if acct_cache is None:
             async with self.db.acquire() as con:
@@ -208,7 +217,7 @@ class UserService:
                     await self.rs.delete('acctlist')
 
             except Exception as e:
-                dbg_print(__file__, 150, e=e)
+                logger.error(f"Error updating last IP for account {acct_id}: {e}", exc_info=True)
 
         return None, acct_id, ip
 
@@ -219,17 +228,27 @@ class UserService:
         acct_id = int(acct_id)
 
         if (acct := (await self.rs.get(f'account@{acct_id}'))) is not None:
-            acct = pickle.loads(acct)
+            try:
+                acct = pickle.loads(acct)
+            except Exception as e:
+                await self.rs.delete(f'account@{acct_id}')
+                logger.error(f"Error loading account data from cache for account {acct_id}: {e}", exc_info=True)
+                return await self.info_acct(acct_id)
 
         else:
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    '''
-                        SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "last_compiler", "motto", "proclass_collection", "specific_ip"
-                        FROM "account" WHERE "acct_id" = $1;
-                    ''',
-                    acct_id,
-                )
+            try:
+                async with self.db.acquire() as con:
+                    result = await con.fetch(
+                        '''
+                            SELECT "name", "acct_type", "mail", "photo", "cover", "lastip", "last_compiler", "motto", "proclass_collection", "specific_ip"
+                            FROM "account" WHERE "acct_id" = $1;
+                        ''',
+                        acct_id,
+                    )
+            except Exception as e:
+                logger.error(f"Error fetching account info for account {acct_id}: {e}", exc_info=True)
+                return ('Eunk', 'Unknown error'), None
+
             if len(result) != 1:
                 return ('Enoext', 'Account not found'), None
 
@@ -248,7 +267,12 @@ class UserService:
                 proclass_collection=result['proclass_collection'],
                 specific_ip=result['specific_ip'] if result['specific_ip'] else '',
             )
-            b_acct = pickle.dumps(acct)
+            try:
+                b_acct = pickle.dumps(acct)
+            except pickle.PicklingError as e:
+                logger.error(f"Error pickling account data for account {acct_id}: {e}", exc_info=True)
+                acct.mail = ''
+                return None, acct
 
             await self.rs.setnx(f'account@{acct_id}', b_acct)
             acct.mail = ''
@@ -269,32 +293,36 @@ class UserService:
         if motto_len > UserConst.MOTTO_MAX:
             return ('Emottomax', 'Motto too long'), None
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    UPDATE
-                        "account"
-                    SET
-                        "acct_type" = $1, "name" = $2,
-                        "photo" = $3, "cover" = $4,
-                        "last_compiler" = $5,
-                        "motto" = $6, "proclass_collection" = $7,
-                        "specific_ip" = $9
-                    WHERE
-                        "acct_id" = $8 RETURNING "acct_id";
-                ''',
-                acct.acct_type,
-                acct.name,
-                acct.photo,
-                acct.cover,
-                acct.last_compiler,
-                acct.motto,
-                acct.proclass_collection,
-                acct.acct_id,
-                acct.specific_ip,
-            )
-            if len(result) != 1:
-                return ('Enoext', 'Account not found'), None
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        UPDATE
+                            "account"
+                        SET
+                            "acct_type" = $1, "name" = $2,
+                            "photo" = $3, "cover" = $4,
+                            "last_compiler" = $5,
+                            "motto" = $6, "proclass_collection" = $7,
+                            "specific_ip" = $9
+                        WHERE
+                            "acct_id" = $8 RETURNING "acct_id";
+                    ''',
+                    acct.acct_type,
+                    acct.name,
+                    acct.photo,
+                    acct.cover,
+                    acct.last_compiler,
+                    acct.motto,
+                    acct.proclass_collection,
+                    acct.acct_id,
+                    acct.specific_ip,
+                )
+                if len(result) != 1:
+                    return ('Enoext', 'Account not found'), None
+        except Exception as e:
+            logger.error(f"Error updating account {acct.acct_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         await self.rs.delete(f'account@{acct.acct_id}')
         await self.rs.delete('acctlist')
@@ -309,49 +337,62 @@ class UserService:
             return ('Epwmax', 'Password too long'), None
         acct_id = int(acct_id)
 
-        async with self.db.acquire() as con:
-            result = await con.fetch('SELECT "password" FROM "account" WHERE "acct_id" = $1;', acct_id)
-            if len(result) != 1:
-                return ('Enoext', 'Account not found'), None
-            result = result[0]
+        try:
+            async with self.db.acquire() as con:
+                async with con.transaction():
+                    result = await con.fetch('SELECT "password" FROM "account" WHERE "acct_id" = $1;', acct_id)
+                    if len(result) != 1:
+                        return ('Enoext', 'Account not found'), None
+                    result = result[0]
 
-            current_hashed_pw = base64.b64decode(result['password'].encode('utf-8'))
-            # Verify old password matches (unless admin is forcing password reset)
-            if not isadmin:
-                if not old or bcrypt.hashpw(old.encode('utf-8'), current_hashed_pw) != current_hashed_pw:
-                    return ('Epwold', 'Old password is incorrect'), None
+                    current_hashed_pw = base64.b64decode(result['password'].encode('utf-8'))
+                    # Verify old password matches (unless admin is forcing password reset)
+                    if not isadmin:
+                        if not old or bcrypt.hashpw(old.encode('utf-8'), current_hashed_pw) != current_hashed_pw:
+                            return ('Epwold', 'Old password is incorrect'), None
 
-            # Check if new password is same as current password
-            if bcrypt.hashpw(pw.encode('utf-8'), current_hashed_pw) == current_hashed_pw:
-                return ('Epwsame', 'New password cannot be the same as current password'), None
+                    # Check if new password is same as current password
+                    if bcrypt.hashpw(pw.encode('utf-8'), current_hashed_pw) == current_hashed_pw:
+                        return ('Epwsame', 'New password cannot be the same as current password'), None
 
-            new_hashed_pw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
-            await con.execute(
-                'UPDATE "account" SET "password" = $1 WHERE "acct_id" = $2',
-                base64.b64encode(new_hashed_pw).decode('utf-8'),
-                acct_id,
-            )
+                    new_hashed_pw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
+                    await con.execute(
+                        'UPDATE "account" SET "password" = $1 WHERE "acct_id" = $2',
+                        base64.b64encode(new_hashed_pw).decode('utf-8'),
+                        acct_id,
+                    )
+        except Exception as e:
+            logger.error(f"Error updating password for account {acct_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         return None, None
 
     async def list_acct(
         self, min_type=UserConst.ACCTTYPE_USER, private=False, reload=False
-    ) -> Tuple[None, List[Account]]:
+    ) -> tuple[None | tuple[str, str], list[Account] | None]:
         field = f'{min_type}|{int(private)}'
         if (acctlist := (await self.rs.hget('acctlist', field))) is not None and reload is False:
-            acctlist = pickle.loads(acctlist)
+            try:
+                acctlist = pickle.loads(acctlist)
+            except Exception as e:
+                await self.rs.hdel('acctlist', field)
+                logger.error(f"Error loading account list from cache for field {field}: {e}", exc_info=True)
+                return await self.list_acct(min_type, private, reload=True)
 
         else:
-
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    '''
-                        SELECT "acct_id", "acct_type", "name", "mail", "lastip", "specific_ip"
-                        FROM "account" WHERE "acct_type" >= $1
-                        ORDER BY "acct_id" ASC;
-                    ''',
-                    min_type,
-                )
+            try:
+                async with self.db.acquire() as con:
+                    result = await con.fetch(
+                        '''
+                            SELECT "acct_id", "acct_type", "name", "mail", "lastip", "specific_ip"
+                            FROM "account" WHERE "acct_type" >= $1
+                            ORDER BY "acct_id" ASC;
+                        ''',
+                        min_type,
+                    )
+            except Exception as e:
+                logger.error(f"Error fetching account list from database for min_type {min_type}: {e}", exc_info=True)
+                return ('Eunk', 'Unknown error'), None
 
             acctlist = []
             for acct_id, acct_type, name, mail, lastip, specific_ip in result:
@@ -374,7 +415,10 @@ class UserService:
 
                 acctlist.append(acct)
 
-            await self.rs.hset('acctlist', field, pickle.dumps(acctlist))
+            try:
+                await self.rs.hset('acctlist', field, pickle.dumps(acctlist))
+            except pickle.PicklingError as e:
+                logger.error(f"Error pickling account list for field {field}: {e}", exc_info=True)
 
         return None, acctlist
 

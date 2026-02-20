@@ -14,7 +14,11 @@ class ManageProLimitHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        pro_id = int(self.get_argument("proid"))
+        try:
+            pro_id = int(self.get_argument("proid"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)
@@ -23,7 +27,11 @@ class ManageProLimitHandler(RequestHandler):
 
     @limit_dispatcher.action("updatelimit")
     async def update_limit_action(self):
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         limits = json.loads(self.get_argument("limits"))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
@@ -41,7 +49,10 @@ class ManageProLimitHandler(RequestHandler):
         new_limits: dict[str, Limit] = {}
         for compiler_type, limit in limits.items():
             if compiler_type != "default":
-                compiler_type = Compiler(int(compiler_type))
+                try:
+                    compiler_type = Compiler(int(compiler_type))
+                except ValueError:
+                    continue
             if compiler_type not in ALLOW_COMPILERS:
                 continue
             new_limits[compiler_type] = Limit(0, 0, 0)

@@ -16,8 +16,15 @@ class BatchSubmitHandler(RequestHandler):
     @reqenv
     async def get(self):
         try:
-            pro_id = int(self.get_argument("pro_id"))
-            contest_id = int(self.get_argument("contest_id", default=0))
+            try:
+                pro_id = int(self.get_argument("pro_id"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid problem ID"))
+
+            try:
+                contest_id = int(self.get_argument("contest_id", default="0"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid contest ID"))
 
             allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
             if contest_id != 0:
@@ -84,7 +91,11 @@ class BatchSubmitHandler(RequestHandler):
             contest_id = self.contest.contest_id
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
 
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         code = self.get_argument("code")
         try:
             compiler_type = Compiler(int(self.get_argument("compiler_type")))
@@ -152,7 +163,11 @@ class BatchSubmitHandler(RequestHandler):
         if self.contest:
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
 
-        chal_id = int(self.get_argument("chal_id"))
+        try:
+            chal_id = int(self.get_argument('chal_id'))
+        except ValueError:
+            return self.error(("Eparam", "Invalid challenge id"))
+
         if (
             (self.contest is None and self.acct.is_kernel())  # not in contest
             or (self.contest and self.contest.is_admin(self.acct))

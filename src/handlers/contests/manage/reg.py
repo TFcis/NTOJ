@@ -27,8 +27,7 @@ class ContestManageRegHandler(RequestHandler):
 
     @contest_manage_reg_dispatcher.action("approval")
     async def approval_action(self):
-        acct_id = int(self.get_argument("acct_id"))
-
+        acct_id = self.acct_id
         if not self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
             return self.error(
                 ("Enoext", f"Account(#{acct_id}) should be in the request status")
@@ -45,8 +44,7 @@ class ContestManageRegHandler(RequestHandler):
 
     @contest_manage_reg_dispatcher.action("reject")
     async def reject_action(self):
-        acct_id = int(self.get_argument("acct_id"))
-
+        acct_id = self.acct_id
         if not self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
             return self.error(
                 ("Enoext", f"Account(#{acct_id}) should be in the request status")
@@ -65,4 +63,8 @@ class ContestManageRegHandler(RequestHandler):
     @contest_require_permission("admin")
     async def post(self):
         reqtype = self.get_argument("reqtype")
+        try:
+            self.acct_id = int(self.get_argument("acct_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid account ID"))
         return await contest_manage_reg_dispatcher.dispatch(self, reqtype)

@@ -1,11 +1,13 @@
 import decimal
 import os
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 from services.pro import BaseConfig, BaseTestdata, CheckerType, SummaryType, ProblemConfig
 from services.prospec.base import ProSpec
 
+logger = logging.getLogger("tornado.application")
 
 @dataclass(slots=True)
 class BatchConfig(BaseConfig):
@@ -40,6 +42,21 @@ class BatchTestdata(BaseTestdata):
 
 class BatchProblemSpec(ProSpec):
     """Specification for Batch-type problems."""
+
+    def get_default_config(self) -> BatchConfig:
+        from services.chal import Compiler
+        return BatchConfig(
+            chalmeta='',
+            userprog_compile_args='',
+            checker_type=CheckerType.DIFF,
+            checker_compiler=None,
+            checker_compile_args='',
+            summary_type=SummaryType.GROUPMIN,
+            summary_compiler=None,
+            summary_compile_args='',
+            has_grader=False,
+            allow_compilers=set(compiler for compiler in Compiler),
+        )
 
     def from_json(self, data: dict[str, Any]) -> BatchConfig:
         """Parse JSON data into BatchConfig."""
@@ -111,23 +128,29 @@ class BatchProblemSpec(ProSpec):
         limits = config.limits
         limit = limits.get(str(compiler_type), limits['default'])
 
-        await db.execute('UPDATE total_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
-        await db.execute('UPDATE subtask_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
+        try:
+            async with db.acquire() as con:
+                async with con.transaction():
+                    await con.execute('UPDATE total_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
+                    await con.execute('UPDATE subtask_result SET state = $1 WHERE chal_id = $2;', ChalConst.STATE_JUDGE, chal_id)
 
-        need_judge_testdatas: set[int] = set()
-        subtasks = []
-        for subtask_id, subtask_config in config.subtask_configs.items():
-            t = [testdata.testdata_id for testdata in subtask_config.testdatas]
-            need_judge_testdatas.update(t)
-            subtasks.append({
-                "id": subtask_id,
-                "score": subtask_config.rate,
-                "testdatas": t,
-                "dependency_subtasks": list(subtask_config.dependency_subtasks),
-            })
+                    need_judge_testdatas: set[int] = set()
+                    subtasks = []
+                    for subtask_id, subtask_config in config.subtask_configs.items():
+                        t = tuple(testdata.testdata_id for testdata in subtask_config.testdatas)
+                        need_judge_testdatas.update(t)
+                        subtasks.append({
+                            "id": subtask_id,
+                            "score": subtask_config.rate,
+                            "testdatas": t,
+                            "dependency_subtasks": list(subtask_config.dependency_subtasks),
+                        })
 
-        await db.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id = ANY($3);',
-                        ChalConst.STATE_JUDGE, chal_id, list(need_judge_testdatas))
+                    await con.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id = ANY($3);',
+                                    ChalConst.STATE_JUDGE, chal_id, list(need_judge_testdatas))
+        except Exception as e:
+            logger.error(f"Failed to update results for chal {chal_id}: {e} when emit_chal", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         assert isinstance(config.spec_config, BatchConfig)
         testdatas = []
@@ -222,41 +245,62 @@ class BatchProblemSpec(ProSpec):
         pro_id = int(pro_id)
         acct_id = int(acct_id)
 
-        async with db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    INSERT INTO "challenge" ("pro_id", "acct_id", "compiler_type", "contest_id")
-                    VALUES ($1, $2, $3, $4) RETURNING "chal_id";
-                ''',
-                pro_id,
-                acct_id,
-                compiler_type,
-                contest_id,
-            )
-            if len(result) != 1:
-                return ('Eunk', 'Unknown error'), None
-            result = result[0]
-            chal_id = result['chal_id']
+        try:
+            async with db.acquire() as con:
+                async with con.transaction():
+                    result = await con.fetch(
+                        '''
+                            INSERT INTO "challenge" ("pro_id", "acct_id", "compiler_type", "contest_id")
+                            VALUES ($1, $2, $3, $4) RETURNING "chal_id";
+                        ''',
+                        pro_id,
+                        acct_id,
+                        compiler_type,
+                        contest_id,
+                    )
+                    if len(result) != 1:
+                        return ('Eunk', 'Unknown error'), None
+                    result = result[0]
+                    chal_id = result['chal_id']
 
-            need_judge_testdatas = set()
-            insert_subtask_values = []
-            for subtask_id, subtask in config.subtask_configs.items():
-                insert_subtask_values.append((chal_id, pro_id, subtask_id))
-                need_judge_testdatas.update(testdata.testdata_id for testdata in subtask.testdatas)
+                    need_judge_testdatas = set()
+                    insert_subtask_values = []
+                    for subtask_id, subtask in config.subtask_configs.items():
+                        insert_subtask_values.append((chal_id, pro_id, subtask_id))
+                        need_judge_testdatas.update(testdata.testdata_id for testdata in subtask.testdatas)
 
-            insert_testdata_values = []
-            for testdata_id in need_judge_testdatas:
-                insert_testdata_values.append((chal_id, pro_id, testdata_id))
+                    insert_testdata_values = []
+                    for testdata_id in need_judge_testdatas:
+                        insert_testdata_values.append((chal_id, pro_id, testdata_id))
 
-            await con.execute('INSERT INTO total_result (chal_id) VALUES ($1)', chal_id)
-            await con.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id) VALUES ($1, $2, $3);', insert_subtask_values)
-            await con.executemany('INSERT INTO testdata_result (chal_id, pro_id, id) VALUES ($1, $2, $3);', insert_testdata_values)
+                    await con.execute('INSERT INTO total_result (chal_id) VALUES ($1)', chal_id)
+                    await con.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id) VALUES ($1, $2, $3);', insert_subtask_values)
+                    await con.executemany('INSERT INTO testdata_result (chal_id, pro_id, id) VALUES ($1, $2, $3);', insert_testdata_values)
 
-        source_ext = COMPILER_INFOS[compiler_type].source_ext
+                    source_ext = COMPILER_INFOS[compiler_type].source_ext
 
-        os.mkdir(f'code/{chal_id}')
-        with open(f"code/{chal_id}/main.{source_ext}", 'wb') as code_f:
-            code_f.write(code.encode('utf-8'))
+                    try:
+                        os.mkdir(f'code/{chal_id}')
+                    except FileExistsError:
+                        logger.error(f"Directory code/{chal_id} already exists when adding chal {chal_id}")
+                        raise
+                    except OSError as e:
+                        logger.error(f"Failed to create directory code/{chal_id} for chal {chal_id}: {e}", exc_info=True)
+                        raise
+
+                    try:
+                        with open(f"code/{chal_id}/main.{source_ext}", 'wb') as code_f:
+                            code_f.write(code.encode('utf-8'))
+                    except OSError as e:
+                        try:
+                            os.rmdir(f'code/{chal_id}')
+                        except OSError:
+                            pass
+                        logger.error(f"Failed to write code file for chal {chal_id}: {e}", exc_info=True)
+                        raise
+        except Exception as e:
+            logger.error(f"Failed to add chal for pro_id {pro_id}, acct_id {acct_id}, contest_id {contest_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         return None, chal_id
 

@@ -1,4 +1,3 @@
-import asyncio
 import base64
 
 from msgpack import packb
@@ -56,7 +55,10 @@ class ManageJudgeHandler(RequestHandler):
 
     @judge_dispatcher.action("connect")
     async def connect_judge(self):
-        index = int(self.get_argument("index"))
+        try:
+            index = int(self.get_argument("index"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid index"))
 
         err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
         if (server_name := server_inform["name"]) == "":
@@ -78,8 +80,11 @@ class ManageJudgeHandler(RequestHandler):
 
     @judge_dispatcher.action("disconnect")
     async def disconnect_judge(self):
-        index = int(self.get_argument("index"))
-        pwd = str(self.get_argument("pwd"))
+        try:
+            index = int(self.get_argument("index"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid index"))
+        pwd = self.get_argument("pwd")
 
         err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
         if (server_name := server_inform["name"]) == "":

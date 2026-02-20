@@ -8,6 +8,16 @@ class ProSpec(ABC):
     """Abstract base class for problem type specifications."""
 
     @abstractmethod
+    def get_default_config(self) -> Any:
+        """
+        Get the default configuration for this problem type.
+
+        Returns:
+            Problem type-specific config object (e.g., BatchConfig) inheriting from BaseConfig
+        """
+        ...
+
+    @abstractmethod
     def from_json(self, data: dict[str, Any]) -> Any:
         """
         Parse JSON data into a problem type-specific configuration.
@@ -98,7 +108,9 @@ class ProSpec(ABC):
         ...
 
     @abstractmethod
-    def parse_testdata_files(self, testdata_id: int, files_json: dict[str, Any]) -> BaseTestdata:
+    def parse_testdata_files(
+        self, testdata_id: int, files_json: dict[str, Any]
+    ) -> BaseTestdata:
         """
         Parse testdata files JSON into a dictionary.
 

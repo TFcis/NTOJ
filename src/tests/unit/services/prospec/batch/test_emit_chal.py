@@ -13,7 +13,22 @@ class TestBatchProblemSpecEmitChal(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.spec = BatchProblemSpec()
-        self.fake_db = AsyncMock()
+
+        # Mock connection with transaction support
+        self.fake_conn = AsyncMock()
+        fake_tx_cm = MagicMock()
+        fake_tx_cm.__aenter__ = AsyncMock(return_value=None)
+        fake_tx_cm.__aexit__ = AsyncMock(return_value=None)
+        self.fake_conn.transaction = MagicMock(return_value=fake_tx_cm)
+
+        # Mock acquire() as async context manager
+        fake_acquire_cm = MagicMock()
+        fake_acquire_cm.__aenter__ = AsyncMock(return_value=self.fake_conn)
+        fake_acquire_cm.__aexit__ = AsyncMock(return_value=None)
+
+        self.fake_db = MagicMock()
+        self.fake_db.acquire = MagicMock(return_value=fake_acquire_cm)
+
         self.fake_rs = AsyncMock()
 
         # Create a basic BatchConfig
@@ -90,21 +105,21 @@ class TestBatchProblemSpecEmitChal(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(err)
         self.assertIsNone(result)
 
-        # Verify database updates
-        self.assertEqual(self.fake_db.execute.call_count, 3)
+        # Verify database updates on connection
+        self.assertEqual(self.fake_conn.execute.call_count, 3)
 
         # Check total_result update
-        call_args = self.fake_db.execute.call_args_list[0]
+        call_args = self.fake_conn.execute.call_args_list[0]
         self.assertIn('UPDATE total_result SET state', call_args[0][0])
         self.assertEqual(call_args[0][1], ChalConst.STATE_JUDGE)
         self.assertEqual(call_args[0][2], 100)
 
         # Check subtask_result update
-        call_args = self.fake_db.execute.call_args_list[1]
+        call_args = self.fake_conn.execute.call_args_list[1]
         self.assertIn('UPDATE subtask_result SET state', call_args[0][0])
 
         # Check testdata_result update
-        call_args = self.fake_db.execute.call_args_list[2]
+        call_args = self.fake_conn.execute.call_args_list[2]
         self.assertIn('UPDATE testdata_result SET state', call_args[0][0])
 
         # Verify judge server was called
@@ -152,13 +167,13 @@ class TestBatchProblemSpecEmitChal(unittest.IsolatedAsyncioTestCase):
         # First subtask has no dependencies
         subtask1 = next(s for s in subtasks if s['id'] == 1)
         self.assertEqual(subtask1['score'], 50)
-        self.assertEqual(subtask1['testdatas'], [1, 2])
+        self.assertEqual(subtask1['testdatas'], (1, 2))
         self.assertEqual(subtask1['dependency_subtasks'], [])
 
         # Second subtask depends on first
         subtask2 = next(s for s in subtasks if s['id'] == 2)
         self.assertEqual(subtask2['score'], 50)
-        self.assertEqual(subtask2['testdatas'], [3])
+        self.assertEqual(subtask2['testdatas'], (3,))
         self.assertEqual(subtask2['dependency_subtasks'], [1])
 
     @patch('services.judge.JudgeServerClusterService')

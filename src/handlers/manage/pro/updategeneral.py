@@ -12,7 +12,11 @@ class ManageProUpdateGeneralHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        pro_id = int(self.get_argument("proid"))
+        try:
+            pro_id = int(self.get_argument("proid"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)
@@ -27,9 +31,17 @@ class ManageProUpdateGeneralHandler(RequestHandler):
 
     @update_dispatcher.action("updategeneral")
     async def update_general(self):
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
+        try:
+            status = int(self.get_argument("status"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid status"))
+
         name = self.get_argument("name")
-        status = int(self.get_argument("status"))
         tags = self.get_argument("tags")
         allow_submit = self.get_argument("allow_submit") == "true"
 
@@ -61,7 +73,10 @@ class ManageProUpdateGeneralHandler(RequestHandler):
 
     @update_dispatcher.action("uploadpackage")
     async def upload_package(self):
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
         pack_token = self.get_argument("pack_token")
 
         err, _ = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)

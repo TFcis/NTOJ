@@ -1,5 +1,4 @@
 from handlers.manage.acct import ManageAcctHandler
-from handlers.manage.contest import ManageContestHandler
 from handlers.manage.dash import ManageDashHandler
 from handlers.manage.holiday import ManageHolidayHandler
 from handlers.manage.info import ManageInfoHandler
@@ -23,7 +22,6 @@ def get_manage_url(db, rs, pool):
         ('/be/manage/info', ManageInfoHandler, args),
         ('/be/manage/acct', ManageAcctHandler, args),
         ('/be/manage/acct/(.+)', ManageAcctHandler, args),
-        ('/be/manage/contest', ManageContestHandler, args),
         ('/be/manage/proclass', ManageProClassHandler, args),
         ('/be/manage/proclass/(.+)', ManageProClassHandler, args),
         ('/be/manage/judge', ManageJudgeHandler, args),

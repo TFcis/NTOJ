@@ -1,7 +1,9 @@
 import asyncio
 import os
 import uuid
+import logging
 
+logger = logging.getLogger("tornado.application")
 
 class PackService:
     def __init__(self, db, rs) -> None:
@@ -18,30 +20,35 @@ class PackService:
     async def direct_copy(self, pack_token, dst):
         pack_token = str(uuid.UUID(pack_token))
 
-        ret = await self.rs.get(f'PACK_TOKEN@{pack_token}')
-        if ret is None:
+        if (await self.rs.exists(f'PACK_TOKEN@{pack_token}')) != 1:
             return ('Enoext', 'Pack token not found'), None
 
-        await self.rs.delete(f'PACK_TOKEN@{pack_token}')
+        try:
+            with open(f'tmp/{pack_token}', 'rb') as inf, open(dst, 'wb') as outf:
+                while True:
+                    data = inf.read(65536)
+                    if len(data) == 0:
+                        break
 
-        inf = open(f'tmp/{pack_token}', 'rb')
-        outf = open(dst, 'wb')
-        while True:
-            data = inf.read(65536)
-            if len(data) == 0:
-                break
-
-            outf.write(data)
-
-        inf.close()
-        outf.close()
-
-        os.remove(f'tmp/{pack_token}')
-
-    async def clear(self, pack_token):
-        if os.path.exists(f'tmp/{pack_token}'):
+                    outf.write(data)
             os.remove(f'tmp/{pack_token}')
             await self.rs.delete(f'PACK_TOKEN@{pack_token}')
+            return None, None
+        except OSError as e:
+            logger.error(f"Error copying file for pack token {pack_token}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
+
+    async def clear(self, pack_token):
+        if (await self.rs.exists(f'PACK_TOKEN@{pack_token}')) != 1:
+            return ('Enoext', 'Pack token not found'), None
+
+        try:
+            os.remove(f'tmp/{pack_token}')
+            await self.rs.delete(f'PACK_TOKEN@{pack_token}')
+            return None, None
+        except OSError as e:
+            logger.error(f"Error clearing file for pack token {pack_token}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
     async def _run_and_wait_process(self, program, *args):
         process = await asyncio.create_subprocess_exec(program, *args)
@@ -52,11 +59,8 @@ class PackService:
     async def unpack(self, pack_token, dst, clean=False):
         pack_token = str(uuid.UUID(pack_token))
 
-        ret = await self.rs.get(f'PACK_TOKEN@{pack_token}')
-        if ret is None:
+        if (await self.rs.delete(f'PACK_TOKEN@{pack_token}') != 1):
             return ('Enoext', 'Pack token not found'), None
-
-        await self.rs.delete(f'PACK_TOKEN@{pack_token}')
 
         if clean:
             if not os.path.exists(dst):
@@ -71,9 +75,13 @@ class PackService:
         if returncode != 0:
             return ('Eunk', 'Unknown error (tar)'), None
 
-        os.remove(f'tmp/{pack_token}')
-        await self._run_and_wait_process('/bin/sh', 'newline.sh', f'{dst}/res/testdata')
+        try:
+            os.remove(f'tmp/{pack_token}')
+        except OSError as e:
+            logger.error(f"Error removing tar file for pack token {pack_token}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
+        await self._run_and_wait_process('/bin/sh', 'newline.sh', f'{dst}/res/testdata')
         def check_file_illegal(path):
             if os.path.islink(path):
                 return ('Eparam', f'{path} should not be a link. So suspicious. You maybe a hacker.')

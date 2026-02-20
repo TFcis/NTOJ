@@ -33,7 +33,7 @@
             }
 
             if (search_name != '') {
-                url += `&name=${search_name}`;
+                url += `&name=${encodeURIComponent(search_name)}`;
             }
 
             return url;

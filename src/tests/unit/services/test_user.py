@@ -27,6 +27,12 @@ class DummyReq:
 class TestUserService(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.fake_conn = AsyncMock()
+
+        fake_tx_cm = MagicMock()
+        fake_tx_cm.__aenter__ = AsyncMock(return_value=None)
+        fake_tx_cm.__aexit__ = AsyncMock(return_value=None)
+        self.fake_conn.transaction = MagicMock(return_value=fake_tx_cm)
+
         fake_acquire_cm = MagicMock()
         fake_acquire_cm.__aenter__ = AsyncMock(return_value=self.fake_conn)
         fake_acquire_cm.__aexit__ = AsyncMock(return_value=None)
@@ -194,9 +200,14 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
     async def test_info_sign_success(self):
         req = DummyReq(id_val="1", cookie_val="sesskey", remote_ip="192.168.1.1")
         with patch("services.user.unpackb", return_value={"time": time.time()}):
-            self.fake_rs.get.return_value = 1
+            self.fake_rs.get.return_value = None
             self.fake_conn.fetch.return_value = [{"acct_id": 1, "lastip": "127.0.0.1"}]
-            with patch.object(self.service, "rs", self.fake_rs):
+            with (
+                patch.object(self.service, "rs", self.fake_rs),
+                patch("services.log.LogService.inst.add_log", new_callable=AsyncMock),
+            ):
+                self.fake_conn.execute.return_value = None
+                self.fake_rs.delete.return_value = None
                 err, acct_id, ip = await self.service.info_sign(req)
         self.assertIsNone(err)
         self.assertEqual(acct_id, 1)
