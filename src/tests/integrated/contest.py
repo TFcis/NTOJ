@@ -478,6 +478,26 @@ class ContestTest(AsyncTest):
                 self.assertIsNone(err)
                 self.assertEqual(contest.user_list[4]['status'], UserStatus.REJECTED)
 
+                # NOTE: Should allow re-approve rejected account
+                res = admin_session.post('contests/1/manage/reg', data={
+                    'reqtype': 'approval',
+                    'acct_id': 4,
+                })
+                self.assertAPIReturnValue(res.text, ('S', 'Re-approve account(#4) successfully.'))
+                err, contest = await ContestService.inst.get_contest(1)
+                assert contest
+                self.assertIsNone(err)
+                self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
+                # NOTE:: Restore to rejected
+                contest.user_list[4]['status'] = UserStatus.REJECTED
+                await ContestService.inst.update_contest(None, contest, userlist_updated=True)
+                err, contest = await ContestService.inst.get_contest(1)
+                assert contest
+                self.assertIsNone(err)
+                self.assertEqual(contest.user_list[4]['status'], UserStatus.REJECTED)
+
+
             # NOTE: Should not allow request register when already rejected
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
