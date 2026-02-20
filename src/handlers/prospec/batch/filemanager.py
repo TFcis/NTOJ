@@ -1,4 +1,5 @@
 import tornado.escape
+import markdown
 
 from handlers.base import RequestHandler, reqenv, require_permission, ActionDispatcher
 from services.log import LogService
@@ -93,6 +94,44 @@ class BatchFilemanagerHandler(RequestHandler):
 
         await self.render('manage/pro/filemanager', page='pro', pro_id=pro_id, dirs=dirs)
 
+    async def _render_cont_md(self, pro_id, basepath):
+        file_mgr = FileManager(f'problem/{pro_id}/{basepath}')
+        if not file_mgr.exists('cont.md'):
+            return None
+
+        err, md_content = file_mgr.read('cont.md', 'r')
+        if err:
+            await LogService.inst.add_log(
+                f'Auto-render failed: Could not read cont.md for problem #{pro_id}. Error: {err}',
+                'manage.pro.render.read_failed'
+            )
+            return ('Erender', f'Read cont.md failed: {err[1]}')
+
+        try:
+            # extra for table, etc.
+            html_content = markdown.markdown(md_content, extensions=['extra'], output_format='html5')
+
+            filepath = file_mgr.get_filepath('cont.html')
+            if not filepath:
+                return ('Erender', 'Invalid path for cont.html')
+
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+
+            await LogService.inst.add_log(
+                f'Auto-rendered cont.md to cont.html for problem #{pro_id}',
+                'manage.pro.render.success'
+            )
+            return None
+
+        except Exception as e:
+            error_msg = str(e)
+            await LogService.inst.add_log(
+                f'Auto-render error for problem #{pro_id}: {error_msg}',
+                'manage.pro.render.error'
+            )
+            return ('Erender', f'Markdown render failed: {error_msg}')
+
     @batch_filemanager_dispatcher.action('preview')
     async def preview_action(self):
         pro_id = int(self.get_argument('pro_id'))
@@ -156,6 +195,30 @@ class BatchFilemanagerHandler(RequestHandler):
             )
             return self.error(err)
 
+        if new_filename == 'cont.md':
+            render_err = await self._render_cont_md(pro_id, basepath)
+            if render_err:
+                return self.error(render_err)
+
+        if old_filename == 'cont.html' and file_mgr.exists('cont.md'):
+            render_err = await self._render_cont_md(pro_id, basepath)
+            if render_err:
+                if file_mgr.exists(old_filename):
+                    file_mgr.delete(old_filename)
+
+                rollback_err, _ = file_mgr.rename(new_filename, old_filename)
+                if rollback_err:
+                    await LogService.inst.add_log(
+                        f'{self.acct.name} tried to roll back rename of {old_filename} to {new_filename} for problem #{pro_id} after render failure {render_err[0]}, but rollback failed with {rollback_err[0]}',
+                        'manage.pro.update.filemanager.renamesinglefile.rollback.failed'
+                    )
+                else:
+                    await LogService.inst.add_log(
+                        f'{self.acct.name} rolled back rename of {old_filename} to {new_filename} for problem #{pro_id} after render failure {render_err[0]}',
+                        'manage.pro.update.filemanager.renamesinglefile.rollback'
+                    )
+                return self.error(render_err)
+
         await LogService.inst.add_log(
             f'{self.acct.name} has sent a request to rename {old_filename} to {new_filename} for problem #{pro_id}',
             'manage.pro.update.filemanager.renamesinglefile',
@@ -190,6 +253,11 @@ class BatchFilemanagerHandler(RequestHandler):
                 'manage.pro.update.filemanager.updatesinglefile.failed'
             )
             return self.error(err)
+
+        if filename == 'cont.md':
+            render_err = await self._render_cont_md(pro_id, basepath)
+            if render_err:
+                return self.error(render_err)
 
         await LogService.inst.add_log(
             f'{self.acct.name} has sent a request to update {filename} for problem #{pro_id}',
@@ -227,6 +295,11 @@ class BatchFilemanagerHandler(RequestHandler):
             )
             return self.error(err)
 
+        if filename == 'cont.md':
+            render_err = await self._render_cont_md(pro_id, basepath)
+            if render_err:
+                return self.error(render_err)
+
         await LogService.inst.add_log(
             f'{self.acct.name} has sent a request to add {filename} for problem #{pro_id}',
             'manage.pro.update.filemanager.addsinglefile',
@@ -253,6 +326,26 @@ class BatchFilemanagerHandler(RequestHandler):
             return self.error(('Eparam', 'Invalid basepath'))
 
         file_mgr = FileManager(f'problem/{pro_id}/{basepath}')
+
+        if filename == 'cont.html' and file_mgr.exists('cont.md'):
+            tmp_filename = 'cont_tmp.html'
+            original_args = self.request.arguments.copy()
+            self.request.arguments['old_filename'] = [filename.encode('utf-8')]
+            self.request.arguments['new_filename'] = [tmp_filename.encode('utf-8')]
+
+            ret = await self.rename_single_file_action()
+
+            self.request.arguments = original_args
+
+            if ret[0] == 'S':
+                file_mgr.delete(tmp_filename)
+                await LogService.inst.add_log(
+                    f'{self.acct.name} triggered auto-restore via deletion of {filename} for problem #{pro_id}',
+                    'manage.pro.update.filemanager.deletesinglefile.restore'
+                )
+                return self.error(('S', ''))
+            else:
+                return ret
 
         err, _ = file_mgr.delete(filename)
         if err:
