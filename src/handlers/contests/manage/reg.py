@@ -30,9 +30,13 @@ class ContestManageRegHandler(RequestHandler):
             rejected_list=rejected_list,
         )
 
-    @contest_manage_reg_dispatcher.action("approval")
+    @contest_manage_reg_dispatcher.action("approve")
     async def approval_action(self):
         acct_id = self.acct_id
+        if acct_id not in self.contest.user_list:
+            return self.error(
+                ("Enoext", f"Account(#{acct_id}) is not registered in this contest")
+            )
         old_status = self.contest.user_list[acct_id]["status"]
         if old_status not in (UserStatus.REQUESTED, UserStatus.REJECTED):
             return self.error(

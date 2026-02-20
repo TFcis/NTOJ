@@ -87,7 +87,7 @@ class ContestTest(AsyncTest):
             self.assertEqual(contest.freeze_scoreboard_period, 0)
             self.assertEqual(contest.contest_start, to_utc(contest_start))
             self.assertEqual(contest.contest_end, to_utc(contest_end))
-            # NOTE: If reg_mode is INVITED, reg_end should be the same as contest_start
+            # NOTE: If reg_mode is INVITED, reg_end should be the same as contest_end
             self.assertEqual(contest.reg_end, to_utc(contest_end))
             self.assertEqual(contest.contest_creator, 1)
 
@@ -327,7 +327,7 @@ class ContestTest(AsyncTest):
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
             })
-            self.assertAPIReturnValue(res.text, ("Eacces", "Invited mode do not allow register"))
+            self.assertAPIReturnValue(res.text, ("Eacces", "Invited mode does not allow register"))
             err, contest = await ContestService.inst.get_contest(1)
             self.assertIsNone(err)
             self.assertNotIn(4, contest.user_list)
@@ -336,7 +336,7 @@ class ContestTest(AsyncTest):
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'unreg'
             })
-            self.assertAPIReturnValue(res.text, ("Eacces", "Invited mode do not allow unregister"))
+            self.assertAPIReturnValue(res.text, ("Eacces", "Invited mode does not allow unregister"))
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             config = copy.deepcopy(default_config)
@@ -433,7 +433,7 @@ class ContestTest(AsyncTest):
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/reg', data={
-                'reqtype': 'approval',
+                'reqtype': 'approve',
                 'acct_id': 4,
             })
             self.assertAPIReturnSuccess(res.text)
@@ -480,7 +480,7 @@ class ContestTest(AsyncTest):
 
                 # NOTE: Should allow re-approve rejected account
                 res = admin_session.post('contests/1/manage/reg', data={
-                    'reqtype': 'approval',
+                    'reqtype': 'approve',
                     'acct_id': 4,
                 })
                 self.assertAPIReturnValue(res.text, ('S', 'Re-approve account(#4) successfully.'))
@@ -489,7 +489,7 @@ class ContestTest(AsyncTest):
                 self.assertIsNone(err)
                 self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
 
-                # NOTE:: Restore to rejected
+                # NOTE: Restore to rejected
                 contest.user_list[4]['status'] = UserStatus.REJECTED
                 await ContestService.inst.update_contest(None, contest, userlist_updated=True)
                 err, contest = await ContestService.inst.get_contest(1)
@@ -523,10 +523,10 @@ class ContestTest(AsyncTest):
             for acct_id in range(3, 9 + 1, 1):
                 self.assertIn(acct_id, contest.user_list)
 
-        with AccountContext('admin@test', 'testtest') as admin_session:
             contest_start = now - datetime.timedelta(days=2)
             config = copy.deepcopy(default_config)
             config['contest_start'] = self.get_isoformat(contest_start)
+            config['reg_mode'] = RegMode.FREE_REG
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
             err, contest = await ContestService.inst.get_contest(1)
@@ -536,6 +536,13 @@ class ContestTest(AsyncTest):
 
         with AccountContext('contest1@test', 'test') as user_session:
             res = user_session.get('contests/1/pro/5/cont.pdf')
+            self.assertEqual(res.status_code, 200)
+
+            # NOTE: Should not allow unregister when contest has started
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnValue(res.text, ("Etime", "Contest has started, you cannot unregister now"))
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',

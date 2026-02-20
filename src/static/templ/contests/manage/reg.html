@@ -5,11 +5,11 @@
 	function init() {
         let contest_id = "{{ contest_id }}";
 
-		document.querySelectorAll('button.approval').forEach(el => {
+		document.querySelectorAll('button.approve').forEach(el => {
             el.addEventListener('click', function (e) {
                 let acct_id = $(this).attr('acct_id');
                 $.post(`{{ url(f'/be/contests/{ contest_id }/manage/reg') }}`, {
-                    'reqtype': 'approval',
+                    'reqtype': 'approve',
                     'acct_id': acct_id,
                 }, res => {
                     res = JSON.parse(res);
@@ -23,15 +23,15 @@
             });
         });
 
-		document.querySelectorAll('button.re-approval').forEach(el => {
+		document.querySelectorAll('button.re-approve').forEach(el => {
             el.addEventListener('click', function (e) {
-                if (!confirm('Are you sure to re-approval this account? Cannot reject this account after re-approval.')) {
+                if (!confirm('Are you sure to re-approve this account? Cannot reject this account after re-approve.')) {
                     return;
                 }
 
                 let acct_id = $(this).attr('acct_id');
                 $.post(`{{ url(f'/be/contests/{ contest_id }/manage/reg') }}`, {
-                    'reqtype': 'approval',
+                    'reqtype': 'approve',
                     'acct_id': acct_id,
                 }, res => {
                     res = JSON.parse(res);
@@ -78,7 +78,7 @@
 
     <p>
     Free Registration Mode
-    We don't need to approval any request.
+    We don't need to approve any request.
     </p>
 
     {% else %}
@@ -98,7 +98,7 @@
                 <td>{{ acct.name }}</td>
                 <td>
                     <div class="btn-toolbar">
-                        <button class="btn btn-primary me-2 approval" acct_id="{{ acct.acct_id }}">Approval</button>
+                        <button class="btn btn-primary me-2 approve" acct_id="{{ acct.acct_id }}">Approve</button>
                         <button class="btn btn-warning me-2 reject" acct_id="{{ acct.acct_id }}">Reject</button>
                     </div>
                 </td>
@@ -122,7 +122,7 @@
                 <td>{{ acct.name }}</td>
                 <td>
                     <div class="btn-toolbar">
-                        <button class="btn btn-primary me-2 re-approval" acct_id="{{ acct.acct_id }}">Re Approval</button>
+                        <button class="btn btn-primary me-2 re-approve" acct_id="{{ acct.acct_id }}">Re Approve</button>
                     </div>
                 </td>
             </tr>

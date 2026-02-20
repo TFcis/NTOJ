@@ -83,13 +83,10 @@ class ContestManageGeneralHandler(RequestHandler):
         err, contest_start = trantime(contest_start)
         if err:
             return self.error(err)
-        assert contest_start
         err, contest_end = trantime(contest_end)
         if err:
             return self.error(err)
-        assert contest_end
         err, reg_end = trantime(reg_end)
-        assert reg_end
         if err:
             return self.error(err)
 
@@ -106,9 +103,19 @@ class ContestManageGeneralHandler(RequestHandler):
             self.contest.reg_mode is RegMode.REG_APPROVAL
             and reg_mode is RegMode.FREE_REG
         ):
-            for acct_id, v in self.contest.user_list.items():
+            for acct_id, v in list(self.contest.user_list.items()):
                 if v["status"] == UserStatus.REQUESTED:
                     self.contest.user_list[acct_id]["status"] = UserStatus.APPROVED
+                elif v["status"] == UserStatus.REJECTED:
+                    self.contest.user_list.pop(acct_id)
+
+        elif (
+            self.contest.reg_mode is RegMode.REG_APPROVAL
+            and reg_mode is RegMode.INVITED
+        ):
+            for acct_id, v in list(self.contest.user_list.items()):
+                if v["status"] in (UserStatus.REQUESTED, UserStatus.REJECTED):
+                    self.contest.user_list.pop(acct_id)
 
         self.contest.reg_mode = reg_mode
         if reg_mode is RegMode.INVITED:

@@ -77,7 +77,9 @@
     <div class="col mt-4">
         <div class="mb-1 text-center">
             <label class="form-label">Status: {{ status }}</label>
+            {% if contest.reg_mode is not RegMode.INVITED %}
             <label class="form-label">Registration End: {{ contest.reg_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</label>
+            {% end %}
 
             {% set now = datetime.datetime.now(datetime.UTC) %}
             {% if now >= contest.reg_end %}
@@ -87,9 +89,9 @@
             {% if contest.reg_mode is not RegMode.INVITED %}
                 {% if now < contest.reg_end and user.acct_id not in contest.user_list %}
                     <button class="btn btn-primary reg form-control">Register</button>
-                {% elif contest.member_is_status(user, UserStatus.REQUESTED) %}
+                {% elif contest.member_is_status(user, UserStatus.REQUESTED) and now < contest.reg_end %}
                     <button class="btn btn-primary cancel-register form-control">Cancel register</button>
-                {% elif contest.member_is_status(user, UserStatus.APPROVED) %}
+                {% elif contest.member_is_status(user, UserStatus.APPROVED) and now < contest.contest_start %}
                     <button class="btn btn-primary unreg form-control">Unregister</button>
                 {% end %}
             {% end %}
