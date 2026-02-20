@@ -42,17 +42,17 @@
             </div>
 
             <div class="card mb-1">
-                <div class="card-header">Registration Before</div>
+                <div class="card-header">Registration Mode</div>
                 <div class="card-body">
                     {% if contest.reg_mode is RegMode.INVITED %}
                         <h5>Invited</h5>
                     {% else %}
-                        <h5>{{ contest.reg_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
                         {% if contest.reg_mode is RegMode.FREE_REG %}
                             <h5>Free Registration, no approval needed</h5>
                         {% elif contest.reg_mode is RegMode.REG_APPROVAL %}
                             <h5>Free Registration, approval needed </h5>
                         {% end %}
+                        <h5>{{ contest.reg_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
                     {% end %}
                 </div>
             </div>
