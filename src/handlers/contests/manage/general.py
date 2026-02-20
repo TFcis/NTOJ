@@ -93,6 +93,8 @@ class ContestManageGeneralHandler(RequestHandler):
         self.contest.name = name
 
         self.contest.contest_mode = contest_mode
+        if contest_end <= contest_start:
+            return self.error(("Eparam", "Contest end time should be later than start time"))
         self.contest.contest_start = contest_start
         self.contest.contest_end = contest_end
 
@@ -101,12 +103,25 @@ class ContestManageGeneralHandler(RequestHandler):
             self.contest.reg_mode is RegMode.REG_APPROVAL
             and reg_mode is RegMode.FREE_REG
         ):
-            for acct_id, v in self.contest.user_list.items():
+            for acct_id, v in list(self.contest.user_list.items()):
                 if v["status"] == UserStatus.REQUESTED:
                     self.contest.user_list[acct_id]["status"] = UserStatus.APPROVED
+                elif v["status"] == UserStatus.REJECTED:
+                    self.contest.user_list.pop(acct_id)
+
+        elif (
+            self.contest.reg_mode is RegMode.REG_APPROVAL
+            and reg_mode is RegMode.INVITED
+        ):
+            for acct_id, v in list(self.contest.user_list.items()):
+                if v["status"] in (UserStatus.REQUESTED, UserStatus.REJECTED):
+                    self.contest.user_list.pop(acct_id)
 
         self.contest.reg_mode = reg_mode
-        self.contest.reg_end = reg_end
+        if reg_mode is RegMode.INVITED:
+            self.contest.reg_end = contest_end
+        else:
+            self.contest.reg_end = reg_end
 
         self.contest.allow_compilers = allow_compilers
         self.contest.is_public_scoreboard = is_public_scoreboard
