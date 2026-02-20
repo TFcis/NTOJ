@@ -415,7 +415,7 @@ class ContestTest(AsyncTest):
 
             # NOTE: Should allow cancel register when in request status
             res = user_session.post('contests/1/reg', data={
-                'reqtype': 'unreg'
+                'reqtype': 'cancelreq'
             })
             self.assertAPIReturnSuccess(res.text)
 
@@ -506,9 +506,9 @@ class ContestTest(AsyncTest):
 
             # NOTE: Should not allow cancel register request when already rejected
             res = user_session.post('contests/1/reg', data={
-                'reqtype': 'unreg'
+                'reqtype': 'cancelreq'
             })
-            self.assertAPIReturnValue(res.text, ("Eacces", "Your registration has been rejected, you cannot unregister"))
+            self.assertAPIReturnValue(res.text, ("Eacces", "Your registration is not in request status, you cannot cancel request"))
 
 
         with AccountContext('admin@test', 'testtest') as admin_session:

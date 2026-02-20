@@ -10,7 +10,7 @@
             }, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
-                    index.show_notify_dialog('Register Successfully', index.DIALOG_TYPE.success);
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
@@ -24,7 +24,21 @@
             }, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
-                    index.show_notify_dialog('Unregister Successfully', index.DIALOG_TYPE.success);
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+                index.reload();
+            })
+        });
+
+        $("button.cancel-register").on('click', e => {
+            $.post(`{{ url(f'/be/contests/{ contest.contest_id }/reg') }}`, {
+                'reqtype': 'cancelreq',
+            }, res => {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
@@ -74,7 +88,7 @@
                 {% if now < contest.reg_end and user.acct_id not in contest.user_list %}
                     <button class="btn btn-primary reg form-control">Register</button>
                 {% elif contest.member_is_status(user, UserStatus.REQUESTED) %}
-                    <button class="btn btn-primary unreg form-control">Cancel register</button>
+                    <button class="btn btn-primary cancel-register form-control">Cancel register</button>
                 {% elif contest.member_is_status(user, UserStatus.APPROVED) %}
                     <button class="btn btn-primary unreg form-control">Unregister</button>
                 {% end %}

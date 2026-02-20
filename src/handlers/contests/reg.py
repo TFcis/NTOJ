@@ -19,15 +19,17 @@ class ContestRegHandler(RequestHandler):
 
         await self.render("contests/reg", contest=self.contest)
 
-    @contest_reg_dispatcher.action("reg")
-    async def register_action(self):
-        acct_id = self.acct.acct_id
-
+    def check(self, action_name):
         if self.contest.is_admin(self.acct):
-            return self.error(("Eacces", "Contest admin do not need to register"))
+            return ("Eacces", f"Contest admin cannot {action_name}")
 
         if self.contest.reg_mode is RegMode.INVITED:
-            return self.error(("Eacces", "Invited mode do not allow register"))
+            return ("Eacces", f"Invited mode do not allow {action_name}")
+
+    @contest_reg_dispatcher.action("reg")
+    async def register_action(self):
+        if error := self.check("register"):
+            return self.error(error)
 
         if datetime.datetime.now(datetime.UTC) > self.contest.reg_end:
             return self.error(
@@ -37,6 +39,7 @@ class ContestRegHandler(RequestHandler):
                 )
             )
 
+        acct_id = self.acct.acct_id
         if self.contest.member_is_status(acct_id, UserStatus.REJECTED):
             assert self.contest.reg_mode is RegMode.REG_APPROVAL
             return self.error(("Eacces", "Your registration has been rejected, you cannot register"))
@@ -59,40 +62,53 @@ class ContestRegHandler(RequestHandler):
         )
         return self.error(("S", "Register Successfully"))
 
+    @contest_reg_dispatcher.action("cancelreq")
+    async def cancel_request_action(self):
+        if error := self.check("cancel request"):
+            return self.error(error)
+
+        if datetime.datetime.now(datetime.UTC) > self.contest.reg_end:
+            return self.error(("Etime", "Registration time has passed, you cannot cancel request now"))
+
+        acct_id = self.acct.acct_id
+        if acct_id not in self.contest.user_list:
+            return self.error(("Enoext", "You have not registered yet"))
+
+        if not self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
+            return self.error(("Eacces", "Your registration is not in request status, you cannot cancel request"))
+
+        self.contest.user_list.pop(acct_id)
+        await ContestService.inst.update_contest(
+            self.acct, self.contest, userlist_updated=True
+        )
+        return self.error(("S", "Cancel Request Successfully"))
+
     @contest_reg_dispatcher.action("unreg")
     async def unregister_action(self):
-        acct_id = self.acct.acct_id
-
-        if self.contest.is_admin(self.acct):
-            return self.error(("Eacces", "Contest admin cannot unregister"))
-
-        if self.contest.reg_mode is RegMode.INVITED:
-            return self.error(("Eacces", "Invited mode do not allow unregister"))
+        if error := self.check("unregister"):
+            return self.error(error)
 
         if datetime.datetime.now(datetime.UTC) >= self.contest.contest_start:
             return self.error(
                 ("Etime", "Contest has started, you cannot unregister now")
             )
 
+        acct_id = self.acct.acct_id
         if acct_id not in self.contest.user_list:
             return self.error(("Enoext", "You have not registered yet"))
 
         if self.contest.member_is_status(acct_id, UserStatus.REJECTED):
             assert self.contest.reg_mode is RegMode.REG_APPROVAL
             return self.error(("Eacces", "Your registration has been rejected, you cannot unregister"))
+        elif self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
+            assert self.contest.reg_mode is RegMode.REG_APPROVAL
+            return self.error(("Eacces", "Your registration is in request status, you cannot unregister"))
 
         self.contest.user_list.pop(acct_id)
-
-
         await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
-
-        if self.contest.member_is_status(acct_id, UserStatus.REQUESTED):
-            assert self.contest.reg_mode is RegMode.REG_APPROVAL
-            return self.error(("S", "Cancel Register Successfully"))
-        else:
-            return self.error(("S", "Unregister Successfully"))
+        return self.error(("S", "Unregister Successfully"))
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
