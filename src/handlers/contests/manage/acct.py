@@ -183,23 +183,20 @@ class ContestManageAcctHandler(RequestHandler):
                 error_group.append(("Eacces", f"Cannot remove contest creator {a_id}"))
                 continue
 
-            if a_id not in self.contest.user_list:
+            try:
+                current_status = self.contest.user_list[a_id]["status"]
+                if current_status != expected_status:
+                    error_group.append((
+                        "Eacces",
+                        f"Cannot remove account {a_id} with status {current_status.name} from {list_type} list"
+                    ))
+                    continue
+            except KeyError:
                 error_group.append(("Enoext", f"Account {a_id} not in contest"))
                 continue
 
-            current_status = self.contest.user_list[a_id]["status"]
-            if current_status != expected_status:
-                error_group.append((
-                    "Estatus",
-                    f"Cannot remove account {a_id} with status {current_status.name} from {list_type} list"
-                ))
-                continue
-
-            try:
-                self.contest.user_list.pop(a_id)
-                removed_list.append(a_id)
-            except KeyError:
-                continue
+            self.contest.user_list.pop(a_id)
+            removed_list.append(a_id)
 
         update_errors, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True

@@ -282,41 +282,36 @@ class ContestService:
                 current_pro_ids = set()
 
                 for pro_id, v in list(contest.pro_list.items()):
-                    try:
-                        pro_status_result = await con.fetch(
-                            'SELECT status FROM problem WHERE pro_id = $1',
-                            pro_id
-                        )
+                    pro_status_result = await con.fetch(
+                        'SELECT status FROM problem WHERE pro_id = $1',
+                        pro_id
+                    )
 
-                        if len(pro_status_result) == 0:
-                            error_group.append(('Enoext', f'Problem {pro_id} not found'))
-                            contest.pro_list.pop(pro_id)
-                            continue
-
-                        pro_status = pro_status_result[0]['status']
-                        # STATUS_HIDDEN = 2, cannot be added to contest
-                        if pro_status == ProConst.STATUS_HIDDEN:
-                            error_group.append(('Eacces', f'Cannot add hidden status problem {pro_id}'))
-                            contest.pro_list.pop(pro_id)
-                            continue
-
-                        result = await con.fetch('''
-                            INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
-                            VALUES ($1, $2, $3, $4)
-                            ON CONFLICT (contest_id, pro_id) DO UPDATE
-                            SET score_type = EXCLUDED.score_type, "order" = EXCLUDED."order"
-                            WHERE
-                                contest_problem_joints.score_type != EXCLUDED.score_type OR
-                                contest_problem_joints.order != EXCLUDED.order
-                            RETURNING pro_id;
-                        ''', contest.contest_id, pro_id, int(v['score_type']), order)
-
-                        current_pro_ids.add(pro_id)
-                        order += 1
-                    except asyncpg.ForeignKeyViolationError:
+                    if len(pro_status_result) == 0:
                         error_group.append(('Enoext', f'Problem {pro_id} not found'))
                         contest.pro_list.pop(pro_id)
                         continue
+
+                    pro_status = pro_status_result[0]['status']
+                    # STATUS_HIDDEN = 2, cannot be added to contest
+                    if pro_status == ProConst.STATUS_HIDDEN:
+                        error_group.append(('Eacces', f'Cannot add hidden status problem {pro_id}'))
+                        contest.pro_list.pop(pro_id)
+                        continue
+
+                    result = await con.fetch('''
+                        INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
+                        VALUES ($1, $2, $3, $4)
+                        ON CONFLICT (contest_id, pro_id) DO UPDATE
+                        SET score_type = EXCLUDED.score_type, "order" = EXCLUDED."order"
+                        WHERE
+                            contest_problem_joints.score_type != EXCLUDED.score_type OR
+                            contest_problem_joints.order != EXCLUDED.order
+                        RETURNING pro_id;
+                    ''', contest.contest_id, pro_id, int(v['score_type']), order)
+
+                    current_pro_ids.add(pro_id)
+                    order += 1
 
                 removed_pros = existing_pro_ids - current_pro_ids
                 if removed_pros:

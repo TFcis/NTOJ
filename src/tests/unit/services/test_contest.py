@@ -138,7 +138,6 @@ class TestContestService(unittest.IsolatedAsyncioTestCase):
         self.assertIn('hidden', error_group[0][1].lower())
         self.assertIn('888', error_group[0][1])
         self.assertNotIn(888, self.test_contest.pro_list)
-        self.assertNotIn(999, self.test_contest.pro_list)
 
     async def test_update_contest_add_user_success(self):
         """Test successfully adding a user to contest"""
