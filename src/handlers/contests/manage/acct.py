@@ -52,9 +52,12 @@ class ContestManageAcctHandler(RequestHandler):
             "status": status,
         }
 
-        await ContestService.inst.update_contest(
+        error_group, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
+
+        if error_group:
+            return self.error(error_group[0])
 
         if list_type == "normal" or (
             list_type == "admin" and not self.contest.hide_admin
@@ -83,8 +86,24 @@ class ContestManageAcctHandler(RequestHandler):
         if acct_id not in self.contest.user_list:
             return self.error(("Enoext", "User is not in contest"))
 
+        expected_status = None
+        if list_type == "normal":
+            expected_status = UserStatus.APPROVED
+        elif list_type == "admin":
+            expected_status = UserStatus.ADMIN
+        else:
+            return self.error(("Eparam", "Invalid list type"))
+
+        current_status = self.contest.user_list[acct_id]["status"]
+        if current_status != expected_status:
+            return self.error((
+                "Eacces",
+                f"Cannot remove user with status {current_status.name} from {list_type} list"
+            ))
+
         self.contest.user_list.pop(acct_id)
-        await ContestService.inst.update_contest(
+
+        _, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
 
@@ -94,7 +113,7 @@ class ContestManageAcctHandler(RequestHandler):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
         return self.error(
-            ("S", f"Account(#{acct_id} successfully removed from user list.")
+            ("S", f"Account(#{acct_id}) successfully removed from user list.")
         )
 
     @contest_manage_acct_dispatcher.action("multi_add")
@@ -120,19 +139,25 @@ class ContestManageAcctHandler(RequestHandler):
                 "status": status,
             }
 
-        await ContestService.inst.update_contest(
+        error_group, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
+
+        success_list = [aid for aid in acct_list if aid in self.contest.user_list and aid != self.contest.contest_creator]
 
         if list_type == "normal" or (
             list_type == "admin" and not self.contest.hide_admin
         ):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
+        if error_group:
+            error_msg = f"Successfully added: {success_list}. Errors: {', '.join([f'{code}: {msg}' for code, msg in error_group])}"
+            return self.error(("S", error_msg))
+
         return self.error(
             (
                 "S",
-                f"Accounts({acct_list}) successfully added to user list with {status.name}.",
+                f"Accounts {success_list} successfully added to user list with {status.name}.",
             )
         )
 
@@ -141,27 +166,60 @@ class ContestManageAcctHandler(RequestHandler):
         acct_id = self.get_argument("acct_id")
         list_type = self.get_argument("type")
 
+        expected_status = None
+        if list_type == "normal":
+            expected_status = UserStatus.APPROVED
+        elif list_type == "admin":
+            expected_status = UserStatus.ADMIN
+        else:
+            return self.error(("Eparam", "Invalid list type"))
+
         acct_list = parse_str_to_list(acct_id)
+        error_group = []
+        removed_list = []
 
         for a_id in acct_list:
             if a_id == self.contest.contest_creator:
+                error_group.append(("Eacces", f"Cannot remove contest creator {a_id}"))
                 continue
+
+            if a_id not in self.contest.user_list:
+                error_group.append(("Enoext", f"Account {a_id} not in contest"))
+                continue
+
+            current_status = self.contest.user_list[a_id]["status"]
+            if current_status != expected_status:
+                error_group.append((
+                    "Estatus",
+                    f"Cannot remove account {a_id} with status {current_status.name} from {list_type} list"
+                ))
+                continue
+
             try:
                 self.contest.user_list.pop(a_id)
+                removed_list.append(a_id)
             except KeyError:
                 continue
 
-        await ContestService.inst.update_contest(
+        update_errors, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
+
+        # Combine errors from validation and update
+        if update_errors:
+            error_group.extend(update_errors)
 
         if list_type == "normal" or (
             list_type == "admin" and not self.contest.hide_admin
         ):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
+        if error_group:
+            error_msg = f"Successfully removed: {removed_list}. Errors: {', '.join([f'{code}: {msg}' for code, msg in error_group])}"
+            return self.error(("S", error_msg))
+
         return self.error(
-            ("S", f"Accounts(#{acct_list} successfully removed from user list.")
+            ("S", f"Accounts {removed_list} successfully removed from user list.")
         )
 
     @reqenv

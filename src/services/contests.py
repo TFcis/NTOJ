@@ -230,6 +230,9 @@ class ContestService:
         return None, contest_id
 
     async def update_contest(self, acct: Account, contest: Contest, prolist_updated=False, userlist_updated=False):
+        from services.pro import ProConst
+        error_group = []
+
         # update db
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -268,64 +271,105 @@ class ContestService:
             )
 
             if prolist_updated:
+                # Get existing problems to track operations
+                existing_pros = await con.fetch(
+                    'SELECT pro_id FROM contest_problem_joints WHERE contest_id = $1',
+                    contest.contest_id
+                )
+                existing_pro_ids = {row['pro_id'] for row in existing_pros}
+
                 order = 0
-                failed = []
-                for pro_id, v in contest.pro_list.items():
+                current_pro_ids = set()
+
+                for pro_id, v in list(contest.pro_list.items()):
                     try:
-                        await con.execute('''
+                        pro_status_result = await con.fetch(
+                            'SELECT status FROM problem WHERE pro_id = $1',
+                            pro_id
+                        )
+
+                        if len(pro_status_result) == 0:
+                            error_group.append(('Enoext', f'Problem {pro_id} not found'))
+                            contest.pro_list.pop(pro_id)
+                            continue
+
+                        pro_status = pro_status_result[0]['status']
+                        # STATUS_HIDDEN = 2, cannot be added to contest
+                        if pro_status == ProConst.STATUS_HIDDEN:
+                            error_group.append(('Eacces', f'Cannot add hidden status problem {pro_id}'))
+                            contest.pro_list.pop(pro_id)
+                            continue
+
+                        result = await con.fetch('''
                             INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
-                            VALUES ($1, $2, $3, $4) ON CONFLICT (contest_id, pro_id) DO UPDATE
+                            VALUES ($1, $2, $3, $4)
+                            ON CONFLICT (contest_id, pro_id) DO UPDATE
                             SET score_type = EXCLUDED.score_type, "order" = EXCLUDED."order"
                             WHERE
                                 contest_problem_joints.score_type != EXCLUDED.score_type OR
-                                contest_problem_joints.order != EXCLUDED.order;
+                                contest_problem_joints.order != EXCLUDED.order
+                            RETURNING pro_id;
                         ''', contest.contest_id, pro_id, int(v['score_type']), order)
+
+                        current_pro_ids.add(pro_id)
                         order += 1
                     except asyncpg.ForeignKeyViolationError:
-                        failed.append(pro_id)
+                        error_group.append(('Enoext', f'Problem {pro_id} not found'))
+                        contest.pro_list.pop(pro_id)
                         continue
 
-                await con.execute('DELETE FROM contest_problem_joints WHERE contest_id = $1 AND "order" >= $2', contest.contest_id, order)
-                for failed_pro_id in failed:
-                    contest.pro_list.pop(failed_pro_id)
+                removed_pros = existing_pro_ids - current_pro_ids
+                if removed_pros:
+                    await con.execute(
+                        'DELETE FROM contest_problem_joints WHERE contest_id = $1 AND pro_id = ANY($2)',
+                        contest.contest_id, list(removed_pros)
+                    )
 
             if userlist_updated:
+                # Ensure contest creator is always admin
                 contest.user_list[contest.contest_creator] = {
                     "status": UserStatus.ADMIN
                 }
-                await con.execute('''
-                    WITH input_data AS (
-                        SELECT
-                            $1::integer           AS contest_id,
-                            unnest($2::integer[]) AS acct_id,
-                            unnest($3::integer[]) AS status
-                    ),
 
-                    upserted AS (
-                        INSERT INTO contest_users (contest_id, acct_id, status)
-                        SELECT contest_id, acct_id, status
-                        FROM input_data
-                        ON CONFLICT (contest_id, acct_id) DO UPDATE
+                # Get existing users to track operations
+                existing_users = await con.fetch(
+                    'SELECT acct_id FROM contest_users WHERE contest_id = $1',
+                    contest.contest_id
+                )
+                existing_acct_ids = {row['acct_id'] for row in existing_users}
+
+                current_acct_ids = set()
+
+                for acct_id, v in list(contest.user_list.items()):
+                    try:
+                        await con.execute('''
+                            INSERT INTO contest_users (contest_id, acct_id, status)
+                            VALUES ($1, $2, $3)
+                            ON CONFLICT (contest_id, acct_id) DO UPDATE
                             SET status = EXCLUDED.status
-                            WHERE contest_users.status != EXCLUDED.status
-                        RETURNING acct_id
-                    )
+                            WHERE contest_users.status != EXCLUDED.status;
+                        ''', contest.contest_id, acct_id, int(v['status']))
 
-                    DELETE FROM contest_users cu
-                    WHERE cu.contest_id = $1
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM input_data i
-                        WHERE i.acct_id = cu.acct_id
-                    );
-                ''', contest.contest_id, list(contest.user_list.keys()), [int(v['status']) for v in contest.user_list.values()])
+                        current_acct_ids.add(acct_id)
+                    except asyncpg.ForeignKeyViolationError:
+                        error_group.append(('Enoext', f'Account {acct_id} not found'))
+                        contest.user_list.pop(acct_id)
+                        continue
+
+                # Remove users that are no longer in the list
+                removed_users = existing_acct_ids - current_acct_ids
+                if removed_users:
+                    await con.execute(
+                        'DELETE FROM contest_users WHERE contest_id = $1 AND acct_id = ANY($2)',
+                        contest.contest_id, list(removed_users)
+                    )
 
         b_contest = pickle.dumps(contest)
         await self.rs.hset('contest', str(contest.contest_id), b_contest)
 
         # log
 
-        return None, None
+        return error_group, None
 
     async def add_announce(self, contest_id: int, acct_id: int, subject: str, content: str):
         res = await self.db.fetch('INSERT INTO contest_announcement ("contest_id", "acct_id", "subject", "content", "timestamp") VALUES ($1, $2, $3, $4, NOW()) RETURNING announce_id',
@@ -600,4 +644,3 @@ class ContestService:
         }
 
         return scores
-
