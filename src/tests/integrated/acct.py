@@ -45,7 +45,7 @@ class SignTest(AsyncTest):
             'mail': 'admin@test',
             'pw': 'testtest',
         })
-        self.assertAPIReturnValue(res.text, ('Esignip', 'Login failed'))
+        self.assertAPIReturnValue(res.text, ('Esignip', 'Your ip is not allowed'))
 
         err, acct = await UserService.inst.info_acct(1)
         self.assertIsNone(err)
