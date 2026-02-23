@@ -206,7 +206,7 @@ class ContestTest(AsyncTest):
                 'reqtype': 'add',
                 'pro_id': 1
             })
-            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Cannot add hidden status problem 1'))
 
             res = admin_session.post('contests/1/manage/pro', data={
                 'reqtype': 'multi_add',
@@ -315,6 +315,16 @@ class ContestTest(AsyncTest):
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'remove',
                 'acct_id': 4,
+                'type': 'admin',
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', f'Cannot remove user with status {UserStatus.APPROVED.name} from admin list'))
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
+            res = admin_session.post('contests/1/manage/acct', data={
+                'reqtype': 'remove',
+                'acct_id': 4,
                 'type': 'normal',
             })
             self.assertAPIReturnSuccess(res.text)
@@ -407,6 +417,15 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.REQUESTED)
 
+            # NOTE: Should not allow remove account in request status from manage account page
+            with AccountContext('admin@test', 'testtest') as admin_session:
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'remove',
+                    'acct_id': 4,
+                    'type': 'normal',
+                })
+                self.assertAPIReturnValue(res.text, ('Eacces', f'Cannot remove user with status {UserStatus.REQUESTED.name} from normal list'))
+
             # NOTE: Should not register again when already requested
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
@@ -477,6 +496,14 @@ class ContestTest(AsyncTest):
                 err, contest = await ContestService.inst.get_contest(1)
                 self.assertIsNone(err)
                 self.assertEqual(contest.user_list[4]['status'], UserStatus.REJECTED)
+
+                # NOTE: Should not allow remove account in rejected status from manage account page
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'remove',
+                    'acct_id': 4,
+                    'type': 'normal',
+                })
+                self.assertAPIReturnValue(res.text, ('Eacces', f'Cannot remove user with status {UserStatus.REJECTED.name} from normal list'))
 
                 # NOTE: Should allow re-approve rejected account
                 res = admin_session.post('contests/1/manage/reg', data={

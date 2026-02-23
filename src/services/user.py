@@ -95,7 +95,7 @@ class UserService:
         specific_ip = result[0]['specific_ip']
 
         if specific_ip and ip and specific_ip != ip:
-            return ('Esignip', 'Login failed'), None
+            return ('Esignip', 'Your ip is not allowed'), None
 
         hpw = base64.b64decode(hpw.encode('utf-8'))
         if bcrypt.hashpw(pw.encode('utf-8'), hpw) == hpw:

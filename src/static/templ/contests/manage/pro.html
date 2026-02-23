@@ -48,8 +48,8 @@
             });
         });
 
-		$("#addPro").on('click', () => post_func('add', $("#proId").val(), () => $("#proID").val('')));
-		$("#removePro").on('click', () => post_func('remove', $("#proId").val(), () => $("#proID").val('')));
+		$("#addPro").on('click', () => post_func('add', $("#proId").val(), () => $("#proId").val('')));
+		$("#removePro").on('click', () => post_func('remove', $("#proId").val(), () => $("#proId").val('')));
 		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), () => $("#proList").val('')));
 		$("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val(), () => $("#proList").val('')));
     }
