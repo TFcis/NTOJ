@@ -13,6 +13,13 @@
             let status = general_form.find('select#status').val();
             let allow_submit = general_form.find('input#allow-submit').is(":checked");
 
+            {% if pro.status == ProConst.STATUS_HIDDEN %}
+                if (status == {{ ProConst.STATUS_ONLINE }} && !confirm('Are you sure to change problem status from hidden to online?')) {
+                    return;
+                }
+            {% end %}
+
+
             $.post(`{{ url('/be/manage/pro/update') }}`, {
                 'reqtype': 'updategeneral',
                 'pro_id': pro_id,

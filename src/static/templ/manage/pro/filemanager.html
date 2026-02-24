@@ -204,6 +204,9 @@
 
 		document.querySelectorAll('button.delete-single-file').forEach(el => {
 			el.addEventListener('click', function (e) {
+                if (!confirm('Are you sure to delete this file?')) {
+                    return;
+                }
                 let path = $(this).parents('.accordion-collapse').attr('path');
 				let filename = $(this).parents('tr').attr('filename');
 

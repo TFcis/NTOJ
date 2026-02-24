@@ -52,6 +52,9 @@
         });
 
 		j_form.find("#remove").on('click', (event) => {
+            if (!confirm('Are you sure to remove this bulletin?')) {
+                return;
+            }
 			$.post(`{{ url('/be/manage/bulletin/update') }}`, {
 				reqtype: 'remove',
 				bulletin_id: "{{ bulletin_id }}"
