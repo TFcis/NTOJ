@@ -61,6 +61,12 @@ class ContestManageAcctHandler(RequestHandler):
         ):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
+        await self.add_log(
+            f"{self.acct.name} added account #{acct_id} to contest as {status.name}",
+            "contest.manage.acct.add",
+            {"target_acct_id": acct_id, "list_type": list_type, "status": status.name}
+        )
+
         return self.error(
             (
                 "S",
@@ -92,6 +98,12 @@ class ContestManageAcctHandler(RequestHandler):
             list_type == "admin" and not self.contest.hide_admin
         ):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} removed account #{acct_id} from contest",
+            "contest.manage.acct.remove",
+            {"target_acct_id": acct_id, "list_type": list_type}
+        )
 
         return self.error(
             ("S", f"Account(#{acct_id} successfully removed from user list.")
@@ -129,6 +141,12 @@ class ContestManageAcctHandler(RequestHandler):
         ):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
+        await self.add_log(
+            f"{self.acct.name} batch added {len(acct_list)} accounts to contest as {status.name}",
+            "contest.manage.acct.multi_add",
+            {"acct_list": acct_list, "list_type": list_type, "status": status.name}
+        )
+
         return self.error(
             (
                 "S",
@@ -159,6 +177,12 @@ class ContestManageAcctHandler(RequestHandler):
             list_type == "admin" and not self.contest.hide_admin
         ):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} batch removed {len(acct_list)} accounts from contest",
+            "contest.manage.acct.multi_remove",
+            {"acct_list": acct_list, "list_type": list_type}
+        )
 
         return self.error(
             ("S", f"Accounts(#{acct_list} successfully removed from user list.")

@@ -154,6 +154,17 @@ class BatchSubmitHandler(RequestHandler):
         if pro.status == ProConst.STATUS_ONLINE:
             await self.rs.publish("challist_sub", str(1))
 
+        await self.add_log(
+            f"Submit solution to problem #{pro_id} (challenge #{chal_id})",
+            "contest.submit" if contest_id != 0 else "pro.submit",
+            {
+                "pro_id": pro_id,
+                "chal_id": chal_id,
+                "compiler_type": compiler_type.value,
+                "contest_id": contest_id,
+            },
+        )
+
         self.error(("S", chal_id))
 
     @submit_dispatcher.action("rechal")
@@ -203,6 +214,16 @@ class BatchSubmitHandler(RequestHandler):
         )
         if err:
             return self.error(err)
+
+        await self.add_log(
+            f"Rejudge challenge #{chal_id} for problem #{pro_id}",
+            "contest.rechal" if self.contest else "pro.rechal",
+            {
+                "chal_id": chal_id,
+                "pro_id": pro_id,
+                "contest_id": self.contest.contest_id if self.contest else 0,
+            },
+        )
 
         self.error(("S", chal_id))
 

@@ -165,6 +165,11 @@ class ContestManageQuestionHandler(RequestHandler):
                 }
             ),
         )
+        await self.add_log(
+            f"{self.acct.name} replied to question #{question_id}",
+            "contest.manage.question.reply",
+            {"question_id": question_id}
+        )
         return self.error(("S", ""))
 
     @reqenv
@@ -214,6 +219,13 @@ class ContestManageAnnounceHandler(RequestHandler):
                     {"contest_id": self.contest.contest_id, "type": "add-announce"}
                 ),
             )
+
+        await self.add_log(
+            f"{self.acct.name} added announcement: '{subject}'",
+            "contest.manage.announce.add",
+            {"subject": subject}
+        )
+
         return self.error(("S", ""))
 
     @contest_manage_announce_dispatcher.action("edit-announce")
@@ -239,6 +251,13 @@ class ContestManageAnnounceHandler(RequestHandler):
                     {"contest_id": self.contest.contest_id, "type": "edit-announce"}
                 ),
             )
+
+        await self.add_log(
+            f"{self.acct.name} edited announcement #{announce_id}",
+            "contest.manage.announce.edit",
+            {"announce_id": announce_id, "subject": subject}
+        )
+
         return self.error(("S", ""))
 
     @contest_manage_announce_dispatcher.action("popup-announce")
@@ -267,6 +286,13 @@ class ContestManageAnnounceHandler(RequestHandler):
                 }
             ),
         )
+
+        await self.add_log(
+            f"{self.acct.name} sent popup announcement #{announce_id}",
+            "contest.manage.announce.popup",
+            {"announce_id": announce_id, "subject": announce["subject"]}
+        )
+
         return self.error(("S", ""))
 
     @reqenv

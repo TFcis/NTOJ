@@ -54,6 +54,13 @@ class ContestManageProHandler(RequestHandler):
             self.acct, self.contest, prolist_updated=True
         )
         await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} added problem #{pro_id} to contest",
+            "contest.manage.pro.add",
+            {"pro_id": pro_id}
+        )
+
         return self.error(
             ("S", f"Problem(#{pro_id}) successfully added to problem list.")
         )
@@ -74,6 +81,13 @@ class ContestManageProHandler(RequestHandler):
             self.acct, self.contest, prolist_updated=True
         )
         await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} removed problem #{pro_id} from contest",
+            "contest.manage.pro.remove",
+            {"pro_id": pro_id}
+        )
+
         return self.error(
             ("S", f"Problem(#${pro_id}) successfully removed from problem list.")
         )
@@ -94,6 +108,13 @@ class ContestManageProHandler(RequestHandler):
             self.acct, self.contest, prolist_updated=True
         )
         await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} batch added {len(proid_list)} problems to contest",
+            "contest.manage.pro.multi_add",
+            {"pro_list": proid_list}
+        )
+
         return self.error(
             ("S", f"Problems(#{proid_list}) successfully added to problem list.")
         )
@@ -113,6 +134,13 @@ class ContestManageProHandler(RequestHandler):
             self.acct, self.contest, prolist_updated=True
         )
         await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} batch removed {len(pro_list)} problems from contest",
+            "contest.manage.pro.multi_remove",
+            {"pro_list": pro_list}
+        )
+
         return self.error(
             ("S", f"Problems(#${pro_id}) successfully removed from problem list.")
         )
@@ -144,11 +172,6 @@ class ContestManageProHandler(RequestHandler):
                 pro_id,
             )
 
-        # await LogService.inst.add_log(
-        #         f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
-        #         'manage.chal.rechal',
-        #     )
-
         # TODO: send notify to user
         async def _rechal(rechals):
             err, pro = await ProService.inst.get_pro(
@@ -168,6 +191,13 @@ class ContestManageProHandler(RequestHandler):
                 )
 
         await asyncio.create_task(_rechal(rechals=result))
+
+        await self.add_log(
+            f"{self.acct.name} requested rejudge for problem #{pro_id} with {len(result)} submissions",
+            "contest.manage.pro.rechal",
+            {"pro_id": pro_id, "chal_count": len(result)}
+        )
+
         return self.error(("S", f"Problem(#{pro_id}) is rechallenging."))
 
     @contest_manage_pro_dispatcher.action("public")
@@ -193,6 +223,12 @@ class ContestManageProHandler(RequestHandler):
         err, _ = await ProService.inst.update_pro(pro)
         if err:
             return self.error(err)
+
+        await self.add_log(
+            f"{self.acct.name} made problem #{pro_id} public after contest",
+            "contest.manage.pro.public",
+            {"pro_id": pro_id}
+        )
 
         return self.error(("S", ""))
 

@@ -120,6 +120,25 @@ class ContestManageGeneralHandler(RequestHandler):
 
         await ContestService.inst.update_contest(self.acct, self.contest)
 
+        await self.add_log(
+            f"{self.acct.name} updated general settings of contest '{self.contest.name}'",
+            "contest.manage.update.general",
+            {
+                "name": name,
+                "contest_mode": contest_mode.value,
+                "contest_start": contest_start,
+                "contest_end": contest_end,
+                "reg_mode": reg_mode.value,
+                "reg_end": reg_end,
+                "allow_compilers": [c.value for c in allow_compilers],
+                "is_public_scoreboard": is_public_scoreboard,
+                "allow_view_other_page": allow_view_other_page,
+                "hide_admin": hide_admin,
+                "submission_cd_time": submission_cd_time,
+                "freeze_scoreboard_period": freeze_scoreboard_period,
+            },
+        )
+
         return self.error(("S", ""))
 
     @reqenv
@@ -159,6 +178,12 @@ class ContestManageDescEditHandler(RequestHandler):
 
         await ContestService.inst.update_contest(self.acct, self.contest)
 
+        await self.add_log(
+            f"{self.acct.name} updated contest '{self.contest.name}' description ({desc_type})",
+            "contest.manage.update.desc",
+            {"desc_type": desc_type}
+        )
+
         return self.error(("S", ""))
 
     @reqenv
@@ -183,6 +208,13 @@ class ContestManageAddHandler(RequestHandler):
             return self.error(err)
 
         _, contest_id = await ContestService.inst.add_default_contest(self.acct, name)
+
+        await self.add_log(
+            f"{self.acct.name} created a new contest '{name}'",
+            "contest.manage.add",
+            {"contest_id": contest_id}
+        )
+
         return self.error(("S", contest_id))
 
     @reqenv

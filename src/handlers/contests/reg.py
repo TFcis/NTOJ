@@ -58,6 +58,13 @@ class ContestRegHandler(RequestHandler):
         await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
+
+        await self.add_log(
+            f"{self.acct.name} registered for contest '{self.contest.name}'",
+            "contest.user.register",
+            {"status": status}
+        )
+
         return self.error(("S", "Register Successfully"))
 
     @contest_reg_dispatcher.action("unreg")
@@ -78,6 +85,12 @@ class ContestRegHandler(RequestHandler):
         await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
+
+        await self.add_log(
+            f"{self.acct.name} unregistered from contest '{self.contest.name}'",
+            "contest.user.unregister"
+        )
+
         return self.error(("S", "Unregister Successfully"))
 
     @reqenv
