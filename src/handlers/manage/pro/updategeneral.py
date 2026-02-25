@@ -57,7 +57,7 @@ class ManageProUpdateGeneralHandler(RequestHandler):
         err, _ = await ProService.inst.update_pro(pro)
 
         await self.add_log(
-            f"{self.acct.name} has sent a request to update the problem #{pro_id}",
+            f"{self.acct.name} updated the settings of problem #{pro_id}",
             "manage.pro.update.general",
             {
                 "name": name,
@@ -86,7 +86,7 @@ class ManageProUpdateGeneralHandler(RequestHandler):
         err, _ = await ProService.inst.unpack_pro(pro_id, pack_token)
         if err:
             await self.add_log(
-                f"{self.acct.name} tried to update the problem #{pro_id} by uploading problem package but failed",
+                f"{self.acct.name} tried to upload a package for problem #{pro_id} but failed",
                 "manage.pro.update.pro.package.failed",
                 {"err": err},
             )
@@ -99,7 +99,7 @@ class ManageProUpdateGeneralHandler(RequestHandler):
 
         if suspicious_files:
             await self.add_log(
-                f"There are some suspicious files that may have been uploaded by {self.acct.name}",
+                f"Suspicious files detected in problem #{pro_id} uploaded by {self.acct.name}",
                 "manage.pro.update.pro.package.suspicious",
                 {
                     "suspicious_files": suspicious_files,
@@ -108,7 +108,7 @@ class ManageProUpdateGeneralHandler(RequestHandler):
             )
 
         await self.add_log(
-            f"{self.acct.name} has sent a request to update the problem #{pro_id} by uploading problem package",
+            f"{self.acct.name} uploaded a package for problem #{pro_id}",
             "manage.pro.update.pro.package",
         )
         self.error(("S", ""))

@@ -62,7 +62,7 @@ class ManageQuestionHandler(RequestHandler):
             return self.error(err)
 
         await self.add_log(
-            f"{self.acct.name} replyed a question from user #{self.get_argument('qacct_id')}.",
+            f"{self.acct.name} replied to a question from user #{self.get_argument('qacct_id')}",
             "manage.question.reply",
             {"reply_message": rtext},
         )
@@ -89,7 +89,7 @@ class ManageQuestionHandler(RequestHandler):
             return self.error(err)
 
         await self.add_log(
-            f"{self.acct.name} re-replyed a question from user #{self.get_argument('qacct_id')}.",
+            f"{self.acct.name} re-replied to a question from user #{self.get_argument('qacct_id')}",
             "manage.question.re-reply",
             {"reply_message": rtext},
         )
