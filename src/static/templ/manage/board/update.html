@@ -86,6 +86,9 @@
         });
 
 		j_form.find("#remove").on('click', (event) => {
+            if (!confirm('Are you sure to remove this board?')) {
+                return;
+            }
 			$.post(`{{ url('/be/manage/board/update') }}`, {
 				reqtype: 'remove',
 				board_id: board_id,

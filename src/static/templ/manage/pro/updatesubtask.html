@@ -67,6 +67,9 @@
 
         document.querySelectorAll('button.delete-subtask').forEach(el => {
             el.addEventListener('click', function(e) {
+                if (!confirm('Are you sure to delete this subtask?')) {
+                    return;
+                }
                 let subtask = $(this).parents('.accordion-collapse').attr('subtask');
 				$.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
 					'reqtype': 'deletesubtask',
@@ -160,6 +163,7 @@
 {% block content %}
 {% from utils.numeric import merge_list_to_str %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h2>Update subtask will make all challenge NotStart. Be careful.</h2>
 	<button class="btn btn-primary add-subtask">Add Subtask</button>
 
 	<div class="accordion" id="subtasks">

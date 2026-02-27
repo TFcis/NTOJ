@@ -377,7 +377,7 @@ class ChalListHandler(RequestHandler):
             return self.error(("Eparam", "Invalid page offset"))
         try:
             state = int(self.get_argument("state", default="0"))
-            if state not in ChalConst.STATE_STR:
+            if state != 0 and state not in ChalConst.STATE_STR: # NOTE: 0 stands for all states
                 raise ValueError()
         except ValueError:
             return self.error(("Eparam", "Invalid state"))

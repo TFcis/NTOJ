@@ -5,11 +5,33 @@
 	function init() {
         let contest_id = "{{ contest_id }}";
 
-		document.querySelectorAll('button.approval').forEach(el => {
+		document.querySelectorAll('button.approve').forEach(el => {
             el.addEventListener('click', function (e) {
                 let acct_id = $(this).attr('acct_id');
                 $.post(`{{ url(f'/be/contests/{ contest_id }/manage/reg') }}`, {
-                    'reqtype': 'approval',
+                    'reqtype': 'approve',
+                    'acct_id': acct_id,
+                }, res => {
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                        setTimeout(() => index.reload(), 1000);
+                    } else {
+                        index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                    }
+                });
+            });
+        });
+
+		document.querySelectorAll('button.re-approve').forEach(el => {
+            el.addEventListener('click', function (e) {
+                if (!confirm('Are you sure to re-approve this account? Cannot reject this account after re-approve.')) {
+                    return;
+                }
+
+                let acct_id = $(this).attr('acct_id');
+                $.post(`{{ url(f'/be/contests/{ contest_id }/manage/reg') }}`, {
+                    'reqtype': 'approve',
                     'acct_id': acct_id,
                 }, res => {
                     res = JSON.parse(res);
@@ -56,10 +78,11 @@
 
     <p>
     Free Registration Mode
-    We don't need to approval any request.
+    We don't need to approve any request.
     </p>
 
     {% else %}
+    <h1>Request User</h1>
     <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
         <thead>
             <tr>
@@ -69,14 +92,37 @@
             </tr>
         </thead>
         <tbody>
-        {% for acct in reg_list %}
+        {% for acct in requested_list %}
             <tr>
                 <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
                 <td>{{ acct.name }}</td>
                 <td>
                     <div class="btn-toolbar">
-                        <button class="btn btn-primary me-2 approval" acct_id="{{ acct.acct_id }}">Approval</button>
+                        <button class="btn btn-primary me-2 approve" acct_id="{{ acct.acct_id }}">Approve</button>
                         <button class="btn btn-warning me-2 reject" acct_id="{{ acct.acct_id }}">Reject</button>
+                    </div>
+                </td>
+            </tr>
+        {% end %}
+        </tbody>
+    </table>
+    <h1>Rejected User</h1>
+    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+        <thead>
+            <tr>
+                <th scope="col">Account ID</th>
+                <th scope="col">Account</th>
+                <th scope="col">Operation</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for acct in rejected_list %}
+            <tr>
+                <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
+                <td>{{ acct.name }}</td>
+                <td>
+                    <div class="btn-toolbar">
+                        <button class="btn btn-primary me-2 re-approve" acct_id="{{ acct.acct_id }}">Re Approve</button>
                     </div>
                 </td>
             </tr>
