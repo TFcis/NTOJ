@@ -30,36 +30,6 @@
 			});
 		};
 
-		var j_form = $('#ip-form');
-        const ip_re = /^(((?!25?[6-9])[12]\d|[1-9])?\d\.?\b){4}$/;
-		j_form.find('button.submit').on('click', function(e) {
-            var type = j_form.find('#type').val();
-            const start_ip = j_form.find('#start_ip').val().trim();
-            const end_ip = j_form.find('#end_ip').val().trim();
-
-            if((start_ip.length > 0 || end_ip.length > 0) && (!ip_re.test(start_ip) || !ip_re.test(end_ip))) {
-                index.show_notify_dialog('IP format error, please input correct IP address.', index.DIALOG_TYPE.error);
-                return;
-            }
-            if(start_ip.length == 0 && end_ip.length == 0) {
-                start_ip = end_ip = '0.0.0.0';
-            } 
-
-            $.post(`{{ url(f'/be/contests/{ contest_id }/manage/acct') }}`, {
-                'reqtype': 'update_ip',
-                'start_ip': start_ip,
-                'end_ip': end_ip,
-            }, function(res) {
-                res = JSON.parse(res);
-                if (res.status == 'S') {
-                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
-                    index.reload();
-                } else {
-                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
-                }
-            });
-		});
-
 		document.querySelectorAll('button.remove').forEach(el => {
 			el.addEventListener('click', () => post_func('remove', $(el).attr('acct_id'),
 				$(el).hasClass('normal') ? "normal" : "admin"
@@ -75,12 +45,53 @@
 		$("#removeAcctAdmin").on('click', () => post_func('remove', $("#acctIdAdmin").val(), 'admin'));
 		$("#addAcctListAdmin").on('click', () => post_func('multi_add', $("#acctListAdmin").val(), 'admin'));
 		$("#removeAcctListAdmin").on('click', () => post_func('multi_remove', $("#acctListAdmin").val(), 'admin'));
+
+		const reallocate_func = (reqtype, acct_id = null, pro_set_idx = null) => {
+			let data = { reqtype: reqtype };
+			if (acct_id) data.acct_id = acct_id;
+			if (pro_set_idx !== null) data.pro_set_idx = pro_set_idx;
+
+			$.post(`{{ url(f'/be/contests/{ contest_id }/manage/acct') }}`, data, res => {
+				res = JSON.parse(res);
+				if (res.status == 'S') {
+					index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+					setTimeout(() => index.reload(), 1000);
+				} else {
+					index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+				}
+			});
+		};
+
+		document.querySelectorAll('button.reallocate-account').forEach(el => {
+			el.addEventListener('click', () => {
+				if (confirm('Reallocate all problem sets for this account?')) {
+					reallocate_func('reallocate_account_all_pro_sets', $(el).attr('acct_id'));
+				}
+			});
+		});
+
+		document.querySelectorAll('a.reallocate-account-pro-set').forEach(el => {
+			el.addEventListener('click', (e) => {
+				e.preventDefault();
+				const acct_id = $(el).attr('acct_id');
+				const pro_set_idx = $(el).attr('pro_set_idx');
+				if (confirm(`Reallocate Problem ${parseInt(pro_set_idx) + 1} for account ${acct_id}?`)) {
+					reallocate_func('reallocate_account_pro_set', acct_id, parseInt(pro_set_idx));
+				}
+			});
+		});
+
+		$("#reallocateAll").on('click', function() {
+			if (confirm('Reallocate all problem sets for ALL accounts? This cannot be undone!')) {
+				reallocate_func('reallocate_all_accounts_all_pro_sets');
+			}
+		});
     }
 </script>
 {% end %}
 
 {% block content %}
-
+{% from services.contests import ContestMode %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
 	<div class="accordion">
 		<div class="accordion-item">
@@ -108,6 +119,14 @@
 						</div>
 					</form>
 
+					{% if contest.contest_mode == ContestMode.RANDOM_SET %}
+					<div class="alert alert-info mt-3" role="alert">
+						<strong>RandomSet Mode:</strong>
+						<button class="btn btn-danger btn-sm" id="reallocateAll" type="button">Reallocate All Accounts & All Problem Sets</button>
+						<p class="mb-0 mt-2"><small>This will reassign all problems for all accounts. Use with caution!</small></p>
+					</div>
+					{% end %}
+
 					<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
 					<thead>
 						<tr>
@@ -122,7 +141,20 @@
 							<th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
 							<td>{{ acct.name }}</td>
 							<td>
-								<button class="btn btn-primary me-2 remove normal" acct_id="{{ acct.acct_id }}">Remove</button>
+								<button class="btn btn-warning me-2 remove normal" acct_id="{{ acct.acct_id }}">Remove</button>
+								{% if contest.contest_mode == ContestMode.RANDOM_SET %}
+								<button class="btn btn-info me-2 reallocate-account" acct_id="{{ acct.acct_id }}">Reallocate All</button>
+								<div class="btn-group me-2" role="group">
+									<button type="button" class="btn btn-sm btn-secondary dropdown-toggle reallocate-dropdown" data-bs-toggle="dropdown" aria-expanded="false" acct_id="{{ acct.acct_id }}">
+										Reallocate Problem
+									</button>
+									<ul class="dropdown-menu" acct_id="{{ acct.acct_id }}">
+										{% for idx in range(len(contest.pro_sets)) %}
+										<li><a class="dropdown-item reallocate-account-pro-set" href="#" acct_id="{{ acct.acct_id }}" pro_set_idx="{{ idx }}">Problem {{ idx + 1 }}</a></li>
+										{% end %}
+									</ul>
+								</div>
+								{% end %}
 							</td>
 						</tr>
 					{% end %}
@@ -179,32 +211,6 @@
 					{% end %}
 					</tbody>
 					</table>
-				</div>
-			</div>
-		</div>
-	</div>
-	<div class="accordion">
-		<div class="accordion-item">
-			<h2 class="accordion-header" id="headingTwo">
-				<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="true" aria-controls="collapseOne">
-                    IP Whitelist
-				</button>
-			</h2>
-
-			<div id="collapseTwo" class="accordion-collapse collapse show" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
-				<div class="accordion-body">
-					<form id="ip-form">
-                        <div class="mb-3">
-                            <label>Start IP</label>
-                            <input class="form-control" id="start_ip" type="text" value="{{ start_ip }}">
-                        </div>
-                        <div class="mb-3">
-                            <label>End IP</label>
-                            <input class="form-control" id="end_ip" type="text" value="{{ end_ip }}">
-                        </div>
-                        <button type="button" class="btn btn-primary submit">Update</button>
-                        <button type="button" class="btn btn-secondary cancel">Cancel</button>
-                    </form>
 				</div>
 			</div>
 		</div>

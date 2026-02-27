@@ -351,7 +351,7 @@ font-weight: bolder;
                             </th>
                             {% end %}
                         {% else %}
-                            {% for idx, pro_id in enumerate(contest.get_prolist_from_acct_by_ip(user)) %}
+                            {% for idx, pro_id in enumerate(contest.get_randomset_prolist(user)) %}
                             <th scope="col">
                                 <a class="" href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro_id }/') }}">{{ pro_idx_to_pro_alphabet(idx) }}</a>
                             </th>

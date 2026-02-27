@@ -1,5 +1,6 @@
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
+from services.contests import ContestMode
 from services.chal import ChalService
 from services.judge import JudgeServerClusterService
 from services.pro import ProService, ProConst
@@ -22,11 +23,21 @@ class SubmitHandler(RequestHandler):
 
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.contest:
-            if not self.contest.is_running() and not self.contest.is_admin(self.acct):
-                return self.error(PERMISSION_DENIED_ERROR)
-
             if not self.contest.is_pro(pro_id):
                 return self.error(("Enoext", "Problem not in contest"))
+
+            if not self.contest.is_member(self.acct):
+                return self.error(PERMISSION_DENIED_ERROR)
+
+            if not self.contest.is_admin(self.acct) and not self.contest.is_running():
+                return self.error(PERMISSION_DENIED_ERROR)
+
+            if self.contest.contest_mode == ContestMode.RANDOM_SET and not self.contest.is_admin(self.acct):
+                contest_prolist = self.contest.get_randomset_prolist(self.acct)
+                if contest_prolist is None:
+                    return self.error(('Enopro', 'Problem set not allocated yet. Please contact admin.'))
+                if pro_id not in contest_prolist:
+                    return self.error(PERMISSION_DENIED_ERROR)
 
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
         else:
@@ -91,6 +102,25 @@ class SubmitHandler(RequestHandler):
             return self.error(("Ejudge", "No available judge"))
 
         reqtype = self.get_argument("reqtype")
+        if reqtype == "submit":
+            pro_id = int(self.get_argument("pro_id"))
+            if self.contest:
+                if not self.contest.is_pro(pro_id):
+                    return self.error(("Enoext", "Problem not in contest"))
+
+                if not self.contest.is_member(self.acct):
+                    return self.error(PERMISSION_DENIED_ERROR)
+
+                if not self.contest.is_admin(self.acct) and not self.contest.is_running():
+                    return self.error(PERMISSION_DENIED_ERROR)
+
+                if self.contest.contest_mode == ContestMode.RANDOM_SET and not self.contest.is_admin(self.acct):
+                    contest_prolist = self.contest.get_randomset_prolist(self.acct)
+                    if contest_prolist is None:
+                        return self.error(('Enopro', 'Problem set not allocated yet. Please contact admin.'))
+                    if pro_id not in contest_prolist:
+                        return self.error(PERMISSION_DENIED_ERROR)
+
         return await submit_dispatcher.dispatch(self, reqtype)
 
     async def _dispatch_to_problem_handler(self, pro_id: int):

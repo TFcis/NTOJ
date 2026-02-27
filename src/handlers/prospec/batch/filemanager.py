@@ -320,7 +320,6 @@ class BatchFilemanagerHandler(RequestHandler):
             if render_err:
                 return self.error(render_err)
 
-        await LogService.inst.add_log(
         await self.add_log(
             f'{self.acct.name} has sent a request to add {filename} for problem #{pro_id}',
             'manage.pro.update.filemanager.addsinglefile',

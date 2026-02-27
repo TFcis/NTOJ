@@ -25,12 +25,25 @@ class ContestManageProHandler(RequestHandler):
             pro_list.append(pro)
 
         if self.contest.contest_mode == ContestMode.RANDOM_SET:
+            pro_sets_with_info = []
+            for pro_set in self.contest.pro_sets:
+                pro_set_info = []
+                for pro_id in pro_set:
+                    err, pro = await ProService.inst.get_pro(
+                        pro_id, ProConst.PRO_STATUS_CONTEST_USER
+                    )
+                    if err:
+                        continue
+                    pro_set_info.append(pro)
+                pro_sets_with_info.append(pro_set_info)
+
             await self.render(
                 "contests/manage/rand-pro",
                 page="pro",
                 contest_id=self.contest.contest_id,
                 contest=self.contest,
-                pro_sets=self.contest.pro_sets
+                pro_sets=self.contest.pro_sets,
+                pro_sets_with_info=pro_sets_with_info
             )
         else:
             await self.render(
@@ -122,7 +135,7 @@ class ContestManageProHandler(RequestHandler):
         success_list = [pid for pid in proid_list if pid in self.contest.pro_list]
 
         await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
-        
+
         if error_group:
             await self.add_log(
                 f"{self.acct.name} batch added {len(proid_list)} problems to contest",
@@ -263,11 +276,7 @@ class ContestManageProHandler(RequestHandler):
         return self.error(("S", ""))
 
     @contest_manage_pro_dispatcher.action("add_set")
-    async def add_set_action(self):
-        '''
-            Add a problem set in random set mode
-            pro_id should be a list of problem ids separated by comma
-        '''
+    async def add_proset_action(self):
         if self.contest.contest_mode != ContestMode.RANDOM_SET:
             return self.error(('Emod', 'Cannot add problem set to non-random set contests'))
 
@@ -286,11 +295,7 @@ class ContestManageProHandler(RequestHandler):
         return self.error(("S", "Add new problem set successfully"))
 
     @contest_manage_pro_dispatcher.action("remove_set")
-    async def remove_set_action(self):
-        '''
-            Remove a problem set in random set mode
-            pro_id is the problem set index
-        '''
+    async def remove_proset_action(self):
         if self.contest.contest_mode != ContestMode.RANDOM_SET:
             return self.error(('Emod', 'Cannot remove problem set from non-random set contests'))
 
@@ -305,11 +310,7 @@ class ContestManageProHandler(RequestHandler):
         return self.error(("S", f"Remove problem set #{pro_set_idx} successfully"))
 
     @contest_manage_pro_dispatcher.action("update_order")
-    async def update_order_action(self):
-        '''
-            Update problem order in random set mode
-            pro_id is a comma separated list of new problem set indices
-        '''
+    async def update_proset_order_action(self):
         if self.contest.contest_mode != ContestMode.RANDOM_SET:
             return self.error(('Emod', 'Cannot update problem order in non-random set contests'))
 
@@ -325,7 +326,58 @@ class ContestManageProHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        return self.error(("S", f"Update problem set order successfully"))
+        return self.error(("S", "Update problem set order successfully"))
+
+    @contest_manage_pro_dispatcher.action("add_to_set")
+    async def add_pro_to_proset_action(self):
+        if self.contest.contest_mode != ContestMode.RANDOM_SET:
+            return self.error(('Emod', 'Cannot modify problem set in non-random set contests'))
+
+        pro_set_idx = int(self.get_argument("pro_set_idx"))
+        pro_id = int(self.get_argument("pro_id"))
+
+        if pro_set_idx < 0 or pro_set_idx >= len(self.contest.pro_sets):
+            return self.error(('Eparam', 'Problem set index out of range'))
+
+        current_pro_set = self.contest.pro_sets[pro_set_idx]
+        if pro_id in current_pro_set:
+            return self.error(('Eexist', f'Problem {pro_id} is already in this problem set'))
+
+        new_pro_set = current_pro_set + [pro_id]
+        pro_set = [(pid, ProblemScoreType.IOI2017) for pid in new_pro_set]
+
+        err, _ = await ContestService.inst.update_pro_set(self.contest, pro_set_idx, pro_set)
+        if err:
+            return self.error(err)
+
+        return self.error(("S", f"Added problem {pro_id} to problem set #{pro_set_idx + 1}"))
+
+    @contest_manage_pro_dispatcher.action("remove_from_set")
+    async def remove_pro_from_proset_action(self):
+        if self.contest.contest_mode != ContestMode.RANDOM_SET:
+            return self.error(('Emod', 'Cannot modify problem set in non-random set contests'))
+
+        pro_set_idx = int(self.get_argument("pro_set_idx"))
+        pro_id = int(self.get_argument("pro_id"))
+
+        if pro_set_idx < 0 or pro_set_idx >= len(self.contest.pro_sets):
+            return self.error(('Eparam', 'Problem set index out of range'))
+
+        current_pro_set = self.contest.pro_sets[pro_set_idx]
+        if pro_id not in current_pro_set:
+            return self.error(('Enoext', f'Problem {pro_id} is not in this problem set'))
+
+        if len(current_pro_set) == 1:
+            return self.error(('Eparam', 'Cannot remove the last problem from a problem set'))
+
+        new_pro_set = [pid for pid in current_pro_set if pid != pro_id]
+        pro_set = [(pid, ProblemScoreType.IOI2017) for pid in new_pro_set]
+
+        err, _ = await ContestService.inst.update_pro_set(self.contest, pro_set_idx, pro_set)
+        if err:
+            return self.error(err)
+
+        return self.error(("S", f"Removed problem {pro_id} from problem set #{pro_set_idx + 1}"))
 
     @reqenv
     @contest_require_permission("admin")

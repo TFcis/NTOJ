@@ -135,6 +135,8 @@ class ContestManageGeneralHandler(RequestHandler):
         else:
             self.contest.reg_end = reg_end
 
+        self.contest.reg_mode = reg_mode
+
         self.contest.allow_compilers = allow_compilers
         self.contest.is_public_scoreboard = is_public_scoreboard
         self.contest.allow_view_other_page = allow_view_other_page
