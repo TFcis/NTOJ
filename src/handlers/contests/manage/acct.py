@@ -64,6 +64,12 @@ class ContestManageAcctHandler(RequestHandler):
         ):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
+        await self.add_log(
+            f"{self.acct.name} added account #{acct_id} to contest as {status.name}",
+            "contest.manage.acct.add",
+            {"target_acct_id": acct_id, "list_type": list_type, "status": status.name}
+        )
+
         return self.error(
             (
                 "S",
@@ -112,6 +118,12 @@ class ContestManageAcctHandler(RequestHandler):
         ):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
+        await self.add_log(
+            f"{self.acct.name} removed account #{acct_id} from contest",
+            "contest.manage.acct.remove",
+            {"target_acct_id": acct_id, "list_type": list_type}
+        )
+
         return self.error(
             ("S", f"Account(#{acct_id}) successfully removed from user list.")
         )
@@ -151,15 +163,25 @@ class ContestManageAcctHandler(RequestHandler):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
         if error_group:
+            await self.add_log(
+                f"{self.acct.name} batch added {len(acct_list)} accounts to contest as {status.name}",
+                "contest.manage.acct.multi_add",
+                {"acct_list": acct_list, "list_type": list_type, "status": status.name, "error": error_group}
+            )
             error_msg = f"Successfully added: {success_list}. Errors: {', '.join([f'{code}: {msg}' for code, msg in error_group])}"
             return self.error(("S", error_msg))
-
-        return self.error(
-            (
-                "S",
-                f"Accounts {success_list} successfully added to user list with {status.name}.",
+        else:
+            await self.add_log(
+                f"{self.acct.name} batch added {len(acct_list)} accounts to contest as {status.name}",
+                "contest.manage.acct.multi_add",
+                {"acct_list": acct_list, "list_type": list_type, "status": status.name}
             )
-        )
+            return self.error(
+                (
+                    "S",
+                    f"Accounts {success_list} successfully added to user list with {status.name}.",
+                )
+            )
 
     @contest_manage_acct_dispatcher.action("multi_remove")
     async def multi_remove_action(self):
@@ -212,12 +234,22 @@ class ContestManageAcctHandler(RequestHandler):
             await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
         if error_group:
+            await self.add_log(
+                f"{self.acct.name} batch removed {len(acct_list)} accounts from contest",
+                "contest.manage.acct.multi_remove",
+                {"acct_list": acct_list, "list_type": list_type, "error": error_group}
+            )
             error_msg = f"Successfully removed: {removed_list}. Errors: {', '.join([f'{code}: {msg}' for code, msg in error_group])}"
             return self.error(("S", error_msg))
-
-        return self.error(
-            ("S", f"Accounts {removed_list} successfully removed from user list.")
-        )
+        else:
+            await self.add_log(
+                f"{self.acct.name} batch removed {len(acct_list)} accounts from contest",
+                "contest.manage.acct.multi_remove",
+                {"acct_list": acct_list, "list_type": list_type}
+            )
+            return self.error(
+                ("S", f"Accounts {removed_list} successfully removed from user list.")
+            )
 
     @reqenv
     @contest_require_permission("admin")

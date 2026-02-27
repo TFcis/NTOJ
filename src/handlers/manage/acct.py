@@ -63,13 +63,13 @@ class ManageAcctHandler(RequestHandler):
         err, acct = await UserService.inst.info_acct(acct_id)
 
         if err:
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name}(#{self.acct.acct_id}) had been send a request to update the account #{acct_id} but not found",
                 "manage.acct.update.failure",
             )
             return self.error(err)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name}(#{self.acct.acct_id}) had been send a request to update the account {acct.name}(#{acct.acct_id})",
             "manage.acct.update",
         )

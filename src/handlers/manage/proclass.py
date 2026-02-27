@@ -95,7 +95,7 @@ class ManageProClassHandler(RequestHandler):
         if len(p_list) == 0:
             return self.error(("Eparam", "Problem list should not be empty"))
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} add proclass name={name}",
             "manage.proclass.add",
             {
@@ -151,13 +151,13 @@ class ManageProClassHandler(RequestHandler):
             ProClassConst.OFFICIAL_PUBLIC,
             ProClassConst.OFFICIAL_HIDDEN,
         ):
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried to update proclass name={proclass['name']}, but an admin cannot modify a user's own proclass",
                 "manage.proclass.update.failed",
             )
             return self.error(PERMISSION_DENIED_ERROR)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} update proclass name={name}",
             "manage.proclass.update",
             {
@@ -187,13 +187,13 @@ class ManageProClassHandler(RequestHandler):
             ProClassConst.OFFICIAL_PUBLIC,
             ProClassConst.OFFICIAL_HIDDEN,
         ):
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried to remove proclass name={proclass['name']}, but an admin cannot modify a user's own proclass",
                 "manage.proclass.remove.failed",
             )
             return self.error(PERMISSION_DENIED_ERROR)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} remove proclass name={proclass['name']}.",
             "manage.proclass.remove",
         )

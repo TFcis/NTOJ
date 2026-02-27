@@ -192,7 +192,7 @@ class UserService:
 
                 if (lastip := result['lastip']) != ip and ip != '':
                     await LogService.inst.add_log(
-                        f"Update acct {acct_id} lastip from {lastip} to {ip} ", 'acct.updateip'
+                        f"Updated last IP of account #{acct_id} from {lastip} to {ip}", 'acct.updateip'
                     )
                     await con.execute('UPDATE "account" SET "lastip" = $1 WHERE "acct_id" = $2;', ip, acct_id)
                     await self.rs.delete(f'account@{acct_id}')
@@ -205,7 +205,7 @@ class UserService:
 
                 if lastip != ip and ip != '':
                     await LogService.inst.add_log(
-                        f"Update acct {acct_id} lastip from {lastip} to {ip} ", 'acct.updateip'
+                        f"Updated last IP of account #{acct_id} from {lastip} to {ip}", 'acct.updateip'
                     )
 
                     async with self.db.acquire() as con:

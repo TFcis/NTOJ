@@ -51,7 +51,7 @@ class ManageProSubtaskHandler(RequestHandler):
 
         subtask_configs[subtask_id].rate = rate
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to update rate of subtask#{subtask_id} for problem #{pro_id}",
             "manage.pro.update.subtask.updaterate",
             {"rate": rate},
@@ -86,7 +86,7 @@ class ManageProSubtaskHandler(RequestHandler):
             return self.error(("Eparam", "Dependency subtasks have cycle"))
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to set dependency subtasks to subtask#{subtask_id} for problem #{pro_id}",
             "manage.pro.update.subtask.setdepsubtasks",
             {"dependency_subtasks": list(dep_subtasks)},
@@ -114,7 +114,7 @@ class ManageProSubtaskHandler(RequestHandler):
         )
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to add a new subtask for problem #{pro_id}",
             "manage.pro.update.subtask.addsubtask",
             {"rate": rate, "subtask_id": len(subtask_configs) - 1},
@@ -148,7 +148,7 @@ class ManageProSubtaskHandler(RequestHandler):
             subtask_configs[new_subtask_id] = subtask
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to delete a subtask for problem #{pro_id}",
             "manage.pro.update.subtask.deletesubtask",
         )
@@ -183,7 +183,7 @@ class ManageProSubtaskHandler(RequestHandler):
             )
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to set testdatas to subtask#{subtask_id} for problem #{pro_id}",
             "manage.pro.update.subtask.settestdata",
             {

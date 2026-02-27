@@ -42,7 +42,7 @@ class CodeService:
               and (owner is None or query_acct.acct_id in config.lock_user_list)
               and query_acct.acct_id in config.can_see_code_user):
 
-            await LogService.inst.add_log(f"{query_acct.name} view the challenge {chal_id}", "manage.chal.view")
+            await LogService.inst.add_log(f"{query_acct.name} viewed challenge #{chal_id}", "manage.chal.view")
             can_see = True
 
         elif contest_id != 0:

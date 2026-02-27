@@ -65,14 +65,14 @@ class ManageJudgeHandler(RequestHandler):
             server_name = f"server-{index}"
 
         if err := await JudgeServerClusterService.inst.connect_server(index):
-            await LogService.inst.add_log(
-                f"{self.acct.name} tried connected {server_name} but failed.",
+            await self.add_log(
+                f"{self.acct.name} tried to connect to {server_name} but failed",
                 "manage.judge.connect.failure",
             )
             return self.error(err)
 
-        await LogService.inst.add_log(
-            f"{self.acct.name} had been connected {server_name} succesfully.",
+        await self.add_log(
+            f"{self.acct.name} connected to {server_name} successfully",
             "manage.judge.connect",
         )
 
@@ -91,16 +91,16 @@ class ManageJudgeHandler(RequestHandler):
             server_name = f"server-{index}"
 
         if config.unlock_pwd != base64.b64encode(packb(pwd)):
-            await LogService.inst.add_log(
-                f"{self.acct.name} tried to disconnect {server_name} but failed.",
+            await self.add_log(
+                f"{self.acct.name} tried to disconnect {server_name} but failed",
                 "manage.judge.disconnect.failure",
             )
             return self.error(("Eacces", "Wrong password"))
 
         if err := await JudgeServerClusterService.inst.disconnect_server(index):
             return self.error(err)
-        await LogService.inst.add_log(
-            f"{self.acct.name} had been disconnected {server_name} succesfully.",
+        await self.add_log(
+            f"{self.acct.name} disconnected {server_name} successfully",
             "manage.judge.disconnect",
         )
 

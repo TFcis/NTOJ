@@ -53,9 +53,21 @@ class ContestManageRegHandler(RequestHandler):
         await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
+
         if old_status == UserStatus.REQUESTED:
+            await self.add_log(
+                f"{self.acct.name} approved registration request from account #{acct_id}",
+                "contest.manage.reg.approval",
+                {"target_acct_id": acct_id}
+            )
             return self.error(("S", f"Approve account(#{acct_id}) successfully."))
+
         elif old_status == UserStatus.REJECTED:
+            await self.add_log(
+                f"{self.acct.name} approved rejected account #{acct_id}",
+                "contest.manage.reg.approval",
+                {"target_acct_id": acct_id}
+            )
             return self.error(("S", f"Re-approve account(#{acct_id}) successfully."))
 
     @contest_manage_reg_dispatcher.action("reject")
@@ -73,6 +85,13 @@ class ContestManageRegHandler(RequestHandler):
         await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True
         )
+
+        await self.add_log(
+            f"{self.acct.name} rejected registration request from account #{acct_id}",
+            "contest.manage.reg.reject",
+            {"target_acct_id": acct_id}
+        )
+
         return self.error(("S", f"Reject account(#{acct_id}) successfully."))
 
     @reqenv

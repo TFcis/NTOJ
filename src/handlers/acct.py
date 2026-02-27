@@ -151,8 +151,8 @@ class AcctConfigHandler(RequestHandler):
             return self.error(err)
 
         if not err and self.target_acct_id != self.acct.acct_id:
-            await LogService.inst.add_log(
-                f"{self.acct.name} was changing the password of user #{self.target_acct_id}.",
+            await self.add_log(
+                f"{self.acct.name} changed the password of account #{self.target_acct_id}",
                 "manage.acct.update.pwd",
             )
 
@@ -262,8 +262,8 @@ class AcctProClassHandler(RequestHandler):
         ):
             return self.error(err)
 
-        await LogService.inst.add_log(
-            f"{self.acct.name} add proclass name={name}",
+        await self.add_log(
+            f"{self.acct.name} added problem class '{name}'",
             "user.proclass.add",
             {
                 "list": p_list,
@@ -311,14 +311,14 @@ class AcctProClassHandler(RequestHandler):
 
         _, proclass = await ProClassService.inst.get_proclass(proclass_id)
         if proclass["acct_id"] != self.acct.acct_id:
-            await LogService.inst.add_log(
-                f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them",
+            await self.add_log(
+                f"{self.acct.name} tried to update problem class '{proclass['name']}', but the problem class is not owned by them",
                 "user.proclass.update.failed",
             )
             return self.error(PERMISSION_DENIED_ERROR)
 
-        await LogService.inst.add_log(
-            f"{self.acct.name} update proclass name={name}",
+        await self.add_log(
+            f"{self.acct.name} updated problem class '{name}'",
             "user.proclass.update",
             {
                 "list": p_list,
@@ -345,14 +345,14 @@ class AcctProClassHandler(RequestHandler):
             return self.error(err)
 
         if proclass["acct_id"] != self.acct.acct_id:
-            await LogService.inst.add_log(
-                f"{self.acct.name} tried to remove proclass name={proclass['name']}, but this proclass is not owned by them",
+            await self.add_log(
+                f"{self.acct.name} tried to remove problem class '{proclass['name']}', but the problem class is not owned by them",
                 "user.proclass.remove.failed",
             )
             return self.error(PERMISSION_DENIED_ERROR)
 
-        await LogService.inst.add_log(
-            f"{self.acct.name} remove proclass name={proclass['name']}.",
+        await self.add_log(
+            f"{self.acct.name} removed problem class '{proclass['name']}'",
             "user.proclass.remove",
         )
         await ProClassService.inst.remove_proclass(proclass_id)
@@ -397,8 +397,8 @@ class SignHandler(RequestHandler):
 
         err, acct_id = await UserService.inst.sign_in(mail, pw, self.request.remote_ip)
         if err:
-            await LogService.inst.add_log(
-                f"{mail} try to sign in but failed: {err}",
+            await self.add_log(
+                f"{mail} tried to sign in but failed: {err}",
                 "signin.failure",
                 {
                     "type": "signin.failure",
@@ -408,8 +408,9 @@ class SignHandler(RequestHandler):
             )
             return self.error(err)
 
-        await LogService.inst.add_log(
-            f"#{acct_id} sign in successfully",
+        self.acct.acct_id = acct_id
+        await self.add_log(
+            f"Account #{acct_id} signed in",
             "signin.success",
             {"type": "signin.success", "acct_id": acct_id},
         )
@@ -468,7 +469,7 @@ class SignHandler(RequestHandler):
         if self.acct.is_guest():
             return self.error(("Esign", "Not signed in"))
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name}(#{self.acct.acct_id}) sign out",
             "signout",
             {
