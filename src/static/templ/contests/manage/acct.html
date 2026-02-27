@@ -18,7 +18,7 @@
 			}, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
-                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
 					setTimeout(() => index.reload(), 1000);
                 } else {
 					$("#acctIdNormal").val('');

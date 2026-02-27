@@ -12,7 +12,7 @@
             }, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
-                    index.show_notify_dialog('Register Successfully', index.DIALOG_TYPE.success);
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
@@ -26,7 +26,21 @@
             }, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
-                    index.show_notify_dialog('Unregister Successfully', index.DIALOG_TYPE.success);
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+                index.reload();
+            })
+        });
+
+        $("button.cancel-register").on('click', e => {
+            $.post(`{{ url(f'/be/contests/{ contest.contest_id }/reg') }}`, {
+                'reqtype': 'cancelreq',
+            }, res => {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
@@ -36,7 +50,6 @@
     }
 </script>
 
-<!-- TODO: Show reject -->
 {% if contest.reg_mode is RegMode.INVITED %}
     {% if user.acct_id in contest.user_list %}
         {% set status = "Invited" %}
@@ -60,6 +73,8 @@
         {% set status = "Waiting Approval" %}
     {% elif contest.member_is_status(user, UserStatus.APPROVED) %}
         {% set status = "Registered" %}
+    {% elif contest.member_is_status(user, UserStatus.REJECTED) %}
+        {% set status = "Rejected" %}
     {% else %}
         {% set status = "Not Registered" %}
     {% end %}
@@ -70,11 +85,11 @@
     <div class="col mt-4">
         <div class="mb-1 text-center">
             <label class="form-label">Status: {{ status }}</label>
+            {% if contest.reg_mode is not RegMode.INVITED %}
             <label class="form-label">Registration End: {{ contest.reg_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</label>
+            {% end %}
 
             {% set now = datetime.datetime.now(datetime.UTC) %}
-            {% set is_reged = user.acct_id in contest.user_list and contest.user_list[user.acct_id]['status'] in (UserStatus.REQUESTED, UserStatus.APPROVED) %}
-
             {% if now >= contest.reg_end %}
                 <h4 class="form-label">Registration Ended</h4>
             {% end %}
@@ -87,9 +102,11 @@
             {% end %}
 
             {% if contest.reg_mode is not RegMode.INVITED %}
-                {% if not is_reged and now < contest.reg_end %}
+                {% if now < contest.reg_end and user.acct_id not in contest.user_list %}
                     <button class="btn btn-primary reg form-control">Register</button>
-                {% elif is_reged and contest.reg_mode is not RegMode.PASSWORD %}
+                {% elif contest.member_is_status(user, UserStatus.REQUESTED) and now < contest.reg_end %}
+                    <button class="btn btn-primary cancel-register form-control">Cancel register</button>
+                {% elif contest.member_is_status(user, UserStatus.APPROVED) and now < contest.contest_start and contest.reg_mode is not RegMode.PASSWORD %}
                     <button class="btn btn-primary unreg form-control">Unregister</button>
                 {% end %}
             {% end %}

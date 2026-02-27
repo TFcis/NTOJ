@@ -129,6 +129,23 @@ class RequestHandler(tornado.web.RequestHandler):
         else:
             return None
 
+    async def add_log(self, message, log_type=None, params=None):
+        """Convenience method to add log with current handler context
+
+        Automatically extracts operator_acct_id, operator_ip, and contest_id
+        from the current handler instance.
+
+        Args:
+            message: Log message
+            log_type: Type of log (e.g., 'manage.inform.add')
+            params: Additional parameters (dict)
+
+        Returns:
+            Tuple of (error, log_id)
+        """
+        from services.log import LogService
+        return await LogService.inst.add_log(message, log_type, params, handler=self)
+
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def __init__(self, *args, **kwargs):

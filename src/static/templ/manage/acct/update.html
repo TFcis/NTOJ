@@ -11,7 +11,13 @@
             var type = j_form.find('#type').val();
             const ip = j_form.find('#ip').val().trim();
 
-            if(ip.length > 0 && !ip_re.test(ip)) {
+            {% if not acct.is_kernel() %}
+            if (type == {{ UserConst.ACCTTYPE_KERNEL }} && !confirm('Are you sure to change this account from user to kernel level?')) {
+                return;
+            }
+            {% end %}
+
+            if (ip.length > 0 && !ip_re.test(ip)) {
                 index.show_notify_dialog('Specific IP format error, please input correct IP address.', index.DIALOG_TYPE.error);
                 return;
             }

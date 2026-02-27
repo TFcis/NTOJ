@@ -129,8 +129,8 @@ class AcctConfigHandler(RequestHandler):
             return self.error(err)
 
         if not err and self.target_acct_id != self.acct.acct_id:
-            await LogService.inst.add_log(
-                f"{self.acct.name} was changing the password of user #{self.target_acct_id}.",
+            await self.add_log(
+                f"{self.acct.name} changed the password of account #{self.target_acct_id}",
                 "manage.acct.update.pwd",
             )
 
@@ -205,8 +205,8 @@ class SignHandler(RequestHandler):
 
         err, acct_id = await UserService.inst.sign_in(mail, pw, self.request.remote_ip)
         if err:
-            await LogService.inst.add_log(
-                f"{mail} try to sign in but failed: {err}",
+            await self.add_log(
+                f"{mail} tried to sign in but failed: {err}",
                 "signin.failure",
                 {
                     "type": "signin.failure",
@@ -216,8 +216,9 @@ class SignHandler(RequestHandler):
             )
             return self.error(err)
 
-        await LogService.inst.add_log(
-            f"#{acct_id} sign in successfully",
+        self.acct.acct_id = acct_id
+        await self.add_log(
+            f"Account #{acct_id} signed in",
             "signin.success",
             {"type": "signin.success", "acct_id": acct_id},
         )
@@ -276,7 +277,7 @@ class SignHandler(RequestHandler):
         if self.acct.is_guest():
             return self.error(("Esign", "Not signed in"))
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name}(#{self.acct.acct_id}) sign out",
             "signout",
             {

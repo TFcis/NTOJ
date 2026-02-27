@@ -175,7 +175,7 @@ class ManageInfoHandler(RequestHandler):
             finally:
                 await con.release()
 
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} performed a VACUUM ANALYZE on the database.",
                 "manage.info.vacuum",
             )

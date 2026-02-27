@@ -72,7 +72,7 @@ class ManageProListHandler(RequestHandler):
                 pro_id,
             )
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
             "manage.chal.rechal",
         )
@@ -123,7 +123,7 @@ class ManageProListHandler(RequestHandler):
                 pro_id,
             )
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
             "manage.chal.rechalall",
         )

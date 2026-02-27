@@ -55,6 +55,9 @@
         });
 
         j_reset.find('button.submit').on('click', function(e) {
+            if (!confirm('Are you sure to change password?')) {
+                return;
+            }
             let old = j_reset.find('input.old').val();
             let pw = j_reset.find('input.pw').val();
             let repeat = j_reset.find('input.repeat').val();
@@ -81,6 +84,9 @@
         });
 
         j_login.find('button.logout-all').on('click', function(e) {
+            if (!confirm('Are you sure to log out all devices?')) {
+                return;
+            }
             $.post(`{{ url('/be/acctedit') }}`, {
                 'reqtype': 'remote-logout-all',
                 'acct_id': acct_id,

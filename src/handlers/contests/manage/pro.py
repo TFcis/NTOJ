@@ -54,18 +54,23 @@ class ContestManageProHandler(RequestHandler):
         if self.contest.is_pro(pro_id):
             return self.error(("Eexist", f"Problem(#{pro_id}) is already in contest"))
 
-        err, _ = await ProService.inst.get_pro(
-            pro_id, ProConst.PRO_STATUS_CONTEST_USER
-        )
-        if err:
-            return self.error(err)
-
         self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType.IOI2017}
 
-        await ContestService.inst.update_contest(
+        error_group, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
+
+        if error_group:
+            return self.error(error_group[0])
+
         await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} added problem #{pro_id} to contest",
+            "contest.manage.pro.add",
+            {"pro_id": pro_id}
+        )
+
         return self.error(
             ("S", f"Problem(#{pro_id}) successfully added to problem list.")
         )
@@ -85,12 +90,19 @@ class ContestManageProHandler(RequestHandler):
 
         self.contest.pro_list.pop(pro_id)
 
-        await ContestService.inst.update_contest(
+        _, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
         await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} removed problem #{pro_id} from contest",
+            "contest.manage.pro.remove",
+            {"pro_id": pro_id}
+        )
+
         return self.error(
-            ("S", f"Problem(#${pro_id}) successfully removed from problem list.")
+            ("S", f"Problem(#{pro_id}) successfully removed from problem list.")
         )
 
     @contest_manage_pro_dispatcher.action("multi_add")
@@ -101,20 +113,33 @@ class ContestManageProHandler(RequestHandler):
         proid_list = self.get_argument("pro_id")
         proid_list = parse_str_to_list(proid_list)
         for pro_id in proid_list:
-            err, _ = await ProService.inst.get_pro(
-                pro_id, ProConst.PRO_STATUS_CONTEST_USER
-            )
-            if err:
-                continue
             self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType.IOI2017}
 
-        await ContestService.inst.update_contest(
+        error_group, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
+
+        success_list = [pid for pid in proid_list if pid in self.contest.pro_list]
+
         await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
-        return self.error(
-            ("S", f"Problems(#{proid_list}) successfully added to problem list.")
-        )
+        
+        if error_group:
+            await self.add_log(
+                f"{self.acct.name} batch added {len(proid_list)} problems to contest",
+                "contest.manage.pro.multi_add",
+                {"pro_list": proid_list, "error": error_group}
+            )
+            error_msg = f"Successfully added: {success_list}. Errors: {', '.join([f'{code}: {msg}' for code, msg in error_group])}"
+            return self.error(("S", error_msg))
+        else:
+            await self.add_log(
+                f"{self.acct.name} batch added {len(proid_list)} problems to contest",
+                "contest.manage.pro.multi_add",
+                {"pro_list": proid_list}
+            )
+            return self.error(
+                ("S", f"Problems {success_list} successfully added to problem list.")
+            )
 
     @contest_manage_pro_dispatcher.action("multi_remove")
     async def multi_remove_action(self):
@@ -124,18 +149,30 @@ class ContestManageProHandler(RequestHandler):
         pro_id = self.get_argument("pro_id")
         pro_list = parse_str_to_list(pro_id)
 
+        removed_list = []
+        failed_remove_list = []
         for pro_id in pro_list:
             try:
                 self.contest.pro_list.pop(pro_id)
+                removed_list.append(pro_id)
             except KeyError:
+                failed_remove_list.append(pro_id)
                 continue
 
-        await ContestService.inst.update_contest(
+        _, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
+
         await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} batch removed {len(pro_list)} problems from contest",
+            "contest.manage.pro.multi_remove",
+            {"pro_list": pro_list}
+        )
+
         return self.error(
-            ("S", f"Problems(#${pro_id}) successfully removed from problem list.")
+            ("S", f"Problems {removed_list} successfully removed from problem list. Failed to remove: {failed_remove_list} due to not found in contest.")
         )
 
     @contest_manage_pro_dispatcher.action("rechal")
@@ -165,11 +202,6 @@ class ContestManageProHandler(RequestHandler):
                 pro_id,
             )
 
-        # await LogService.inst.add_log(
-        #         f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
-        #         'manage.chal.rechal',
-        #     )
-
         # TODO: send notify to user
         async def _rechal(rechals):
             err, pro = await ProService.inst.get_pro(
@@ -189,6 +221,13 @@ class ContestManageProHandler(RequestHandler):
                 )
 
         await asyncio.create_task(_rechal(rechals=result))
+
+        await self.add_log(
+            f"{self.acct.name} requested rejudge for problem #{pro_id} with {len(result)} submissions",
+            "contest.manage.pro.rechal",
+            {"pro_id": pro_id, "chal_count": len(result)}
+        )
+
         return self.error(("S", f"Problem(#{pro_id}) is rechallenging."))
 
     @contest_manage_pro_dispatcher.action("public")
@@ -214,6 +253,12 @@ class ContestManageProHandler(RequestHandler):
         err, _ = await ProService.inst.update_pro(pro)
         if err:
             return self.error(err)
+
+        await self.add_log(
+            f"{self.acct.name} made problem #{pro_id} public after contest",
+            "contest.manage.pro.public",
+            {"pro_id": pro_id}
+        )
 
         return self.error(("S", ""))
 

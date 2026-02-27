@@ -8,6 +8,7 @@
 		<a href="{{ url(f'/contests/{ contest_id }/manage/acct/') }}" class="nav-link {% if page == 'acct' %} active{% end %}">Account</a>
 		<a href="{{ url(f'/contests/{ contest_id }/manage/pro/') }}" class="nav-link {% if page == 'pro' %} active{% end %}">Problem</a>
 		<a href="{{ url(f'/contests/{ contest_id }/manage/reg/') }}" class="nav-link {% if page == 'reg' %} active{% end %}">Registration</a>
+		<a href="{{ url(f'/contests/{ contest_id }/manage/log/') }}" class="nav-link{% if page == 'log' %} active{% end %}">Log</a>
 	</nav>
 </div>
 {% block content %}{% end %}
