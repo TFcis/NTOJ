@@ -5,7 +5,7 @@ import uuid
 import logging
 from typing import IO
 
-
+from services.user import UserService
 from handlers.base import WebSocketHandler
 
 logger = logging.getLogger("tornado.application")
@@ -20,6 +20,17 @@ class PackHandler(WebSocketHandler):
         return True
 
     async def open(self):
+        acct_id_cookie = self.get_secure_cookie("id")
+        acct_id = int(acct_id_cookie) if acct_id_cookie is not None else 0
+
+        err, acct = await UserService.inst.info_acct(acct_id)
+        if err:
+            return self.close()
+        assert acct
+
+        if not acct.is_kernel():
+            return self.close()
+
         self.state = PackHandler.STATE_HDR
         self.output: IO | None = None
         self.remain: int = 0
@@ -64,6 +75,10 @@ class PackHandler(WebSocketHandler):
             try:
                 hdr = json.loads(msg)
                 self.pack_token = str(uuid.UUID(hdr['pack_token']))
+                if (await self.rs.exists(f'PACK_TOKEN@{self.pack_token}')) != 1:
+                    self.write_message('Etoken')
+                    return
+
                 self.remain = hdr['pack_size']
                 self.received_md5 = hdr['md5']
             except (ValueError, KeyError, json.JSONDecodeError):
