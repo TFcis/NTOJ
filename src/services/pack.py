@@ -1,7 +1,9 @@
 import asyncio
 import os
 import uuid
+import shutil
 import logging
+import tempfile
 
 logger = logging.getLogger("tornado.application")
 
@@ -12,7 +14,7 @@ class PackService:
         PackService.inst = self
 
     async def gen_token(self):
-        pack_token = str(uuid.uuid1())
+        pack_token = str(uuid.uuid4())
         await self.rs.set(f'PACK_TOKEN@{pack_token}', 0)
 
         return None, pack_token
@@ -71,37 +73,44 @@ class PackService:
                 os.makedirs(dst, 0o700)
 
         # FIXME: Detect zip bomb
-        returncode = await self._run_and_wait_process('/bin/tar', '-Jxf', f'tmp/{pack_token}', '-C', dst)
-        if returncode != 0:
-            return ('Eunk', 'Unknown error (tar)'), None
+        with tempfile.TemporaryDirectory() as tmpdir:
+            returncode = await self._run_and_wait_process('/bin/tar', '-Jxf', f'tmp/{pack_token}', '-C', tmpdir)
+            if returncode != 0:
+                return ('Eunk', 'Unknown error (tar)'), None
 
-        try:
-            os.remove(f'tmp/{pack_token}')
-        except OSError as e:
-            logger.error(f"Error removing tar file for pack token {pack_token}: {e}", exc_info=True)
-            return ('Eunk', 'Unknown error'), None
+            try:
+                os.remove(f'tmp/{pack_token}')
+            except OSError as e:
+                logger.error(f"Error removing tar file for pack token {pack_token}: {e}", exc_info=True)
+                return ('Eunk', 'Unknown error'), None
 
-        await self._run_and_wait_process('/bin/sh', 'newline.sh', f'{dst}/res/testdata')
-        def check_file_illegal(path):
-            if os.path.islink(path):
-                return ('Eparam', f'{path} should not be a link. So suspicious. You maybe a hacker.')
+            def check_file_illegal(path):
+                if os.path.islink(path):
+                    return ('Eparam', f'{path} should not be a link. So suspicious. You maybe a hacker.')
 
-            if not os.path.isfile(path):
-                return ('Eparam', f'What the heck about {path}. What file are you uploading? So suspicious.')
+                if not os.path.isfile(path):
+                    return ('Eparam', f'What the heck about {path}. What file are you uploading? So suspicious.')
 
-            return None
+                return None
 
-        err = None
-        def dfs(path):
-            nonlocal err
+            err = None
+            def dfs(path):
+                nonlocal err
+                if err:
+                    return
+                for name in os.listdir(path):
+                    if os.path.isdir(os.path.join(path, name)):
+                        dfs(os.path.join(path, name))
+                    else:
+                        err = check_file_illegal(os.path.join(path, name))
+            dfs(dst)
             if err:
-                return
-            for name in os.listdir(path):
-                if os.path.isdir(os.path.join(path, name)):
-                    dfs(os.path.join(path, name))
-                else:
-                    err = check_file_illegal(os.path.join(path, name))
-        dfs(dst)
+                return err, None
 
+            returncode = await self._run_and_wait_process('/bin/sh', 'newline.sh', f'{tmpdir}/res/testdata')
+            if returncode != 0:
+                return ('Eunk', 'Unknown error (newline)'), None
 
-        return err, None
+            shutil.copytree(tmpdir, dst, dirs_exist_ok=True)
+
+        return None, None
