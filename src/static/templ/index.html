@@ -124,10 +124,9 @@
                 console.warn('malformed contestnewqasub payload', data);
               }
             });
-            // Initialize channel with contest id + acct_id
+            // Initialize channel with contest id
             index.ws_send('contestnewqasub_init', JSON.stringify({
               contest_id: "{{ contest.contest_id }}",
-              acct_id: "{{ user.acct_id }}",
             }));
         {% end %}
     {% end %}
