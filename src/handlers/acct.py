@@ -60,6 +60,7 @@ config_dispatcher = ActionDispatcher()
 
 class AcctConfigHandler(RequestHandler):
     @reqenv
+    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def get(self, acct_id: int = None):
         try:
             acct_id = int(acct_id)
@@ -71,12 +72,14 @@ class AcctConfigHandler(RequestHandler):
             return self.error(err)
 
         session_keys = {}
-        current_session_key = hashlib.md5(self.get_cookie("id").encode()).hexdigest()
-        for session_key, v in (
-            await self.rs.hgetall(f"account_session@{acct_id}")
-        ).items():
-            session_key = hashlib.md5(session_key).hexdigest()
-            session_keys[session_key] = unpackb(v)
+        current_session_key = None
+        if self.acct.acct_id == acct_id:
+            current_session_key = hashlib.md5(self.get_cookie("id").encode()).hexdigest()
+            for session_key, v in (
+                await self.rs.hgetall(f"account_session@{acct_id}")
+            ).items():
+                session_key = hashlib.md5(session_key).hexdigest()
+                session_keys[session_key] = unpackb(v)
 
         await self.render(
             "acct/acct-config",

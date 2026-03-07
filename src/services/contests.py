@@ -97,10 +97,10 @@ class Contest:
 
     def is_member(self, acct: Account | None = None, acct_id: int | None = None) -> bool:
         if acct is not None:
-            return acct.acct_id in self.user_list
+            return acct.acct_id in self.user_list and self.user_list[acct.acct_id]['status'] in (UserStatus.APPROVED, UserStatus.ADMIN)
 
         if acct_id is not None:
-            return acct_id in self.user_list
+            return acct_id in self.user_list and self.user_list[acct_id]['status'] in (UserStatus.APPROVED, UserStatus.ADMIN)
 
         assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
 

@@ -3,6 +3,7 @@ import datetime
 import json
 
 from tornado.websocket import websocket_connect
+from tornado.httpclient import HTTPRequest
 
 from services.contests import ContestService, ContestMode, RegMode, UserStatus
 from services.pro import ProService, ProConst
