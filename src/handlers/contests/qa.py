@@ -71,19 +71,18 @@ class ContestQACallback:
     async def handle_custom_message(self, conn, msg_type, msg_data):
         """Handle custom initialization message
 
-        Expects JSON: {"contest_id": int, "acct_id": int}
+        Expects JSON: {"contest_id": int}
         """
         if msg_type == 'contestnewqasub_init':
             try:
                 init_data = json.loads(msg_data)
                 contest_id = int(init_data.get('contest_id'))
-                acct_id = int(init_data.get('acct_id'))
 
                 state = self.conn_state.get(conn)
                 if not state:
                     return True
                 state['contest_id'] = contest_id
-                state['acct_id'] = acct_id
+                state['acct_id'] = conn.acct_id
                 return True  # Handled
             except Exception as e:
                 return True  # Handled (but failed)

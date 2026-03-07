@@ -15,7 +15,7 @@ class BatchSubtaskTest(AsyncTest):
         pack_token = self.get_upload_token(session)
         with open(filepath, 'rb') as file:
             size = os.path.getsize(filepath)
-            await self.upload_file(file, size, pack_token)
+            await self.upload_file(file, size, pack_token, session)
 
         return pack_token
 

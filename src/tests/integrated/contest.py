@@ -3,6 +3,7 @@ import datetime
 import json
 
 from tornado.websocket import websocket_connect
+from tornado.httpclient import HTTPRequest
 
 from services.contests import ContestService, ContestMode, RegMode, UserStatus
 from services.pro import ProService, ProConst
@@ -739,13 +740,15 @@ class ContestTest(AsyncTest):
                     self.assertEqual(j['contest_id'], 1)
                     self.assertEqual(j['type'], 'reply')
                     self.assertEqual(j['ask_acct_id'], 4)
-            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
+            ws = await websocket_connect(HTTPRequest('ws://localhost:5501/be/ws', headers=headers), on_message_callback=_message)
             await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
             await ws.write_message(json.dumps({
                 'type': 'contestnewqasub_init',
                 'data': json.dumps({
                     "contest_id": 1,
-                    "acct_id": 4,
                 })
             }))
 
@@ -788,13 +791,14 @@ class ContestTest(AsyncTest):
                     self.assertEqual(j['contest_id'], 1)
                     self.assertEqual(j['type'], 'add-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
+            ws = await websocket_connect(HTTPRequest('ws://localhost:5501/be/ws', headers=headers), on_message_callback=_message)
             await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
             await ws.write_message(json.dumps({
                 'type': 'contestnewqasub_init',
                 'data': json.dumps({
                     "contest_id": 1,
-                    "acct_id": 4,
                 })
             }))
             res = admin_session.post('contests/1/manage/announce', data={
@@ -858,13 +862,14 @@ class ContestTest(AsyncTest):
                     self.assertEqual(j['contest_id'], 1)
                     self.assertEqual(j['type'], 'edit-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
+            ws = await websocket_connect(HTTPRequest('ws://localhost:5501/be/ws', headers=headers), on_message_callback=_message)
             await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
             await ws.write_message(json.dumps({
                 'type': 'contestnewqasub_init',
                 'data': json.dumps({
                     "contest_id": 1,
-                    "acct_id": 4,
                 })
             }))
             res = admin_session.post('contests/1/manage/announce', data={
@@ -894,9 +899,16 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['contest_id'], 1)
                 self.assertEqual(j['type'], 'popup-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
+            ws = await websocket_connect(HTTPRequest('ws://localhost:5501/be/ws', headers=headers), on_message_callback=_message)
             await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
-            await ws.write_message(json.dumps({'type': 'contestnewqasub_init', 'data': json.dumps({"contest_id": 1, "acct_id": 4})}))
+            await ws.write_message(json.dumps({
+                'type': 'contestnewqasub_init',
+                'data': json.dumps({
+                    "contest_id": 1,
+                })
+            }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'popup-announce',
                 'announce_id': 1,
