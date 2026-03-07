@@ -21,7 +21,13 @@ class PackHandler(WebSocketHandler):
 
     async def open(self):
         acct_id_cookie = self.get_secure_cookie("id")
-        acct_id = int(acct_id_cookie) if acct_id_cookie is not None else 0
+        if not acct_id_cookie:
+            return self.close()
+
+        try:
+            acct_id = int(acct_id_cookie)
+        except ValueError:
+            return self.close()
 
         err, acct = await UserService.inst.info_acct(acct_id)
         if err:
@@ -77,22 +83,22 @@ class PackHandler(WebSocketHandler):
                 self.pack_token = str(uuid.UUID(hdr['pack_token']))
                 if (await self.rs.exists(f'PACK_TOKEN@{self.pack_token}')) != 1:
                     self.write_message('Etoken')
-                    return
+                    return self.close()
 
                 self.remain = hdr['pack_size']
                 self.received_md5 = hdr['md5']
             except (ValueError, KeyError, json.JSONDecodeError):
                 self.write_message('Eparam')
-                return
+                return self.close()
 
             try:
                 self.output = open(f'tmp/{self.pack_token}', 'wb')
             except OSError:
                 logger.error(f"Failed to open file tmp/{self.pack_token} for writing", exc_info=True)
                 self.write_message('Eio')
-                return
-            self.state = PackHandler.STATE_DTAT
+                return self.close()
 
+            self.state = PackHandler.STATE_DTAT
             self.write_message('S')
 
     def on_close(self) -> None:

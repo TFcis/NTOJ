@@ -75,14 +75,14 @@ class PackService:
         # FIXME: Detect zip bomb
         with tempfile.TemporaryDirectory() as tmpdir:
             returncode = await self._run_and_wait_process('/bin/tar', '-Jxf', f'tmp/{pack_token}', '-C', tmpdir)
-            if returncode != 0:
-                return ('Eunk', 'Unknown error (tar)'), None
-
             try:
                 os.remove(f'tmp/{pack_token}')
             except OSError as e:
                 logger.error(f"Error removing tar file for pack token {pack_token}: {e}", exc_info=True)
                 return ('Eunk', 'Unknown error'), None
+
+            if returncode != 0:
+                return ('Eunk', 'Unknown error (tar)'), None
 
             def check_file_illegal(path):
                 if os.path.islink(path):
@@ -103,7 +103,7 @@ class PackService:
                         dfs(os.path.join(path, name))
                     else:
                         err = check_file_illegal(os.path.join(path, name))
-            dfs(dst)
+            dfs(tmpdir)
             if err:
                 return err, None
 

@@ -82,7 +82,7 @@ config_dispatcher = ActionDispatcher()
 
 class AcctConfigHandler(RequestHandler):
     @reqenv
-    @require_permission((UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL))
+    @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def get(self, acct_id: int = None):
         try:
             acct_id = int(acct_id)
