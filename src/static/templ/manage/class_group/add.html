@@ -1,0 +1,147 @@
+{% extends '../manage.html' %}
+{% block head %}
+<script type="text/javascript">
+function submitForm() {
+    const year = $('#year').val();
+    const semester = $('#semester').val();
+    const classNumber = $('#class_number').val();
+    const customName = $('#custom_name').val();
+    const ipStart = $('#ip_range_start').val();
+    const ipEnd = $('#ip_range_end').val();
+
+    if (!year || !semester || !classNumber) {
+        alert('請填寫學年、學期和班級編號');
+        return;
+    }
+
+    if ((ipStart && !ipEnd) || (!ipStart && ipEnd)) {
+        alert('請同時填寫 IP 範圍的起始和結束');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('reqtype', 'create');
+    formData.append('year', year);
+    formData.append('semester', semester);
+    formData.append('class_number', classNumber);
+    formData.append('custom_name', customName);
+    formData.append('ip_range_start', ipStart);
+    formData.append('ip_range_end', ipEnd);
+
+    const csvFile = $('#csv_file')[0].files[0];
+    if (csvFile) {
+        formData.append('csv_file', csvFile);
+    }
+
+    $.ajax({
+        url: `{{ url('/be/manage/class_group') }}`,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(res) {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('建立成功', index.DIALOG_TYPE.success);
+                index.go(`{{ url('/manage/class_group/') }}`);
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
+        },
+        error: function() {
+            alert('請求失敗');
+        }
+    });
+}
+</script>
+{% end %}
+
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h2>新增班級群組</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <form id="add_form">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="year" class="form-label">學年 *</label>
+                        <input type="number" class="form-control" id="year"
+                               placeholder="例如：113" required>
+                        <div class="form-text">輸入學年度（如 113 學年）</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="semester" class="form-label">學期 *</label>
+                        <select class="form-select" id="semester" required>
+                            <option value="">請選擇</option>
+                            <option value="1">上學期</option>
+                            <option value="2">下學期</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="class_number" class="form-label">班級編號 *</label>
+                        <input type="number" class="form-control" id="class_number"
+                               placeholder="例如：101" min="101" max="319" required>
+                        <div class="form-text">範圍：101-319</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="custom_name" class="form-label">自訂名稱</label>
+                    <input type="text" class="form-control" id="custom_name"
+                           placeholder="可選">
+                </div>
+
+                <hr>
+
+                <h5>IP 範圍設定</h5>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="ip_range_start" class="form-label">起始 IP</label>
+                        <input type="text" class="form-control" id="ip_range_start"
+                               placeholder="例如：192.168.1.1">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="ip_range_end" class="form-label">結束 IP</label>
+                        <input type="text" class="form-control" id="ip_range_end"
+                               placeholder="例如：192.168.1.50">
+                    </div>
+                </div>
+                <div class="alert alert-info">
+                    <strong>說明：</strong>
+                    <ul class="mb-0">
+                        <li>若設定 IP 範圍，將依序分配給批量建立的帳號</li>
+                        <li>CSV 中若有指定 specific_ip，則會忽略此 IP 範圍</li>
+                    </ul>
+                </div>
+
+                <hr>
+
+                <h5>批量建立帳號（可選）</h5>
+                <div class="mb-3">
+                    <label for="csv_file" class="form-label">上傳 CSV 檔案</label>
+                    <input type="file" class="form-control" id="csv_file"
+                           accept=".csv">
+                    <div class="form-text">最大 2MB，必須包含 email, name, password 欄位，specific_ip 可選</div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>CSV 格式範例：</strong>
+                    <pre class="mb-0">email,name,password,specific_ip
+b010298,王小明,P123,192.168.11.10
+b010299,李小華,P456,</pre>
+                    <small>或者省略 specific_ip 欄位：</small>
+                    <pre class="mb-0">email,name,password
+b010298,王小明,P123
+b010299,李小華,P456</pre>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" onclick="submitForm()">建立班級群組</button>
+                    <a href="/manage/class_group" class="btn btn-secondary">取消</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% end %}

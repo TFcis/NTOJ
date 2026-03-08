@@ -11,6 +11,7 @@ from services.judge import JudgeServerClusterService
 from services.rate import RateService
 from .util import AccountContext, AsyncTest
 from .manage.acct import ManageAcctTest
+from .manage.class_group import ManageClassGroupTest
 from .manage.pro.filemanager import ManageProFileManagerTest
 from .manage.prospec.batch.test_update import BatchUpdateTest
 from .manage.prospec.batch.test_judge import BatchJudgeTest
@@ -19,7 +20,7 @@ from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
 from .chal import ChalTest, ChalListTest, ChalUserAnswerTest
-from .contest import ContestTest, ContestRegistrationPasswordModeTest, RandomContestTest,  ContestProblemPermissionTest
+from .contest import ContestTest, ContestRegistrationPasswordModeTest, RandomContestTest, ContestClassGroupTest, ContestProblemPermissionTest
 from .proclass import ProClassTest
 from .submit import SubmitTest
 from .holiday import HolidayTest
@@ -192,8 +193,10 @@ class IntegratedTest(AsyncTest):
             HolidayTest().main,
             RandomContestTest().main,
             ContestRegistrationPasswordModeTest().main,
+            ContestClassGroupTest().main,
             ContestProblemPermissionTest().main,
             ChalUserAnswerTest().main,
+            ManageClassGroupTest().main,
         ]
         for f in s:
             r = await f()

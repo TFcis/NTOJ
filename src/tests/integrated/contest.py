@@ -1,10 +1,12 @@
 import copy
 import datetime
 import json
+import io
 
 from tornado.websocket import websocket_connect
 from tornado.httpclient import HTTPRequest
 
+from services.class_group import ClassGroupService
 from services.contests import ContestService, ContestMode, RegMode, UserStatus
 from services.pro import ProService, ProConst
 from services.chal import Compiler
@@ -1543,3 +1545,174 @@ class ContestProblemPermissionTest(AsyncTest):
                 self.assertAPIReturnSuccess(res.text)
 
 
+class ContestClassGroupTest(AsyncTest):
+    """Integration tests for adding/removing a class group to/from a contest"""
+
+    async def main(self):
+        await self.test_add_remove_class_group()
+        await self.test_add_empty_class_group()
+        await self.test_remove_skips_wrong_status()
+
+    async def _create_contest(self, admin_session) -> int:
+        res = admin_session.post('contests/manage/add', data={
+            'reqtype': 'add',
+            'name': 'cg_contest',
+        })
+        self.assertAPIReturnSuccess(res.text)
+        contest_id = json.loads(res.text)['data']
+
+        now = datetime.datetime.now()
+        admin_session.post(f'contests/{contest_id}/manage/general', data={
+            'reqtype': 'update',
+            'name': 'cg_contest',
+            'contest_mode': ContestMode.IOI,
+            'contest_start': self.get_isoformat(now + datetime.timedelta(days=1)),
+            'contest_end': self.get_isoformat(now + datetime.timedelta(days=2)),
+            'reg_mode': RegMode.INVITED,
+            'reg_end': self.get_isoformat(now + datetime.timedelta(days=1)),
+            'allow_compilers[]': [Compiler.GPP],
+            'is_public_scoreboard': 'false',
+            'allow_view_other_page': 'false',
+            'hide_admin': 'false',
+            'submission_cd_time': 0,
+            'freeze_scoreboard_period': 0,
+        })
+        return contest_id
+
+    async def _create_group_with_members(self, email_prefix: str, year: int, class_number: int) -> tuple[int, list[int]]:
+        """Create a class group with 3 members via CSV; return (group_id, [acct_ids])."""
+        csv_content = (
+            f"email,name,password\n"
+            f"{email_prefix}1,CG User 1,CGPass1\n"
+            f"{email_prefix}2,CG User 2,CGPass2\n"
+            f"{email_prefix}3,CG User 3,CGPass3"
+        ).encode()
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            files = {'csv_file': ('cg.csv', io.BytesIO(csv_content), 'text/csv')}
+            res = admin_session.post(
+                'manage/class_group',
+                data={
+                    'reqtype': 'create',
+                    'year': year,
+                    'semester': 1,
+                    'class_number': class_number,
+                    'custom_name': 'ContestTest',
+                },
+                files=files,
+            )
+            self.assertAPIReturnSuccess(res.text)
+            group_id = json.loads(res.text)['data']
+
+        err, members = await ClassGroupService.inst.get_group_members(group_id)
+        self.assertIsNone(err)
+        assert members is not None
+        acct_ids = [m['acct_id'] for m in members]
+        self.assertEqual(len(acct_ids), 3)
+        return group_id, acct_ids
+
+    async def test_add_remove_class_group(self):
+        """Add then remove an entire class group from a contest."""
+        group_id, acct_ids = await self._create_group_with_members('cgcont001_', 200, 101)
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            contest_id = await self._create_contest(admin_session)
+
+            # Add class group as normal participants
+            res = admin_session.post(f'contests/{contest_id}/manage/acct', data={
+                'reqtype': 'add_class_group',
+                'group_id': group_id,
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            err, contest = await ContestService.inst.get_contest(contest_id)
+            self.assertIsNone(err)
+            assert contest
+            for acct_id in acct_ids:
+                self.assertIn(acct_id, contest.user_list)
+                self.assertEqual(contest.user_list[acct_id]['status'], UserStatus.APPROVED)
+
+            # Remove class group
+            res = admin_session.post(f'contests/{contest_id}/manage/acct', data={
+                'reqtype': 'remove_class_group',
+                'group_id': group_id,
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            err, contest = await ContestService.inst.get_contest(contest_id)
+            self.assertIsNone(err)
+            assert contest
+            for acct_id in acct_ids:
+                self.assertNotIn(acct_id, contest.user_list)
+
+    async def test_add_empty_class_group(self):
+        """Adding a class group with no members should return an error."""
+        err, group_id = await ClassGroupService.inst.create_class_group(
+            year=200, semester=2, class_number=102, custom_name='Empty',
+            ip_range_start='', ip_range_end=''
+        )
+        self.assertIsNone(err)
+        assert group_id
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            contest_id = await self._create_contest(admin_session)
+
+            res = admin_session.post(f'contests/{contest_id}/manage/acct', data={
+                'reqtype': 'add_class_group',
+                'group_id': group_id,
+                'type': 'normal',
+            })
+            self.assertAPIReturnValue(res.text, ("Enoext", "Class group has no members"))
+
+    async def test_remove_skips_wrong_status(self):
+        """remove_class_group skips members whose status does not match the list type."""
+        csv_content = b"email,name,password\ncgcont004_1,CG User 4,CGPass4\ncgcont004_2,CG User 5,CGPass5"
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            files = {'csv_file': ('cg3.csv', io.BytesIO(csv_content), 'text/csv')}
+            res = admin_session.post(
+                'manage/class_group',
+                data={
+                    'reqtype': 'create',
+                    'year': 200,
+                    'semester': 2,
+                    'class_number': 103,
+                    'custom_name': 'StatusTest',
+                },
+                files=files,
+            )
+            self.assertAPIReturnSuccess(res.text)
+            group_id = json.loads(res.text)['data']
+
+            err, members = await ClassGroupService.inst.get_group_members(group_id)
+            self.assertIsNone(err)
+            assert members
+            acct_ids = [m['acct_id'] for m in members]
+            self.assertEqual(len(acct_ids), 2)
+
+            contest_id = await self._create_contest(admin_session)
+
+            # acct_ids[0] as normal, acct_ids[1] as admin
+            admin_session.post(f'contests/{contest_id}/manage/acct', data={
+                'reqtype': 'add', 'acct_id': acct_ids[0], 'type': 'normal',
+            })
+            admin_session.post(f'contests/{contest_id}/manage/acct', data={
+                'reqtype': 'add', 'acct_id': acct_ids[1], 'type': 'admin',
+            })
+
+            # remove_class_group with type=normal should only remove the normal member
+            res = admin_session.post(f'contests/{contest_id}/manage/acct', data={
+                'reqtype': 'remove_class_group',
+                'group_id': group_id,
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            err, contest = await ContestService.inst.get_contest(contest_id)
+            self.assertIsNone(err)
+            assert contest
+            self.assertNotIn(acct_ids[0], contest.user_list)   # normal → removed
+            self.assertIn(acct_ids[1], contest.user_list)       # admin → kept
+            self.assertEqual(contest.user_list[acct_ids[1]]['status'], UserStatus.ADMIN)

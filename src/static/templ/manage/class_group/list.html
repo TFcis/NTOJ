@@ -1,0 +1,158 @@
+{% extends '../manage.html' %}
+{% block head %}
+<script type="text/javascript">
+function deleteGroup(groupId, groupName) {
+    if (!confirm(`確定要刪除班級群組「${groupName}」嗎？\n此操作將解除所有成員的關聯（但不會刪除帳號本身）。`)) {
+        return;
+    }
+
+    $.post(`{{ url('/be/manage/class_group') }}`, {
+        reqtype: 'delete',
+        group_id: groupId
+    }, function(res) {
+        res = JSON.parse(res);
+        if (res.status == 'S') {
+            index.show_notify_dialog('刪除成功', index.DIALOG_TYPE.success);
+            index.reload();
+        } else {
+            index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+        }
+    });
+}
+
+function applyFilter() {
+    const year = $('#filter_year').val();
+    const semester = $('#filter_semester').val();
+    const classNumber = $('#filter_class_number').val();
+
+    let url = '/manage/class_group?pageoff=0';
+    if (year) url += `&year=${year}`;
+    if (semester) url += `&semester=${semester}`;
+    if (classNumber) url += `&class_number=${classNumber}`;
+
+    location.href = url;
+}
+
+function clearFilter() {
+    location.href = '/manage/class_group';
+}
+</script>
+{% end %}
+
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h2>班級群組管理</h2>
+
+    <!-- 篩選區 -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">篩選</h5>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="filter_year" class="form-label">學年</label>
+                    <input type="number" class="form-control" id="filter_year"
+                           placeholder="例如：113" value="{{ filter_year or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="filter_semester" class="form-label">學期</label>
+                    <select class="form-select" id="filter_semester">
+                        <option value="">全部</option>
+                        <option value="1" {% if filter_semester == 1 %}selected{% end %}>上學期</option>
+                        <option value="2" {% if filter_semester == 2 %}selected{% end %}>下學期</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filter_class_number" class="form-label">班級編號</label>
+                    <input type="number" class="form-control" id="filter_class_number"
+                           placeholder="例如：101" value="{{ filter_class_number or '' }}">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary me-2" onclick="applyFilter()">套用篩選</button>
+                    <button class="btn btn-secondary" onclick="clearFilter()">清除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增按鈕 -->
+    <div class="mb-3">
+        <a href="/manage/class_group/add" class="btn btn-success">新增班級群組</a>
+    </div>
+
+    <!-- 列表 -->
+    <table class="table table-hover table-sm">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>班級名稱</th>
+                <th>帳號 ID 範圍</th>
+                <th>Specific IP 範圍</th>
+                <th>IP 登入</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in groups %}
+            {% set group = item['group'] %}
+            {% set id_range = item['id_range'] %}
+            <tr>
+                <td>{{ group.group_id }}</td>
+                <td>{{ group.get_display_name() }}</td>
+                <td>
+                    {% if id_range %}
+                        {{ id_range[0] }} - {{ id_range[1] }}
+                    {% else %}
+                        無成員
+                    {% end %}
+                </td>
+                <td>
+                    {% if group.ip_range_start and group.ip_range_end %}
+                        {{ group.ip_range_start }} - {{ group.ip_range_end }}
+                    {% else %}
+                        未設定
+                    {% end %}
+                </td>
+                <td>
+                    {% if group.ip_login_enabled %}
+                        <span class="badge bg-success">啟用</span>
+                    {% else %}
+                        <span class="badge bg-secondary">停用</span>
+                    {% end %}
+                </td>
+                <td>
+                    <a class="btn btn-sm btn-primary" href="/manage/class_group/config?groupid={{ group.group_id }}">
+                        設定
+                    </a>
+                    <button class="btn btn-sm btn-danger"
+                            onclick="deleteGroup({{ group.group_id }}, '{{ group.get_display_name() }}')">
+                        刪除
+                    </button>
+                </td>
+            </tr>
+        {% end %}
+        </tbody>
+    </table>
+
+    <!-- 分頁 -->
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col pt-3">
+            {% set _p_pageoff = pageoff %}
+            {% set _p_pagenum = 40 %}
+            {% set _p_total_cnt = total_cnt %}
+            {% set postfix_parts = [] %}
+            {% if filter_year %}
+                {% set _ = postfix_parts.append(f'year={filter_year}') %}
+            {% end %}
+            {% if filter_semester %}
+                {% set _ = postfix_parts.append(f'semester={filter_semester}') %}
+            {% end %}
+            {% if filter_class_number %}
+                {% set _ = postfix_parts.append(f'class_number={filter_class_number}') %}
+            {% end %}
+            {% set _p_postfix = '&'.join(postfix_parts) %}
+            {% include "../../pagination.html" %}
+        </div>
+    </div>
+</div>
+{% end %}

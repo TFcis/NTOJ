@@ -1,5 +1,6 @@
 from handlers.base import reqenv, RequestHandler, ActionDispatcher
 from handlers.contests.base import contest_require_permission
+from services.class_group import ClassGroupService
 from services.contests import ContestService, UserStatus, ContestMode
 from services.user import UserService
 from utils.numeric import parse_str_to_list
@@ -19,6 +20,8 @@ class ContestManageAcctHandler(RequestHandler):
             elif v["status"] == UserStatus.APPROVED:
                 acct_list.append(acct)
 
+        _, class_groups = await ClassGroupService.inst.list_class_groups(pagesize=200)
+
         await self.render(
             "contests/manage/acct",
             page="acct",
@@ -26,6 +29,7 @@ class ContestManageAcctHandler(RequestHandler):
             contest=self.contest,
             acct_list=acct_list,
             admin_list=admin_list,
+            class_groups=class_groups or [],
         )
 
     @contest_manage_acct_dispatcher.action("add")
@@ -276,6 +280,108 @@ class ContestManageAcctHandler(RequestHandler):
             return self.error(
                 ("S", f"Accounts {removed_list} successfully removed from user list.")
             )
+
+    @contest_manage_acct_dispatcher.action("add_class_group")
+    async def add_class_group_action(self):
+        try:
+            group_id = int(self.get_argument("group_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid group ID"))
+
+        list_type = self.get_argument("type", default="normal")
+        if list_type not in ("normal", "admin"):
+            return self.error(("Eparam", "Invalid list type"))
+
+        status = UserStatus.APPROVED if list_type == "normal" else UserStatus.ADMIN
+
+        err, members = await ClassGroupService.inst.get_group_members(group_id)
+        if err:
+            return self.error(err)
+        assert members is not None
+
+        if not members:
+            return self.error(("Enoext", "Class group has no members"))
+
+        added = []
+        for member in members:
+            acct_id = member["acct_id"]
+            if acct_id == self.contest.contest_creator:
+                continue
+            self.contest.user_list[acct_id] = {"status": status}
+            added.append(acct_id)
+
+        error_group, _ = await ContestService.inst.update_contest(
+            self.acct, self.contest, userlist_updated=True
+        )
+
+        if self.contest.contest_mode == ContestMode.RANDOM_SET and status != UserStatus.ADMIN:
+            await ContestService.inst.allocate_new_accounts(self.contest)
+
+        if list_type == "normal" or (list_type == "admin" and not self.contest.hide_admin):
+            await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} added class group #{group_id} ({len(added)} accounts) to contest",
+            "contest.manage.acct.add_class_group",
+            {"group_id": group_id, "acct_list": added, "list_type": list_type},
+        )
+
+        if error_group:
+            return self.error(("S", f"Added {len(added)} accounts from group #{group_id}. Errors: {error_group}"))
+        return self.error(("S", f"Added {len(added)} accounts from class group #{group_id} as {status.name}."))
+
+    @contest_manage_acct_dispatcher.action("remove_class_group")
+    async def remove_class_group_action(self):
+        try:
+            group_id = int(self.get_argument("group_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid group ID"))
+
+        list_type = self.get_argument("type", default="normal")
+        if list_type not in ("normal", "admin"):
+            return self.error(("Eparam", "Invalid list type"))
+
+        expected_status = UserStatus.APPROVED if list_type == "normal" else UserStatus.ADMIN
+
+        err, members = await ClassGroupService.inst.get_group_members(group_id)
+        if err:
+            return self.error(err)
+        assert members is not None
+
+        removed = []
+        for member in members:
+            acct_id = member["acct_id"]
+            if acct_id == self.contest.contest_creator:
+                continue
+            entry = self.contest.user_list.get(acct_id)
+            if entry is None or entry["status"] != expected_status:
+                continue
+            self.contest.user_list.pop(acct_id)
+            if self.contest.contest_mode == ContestMode.RANDOM_SET and acct_id in self.contest.acct_pro_list:
+                self.contest.acct_pro_list.pop(acct_id)
+            removed.append(acct_id)
+
+        await ContestService.inst.update_contest(
+            self.acct, self.contest, userlist_updated=True
+        )
+
+        if list_type == "normal" or (list_type == "admin" and not self.contest.hide_admin):
+            if self.contest.contest_mode == ContestMode.RANDOM_SET:
+                async with self.rs.pipeline() as pipe:
+                    for acct_id in removed:
+                        for pro_order in range(len(self.contest.pro_sets)):
+                            await pipe.hdel(f"contest_{self.contest.contest_id}_randomset_scoreboard", f'{acct_id}_{pro_order}')
+                    await pipe.execute()
+            else:
+                await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        await self.add_log(
+            f"{self.acct.name} removed class group #{group_id} ({len(removed)} accounts) from contest",
+            "contest.manage.acct.remove_class_group",
+            {"group_id": group_id, "acct_list": removed, "list_type": list_type},
+        )
+
+        return self.error(("S", f"Removed {len(removed)} accounts from class group #{group_id}."))
 
     @contest_manage_acct_dispatcher.action("reallocate_account_pro_set")
     async def reallocate_account_pro_set_action(self):

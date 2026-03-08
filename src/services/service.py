@@ -1,6 +1,7 @@
 import config
 
 from .chal import ChalService
+from .class_group import ClassGroupService
 from .code import CodeService
 from .contests import ContestService
 from .holiday import HolidayService
@@ -28,3 +29,4 @@ def services_init(db, rs):
     Service.Rate = RateService(db, rs)
     Service.Judge = JudgeServerClusterService(rs, config.JUDGE_SERVER_LIST)
     Service.Holiday = HolidayService(db, rs)
+    Service.ClassGroup = ClassGroupService(db, rs)
