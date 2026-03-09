@@ -542,3 +542,126 @@
     </pre>
 {% end %}
 
+{% if rechal %}
+<div class="row mt-4">
+    <div class="col-12">
+        {% if not show_history %}
+            <a href="?history=1" class="btn btn-secondary">View Judge History</a>
+        {% elif not history %}
+            <p>No history recorded yet.</p>
+        {% else %}
+        <div class="accordion" id="history-accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapse_history"
+                        aria-expanded="true"
+                        aria-controls="collapse_history"
+                    >
+                        Judge History <small class="text-muted ms-2">(Admin Only)</small>
+                    </button>
+                </h2>
+                <div id="collapse_history" class="accordion-collapse collapse show">
+                    <div class="accordion-body">
+
+                        <h6>Total Result History</h6>
+                        {% if len(history['total']) == 0 %}
+                            <p class="text-muted">No history recorded yet.</p>
+                        {% else %}
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>State</th>
+                                    <th>Time (ms)</th>
+                                    <th>Memory (KiB)</th>
+                                    <th>Rate</th>
+                                    <th>Recorded At</th>
+                                    <th>Operation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for h in history['total'] %}
+                                <tr>
+                                    <td class="state state-{{ h.state }}">{{ ChalConst.STATE_LONG_STR[h.state] }}</td>
+                                    <td>{{ h.time }}</td>
+                                    <td>{{ h.memory }}</td>
+                                    <td>{{ h.rate }}</td>
+                                    <td>{{ h.recorded_at.astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>{{ 'Update' if h.operation == 'U' else 'Delete' }}</td>
+                                </tr>
+                                {% end %}
+                            </tbody>
+                        </table>
+                        {% end %}
+
+                        <h6>Subtask Result History</h6>
+                        {% if len(history['subtask']) == 0 %}
+                            <p class="text-muted">No history recorded yet.</p>
+                        {% else %}
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Subtask</th>
+                                    <th>State</th>
+                                    <th>Time (ms)</th>
+                                    <th>Memory (KiB)</th>
+                                    <th>Rate</th>
+                                    <th>Recorded At</th>
+                                    <th>Operation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for h in history['subtask'] %}
+                                <tr>
+                                    <td>{{ '%04d' % (h.subtask_id + 1) }}</td>
+                                    <td class="state state-{{ h.state }}">{{ ChalConst.STATE_LONG_STR[h.state] }}</td>
+                                    <td>{{ h.time }}</td>
+                                    <td>{{ h.memory }}</td>
+                                    <td>{{ h.rate }}</td>
+                                    <td>{{ h.recorded_at.astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>{{ 'Update' if h.operation == 'U' else 'Delete' }}</td>
+                                </tr>
+                                {% end %}
+                            </tbody>
+                        </table>
+                        {% end %}
+
+                        <h6>Testdata Result History</h6>
+                        {% if len(history['testdata']) == 0 %}
+                            <p class="text-muted">No history recorded yet.</p>
+                        {% else %}
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Testdata</th>
+                                    <th>State</th>
+                                    <th>Time (ms)</th>
+                                    <th>Memory (KiB)</th>
+                                    <th>Recorded At</th>
+                                    <th>Operation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for h in history['testdata'] %}
+                                <tr>
+                                    <td>{{ '%04d' % (h.testdata_id + 1) }}</td>
+                                    <td class="state state-{{ h.state }}">{{ ChalConst.STATE_LONG_STR[h.state] }}</td>
+                                    <td>{{ h.time }}</td>
+                                    <td>{{ h.memory }}</td>
+                                    <td>{{ h.recorded_at.astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>{{ 'Update' if h.operation == 'U' else 'Delete' }}</td>
+                                </tr>
+                                {% end %}
+                            </tbody>
+                        </table>
+                        {% end %}
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% end %}
+    </div>
+</div>
+{% end %}
