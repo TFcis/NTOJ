@@ -548,7 +548,12 @@ class ChalHandler(RequestHandler):
             for testdata_id in pro.config.testdatas.keys():
                 testdata_to_subtasks[testdata_id].append(subtask_config.subtask_id)
 
-        await self.render("chal", pro=pro, chal=chal, rechal=rechal, testdata_to_subtasks=testdata_to_subtasks)
+        show_history = rechal and self.get_argument("history", default=None) is not None
+        history = None
+        if show_history:
+            _, history = await ChalService.inst.get_challenge_history(chal_id)
+
+        await self.render("chal", pro=pro, chal=chal, rechal=rechal, testdata_to_subtasks=testdata_to_subtasks, history=history, show_history=show_history)
         return
 
     @reqenv

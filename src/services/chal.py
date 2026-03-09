@@ -199,6 +199,39 @@ class Challenge:
     subtask_results: dict[int, SubtaskResult] | None
     testdata_results: dict[int, TestdataResult] | None
 
+
+@dataclass(slots=True, frozen=True)
+class TotalResultHistory:
+    state: int
+    time: int
+    memory: int
+    rate: decimal.Decimal
+    message: str
+    message_type: MessageType
+    recorded_at: datetime.datetime
+    operation: str
+
+
+@dataclass(slots=True, frozen=True)
+class SubtaskResultHistory:
+    subtask_id: int
+    state: int
+    time: int
+    memory: int
+    rate: decimal.Decimal
+    recorded_at: datetime.datetime
+    operation: str
+
+
+@dataclass(slots=True, frozen=True)
+class TestdataResultHistory:
+    testdata_id: int
+    state: int
+    time: int
+    memory: int
+    recorded_at: datetime.datetime
+    operation: str
+
 @dataclass
 class ChalSearchingParam:
     """
@@ -842,3 +875,81 @@ class ChalService:
             )
 
         return None, None
+
+    async def get_challenge_history(self, chal_id: int) -> tuple[None, dict] | ErrorType:
+        """
+        Retrieve judge history for a challenge (admin only).
+
+        History rows are recorded by SQL triggers whenever total_result,
+        subtask_result, or testdata_result rows are updated/deleted,
+        excluding transient states STATE_JUDGE (100) and STATE_NOTSTARTED (101).
+
+        Args:
+            chal_id (int): Challenge ID.
+
+        Returns:
+            On success: (None, {'total': list[TotalResultHistory],
+                                'subtask': list[SubtaskResultHistory],
+                                'testdata': list[TestdataResultHistory]})
+            On failure: (error_code, None)
+        """
+        chal_id = int(chal_id)
+        try:
+            async with self.db.acquire() as con:
+                total_rows = await con.fetch(
+                    '''
+                        SELECT state, time, memory, rate, message, message_type,
+                               recorded_at, operation
+                        FROM total_result_history
+                        WHERE chal_id = $1
+                        ORDER BY recorded_at DESC;
+                    ''',
+                    chal_id,
+                )
+                subtask_rows = await con.fetch(
+                    '''
+                        SELECT subtask_id, state, time, memory, rate,
+                               recorded_at, operation
+                        FROM subtask_result_history
+                        WHERE chal_id = $1
+                        ORDER BY recorded_at DESC, subtask_id ASC;
+                    ''',
+                    chal_id,
+                )
+                testdata_rows = await con.fetch(
+                    '''
+                        SELECT testdata_id, state, time, memory,
+                               recorded_at, operation
+                        FROM testdata_result_history
+                        WHERE chal_id = $1
+                        ORDER BY recorded_at DESC, testdata_id ASC;
+                    ''',
+                    chal_id,
+                )
+        except Exception as e:
+            logger.error(f"Error fetching challenge history {chal_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
+
+        total = [
+            TotalResultHistory(
+                r['state'], r['time'], r['memory'], r['rate'],
+                r['message'], r['message_type'], r['recorded_at'], r['operation'],
+            )
+            for r in total_rows
+        ]
+        subtask = [
+            SubtaskResultHistory(
+                r['subtask_id'], r['state'], r['time'], r['memory'],
+                r['rate'], r['recorded_at'], r['operation'],
+            )
+            for r in subtask_rows
+        ]
+        testdata = [
+            TestdataResultHistory(
+                r['testdata_id'], r['state'], r['time'], r['memory'],
+                r['recorded_at'], r['operation'],
+            )
+            for r in testdata_rows
+        ]
+
+        return None, {'total': total, 'subtask': subtask, 'testdata': testdata}
