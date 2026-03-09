@@ -20,7 +20,9 @@ class ContestManageAcctHandler(RequestHandler):
             elif v["status"] == UserStatus.APPROVED:
                 acct_list.append(acct)
 
-        _, class_groups = await ClassGroupService.inst.list_class_groups(pagesize=200)
+        err, class_groups = await ClassGroupService.inst.list_class_groups(pagesize=200)
+        if err:
+            return self.error(err)
 
         await self.render(
             "contests/manage/acct",

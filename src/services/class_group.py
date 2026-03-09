@@ -1,5 +1,6 @@
 import csv
 import io
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from ipaddress import AddressValueError, IPv4Address
@@ -7,6 +8,9 @@ from ipaddress import AddressValueError, IPv4Address
 from handlers.base import UnifiedWebSocketHandler
 from services.user import UserService
 
+logger = logging.getLogger("tornado.application")
+
+UNKNOWN_ERROR = ("Eunk", "Unknown Error")
 
 @dataclass(slots=True)
 class ClassGroup:
@@ -69,7 +73,8 @@ class ClassGroupService:
                 return None, groups
 
         except Exception as e:
-            return ("Eunk", f"Database error: {str(e)}"), None
+            logger.error(f"Error listing class groups: {str(e)}")
+            return UNKNOWN_ERROR, None
 
     async def count_class_groups(
         self,
@@ -87,7 +92,8 @@ class ClassGroupService:
                 result = await con.fetchrow(query, *params)
                 return result["count"]
 
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error counting class groups: {str(e)}")
             return 0
 
     async def get_class_group(self, group_id: int) -> tuple[tuple | None, ClassGroup | None]:
@@ -112,7 +118,8 @@ class ClassGroupService:
                 return None, ClassGroup(**result)
 
         except Exception as e:
-            return ("Eunk", f"Database error: {str(e)}"), None
+            logger.error(f"Error getting class group {group_id}: {str(e)}")
+            return UNKNOWN_ERROR, None
 
     async def get_group_members(self, group_id: int) -> tuple[tuple | None, list[dict] | None]:
         """Get all members of class group (including account info)"""
@@ -138,7 +145,8 @@ class ClassGroupService:
                 return None, members
 
         except Exception as e:
-            return ("Eunk", f"Database error: {str(e)}"), None
+            logger.error(f"Error getting members for class group {group_id}: {str(e)}")
+            return UNKNOWN_ERROR, None
 
     async def get_account_id_range(self, group_id: int) -> tuple[tuple | None, tuple | None]:
         """Get account ID range of class group"""
@@ -160,7 +168,8 @@ class ClassGroupService:
                 return None, None
 
         except Exception as e:
-            return ("Eunk", f"Database error: {str(e)}"), None
+            logger.error(f"Error getting account ID range for class group {group_id}: {str(e)}")
+            return UNKNOWN_ERROR, None
 
     # === Create/Update/Delete Methods ===
 
@@ -195,7 +204,8 @@ class ClassGroupService:
                 return None, result["group_id"]
 
         except Exception as e:
-            return ("Eunk", f"Failed to create class group: {str(e)}"), None
+            logger.error(f"Error creating class group: {str(e)}")
+            return UNKNOWN_ERROR, None
 
     async def update_class_group(self, group: ClassGroup) -> tuple | None:
         """Update class group information"""
@@ -221,7 +231,7 @@ class ClassGroupService:
                         UPDATE "class_group"
                         SET "year" = $2, "semester" = $3, "class_number" = $4,
                             "custom_name" = $5, "ip_range_start" = $6, "ip_range_end" = $7,
-                            "updated_at" = NOW()
+                            "updated_at" = NOW(), "ip_login_enabled" = false
                         WHERE "group_id" = $1;
                         ''',
                         group.group_id,
@@ -242,7 +252,8 @@ class ClassGroupService:
                 return None
 
         except Exception as e:
-            return ("Eunk", f"Failed to update class group: {str(e)}")
+            logger.error(f"Error updating class group {group.group_id}: {str(e)}")
+            return UNKNOWN_ERROR
 
     async def delete_class_group(self, group_id: int) -> tuple | None:
         """Delete class group (CASCADE will auto-delete relations)"""
@@ -262,7 +273,8 @@ class ClassGroupService:
                 return None
 
         except Exception as e:
-            return ("Eunk", f"Failed to delete class group: {str(e)}")
+            logger.error(f"Error deleting class group {group_id}: {str(e)}")
+            return UNKNOWN_ERROR
 
     # === Member Management Methods ===
 
@@ -303,7 +315,8 @@ class ClassGroupService:
                 return None
 
         except Exception as e:
-            return ("Eunk", f"Failed to remove member: {str(e)}")
+            logger.error(f"Error removing member {acct_id} from group {group_id}: {str(e)}")
+            return UNKNOWN_ERROR
 
     async def batch_create_accounts(
         self,
@@ -403,7 +416,8 @@ class ClassGroupService:
                         )
                 except Exception:
                     pass  # best-effort cleanup
-            return ("Eunk", f"Failed to create accounts: {str(e)}"), None
+            logger.error(f"Error batch creating accounts for group {group_id}: {str(e)}")
+            return UNKNOWN_ERROR, None
 
     # === IP Management Methods ===
 
@@ -429,16 +443,18 @@ class ClassGroupService:
             async with self.db.acquire() as con:
                 async with con.transaction():
                     # Update class_group IP range
-                    await con.execute(
+                    result = await con.fetch(
                         '''
                         UPDATE "class_group"
                         SET "ip_range_start" = $2, "ip_range_end" = $3, "updated_at" = NOW()
-                        WHERE "group_id" = $1;
+                        WHERE "group_id" = $1 RETURNING "group_id";
                         ''',
                         group_id,
                         ip_start,
                         ip_end,
                     )
+                    if len(result) != 1:
+                        return ("Enoext", "Class group not found")
 
                     # Assign IPs to members sequentially
                     acct_ids = await self._assign_ips_to_members(con, group_id, ip_list)
@@ -450,7 +466,8 @@ class ClassGroupService:
             return None
 
         except Exception as e:
-            return ("Eunk", f"Failed to set IP range: {str(e)}")
+            logger.error(f"Error setting IP range for group {group_id}: {str(e)}")
+            return UNKNOWN_ERROR
 
     async def enable_ip_login(self, group_id: int, enabled: bool) -> tuple | None:
         """Enable/disable IP login restriction"""
@@ -458,15 +475,17 @@ class ClassGroupService:
             async with self.db.acquire() as con:
                 async with con.transaction():
                     # Update class_group ip_login_enabled
-                    await con.execute(
+                    result = await con.fetch(
                         '''
                         UPDATE "class_group"
                         SET "ip_login_enabled" = $2, "updated_at" = NOW()
-                        WHERE "group_id" = $1;
+                        WHERE "group_id" = $1 RETURNING "group_id";
                         ''',
                         group_id,
                         enabled,
                     )
+                    if len(result) != 1:
+                        return ("Enoext", "Class group not found")
 
                     if enabled:
                         # Enable: allocate IP from range
@@ -523,7 +542,8 @@ class ClassGroupService:
             return None
 
         except Exception as e:
-            return ("Eunk", f"Failed to toggle IP login: {str(e)}")
+            logger.error(f"Error toggling IP login for group {group_id}: {str(e)}")
+            return UNKNOWN_ERROR
 
     async def remove_all_specific_ip(self, group_id: int) -> tuple | None:
         """Clear all members' specific IPs"""
@@ -531,15 +551,17 @@ class ClassGroupService:
             async with self.db.acquire() as con:
                 async with con.transaction():
                     # Clear class_group IP range
-                    await con.execute(
+                    result = await con.fetch(
                         '''
                         UPDATE "class_group"
                         SET "ip_range_start" = '', "ip_range_end" = '',
                             "ip_login_enabled" = FALSE, "updated_at" = NOW()
-                        WHERE "group_id" = $1;
+                        WHERE "group_id" = $1 RETURNING "group_id";
                         ''',
                         group_id,
                     )
+                    if len(result) != 1:
+                        return ("Enoext", "Class group not found")
 
                     # Get all members
                     acct_ids = await con.fetch(
@@ -570,7 +592,8 @@ class ClassGroupService:
             return None
 
         except Exception as e:
-            return ("Eunk", f"Failed to remove all IPs: {str(e)}")
+            logger.error(f"Error removing all specific IPs for group {group_id}: {str(e)}")
+            return UNKNOWN_ERROR
 
     async def update_member_ip(
         self,
@@ -618,7 +641,50 @@ class ClassGroupService:
             return None
 
         except Exception as e:
-            return ("Eunk", f"Failed to update member IP: {str(e)}")
+            logger.error(f"Error updating member {acct_id} IP in group {group_id}: {str(e)}")
+            return UNKNOWN_ERROR
+
+    async def get_next_available_ip(self, group_id: int) -> Tuple[Optional[tuple], Optional[str]]:
+        """Return the first IP in the group's range not yet assigned to any member.
+
+        Returns:
+            (None, ip_str)  — an available IP was found
+            (None, None)    — group has no IP range configured
+            (error, None)   — range is exhausted or another error occurred
+        """
+        err, group = await self.get_class_group(group_id)
+        if err:
+            return err, None
+        assert group
+
+        if not group.ip_range_start or not group.ip_range_end:
+            return None, None
+
+        try:
+            ip_list = self._generate_ips_from_range(group.ip_range_start, group.ip_range_end)
+        except ValueError as e:
+            return ("Erange", str(e)), None
+
+        try:
+            async with self.db.acquire() as con:
+                rows = await con.fetch(
+                    '''
+                    SELECT a."specific_ip"
+                    FROM "class_group_member" cgm
+                    JOIN "account" a ON cgm."acct_id" = a."acct_id"
+                    WHERE cgm."group_id" = $1 AND a."specific_ip" != '';
+                    ''',
+                    group_id,
+                )
+        except Exception as e:
+            return ("Eunk", f"Database error: {str(e)}"), None
+
+        used_ips = {row["specific_ip"] for row in rows}
+        for ip in ip_list:
+            if ip not in used_ips:
+                return None, ip
+
+        return ("Erange", "No available IPs left in group range"), None
 
     # === Helper Methods ===
 
@@ -814,13 +880,16 @@ class ClassGroupService:
             accounts = []
             for row_num, row in enumerate(reader, start=2):  # start=2 because first line is header
                 # Validate each row data
+                row["email"] = row["email"].strip() if row["email"] else ""
+                row["name"] = row["name"].strip() if row["name"] else ""
+                row["password"] = row["password"].strip() if row["password"] else ""
                 if not row["email"] or not row["name"] or not row["password"]:
                     return ("Eformat", f"Row {row_num}: Missing required field"), None
 
                 account_data = {
-                    "email": row["email"].strip(),
-                    "name": row["name"].strip(),
-                    "password": row["password"].strip(),
+                    "email": row["email"],
+                    "name": row["name"],
+                    "password": row["password"],
                     "specific_ip": row.get("specific_ip", "").strip(),
                 }
 

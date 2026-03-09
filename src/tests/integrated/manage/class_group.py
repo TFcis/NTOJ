@@ -22,6 +22,7 @@ class ManageClassGroupTest(AsyncTest):
         await self.test_delete_class_group()
         await self.test_csv_validation_errors()
         await self.test_permission_control()
+        await self.test_add_member_manual_ip_login_enabled()
 
     async def test_create_class_group(self):
         """Test creating a basic class group without CSV"""
@@ -590,3 +591,104 @@ invalidip001,Invalid IP User,Pass123,999.999.999.999"""
             })
             # Should return permission error
             self.assertAPIReturnValue(res.text, ("Eacces", "Permission denied"))
+
+    async def test_add_member_manual_ip_login_enabled(self):
+        """When ip_login_enabled is True, add_member_manual must assign a specific_ip."""
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            # --- Case 1: ip_login_enabled + range available → auto-assign IP ---
+            err, group_id = await ClassGroupService.inst.create_class_group(
+                year=120, semester=1, class_number=801,
+                custom_name='IPLoginTest',
+                ip_range_start='10.10.10.1',
+                ip_range_end='10.10.10.5',
+            )
+            self.assertIsNone(err)
+            assert group_id
+
+            # Enable IP login restriction
+            res = admin_session.post('manage/class_group', {
+                'reqtype': 'enable_ip_login',
+                'group_id': group_id,
+                'enabled': 'true',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            # Add member without explicit specific_ip → should auto-assign 10.10.10.1
+            res = admin_session.post('manage/class_group', {
+                'reqtype': 'add_member_manual',
+                'group_id': group_id,
+                'email': 'cgiplogin001',
+                'name': 'IP Login User 1',
+                'password': 'IPLoginPass1',
+                'specific_ip': '',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            acct_id1 = json.loads(res.text)['data']
+
+            err, acct = await UserService.inst.info_acct(acct_id1)
+            self.assertIsNone(err)
+            assert acct
+            self.assertEqual(acct.specific_ip, '10.10.10.1')
+
+            # Add second member → auto-assign 10.10.10.2
+            res = admin_session.post('manage/class_group', {
+                'reqtype': 'add_member_manual',
+                'group_id': group_id,
+                'email': 'cgiplogin002',
+                'name': 'IP Login User 2',
+                'password': 'IPLoginPass2',
+                'specific_ip': '',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            acct_id2 = json.loads(res.text)['data']
+
+            err, acct = await UserService.inst.info_acct(acct_id2)
+            self.assertIsNone(err)
+            assert acct
+            self.assertEqual(acct.specific_ip, '10.10.10.2')
+
+            # --- Case 2: explicit specific_ip overrides auto-assign ---
+            res = admin_session.post('manage/class_group', {
+                'reqtype': 'add_member_manual',
+                'group_id': group_id,
+                'email': 'cgiplogin003',
+                'name': 'IP Login User 3',
+                'password': 'IPLoginPass3',
+                'specific_ip': '10.10.10.5',  # explicit, picks last IP
+            })
+            self.assertAPIReturnSuccess(res.text)
+            acct_id3 = json.loads(res.text)['data']
+
+            err, acct = await UserService.inst.info_acct(acct_id3)
+            self.assertIsNone(err)
+            assert acct
+            self.assertEqual(acct.specific_ip, '10.10.10.5')
+
+            # --- Case 3: ip_login_enabled + no ip_range → Einval ---
+            err, group_id_no_range = await ClassGroupService.inst.create_class_group(
+                year=120, semester=2, class_number=802,
+                custom_name='IPLoginNoRange',
+                ip_range_start='',
+                ip_range_end='',
+            )
+            self.assertIsNone(err)
+            assert group_id_no_range
+
+            # Enable ip_login without a range (must be done via direct service call
+            # since the handler's enable_ip_login service also validates no range)
+            async with ClassGroupService.inst.db.acquire() as con:
+                await con.execute(
+                    'UPDATE "class_group" SET "ip_login_enabled" = TRUE WHERE "group_id" = $1;',
+                    group_id_no_range,
+                )
+
+            res = admin_session.post('manage/class_group', {
+                'reqtype': 'add_member_manual',
+                'group_id': group_id_no_range,
+                'email': 'cgiplogin004',
+                'name': 'IP Login User 4',
+                'password': 'IPLoginPass4',
+                'specific_ip': '',
+            })
+            data = json.loads(res.text)
+            self.assertEqual(data['status'], 'Einval')

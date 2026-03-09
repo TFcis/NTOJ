@@ -34,6 +34,8 @@ class ManageClassGroupHandler(RequestHandler):
             groups_with_range = []
             for group in groups:
                 err, id_range = await ClassGroupService.inst.get_account_id_range(group.group_id)
+                if err:
+                    return self.error(err)
                 groups_with_range.append({"group": group, "id_range": id_range})
 
             await self.render(
@@ -88,9 +90,6 @@ class ManageClassGroupHandler(RequestHandler):
         if semester not in (1, 2):
             return self.error(("Einval", "Semester must be 1 or 2"))
 
-        # if not (101 <= class_number <= 319):
-        #     return self.error(("Einval", "Class number must be between 101 and 319"))
-
         if ip_range_start and ip_range_end:
             is_valid, error_msg = ClassGroupService.inst._validate_ip(ip_range_start)
             if not is_valid:
@@ -99,6 +98,8 @@ class ManageClassGroupHandler(RequestHandler):
             is_valid, error_msg = ClassGroupService.inst._validate_ip(ip_range_end)
             if not is_valid:
                 return self.error(("Einval", f"Invalid end IP: {error_msg}"))
+        elif ip_range_start or ip_range_end:
+            return self.error(("Einval", "Both ip_range_start and ip_range_end must be set together"))
 
         csv_file = self.request.files.get("csv_file")
         if csv_file:
@@ -202,10 +203,25 @@ class ManageClassGroupHandler(RequestHandler):
         password = self.get_argument("password").strip()
         specific_ip = self.get_argument("specific_ip", default="").strip()
 
+        err, group = await ClassGroupService.inst.get_class_group(group_id)
+        if err:
+            return self.error(err)
+        assert group
+
         if specific_ip:
             is_valid, error_msg = ClassGroupService.inst._validate_ip(specific_ip)
             if not is_valid:
                 return self.error(("Einval", f"Invalid IP: {error_msg}"))
+        elif group.ip_login_enabled:
+            # IP login restriction is active — ensure the new member gets an IP
+            if group.ip_range_start and group.ip_range_end:
+                err, auto_ip = await ClassGroupService.inst.get_next_available_ip(group_id)
+                if err:
+                    return self.error(err)
+                assert auto_ip is not None
+                specific_ip = auto_ip
+            else:
+                return self.error(("Einval", "IP login is enabled for this group but no IP range is configured; provide a specific_ip"))
 
         err, acct_id = await UserService.inst.sign_up(email, password, name)
         if err:

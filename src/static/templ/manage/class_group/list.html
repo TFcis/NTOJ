@@ -1,7 +1,9 @@
 {% extends '../manage.html' %}
 {% block head %}
 <script type="text/javascript">
-function deleteGroup(groupId, groupName) {
+function deleteGroup(btn) {
+    const groupId = btn.dataset.groupId;
+    const groupName = btn.dataset.groupName;
     if (!confirm(`確定要刪除班級群組「${groupName}」嗎？\n此操作將解除所有成員的關聯（但不會刪除帳號本身）。`)) {
         return;
     }
@@ -25,7 +27,7 @@ function applyFilter() {
     const semester = $('#filter_semester').val();
     const classNumber = $('#filter_class_number').val();
 
-    let url = '/manage/class_group?pageoff=0';
+    let url = '{{ url('/manage/class_group?pageoff=0') }}';
     if (year) url += `&year=${year}`;
     if (semester) url += `&semester=${semester}`;
     if (classNumber) url += `&class_number=${classNumber}`;
@@ -34,7 +36,7 @@ function applyFilter() {
 }
 
 function clearFilter() {
-    location.href = '/manage/class_group';
+    location.href = '{{ url('/manage/class_group') }}';
 }
 </script>
 {% end %}
@@ -76,7 +78,7 @@ function clearFilter() {
 
     <!-- 新增按鈕 -->
     <div class="mb-3">
-        <a href="/manage/class_group/add" class="btn btn-success">新增班級群組</a>
+        <a href="{{ url('/manage/class_group/add') }}" class="btn btn-success">新增班級群組</a>
     </div>
 
     <!-- 列表 -->
@@ -120,11 +122,13 @@ function clearFilter() {
                     {% end %}
                 </td>
                 <td>
-                    <a class="btn btn-sm btn-primary" href="/manage/class_group/config?groupid={{ group.group_id }}">
+                    <a class="btn btn-sm btn-primary" href="{{ url(f'/manage/class_group/config?groupid={ group.group_id }') }}">
                         設定
                     </a>
                     <button class="btn btn-sm btn-danger"
-                            onclick="deleteGroup({{ group.group_id }}, '{{ group.get_display_name() }}')">
+                            data-group-id="{{ group.group_id }}"
+                            data-group-name="{{ group.get_display_name() }}"
+                            onclick="deleteGroup(this)">
                         刪除
                     </button>
                 </td>
