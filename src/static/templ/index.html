@@ -7,21 +7,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
   <meta name="language" content="tw">
   <link rel="stylesheet" href="{{ url('/src/index.css') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"
-    integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
-    rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="{{ url('/src/third/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url('/src/third/all.min.css') }}">
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
-    integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="{{ url('/src/third/jquery.min.js') }}"></script>
   <script src="{{ url('/src/index.js') }}"></script>
   <script src="{{ url('/src/pack.js') }}"></script>
-  <script type="module"> import pdfjsDist from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/+esm' </script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-chtml.js" async></script>
+  <script type="module" src="{{ url('/src/third/pdf.min.js') }}"></script>
+  <script src="{{ url('/src/third/tex-chtml.js') }}"></script>
   <script>
     window.MathJax = {
       tex: {
@@ -37,9 +30,9 @@
       }
     };
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" async></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.7/purify.min.js" integrity="sha512-BdRNuI8/lsyxkKQVxK1lVtfZshggfXPAwEP+JAOJEKx6Y8SLfcBSRdaWyXQmMxo+wG180uFqXYGjGRL0mh4/Jw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js" integrity="sha512-iWbxiCA4l1WTD0rRctt/BfDEmDC5PiVqFc6c1Rhj/GKjuj6tqrjrikTw3Sypm/eEgMa7jSOS9ydmDlOtxJKlSQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="{{ url('/src/third/marked.min.js') }}"></script>
+  <script src="{{ url('/src/third/purify.min.js') }}"></script>
+  <script src="{{ url('/src/third/spark-md5.min.js') }}"></script>
 
     <script id="indexjs" type="text/javascript" acct_id="{{ user.acct_id }}" contest_id="{{ contest_id }}" base_url="{{ base_url }}">
     $(document).ready(function () {
@@ -133,7 +126,6 @@
           <li class="nav-item contests"><a class="nav-link" href="{{ url('/contests/') }}">Contests</a></li>
 
           <li><a class="nav-link message" style="display: none;" href=""></a></li>
-          <!-- <li><a class="nav-link" href="http://forum.tfcis.org/forum.php?mod=forumdisplay&fid=40" target="_new">Discuss</a></li> -->
           <li><a class="nav-link" href="https://github.com/TFcis/NTOJ/issues" target="_new">Make A Wish</a></li>
           <li class="nav-item about"><a class="nav-link" href="{{ url('/about/') }}">About</a></li>
           <li class="dev-info"><a class="nav-link" href="{{ url('/dev-info/') }}">DevInfo</a></li>
@@ -159,12 +151,8 @@
     <small>Developed By TOJ Dev Group @ <a href="https://github.com/TFcis/NTOJ/tree/tnfsh">Github</a></small>
   </footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.8/umd/popper.min.js"
-    integrity="sha512-TPh2Oxlg1zp+kz3nFA0C5vVC6leG/6mm1z9+mA81MI5eaUVqasPLO8Cuk4gMF4gUfP5etR73rgU/8PNMsSesoQ=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.min.js"
-    integrity="sha512-WW8/jxkELe2CAiE4LvQfwm1rajOS8PHasCCx+knHG0gBHt8EXxS6T6tJRTGuDQVnluuAvMxWF4j8SNFDKceLFg=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="{{ url('/src/third/popper.min.js') }}"></script>
+  <script src="{{ url('/src/third/bootstrap.min.js') }}"></script>
 </body>
 
 </html>

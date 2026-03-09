@@ -1,7 +1,7 @@
 {% from services.chal import COMPILER_INFOS %}
 {% from utils.numeric import merge_list_to_str %}
 <link rel="stylesheet" type="text/css" href="{{ url('/src/pro.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf_viewer.min.css" integrity="sha512-8LkkqbXJPviYJENC5Z8qC2uKz27x0tNgrZbzsAzt7zkw0/2lXtSdrslVhfrkcR+6LRmxjZxlqniSyWXimoaH5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" type="text/css" href="{{ url('/src/third/pdf_viewer.min.css') }}">
 <script type="text/javascript">
     var pdf_url = '';
     var html_url = '';
@@ -15,7 +15,7 @@
 
     function init() {
         let PDFJS = pdfjsLib;
-        PDFJS.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.mjs';
+        PDFJS.GlobalWorkerOptions.workerSrc = '{{ url('/src/third/pdf.worker.min.mjs') }}';
 
         $("#pdfbtn").on('click', function(event) {
             let url = `${pdf_url}?download=1`;
