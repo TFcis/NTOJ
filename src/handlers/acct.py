@@ -32,18 +32,6 @@ class AcctHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        acct.acct_type = UserConst.ACCTTYPE_USER
-
-        err, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_NORMAL_USER)
-        if err:
-            return self.error(err)
-
-        acct.acct_type = UserConst.ACCTTYPE_KERNEL
-
-        def chunk_list(la, size):
-            for i in range(0, len(la), size):
-                yield la[i : i + size]
-
         # force https, add by xiplus, 2018/8/24
         acct.photo = re.sub(r"^http://", "https://", acct.photo)
         acct.cover = re.sub(r"^http://", "https://", acct.cover)
@@ -51,7 +39,6 @@ class AcctHandler(RequestHandler):
         await self.render(
             "acct/profile",
             acct=acct,
-            prolist=chunk_list(prolist, 10),
         )
 
 
