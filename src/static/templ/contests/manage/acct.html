@@ -46,6 +46,35 @@
 		$("#addAcctListAdmin").on('click', () => post_func('multi_add', $("#acctListAdmin").val(), 'admin'));
 		$("#removeAcctListAdmin").on('click', () => post_func('multi_remove', $("#acctListAdmin").val(), 'admin'));
 
+		const class_group_func = (reqtype, group_id, list_type) => {
+			if (!group_id) {
+				index.show_notify_dialog('Please select a class group.', index.DIALOG_TYPE.warning);
+				return;
+			}
+			$.post(`{{ url(f'/be/contests/{ contest_id }/manage/acct') }}`, {
+				reqtype: reqtype,
+				group_id: group_id,
+				type: list_type,
+			}, res => {
+				res = JSON.parse(res);
+				if (res.status == 'S') {
+					index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+					setTimeout(() => index.reload(), 1000);
+				} else {
+					index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+				}
+			});
+		};
+
+		$("#addClassGroup").on('click', () => class_group_func('add_class_group', $("#classGroupSelect").val(), 'normal'));
+		$("#removeClassGroup").on('click', () => {
+			const gid = $("#classGroupSelect").val();
+			if (!gid) { index.show_notify_dialog('Please select a class group.', index.DIALOG_TYPE.warning); return; }
+			if (confirm('Remove all members of this class group from contest?')) {
+				class_group_func('remove_class_group', gid, 'normal');
+			}
+		});
+
 		const reallocate_func = (reqtype, acct_id = null, pro_set_idx = null) => {
 			let data = { reqtype: reqtype };
 			if (acct_id) data.acct_id = acct_id;
@@ -93,6 +122,33 @@
 {% block content %}
 {% from services.contests import ContestMode %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
+	{% if class_groups %}
+	<div class="accordion mb-3">
+		<div class="accordion-item">
+			<h2 class="accordion-header" id="headingClassGroup">
+				<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseClassGroup" aria-expanded="true" aria-controls="collapseClassGroup">
+					Class Group
+				</button>
+			</h2>
+			<div id="collapseClassGroup" class="accordion-collapse collapse show" aria-labelledby="headingClassGroup">
+				<div class="accordion-body">
+					<div class="input-group mb-1">
+						<select class="form-select" id="classGroupSelect">
+							<option value="">-- Select Class Group --</option>
+							{% for g in class_groups %}
+							<option value="{{ g.group_id }}">{{ g.get_display_name() }}</option>
+							{% end %}
+						</select>
+						<button class="btn btn-primary" id="addClassGroup" type="button">Add All Members</button>
+						<button class="btn btn-warning" id="removeClassGroup" type="button">Remove All Members</button>
+					</div>
+					<small class="text-muted">Adds / removes all members of the selected class group as normal (non-admin) participants.</small>
+				</div>
+			</div>
+		</div>
+	</div>
+	{% end %}
+
 	<div class="accordion">
 		<div class="accordion-item">
 			<h2 class="accordion-header" id="headingOne">

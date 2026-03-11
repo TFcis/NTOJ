@@ -1,0 +1,426 @@
+{% extends '../manage.html' %}
+{% block head %}
+<script type="text/javascript">
+const GROUP_ID = {{ group_id }};
+
+function updateGroup() {
+    const customName = $('#custom_name').val();
+
+    $.ajax({
+        url: `{{ url('/be/manage/class_group') }}`,
+        type: 'POST',
+        data: {
+            reqtype: 'update',
+            group_id: GROUP_ID,
+            year: {{ group.year }},
+            semester: {{ group.semester }},
+            class_number: {{ group.class_number }},
+            custom_name: customName,
+            ip_range_start: '{{ group.ip_range_start or "" }}',
+            ip_range_end: '{{ group.ip_range_end or "" }}'
+        },
+        success: function(res) {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('設定名稱成功', index.DIALOG_TYPE.success);
+                index.reload();
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
+        }
+    });
+}
+
+function addIpRange() {
+    const ipStart = $('#ip_start').val();
+    const ipEnd = $('#ip_end').val();
+
+    if (!ipStart || !ipEnd) {
+        alert('請填寫起始和結束 IP');
+        return;
+    }
+
+    $.ajax({
+        url: `{{ url('/be/manage/class_group') }}`,
+        type: 'POST',
+        data: {
+            reqtype: 'set_ip_range',
+            group_id: GROUP_ID,
+            ip_start: ipStart,
+            ip_end: ipEnd
+        },
+        success: function(res) {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('設定IP Range成功', index.DIALOG_TYPE.success);
+                index.reload();
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
+        }
+    });
+}
+
+function removeAllIp() {
+    if (!confirm('確定要清空所有 IP 設定？這將清除 IP 範圍和所有成員的特定 IP')) return;
+
+    $.ajax({
+        url: `{{ url('/be/manage/class_group') }}`,
+        type: 'POST',
+        data: {
+            reqtype: 'remove_all_ip',
+            group_id: GROUP_ID
+        },
+        success: function(res) {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('已清空所有 IP 設定', index.DIALOG_TYPE.success);
+                index.reload();
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
+        }
+    });
+}
+
+function toggleIpLogin(enabled) {
+    const action = enabled ? '啟用' : '停用';
+    const message = enabled ?
+        '啟用後將根據 IP 範圍自動分配 IP 給所有成員，確定要啟用嗎？' :
+        '停用後將清除所有成員的特定 IP，確定要停用嗎？';
+
+    if (!confirm(message)) return;
+
+    $.ajax({
+        url: `{{ url('/be/manage/class_group') }}`,
+        type: 'POST',
+        data: {
+            reqtype: 'enable_ip_login',
+            group_id: GROUP_ID,
+            enabled: enabled ? 'true' : 'false'
+        },
+        success: function(res) {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog(action + ' IP 登入限制成功，相關帳號已登出', index.DIALOG_TYPE.success);
+                index.reload();
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
+        }
+    });
+}
+
+function updateMemberIp(acctId, specificIp) {
+    $.ajax({
+        url: `{{ url('/be/manage/class_group') }}`,
+        type: 'POST',
+        data: {
+            reqtype: 'update_member_ip',
+            group_id: GROUP_ID,
+            acct_id: acctId,
+            new_ip: specificIp
+        },
+        success: function(res) {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('更新 IP 成功，該帳號已登出', index.DIALOG_TYPE.success);
+                index.reload();
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
+        }
+    });
+}
+
+function removeMember(acctId) {
+    if (!confirm('確定要移除此成員？')) return;
+
+    $.ajax({
+        url: `{{ url('/be/manage/class_group') }}`,
+        type: 'POST',
+        data: {
+            reqtype: 'remove_member',
+            group_id: GROUP_ID,
+            acct_id: acctId
+        },
+        success: function(res) {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('已移除成員', index.DIALOG_TYPE.success);
+                index.reload();
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
+        }
+    });
+}
+
+function addMemberManual() {
+    const email = $('#new_email').val();
+    const name = $('#new_name').val();
+    const password = $('#new_password').val();
+    const specificIp = $('#new_specific_ip').val();
+
+    if (!email || !name || !password) {
+        alert('請填寫帳號、姓名和密碼');
+        return;
+    }
+
+    $.ajax({
+        url: `{{ url('/be/manage/class_group') }}`,
+        type: 'POST',
+        data: {
+            reqtype: 'add_member_manual',
+            group_id: GROUP_ID,
+            email: email,
+            name: name,
+            password: password,
+            specific_ip: specificIp
+        },
+        success: function(res) {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('新增帳號成功', index.DIALOG_TYPE.success);
+                index.reload();
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
+        }
+    });
+}
+
+function addMembersBatch() {
+    const csvFile = $('#csv_file')[0].files[0];
+    if (!csvFile) {
+        alert('請選擇 CSV 檔案');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('reqtype', 'add_member_csv');
+    formData.append('group_id', GROUP_ID);
+    formData.append('csv_file', csvFile);
+
+    $.ajax({
+        url: `{{ url('/be/manage/class_group') }}`,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(res) {
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                index.show_notify_dialog('批量新增帳號成功', index.DIALOG_TYPE.success);
+                index.reload();
+            } else {
+                index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            }
+        }
+    });
+}
+
+function editMemberIp(acctId, currentIp) {
+    const newIp = prompt('請輸入新的 IP（留空表示移除）:', currentIp || '');
+    if (newIp === null) return;
+    updateMemberIp(acctId, newIp);
+}
+</script>
+{% end %}
+
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h2>班級群組設定</h2>
+
+    <!-- 基本資訊 -->
+    <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">基本資訊</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">學年</label>
+                    <input type="text" class="form-control" value="{{ group.year }}" disabled>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">學期</label>
+                    <input type="text" class="form-control" value="{{ '上學期' if group.semester == 1 else '下學期' }}" disabled>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">班級編號</label>
+                    <input type="text" class="form-control" value="{{ group.class_number }}" disabled>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">建立時間</label>
+                    <input type="text" class="form-control" value="{{ group.created_at.strftime('%Y-%m-%d %H:%M') }}" disabled>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="custom_name" class="form-label">自訂名稱</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="custom_name"
+                           value="{{ group.custom_name or '' }}">
+                    <button class="btn btn-primary" type="button" onclick="updateGroup()">更新</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- IP 範圍管理 -->
+    <div class="card mb-3">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">IP 範圍管理</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-5">
+                    <label for="ip_start" class="form-label">起始 IP</label>
+                    <input type="text" class="form-control" id="ip_start" value="{{ group.ip_range_start }}">
+                </div>
+                <div class="col-md-5">
+                    <label for="ip_end" class="form-label">結束 IP</label>
+                    <input type="text" class="form-control" id="ip_end" value="{{ group.ip_range_end }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-success w-100" onclick="addIpRange()">新增</button>
+                </div>
+            </div>
+
+            {% if group.ip_range_start and group.ip_range_end %}
+            <div class="alert alert-success">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>目前 IP 範圍：</strong> {{ group.ip_range_start }} ~ {{ group.ip_range_end }}
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="removeAllIp()">清空所有 IP</button>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <h6>IP 登入限制</h6>
+                <div class="alert {{ 'alert-warning' if group.ip_login_enabled else 'alert-secondary' }}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>狀態：</strong>
+                            {% if group.ip_login_enabled %}
+                            <span class="badge bg-success">已啟用</span>
+                            <span class="ms-2">成員只能從指定的 IP 登入</span>
+                            {% else %}
+                            <span class="badge bg-secondary">未啟用</span>
+                            <span class="ms-2">成員可從任何 IP 登入</span>
+                            {% end %}
+                        </div>
+                        <div>
+                            {% if group.ip_login_enabled %}
+                            <button class="btn btn-sm btn-secondary" onclick="toggleIpLogin(false)">停用 IP 限制</button>
+                            {% else %}
+                            <button class="btn btn-sm btn-warning" onclick="toggleIpLogin(true)">啟用 IP 限制</button>
+                            {% end %}
+                        </div>
+                    </div>
+                </div>
+                <small class="text-muted">
+                    <strong>提示：</strong>啟用後會自動將 IP 範圍內的 IP 依序分配給成員；停用後會清除所有成員的特定 IP。
+                </small>
+            </div>
+            {% else %}
+            <div class="alert alert-info">尚未設定 IP 範圍</div>
+            {% end %}
+        </div>
+    </div>
+
+    <!-- 成員管理 -->
+    <div class="card mb-3">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">成員管理 ({{ len(members) }} 人)</h5>
+        </div>
+        <div class="card-body">
+            <!-- 單個新增 -->
+            <div class="border p-3 mb-3 rounded">
+                <h6>單個新增成員</h6>
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="new_email" placeholder="帳號 (email)">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="new_name" placeholder="名稱">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="password" class="form-control" id="new_password" placeholder="密碼">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control" id="new_specific_ip" placeholder="特定 IP（可選）">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" onclick="addMemberManual()">新增</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 批量新增 -->
+            <div class="border p-3 mb-3 rounded">
+                <h6>批量新增成員（CSV）</h6>
+                <div class="row g-2">
+                    <div class="col-md-10">
+                        <input type="file" class="form-control" id="csv_file" accept=".csv">
+                        <small class="form-text text-muted">格式：email,name,password[,specific_ip]</small>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-success w-100" onclick="addMembersBatch()">批量新增</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 成員列表 -->
+            {% if members %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>帳號</th>
+                            <th>姓名</th>
+                            <th>特定 IP</th>
+                            <th>加入時間</th>
+                            <th style="width: 150px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in members %}
+                        <tr>
+                            <td>{{ member['mail'] }}</td>
+                            <td>{{ member['name'] }}</td>
+                            <td>
+                                {% if member['specific_ip'] %}
+                                <span class="badge bg-primary">{{ member['specific_ip'] }}</span>
+                                {% else %}
+                                <span class="text-muted">未設定</span>
+                                {% end %}
+                            </td>
+                            <td>{{ member['joined_at'].strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning"
+                                        onclick="editMemberIp({{ member['acct_id'] }}, '{{ member['specific_ip'] or '' }}')">
+                                    編輯 IP
+                                </button>
+                                <button class="btn btn-sm btn-danger"
+                                        onclick="removeMember({{ member['acct_id'] }})">
+                                    移除
+                                </button>
+                            </td>
+                        </tr>
+                        {% end %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">此班級群組尚無成員</div>
+            {% end %}
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{{ url('/manage/class_group') }}" class="btn btn-secondary">返回列表</a>
+    </div>
+</div>
+{% end %}

@@ -471,9 +471,9 @@ class ContestService:
 
             except Exception as e:
                 logger.error(f'Error adding pro set to contest {contest.contest_id}: {e}')
-                tr.rollback()
+                await tr.rollback()
             else:
-                tr.commit()
+                await tr.commit()
 
         contest.pro_sets.append([pro_id for pro_id, _ in pro_set])
 
