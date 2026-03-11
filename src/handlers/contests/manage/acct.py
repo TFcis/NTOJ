@@ -223,12 +223,6 @@ class ContestManageAcctHandler(RequestHandler):
             if a_id == self.contest.contest_creator:
                 error_group.append(("Eacces", f"Cannot remove contest creator {a_id}"))
                 continue
-            try:
-                self.contest.user_list.pop(a_id)
-                if self.contest.contest_mode == ContestMode.RANDOM_SET and a_id in self.contest.acct_pro_list:
-                    self.contest.acct_pro_list.pop(a_id)
-            except KeyError:
-                continue
 
             try:
                 current_status = self.contest.user_list[a_id]["status"]
@@ -242,8 +236,13 @@ class ContestManageAcctHandler(RequestHandler):
                 error_group.append(("Enoext", f"Account {a_id} not in contest"))
                 continue
 
-            self.contest.user_list.pop(a_id)
-            removed_list.append(a_id)
+            try:
+                self.contest.user_list.pop(a_id)
+                removed_list.append(a_id)
+                if self.contest.contest_mode == ContestMode.RANDOM_SET and a_id in self.contest.acct_pro_list:
+                    self.contest.acct_pro_list.pop(a_id)
+            except KeyError:
+                continue
 
         update_errors, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, userlist_updated=True

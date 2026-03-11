@@ -93,7 +93,7 @@ class Contest:
             return acct_id == self.contest_creator \
                     or (acct_id in self.user_list and self.user_list[acct_id]['status'] == UserStatus.ADMIN)
 
-        assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
+        assert False, 'one of args(acct or acct_id) must not None'
 
     def is_member(self, acct: Account | None = None, acct_id: int | None = None) -> bool:
         if acct is not None:
@@ -102,7 +102,7 @@ class Contest:
         if acct_id is not None:
             return acct_id in self.user_list and self.user_list[acct_id]['status'] in (UserStatus.APPROVED, UserStatus.ADMIN)
 
-        assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
+        assert False, 'one of args(acct or acct_id) must not None'
 
     def member_is_status(self, acct: Account | int, status: UserStatus) -> bool:
         acct_id = None
@@ -466,12 +466,13 @@ class ContestService:
                 )
                 inserted_count = res.split(' ')[2]
                 if inserted_count != str(len(pro_set)):
-                    tr.rollback()
+                    await tr.rollback()
                     return ('Eparam', 'Cannot add proset due to problem not found or problem is hidden'), None
 
             except Exception as e:
                 logger.error(f'Error adding pro set to contest {contest.contest_id}: {e}')
                 await tr.rollback()
+                return
             else:
                 await tr.commit()
 
@@ -504,51 +505,88 @@ class ContestService:
         if pro_size == 0:
             return
 
-        acct_ids = [acct_id for acct_id in contest.user_list.keys()
-                    if contest.user_list[acct_id]['status'] == UserStatus.APPROVED]
+        await self._allocate_random_pro_set(contest, pro_set, pro_set_idx)
 
-        allocations = []
+    async def _allocate_random_pro_set(
+        self,
+        contest: Contest,
+        pro_set: list[int],
+        pro_set_idx: int,
+        *,
+        target_acct_ids: set[int] | None = None,
+        replace_existing: bool = False,
+    ):
+        """Allocate/reallocate a specific RandomSet problem set.
 
+        When replace_existing=False, accounts that already have this set are skipped.
+        When replace_existing=True, the set at pro_set_idx is replaced in-place.
+        """
+        if contest.contest_mode != ContestMode.RANDOM_SET:
+            return
+
+        pro_size = len(pro_set)
+        if pro_size == 0:
+            return
+
+        acct_ids = sorted(
+            acct_id for acct_id, user_data in contest.user_list.items()
+            if user_data['status'] == UserStatus.APPROVED
+            and (target_acct_ids is None or acct_id in target_acct_ids)
+        )
+
+        allocations: list[tuple[int, int, int]] = []
         for i, acct_id in enumerate(acct_ids):
-            if acct_id in contest.acct_pro_list and len(contest.acct_pro_list[acct_id]) > pro_set_idx:
-                # Already allocated
+            current = contest.acct_pro_list.get(acct_id, [])
+            if not replace_existing and len(current) > pro_set_idx:
                 continue
 
             prev_pro = None
             next_pro = None
 
             if i > 0:
-                prev_acct = acct_ids[i-1]
-                if prev_acct in contest.acct_pro_list and len(contest.acct_pro_list[prev_acct]) > pro_set_idx:
-                    prev_pro = contest.acct_pro_list[prev_acct][pro_set_idx]
+                prev_acct = acct_ids[i - 1]
+                prev_alloc = contest.acct_pro_list.get(prev_acct, [])
+                if len(prev_alloc) > pro_set_idx:
+                    prev_pro = prev_alloc[pro_set_idx]
 
             if i < len(acct_ids) - 1:
-                next_acct = acct_ids[i+1]
-                if next_acct in contest.acct_pro_list and len(contest.acct_pro_list[next_acct]) > pro_set_idx:
-                    next_pro = contest.acct_pro_list[next_acct][pro_set_idx]
+                next_acct = acct_ids[i + 1]
+                # For accounts outside target_acct_ids, keep existing neighbor constraints.
+                # For targeted accounts, they are reallocated later in this loop.
+                if target_acct_ids is None or next_acct not in target_acct_ids or not replace_existing:
+                    next_alloc = contest.acct_pro_list.get(next_acct, [])
+                    if len(next_alloc) > pro_set_idx:
+                        next_pro = next_alloc[pro_set_idx]
 
             if pro_size == 1:
                 chosen = pro_set[0]
             elif pro_size == 2:
                 chosen = pro_set[0] if prev_pro != pro_set[0] and next_pro != pro_set[0] else pro_set[1]
             else:
-                if not next_pro:
-                    if i >= 2:
-                        next_acct = acct_ids[i-2]
-                        if next_acct in contest.acct_pro_list and len(contest.acct_pro_list[next_acct]) > pro_set_idx:
-                            next_pro = contest.acct_pro_list[next_acct][pro_set_idx]
-
                 available = [p for p in pro_set if p not in (prev_pro, next_pro)]
+                if not available:
+                    available = pro_set
                 chosen = random.choice(available)
 
             if acct_id not in contest.acct_pro_list:
                 contest.acct_pro_list[acct_id] = []
-            contest.acct_pro_list[acct_id].append(chosen)
+
+            if len(contest.acct_pro_list[acct_id]) == pro_set_idx:
+                contest.acct_pro_list[acct_id].append(chosen)
+            elif len(contest.acct_pro_list[acct_id]) > pro_set_idx:
+                contest.acct_pro_list[acct_id][pro_set_idx] = chosen
+            else:
+                logger.warning(
+                    'Skip randomset allocation for acct %s in contest %s due to inconsistent pro_set length',
+                    acct_id,
+                    contest.contest_id,
+                )
+                continue
 
             allocations.append((contest.contest_id, acct_id, chosen))
 
-        async with self.db.acquire() as con:
-            if allocations:
+        if allocations:
+            async with self.db.acquire() as con:
                 await con.executemany(
                     '''
                     INSERT INTO contest_acct_pro_joints ("contest_id", "acct_id", "pro_id")
@@ -727,13 +765,20 @@ class ContestService:
                 await con.execute('''
                     DELETE FROM contest_acct_pro_joints
                     WHERE contest_id = $1 AND pro_id = ANY($2::integer[]);
-                ''', contest.contest_id, list(removed_pros))
+                ''', contest.contest_id, old_pro_set)
 
-            for acct_id in contest.acct_pro_list:
-                if len(contest.acct_pro_list[acct_id]) > pro_set_idx:
-                    contest.acct_pro_list[acct_id].pop(pro_set_idx)
-
-            await self.add_random_pro(contest, new_pro_ids, pro_set_idx)
+            approved_ids = {
+                acct_id
+                for acct_id, user_data in contest.user_list.items()
+                if user_data['status'] == UserStatus.APPROVED
+            }
+            await self._allocate_random_pro_set(
+                contest,
+                new_pro_ids,
+                pro_set_idx,
+                target_acct_ids=approved_ids,
+                replace_existing=True,
+            )
 
         await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
@@ -758,10 +803,13 @@ class ContestService:
                 WHERE contest_id = $1 AND acct_id = $2 AND pro_id = ANY($3::integer[]);
             ''', contest.contest_id, acct_id, pro_set)
 
-        if acct_id in contest.acct_pro_list and len(contest.acct_pro_list[acct_id]) > pro_set_idx:
-            contest.acct_pro_list[acct_id].pop(pro_set_idx)
-
-        await self.add_random_pro(contest, pro_set, pro_set_idx)
+        await self._allocate_random_pro_set(
+            contest,
+            pro_set,
+            pro_set_idx,
+            target_acct_ids={acct_id},
+            replace_existing=True,
+        )
         await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
         return None, None
@@ -784,11 +832,18 @@ class ContestService:
                 WHERE contest_id = $1 AND pro_id = ANY($2::integer[]);
             ''', contest.contest_id, pro_set)
 
-        for acct_id in contest.acct_pro_list:
-            if len(contest.acct_pro_list[acct_id]) > pro_set_idx:
-                contest.acct_pro_list[acct_id].pop(pro_set_idx)
-
-        await self.add_random_pro(contest, pro_set, pro_set_idx)
+        approved_ids = {
+            acct_id
+            for acct_id, user_data in contest.user_list.items()
+            if user_data['status'] == UserStatus.APPROVED
+        }
+        await self._allocate_random_pro_set(
+            contest,
+            pro_set,
+            pro_set_idx,
+            target_acct_ids=approved_ids,
+            replace_existing=True,
+        )
         await self.rs.hset('contest', str(contest.contest_id), pickle.dumps(contest))
 
         return None, None

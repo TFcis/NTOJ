@@ -331,6 +331,35 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
 
+            # Regression case for issue #5:
+            # multi_remove should only remove users with matching status in the target list.
+            res = admin_session.post('contests/1/manage/acct', data={
+                'reqtype': 'add',
+                'acct_id': 3,
+                'type': 'admin',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            res = admin_session.post('contests/1/manage/acct', data={
+                'reqtype': 'multi_remove',
+                'acct_id': '3,4',
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertIn(3, contest.user_list)
+            self.assertEqual(contest.user_list[3]['status'], UserStatus.ADMIN)
+            self.assertNotIn(4, contest.user_list)
+
+            # Restore approved account for subsequent registration tests.
+            res = admin_session.post('contests/1/manage/acct', data={
+                'reqtype': 'add',
+                'acct_id': 4,
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'remove',
                 'acct_id': 4,
@@ -339,6 +368,18 @@ class ContestTest(AsyncTest):
             self.assertAPIReturnValue(res.text, ('Eacces', f'Cannot remove user with status {UserStatus.APPROVED.name} from admin list'))
             err, contest = await ContestService.inst.get_contest(1)
             self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
+            # Regression: multi_remove must not remove users with mismatched status.
+            res = admin_session.post('contests/1/manage/acct', data={
+                'reqtype': 'multi_remove',
+                'acct_id': 4,
+                'type': 'admin',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertIn(4, contest.user_list)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
 
             res = admin_session.post('contests/1/manage/acct', data={
@@ -1411,6 +1452,114 @@ class RandomContestTest(AsyncTest):
                         contest.acct_pro_list[acct_ids[i + 1]][pro_set_idx]
                     )
 
+        # Regression case for issue #3:
+        # Reallocating a single account on a single pro_set should not shrink
+        # that account's allocation list or shift later set indexes.
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
+                'name': 'random contest reallocate regression'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            reallocate_contest_id = json.loads(res.text)['data']
+
+            cfg = copy.deepcopy(default_config)
+            cfg['name'] = 'random contest reallocate regression'
+            cfg['contest_mode'] = ContestMode.RANDOM_SET
+            res = admin_session.post(f'contests/{reallocate_contest_id}/manage/general', data=cfg)
+            self.assertAPIReturnSuccess(res.text)
+
+            # Two sets are required to expose index shift bug.
+            res = admin_session.post(f'contests/{reallocate_contest_id}/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '7,8'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            res = admin_session.post(f'contests/{reallocate_contest_id}/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '10,11'
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            res = admin_session.post(f'contests/{reallocate_contest_id}/manage/acct', data={
+                'reqtype': 'multi_add',
+                'acct_id': '4,5,6',
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            err, contest = await ContestService.inst.get_contest(reallocate_contest_id)
+            assert contest
+            self.assertIsNone(err)
+            before_alloc = contest.acct_pro_list[4].copy()
+            self.assertEqual(len(before_alloc), 2)
+
+            res = admin_session.post(f'contests/{reallocate_contest_id}/manage/acct', data={
+                'reqtype': 'reallocate_account_pro_set',
+                'acct_id': 4,
+                'pro_set_idx': 0,
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            err, contest = await ContestService.inst.get_contest(reallocate_contest_id)
+            assert contest
+            self.assertIsNone(err)
+
+            # Expected invariant: still 2 allocations (one per set) after reallocate.
+            self.assertEqual(
+                len(contest.acct_pro_list[4]),
+                2,
+                'reallocate_account_pro_set should keep per-account allocation length unchanged',
+            )
+            self.assertIn(contest.acct_pro_list[4][0], (7, 8))
+            self.assertIn(contest.acct_pro_list[4][1], (10, 11))
+
+        # Regression case for issue #4:
+        # Adjacency rule must be checked by acct_id ordering, not insertion ordering.
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
+                'name': 'random contest adjacency regression'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            adjacency_contest_id = json.loads(res.text)['data']
+
+            cfg = copy.deepcopy(default_config)
+            cfg['name'] = 'random contest adjacency regression'
+            cfg['contest_mode'] = ContestMode.RANDOM_SET
+            res = admin_session.post(f'contests/{adjacency_contest_id}/manage/general', data=cfg)
+            self.assertAPIReturnSuccess(res.text)
+
+            # Two-problem set makes expected pattern deterministic under adjacency constraints.
+            res = admin_session.post(f'contests/{adjacency_contest_id}/manage/pro', data={
+                'reqtype': 'add_set',
+                'pro_id': '7,8'
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            # Insert users in non-acct_id order to expose order-dependent allocation.
+            res = admin_session.post(f'contests/{adjacency_contest_id}/manage/acct', data={
+                'reqtype': 'multi_add',
+                'acct_id': '4,6,5',
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            err, contest = await ContestService.inst.get_contest(adjacency_contest_id)
+            assert contest
+            self.assertIsNone(err)
+
+            # Must hold for acct_id-adjacent accounts: (4,5) and (5,6).
+            sorted_ids = sorted(contest.acct_pro_list.keys())
+            for i in range(len(sorted_ids) - 1):
+                left = sorted_ids[i]
+                right = sorted_ids[i + 1]
+                self.assertNotEqual(
+                    contest.acct_pro_list[left][0],
+                    contest.acct_pro_list[right][0],
+                    f'acct_id-adjacent accounts {left} and {right} should not share the same randomset problem',
+                )
+
 class ContestRegistrationPasswordModeTest(AsyncTest):
     async def main(self):
         with AccountContext('admin@test', 'testtest') as admin_session:
@@ -1420,7 +1569,7 @@ class ContestRegistrationPasswordModeTest(AsyncTest):
                 'name': 'password contest'
             })
             password_contest_id = json.loads(res.text)['data']
-            self.assertEqual(password_contest_id, 4)
+            self.assertEqual(password_contest_id, 6)
 
             # Setup password mode contest
             contest_start = now + datetime.timedelta(days=1)
