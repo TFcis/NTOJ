@@ -42,6 +42,14 @@
             }
         });
 
+        $("#contestMode").on('change', function(e) {
+            if ($(this).val() === "{{ ContestMode.RANDOM_SET }}") {
+                $("#freezeScoreboardPeriod").attr('disabled', true);
+            } else {
+                $("#freezeScoreboardPeriod").attr('disabled', false);
+            }
+        });
+
         $("button.submit").on('click', function(e) {
             let start_time = null, end_time = null, reg_end_time = null;
             let contest_name = $("#contestName").val();
