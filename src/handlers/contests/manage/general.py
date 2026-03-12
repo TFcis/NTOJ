@@ -123,7 +123,7 @@ class ContestManageGeneralHandler(RequestHandler):
 
         elif (
             self.contest.reg_mode is RegMode.REG_APPROVAL
-            and reg_mode is RegMode.INVITED
+            and reg_mode in (RegMode.INVITED, RegMode.PASSWORD)
         ):
             for acct_id, v in list(self.contest.user_list.items()):
                 if v["status"] in (UserStatus.REQUESTED, UserStatus.REJECTED):
