@@ -644,7 +644,7 @@ class ClassGroupService:
             logger.error(f"Error updating member {acct_id} IP in group {group_id}: {str(e)}")
             return UNKNOWN_ERROR
 
-    async def get_next_available_ip(self, group_id: int) -> Tuple[Optional[tuple], Optional[str]]:
+    async def get_next_available_ip(self, group_id: int) -> tuple[tuple | None, str | None]:
         """Return the first IP in the group's range not yet assigned to any member.
 
         Returns:
@@ -727,16 +727,27 @@ class ClassGroupService:
         where_clause = " AND ".join(where_clauses) if where_clauses else "TRUE"
         return where_clause, params, param_count
 
-    def _validate_ip(self, ip: str) -> tuple[bool, str | None]:
+    def _validate_ip(self, ip_str: str) -> tuple[bool, str | None]:
         """Validate IP format"""
         try:
-            IPv4Address(ip)
+            IPv4Address(ip_str)
             return True, None
         except AddressValueError as e:
             return False, str(e)
 
     def _validate_ip_range(self, ip_start: str, ip_end: str) -> tuple | None:
-        """Validate IP range format"""
+        """
+        Check whether two IP addresses:
+        1. Are valid IPv4 addresses
+        2. Start with 192.168
+        3. Have the same first three octets (same /24 subnet)
+
+        Returns:
+            bool
+
+        Raises:
+            ValueError: If an IP address is invalid or does not start with 192.168
+        """
         is_valid, error_msg = self._validate_ip(ip_start)
         if not is_valid:
             return ("Einval", f"Invalid start IP: {error_msg}")
@@ -744,6 +755,15 @@ class ClassGroupService:
         is_valid, error_msg = self._validate_ip(ip_end)
         if not is_valid:
             return ("Einval", f"Invalid end IP: {error_msg}")
+
+        if not (ip_start.startswith("192.168.") and ip_end.startswith("192.168.")):
+            return ("Einval", "IP must start with 192.168")
+
+        net1 = ".".join(ip_start.split(".")[:3])
+        net2 = ".".join(ip_end.split(".")[:3])
+
+        if net1 != net2:
+            return ("Einval", "Start and end IP must be in the same /24 subnet")
 
         return None
 

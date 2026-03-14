@@ -91,13 +91,9 @@ class ManageClassGroupHandler(RequestHandler):
             return self.error(("Einval", "Semester must be 1 or 2"))
 
         if ip_range_start and ip_range_end:
-            is_valid, error_msg = ClassGroupService.inst._validate_ip(ip_range_start)
-            if not is_valid:
-                return self.error(("Einval", f"Invalid start IP: {error_msg}"))
-
-            is_valid, error_msg = ClassGroupService.inst._validate_ip(ip_range_end)
-            if not is_valid:
-                return self.error(("Einval", f"Invalid end IP: {error_msg}"))
+            err = ClassGroupService.inst._validate_ip_range(ip_range_start, ip_range_end)
+            if err:
+                return self.error(err)
         elif ip_range_start or ip_range_end:
             return self.error(("Einval", "Both ip_range_start and ip_range_end must be set together"))
 
