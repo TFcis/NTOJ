@@ -1,5 +1,6 @@
 import re
 import time
+import copy
 import math
 import hashlib
 
@@ -206,6 +207,7 @@ class SignHandler(RequestHandler):
             )
             return self.error(err)
 
+        self.acct = copy.deepcopy(self.acct)
         self.acct.acct_id = acct_id
         await self.add_log(
             f"Account #{acct_id} signed in",
