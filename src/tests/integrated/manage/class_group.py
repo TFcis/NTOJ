@@ -278,8 +278,8 @@ cgtest003,Test User 3,Pass789,192.168.10.3"""
             res = admin_session.post('manage/class_group', {
                 'reqtype': 'set_ip_range',
                 'group_id': group_id,
-                'ip_start': '10.0.0.1',
-                'ip_end': '10.0.0.100',
+                'ip_start': '192.168.11.10',
+                'ip_end': '192.168.11.14',
             })
             self.assertAPIReturnSuccess(res.text)
 
@@ -287,8 +287,8 @@ cgtest003,Test User 3,Pass789,192.168.10.3"""
             err, group = await ClassGroupService.inst.get_class_group(group_id)
             self.assertIsNone(err)
             assert group
-            self.assertEqual(group.ip_range_start, '10.0.0.1')
-            self.assertEqual(group.ip_range_end, '10.0.0.100')
+            self.assertEqual(group.ip_range_start, '192.168.11.10')
+            self.assertEqual(group.ip_range_end, '192.168.11.14')
 
             # Remove IP range by updating with empty values
             res = admin_session.post('manage/class_group', {
@@ -599,8 +599,8 @@ invalidip001,Invalid IP User,Pass123,999.999.999.999"""
             err, group_id = await ClassGroupService.inst.create_class_group(
                 year=120, semester=1, class_number=801,
                 custom_name='IPLoginTest',
-                ip_range_start='10.10.10.1',
-                ip_range_end='10.10.10.5',
+                ip_range_start='192.168.11.10',
+                ip_range_end='192.168.11.14',
             )
             self.assertIsNone(err)
             assert group_id
@@ -628,7 +628,7 @@ invalidip001,Invalid IP User,Pass123,999.999.999.999"""
             err, acct = await UserService.inst.info_acct(acct_id1)
             self.assertIsNone(err)
             assert acct
-            self.assertEqual(acct.specific_ip, '10.10.10.1')
+            self.assertEqual(acct.specific_ip, '192.168.11.10')
 
             # Add second member → auto-assign 10.10.10.2
             res = admin_session.post('manage/class_group', {
@@ -645,7 +645,7 @@ invalidip001,Invalid IP User,Pass123,999.999.999.999"""
             err, acct = await UserService.inst.info_acct(acct_id2)
             self.assertIsNone(err)
             assert acct
-            self.assertEqual(acct.specific_ip, '10.10.10.2')
+            self.assertEqual(acct.specific_ip, '192.168.11.11')
 
             # --- Case 2: explicit specific_ip overrides auto-assign ---
             res = admin_session.post('manage/class_group', {
