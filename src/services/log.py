@@ -1,6 +1,8 @@
 import json
 import logging
 import datetime
+import decimal
+from dataclasses import is_dataclass, asdict
 
 logger = logging.getLogger("tornado.application")
 
@@ -8,6 +10,14 @@ class _Encoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime.datetime):
             return o.isoformat(timespec="seconds")
+
+        if is_dataclass(o):
+            logger.warning(f"Serializing dataclass {o} using asdict()")
+            return asdict(o)
+
+        if isinstance(o, decimal.Decimal):
+            logger.warning(f"Serializing Decimal {o} as string")
+            return str(o)
 
         return super().default(o)
 

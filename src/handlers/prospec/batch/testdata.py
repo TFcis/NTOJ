@@ -171,7 +171,7 @@ class BatchTestdataHandler(RequestHandler):
             await self.add_log(
                 f"{self.acct.name} tried to update testdata {testdata_id} with {testdata_type} type for problem #{pro_id}, failed with {err[0]}",
                 "manage.pro.update.testdata.updatesinglefile.failed",
-                {"testdata": testdatas[testdata_id]},
+                {"testdata": asdict(testdatas[testdata_id])},
             )
             return self.error(err)
 
@@ -271,7 +271,7 @@ class BatchTestdataHandler(RequestHandler):
             await self.add_log(
                 f"{self.acct.name} tried to delete testdata {testdata_id} for problem #{pro_id}, failed with {err[0]}",
                 "manage.pro.update.testdata.deletesinglefile.failed",
-                {"testdata": testdatas[testdata_id]},
+                {"testdata": asdict(testdatas[testdata_id])},
             )
             return self.error(err)
 
