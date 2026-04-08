@@ -80,6 +80,10 @@ class ManageProSubtaskHandler(RequestHandler):
         if subtask_id not in subtask_configs:
             return self.error(("Enoext", "Subtask not found"))
 
+        for dep_subtask_id in dep_subtasks:
+            if dep_subtask_id not in subtask_configs:
+                return self.error(("Eparam", f"Dependency subtask {dep_subtask_id} not found"))
+
         subtask_configs[subtask_id].dependency_subtasks = set(dep_subtasks)
 
         if self.have_cycle(subtask_configs):
