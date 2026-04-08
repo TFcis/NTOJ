@@ -68,7 +68,7 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Delete Testdata ${testdata_id} successfully.`;
+                        msg = `Delete Testdata ${parseInt(testdata_id) + 1} successfully.`;
                     } else {
                         dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
@@ -182,7 +182,7 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Update Testdata ${testdata_id} with ${type} successfully.`;
+                        msg = `Update Testdata ${parseInt(testdata_id) + 1} with ${type} successfully.`;
                     } else {
                         dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
