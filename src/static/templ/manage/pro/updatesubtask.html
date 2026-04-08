@@ -31,8 +31,9 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Update rate of subtask#${subtask} successfully.`;
+                        msg = `Update rate of subtask#${parseInt(subtask) + 1} successfully.`;
                     } else {
+                        dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
@@ -57,6 +58,7 @@
                     dialog_type = index.DIALOG_TYPE.success;
                     msg = `Add subtask successfully.`;
                 } else {
+                    dialog_type = index.DIALOG_TYPE.error;
                     msg = res.data;
                 }
 
@@ -82,8 +84,9 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Delete subtask #${subtask} successfully.`;
+                        msg = `Delete subtask #${parseInt(subtask) + 1} successfully.`;
                     } else {
+						dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
@@ -114,8 +117,9 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Subtask #${subtask} set testdatas successfully.`;
+                        msg = `Subtask #${parseInt(subtask) + 1} set testdatas successfully.`;
                     } else {
+						dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
@@ -129,7 +133,7 @@
             el.addEventListener('click', function(e) {
                 let subtask = $(this).parents('.accordion-collapse').attr('subtask');
                 let dep_subtasks = $(this).siblings('#depsubtasks').val();
-                if (!re.test(dep_subtasks)) {
+                if (dep_subtasks.length != 0 && !re.test(dep_subtasks)) {
                     index.show_notify_dialog("Dependency subtasks wrong. Please follow the instruction", index.DIALOG_TYPE.warning);
                     return;
                 }
@@ -146,8 +150,9 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Subtask #${subtask} set dependency subtasks successfully.`;
+                        msg = `Subtask #${parseInt(subtask) + 1} set dependency subtasks successfully.`;
                     } else {
+						dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
