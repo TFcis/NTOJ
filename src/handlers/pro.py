@@ -252,6 +252,14 @@ class ProsetHandler(RequestHandler):
                 return
 
             _, acct_states = await RateService.inst.map_rate_acct(self.acct)
+            err, prolist = await ProService.inst.list_pro(
+                self.acct.is_kernel()
+                and ProConst.PRO_STATUS_KERNEL_USER
+                or ProConst.PRO_STATUS_NORMAL_USER
+            )
+            if err:
+                return self.error(err)
+            pro_exists = {pro.pro_id for pro in prolist}
             for i in range(len(proclass_list)):
                 proclass_list[i] = dict(proclass_list[i])
                 proclass = proclass_list[i]
@@ -262,12 +270,16 @@ class ProsetHandler(RequestHandler):
                 if proclass["acct_id"]:
                     proclass["creator_name"] = accts[proclass["acct_id"]]
 
+                total_cnt = len(p["list"])
                 for pro_id in p["list"]:
+                    if pro_id not in pro_exists:
+                        total_cnt -= 1
+                        continue
                     if pro_id in acct_states:
                         ac_cnt += acct_states[pro_id]["state"] == ChalConst.STATE_AC
 
                 proclass["ac_cnt"] = ac_cnt
-                proclass["total_cnt"] = len(p["list"])
+                proclass["total_cnt"] = total_cnt
 
             self.error(("S", proclass_list))
 
@@ -341,9 +353,9 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
 
         err, _ = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
-            if err[0] == 'Enoext':
+            if err[0] == "Enoext":
                 self.set_status(404)
-            elif err[0] == 'Eacces':
+            elif err[0] == "Eacces":
                 self.set_status(403)
             else:
                 self.set_status(500)

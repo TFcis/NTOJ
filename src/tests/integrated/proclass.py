@@ -1,6 +1,6 @@
 import json
 
-from services.pro import ProClassService, ProClassConst
+from services.pro import ProConst, ProClassService, ProClassConst
 
 from tests.integrated.util import AsyncTest, AccountContext
 
@@ -276,6 +276,50 @@ class ProClassTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
+            # NOTE: problem status
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_HIDDEN,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+            with AccountContext('test1@test', 'test') as user_session:
+                res = user_session.post('proset', data={
+                    'reqtype': 'listproclass',
+                    'proclass_type': 'official',
+                })
+                res = json.loads(res.text)
+                proclass_list = res['data']
+                self.assertNotEqual(proclass_list, [])
+                self.assertEqual(len(proclass_list), 1)
+                self.assertEqual(proclass_list[0]['total_cnt'], 1)
+                self.assertEqual(proclass_list[0]['ac_cnt'], 0)
+                self.assertEqual(proclass_list[0]['proclass_id'], 1)
+
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_ONLINE,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
+            res = admin_session.post('proset', data={
+                'reqtype': 'listproclass',
+                'proclass_type': 'official',
+            })
+            res = json.loads(res.text)
+            proclass_list = res['data']
+            self.assertNotEqual(proclass_list, [])
+            self.assertEqual(len(proclass_list), 1)
+            self.assertEqual(proclass_list[0]['total_cnt'], 2)
+            self.assertEqual(proclass_list[0]['ac_cnt'], 2)
+            self.assertEqual(proclass_list[0]['proclass_id'], 1)
+
+            # NOTE: cleanup
             res = admin_session.post('manage/proclass/update', data={
                 'reqtype': 'remove',
                 'proclass_id': 1,
