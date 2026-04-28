@@ -7,15 +7,19 @@
         let pro_id = "{{ pro.pro_id }}";
         let contest_id = "{{ contest_id }}";
 
-	    j_submit.find('input.file').on('change', function(e) {
-	        var reader = new FileReader();
+        j_submit.find('input.file').on('click', function() {
+            this.value = null;
+        });
 
-	        reader.onload = function(e) {
-	    	    j_submit.find('textarea.code').val(reader.result);
-	        };
+        j_submit.find('input.file').on('change', function(e) {
+            var reader = new FileReader();
 
-	        reader.readAsText(this.files[0]);
-	    });
+            reader.onload = function(e) {
+                j_submit.find('textarea.code').val(reader.result);
+            };
+
+            reader.readAsText(this.files[0]);
+        });
 
         j_submit.find('button.submit').on('click', function(e) {
             let code = j_submit.find('textarea.code').val();
