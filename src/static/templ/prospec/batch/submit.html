@@ -7,6 +7,10 @@
         let pro_id = "{{ pro.pro_id }}";
         let contest_id = "{{ contest_id }}";
 
+        j_submit.find('input.file').on('click', function() {
+            this.value = null;
+        });
+
         j_submit.find('input.file').on('change', function(e) {
             var reader = new FileReader();
 
