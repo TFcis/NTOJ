@@ -165,6 +165,8 @@ class BatchSubmitHandler(RequestHandler):
             },
         )
 
+        await self.rs.hdel('rate', str(self.acct.acct_id))
+
         self.error(("S", chal_id))
 
     @submit_dispatcher.action("rechal")
@@ -224,6 +226,8 @@ class BatchSubmitHandler(RequestHandler):
                 "contest_id": self.contest.contest_id if self.contest else 0,
             },
         )
+
+        await self.rs.hdel('rate', str(chal.acct_id))
 
         self.error(("S", chal_id))
 
