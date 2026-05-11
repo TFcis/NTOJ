@@ -3,7 +3,7 @@ import asyncio
 from handlers.base import reqenv, RequestHandler, ActionDispatcher
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService
-from services.contests import ContestService, ProblemScoreType
+from services.contests import ContestService, ProblemScoreType, ContestMode
 from services.judge import JudgeServerClusterService
 from services.pro import ProService, ProConst
 from utils.numeric import parse_str_to_list
@@ -38,11 +38,21 @@ class ContestManageProHandler(RequestHandler):
             pro_id = int(self.get_argument("pro_id"))
         except ValueError:
             return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            score_type = int(self.get_argument("score_type", default=ProblemScoreType.IOI2017))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem score type"))
 
         if self.contest.is_pro(pro_id):
             return self.error(("Eexist", f"Problem(#{pro_id}) is already in contest"))
 
-        self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType.IOI2017}
+        if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017, ProblemScoreType.ICPC):
+            return self.error(("Eparam", "Invalid score type"))
+
+        if self.contest.contest_mode == ContestMode.ACM:
+            score_type = ProblemScoreType.ICPC
+
+        self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType(score_type)}
 
         error_group, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
@@ -78,7 +88,7 @@ class ContestManageProHandler(RequestHandler):
         _, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
-        await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+        await self.rs.hdel(f"contest_{self.contest.contest_id}_scores", str(pro_id))
 
         await self.add_log(
             f"{self.acct.name} removed problem #{pro_id} from contest",
@@ -94,8 +104,16 @@ class ContestManageProHandler(RequestHandler):
     async def multi_add_action(self):
         proid_list = self.get_argument("pro_id")
         proid_list = parse_str_to_list(proid_list)
+        score_type = int(self.get_argument("score_type", default=ProblemScoreType.IOI2017))
+
+        if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017, ProblemScoreType.ICPC):
+            return self.error(("Eparam", "Invalid score type"))
+
+        if self.contest.contest_mode == ContestMode.ACM:
+            score_type = ProblemScoreType.ICPC
+
         for pro_id in proid_list:
-            self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType.IOI2017}
+            self.contest.pro_list[pro_id] = {"score_type": ProblemScoreType(score_type)}
 
         error_group, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
@@ -103,7 +121,7 @@ class ContestManageProHandler(RequestHandler):
 
         success_list = [pid for pid in proid_list if pid in self.contest.pro_list]
 
-        await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+        # await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
         
         if error_group:
             await self.add_log(
@@ -133,6 +151,7 @@ class ContestManageProHandler(RequestHandler):
         for pro_id in pro_list:
             try:
                 self.contest.pro_list.pop(pro_id)
+                await self.rs.hdel(f"contest_{self.contest.contest_id}_scores", str(pro_id))
                 removed_list.append(pro_id)
             except KeyError:
                 failed_remove_list.append(pro_id)
@@ -141,8 +160,6 @@ class ContestManageProHandler(RequestHandler):
         _, _ = await ContestService.inst.update_contest(
             self.acct, self.contest, prolist_updated=True
         )
-
-        await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
         await self.add_log(
             f"{self.acct.name} batch removed {len(pro_list)} problems from contest",
@@ -165,7 +182,7 @@ class ContestManageProHandler(RequestHandler):
         if not can_submit:
             return self.error(("Ejudge", "No judge available"))
 
-        err, pro = await ProService.inst.get_pro(
+        err, _ = await ProService.inst.get_pro(
             pro_id, ProConst.PRO_STATUS_CONTEST_USER
         )
         if err:
@@ -208,6 +225,25 @@ class ContestManageProHandler(RequestHandler):
         )
 
         return self.error(("S", f"Problem(#{pro_id}) is rechallenging."))
+
+    @contest_manage_pro_dispatcher.action("update_score_type")
+    async def update_score_type_action(self):
+        pro_id = int(self.get_argument("pro_id"))
+        score_type = int(self.get_argument("score_type"))
+
+        if not self.contest.is_pro(pro_id):
+            return self.error(("Enoext", f"Problem(#{pro_id}) not in contest"))
+
+        if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017):
+            return self.error(("Eparam", "Invalid score type"))
+
+        self.contest.pro_list[pro_id]["score_type"] = ProblemScoreType(score_type)
+
+        await ContestService.inst.update_contest(
+            self.acct, self.contest, prolist_updated=True
+        )
+        await self.rs.hdel(f"contest_{self.contest.contest_id}_scores", str(pro_id))
+        return self.error(("S", "Score type updated successfully."))
 
     @contest_manage_pro_dispatcher.action("public")
     async def public_action(self):

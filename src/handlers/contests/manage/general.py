@@ -10,6 +10,7 @@ from services.contests import (
     ContestMode,
     RegMode,
     UserStatus,
+    ProblemScoreType,
 )
 
 contest_manage_general_dispatcher = ActionDispatcher()
@@ -55,10 +56,10 @@ class ContestManageGeneralHandler(RequestHandler):
         try:
             submission_cd_time = int(self.get_argument("submission_cd_time"))
             if submission_cd_time < 0:
-                submission_cd_time = 30
+                submission_cd_time = 1 if contest_mode == ContestMode.ACM else 30
 
         except ValueError:
-            submission_cd_time = 30
+            submission_cd_time = 1 if contest_mode == ContestMode.ACM else 30
 
         try:
             freeze_scoreboard_period = int(
@@ -69,6 +70,14 @@ class ContestManageGeneralHandler(RequestHandler):
 
         except ValueError:
             freeze_scoreboard_period = 0
+
+        try:
+            penalty_value = int(self.get_argument("penalty_value", default="20"))
+            if penalty_value < 0:
+                penalty_value = 20
+
+        except ValueError:
+            penalty_value = 20
 
         allow_compilers = set(
             map(
@@ -128,10 +137,15 @@ class ContestManageGeneralHandler(RequestHandler):
         self.contest.allow_view_other_page = allow_view_other_page
         self.contest.hide_admin = hide_admin
         self.contest.submission_cd_time = submission_cd_time
+        self.contest.penalty_value = penalty_value
         if self.contest.freeze_scoreboard_period != freeze_scoreboard_period:
             self.contest.freeze_scoreboard_period = freeze_scoreboard_period
             if self.contest.is_start():
                 await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
+
+        new_score_type = ProblemScoreType.ICPC if contest_mode == ContestMode.ACM else ProblemScoreType.IOI2017
+        for pro_id in self.contest.pro_list:
+            self.contest.pro_list[pro_id]["score_type"] = new_score_type
 
         await ContestService.inst.update_contest(self.acct, self.contest)
 

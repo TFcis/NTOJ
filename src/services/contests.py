@@ -5,7 +5,7 @@ import pickle
 
 import asyncpg
 
-from services.chal import Compiler
+from services.chal import Compiler, ChalConst
 from services.user import Account
 
 
@@ -17,11 +17,12 @@ class RegMode(enum.IntEnum):
 
 class ContestMode(enum.IntEnum):
     IOI = 0
-    ACM = 1
+    ACM = 1 # NOTE: ACM/ICPC
 
 class ProblemScoreType(enum.IntEnum):
     IOI2013 = 0
     IOI2017 = 1
+    ICPC = 2 # NOTE: ContestMode.ACM
 
 class UserStatus(enum.IntEnum):
     REJECTED = 0
@@ -59,6 +60,7 @@ class Contest:
     hide_admin: bool = True
     submission_cd_time: int = 30
     freeze_scoreboard_period: int = 0
+    penalty_value: int = 20
 
     def is_start(self) -> bool:
         return datetime.datetime.now(datetime.UTC) >= self.contest_start
@@ -139,7 +141,8 @@ class ContestService:
                         "allow_view_other_page",
                         "hide_admin",
                         "submission_cd_time",
-                        "freeze_scoreboard_period"
+                        "freeze_scoreboard_period",
+                        "penalty_value"
                         FROM "contest" WHERE "contest_id" = $1;
                     ''',
                     contest_id
@@ -250,8 +253,9 @@ class ContestService:
                     "allow_view_other_page" = $12,
                     "hide_admin" = $13,
                     "submission_cd_time" = $14,
-                    "freeze_scoreboard_period" = $15
-                    WHERE "contest_id" = $16;
+                    "freeze_scoreboard_period" = $15,
+                    "penalty_value" = $16
+                    WHERE "contest_id" = $17;
                 ''',
                 contest.name,
                 contest.desc_before_contest,
@@ -267,6 +271,7 @@ class ContestService:
                 contest.hide_admin,
                 contest.submission_cd_time,
                 contest.freeze_scoreboard_period,
+                contest.penalty_value,
                 contest.contest_id
             )
 
@@ -483,9 +488,126 @@ class ContestService:
 
         return None, None
 
+    async def get_icpc_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
+        """
+        Calculate ICPC scores for a problem.
+
+        Score (Spend Time) = (first_ac_timestamp) + fail_cnt * penalty_value (Minute)
+        where fail_cnt is the number of submissions before first AC.
+
+        For users without AC: Score = 0, first_ac_timestamp = NULL, chal_id = latest submission chal_id,
+                             fail_cnt = total number of valid submissions
+
+        Filters out invalid/non-verdictable states: CE, CLE, ERR, JE, JUDGE, NOTSTARTED, REJECTED
+        """
+        _, contest = await self.get_contest(contest_id)
+
+        # States to filter out (invalid/non-verdictable submissions)
+        invalid_states = [
+            ChalConst.STATE_CE,
+            ChalConst.STATE_CLE,
+            ChalConst.STATE_ERR,
+            ChalConst.STATE_JE,
+            ChalConst.STATE_JUDGE,
+            ChalConst.STATE_NOTSTARTED,
+            ChalConst.STATE_REJECTED
+        ]
+
+        res = await self.db.fetch('''
+        WITH valid_challenges AS (
+            -- Get all challenges that are valid (not in invalid states) and before before_time
+            SELECT
+                challenge.chal_id,
+                acct_id,
+                pro_id,
+                timestamp,
+                state
+            FROM challenge
+            INNER JOIN total_result
+                ON challenge.chal_id = total_result.chal_id
+            WHERE contest_id = $1
+                AND pro_id = $2
+                AND timestamp < $3::timestamptz
+                AND state NOT IN (SELECT unnest($4::int[]))
+        ),
+        acct_challenges AS (
+            -- Partition challenges by acct_id and pro_id, ordered by timestamp
+            SELECT
+                acct_id,
+                chal_id,
+                pro_id,
+                timestamp,
+                state,
+                ROW_NUMBER() OVER (PARTITION BY acct_id, pro_id ORDER BY timestamp ASC) AS submission_order
+            FROM valid_challenges
+        ),
+        first_ac_challenges AS (
+            -- Find first AC for each acct (may be empty if no AC)
+            SELECT
+                acct_id,
+                chal_id,
+                pro_id,
+                timestamp AS first_ac_timestamp,
+                submission_order - 1 AS fail_cnt  -- Number of submissions before first AC
+            FROM acct_challenges
+            WHERE state = $5  -- Only AC state
+                AND submission_order = (
+                    -- Get the first AC submission order for this acct
+                    SELECT MIN(submission_order)
+                    FROM acct_challenges ac2
+                    WHERE ac2.acct_id = acct_challenges.acct_id
+                        AND ac2.pro_id = acct_challenges.pro_id
+                        AND ac2.state = $5
+                )
+        ),
+        acct_submission_counts AS (
+            -- Count total valid submissions for each acct (for those without AC)
+            SELECT
+                acct_id,
+                pro_id,
+                COUNT(*) AS total_submissions,
+                MAX(chal_id) AS latest_chal_id,
+                MAX(timestamp) AS latest_timestamp
+            FROM acct_challenges
+            GROUP BY acct_id, pro_id
+        )
+        SELECT
+            COALESCE(fac.acct_id, ascsub.acct_id) AS acct_id,
+            COALESCE(fac.chal_id, ascsub.latest_chal_id) AS chal_id,
+            COALESCE(fac.first_ac_timestamp, ascsub.latest_timestamp) AS timestamp,
+            COALESCE(fac.fail_cnt, ascsub.total_submissions) AS fail_cnt,
+            CASE
+                WHEN fac.acct_id IS NOT NULL THEN (EXTRACT(EPOCH FROM (fac.first_ac_timestamp - $6::timestamptz))::integer / 60) + (fac.fail_cnt * $7)::integer
+                ELSE 0
+            END AS score
+        FROM first_ac_challenges fac
+        FULL OUTER JOIN acct_submission_counts ascsub
+            ON fac.acct_id = ascsub.acct_id AND fac.pro_id = ascsub.pro_id
+        ORDER BY acct_id;
+        ''', contest_id, pro_id, before_time,
+            invalid_states,  # $4: array of invalid states to filter out
+            ChalConst.STATE_AC,  # $5: AC state
+            contest.contest_start,  # $6: contest start time for score calculation
+            contest.penalty_value, # $7: penalty value
+        )
+
+        if len(res) == 0:
+            return {}
+
+        scores = {
+            acct_id: {
+                'acct_id': acct_id,
+                'chal_id': chal_id,
+                'score': score,
+                'timestamp': first_ac_timestamp,
+                'fail_cnt': fail_cnt
+            }
+            for acct_id, chal_id, first_ac_timestamp, fail_cnt, score in res
+        }
+
+        return scores
 
     async def get_ioi2013_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
-        _, contest = await self.get_contest(contest_id)
         res = await self.db.fetch(
             f'''
         WITH ranked_challenges AS (

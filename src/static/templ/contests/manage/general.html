@@ -1,7 +1,7 @@
 {% extends 'manage.html' %}
 
 {% block head %}
-{% from services.contests import RegMode %}
+{% from services.contests import ContestMode, RegMode %}
 <script src="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/css/tempus-dominus.min.css" crossorigin="anonymous">
 
@@ -33,6 +33,27 @@
         contest_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestEnd'), options);
         reg_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerRegEnd'), options);
 
+        // Update Submission CD Time default and show/hide Penalty Value based on contest mode
+        const updateContestModeUI = () => {
+            let contest_mode = $("#contestMode").val();
+            let current_value = parseInt($("#submitCdTime").val());
+            // If current value is default (30 for IOI or 1 for ACM), update to new mode default
+            if ((contest_mode == {{ ContestMode.ACM }} && current_value == 30) ||
+                (contest_mode == {{ ContestMode.IOI }} && current_value == 1)) {
+                let new_default = contest_mode == {{ ContestMode.ACM }} ? 1 : 30;
+                $("#submitCdTime").val(new_default);
+            }
+            // Show/hide Penalty Value based on contest mode (ACM = 1)
+            if (contest_mode == {{ ContestMode.ACM }}) {
+                $("#penaltyValueContainer").show();
+            } else {
+                $("#penaltyValueContainer").hide();
+            }
+        };
+
+        $("#contestMode").on('change', updateContestModeUI);
+        updateContestModeUI(); // Initialize on page load
+  
         $("#regMode").on('change', function(e) {
             if ($(this).val() === "{{ RegMode.INVITED }}") {
                 $("#datepickerRegEndInput").val(contest_end_date_picker.viewDate);
@@ -92,6 +113,13 @@
                 index.show_notify_dialog("Freeze Scoreboard Period必須是正整數(包含0)", index.DIALOG_TYPE.warning);
                 return;
             }
+
+            let penalty_value = parseInt($("#penaltyValue").val());
+            if (isNaN(penalty_value) || penalty_value < 0) {
+                index.show_notify_dialog("Penalty Value必須是正整數(包含0)", index.DIALOG_TYPE.warning);
+                return;
+            }
+
             $.post(`{{ url(f'/be/contests/{ contest_id }/manage/general') }}`, {
                 reqtype: "update",
                 name: contest_name,
@@ -109,6 +137,7 @@
                 hide_admin: hide_admin,
                 submission_cd_time: submit_cd_time,
                 freeze_scoreboard_period: freeze_period,
+                penalty_value: penalty_value,
             }, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
@@ -228,6 +257,14 @@
             <label for="freezeScoreboardPeriod" class="form-label">Freeze Scoreboard Period</label>
             <div class="input-group">
                 <input type="number" id="freezeScoreboardPeriod" class="form-control" value="{{ contest.freeze_scoreboard_period }}">
+                <span class="input-group-text">Minutes</span>
+            </div>
+        </div>
+
+        <div class="mb-1" id="penaltyValueContainer">
+            <label for="penaltyValue" class="form-label">Penalty Value (for ICPC Scoring)</label>
+            <div class="input-group">
+                <input type="number" id="penaltyValue" class="form-control" value="{{ contest.penalty_value }}">
                 <span class="input-group-text">Minutes</span>
             </div>
         </div>

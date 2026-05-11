@@ -7,7 +7,7 @@ from msgpack import packb, unpackb
 
 import config
 from handlers.base import RequestHandler, UnifiedWebSocketHandler, reqenv
-from services.contests import ContestService, ProblemScoreType, UserStatus
+from services.contests import ContestMode, ContestService, ProblemScoreType, UserStatus
 from services.user import UserService
 
 
@@ -155,9 +155,14 @@ class ContestScoreboardHandler(RequestHandler):
         cache_name = f'contest_{contest_id}_scores'
         for pro_id, pro_options in self.contest.pro_list.items():
             if has_end_time or (scores := (await self.rs.hget(cache_name, str(pro_id)))) is None:
-                if pro_options["score_type"] == ProblemScoreType.IOI2017:
+
+                score_type = pro_options["score_type"]
+                if score_type == ProblemScoreType.ICPC:
+                    s[pro_id] = await ContestService.inst.get_icpc_scores(contest_id, pro_id, end_time)
+                    assert self.contest.contest_mode == ContestMode.ACM
+                elif score_type == ProblemScoreType.IOI2017:
                     s[pro_id] = await ContestService.inst.get_ioi2017_scores(contest_id, pro_id, end_time)
-                elif pro_options["score_type"] == ProblemScoreType.IOI2013:
+                elif score_type == ProblemScoreType.IOI2013:
                     s[pro_id] = await ContestService.inst.get_ioi2013_scores(contest_id, pro_id, end_time)
 
                 if not has_end_time:
@@ -184,7 +189,7 @@ class ContestScoreboardHandler(RequestHandler):
                 scores[pro_id] = {
                     'pro_id': pro_id,
                     'chal_id': p['chal_id'],
-                    'timestamp': p['timestamp'].astimezone(config.TIMEZONE) - start_time,
+                    'timestamp': (p['timestamp'].astimezone(config.TIMEZONE) - start_time),
                     'score': p['score'],
                     'fail_cnt': p['fail_cnt']
                 }

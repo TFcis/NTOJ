@@ -1,6 +1,7 @@
 {% import math %}
 {% from services.pro import ProConst %}
 {% from services.chal import ChalConst %}
+{% from services.contests import ContestMode %}
 {% from utils.htmlgen import pro_idx_to_pro_alphabet %}
 
 <script type="text/javascript">
@@ -56,6 +57,7 @@ font-weight: bolder;
 
 {% set score_color_class_map = ["state-0", "state-1", "state-2", "state-3", "state-4", "state-5", "state-6", "state-7", "state-8", "state-9", "state-10"] %}
 {% set is_end = contest.is_end() %}
+{% set is_icpc = contest.contest_mode == ContestMode.ACM %}
 
 <div class="row">
     <div class="col-lg-10 col-12">
@@ -65,7 +67,9 @@ font-weight: bolder;
                     <th scope="col">#</th>
                     <th scope="col">Best State</th>
                     <th scope="col">Problem Name</th>
-                    <th scope="col">Best Score</th>
+                    {% if not is_icpc %}
+                        <th scope="col">Best Score</th>
+                    {% end %}
                     {% if show_ac_ratio %}
                         <th scope="col">AC Ratio (User)</th>
                         <th scope="col">AC Ratio (Submission)</th>
@@ -99,15 +103,18 @@ font-weight: bolder;
                         </td>
                     {% end %}
 
-                    {% set state_idx = int(score_map[pro_id]['score'] / 10) %}
-                    {% if score_map[pro_id]['state'] == ChalConst.STATE_AC or state_idx > 10 %}
-                        {% set state_idx = 10 %}
-                    {% elif state_idx < 0 %}
-                        {% set state_idx = 0 %}
+
+                    {% if not is_icpc %}
+                        {% set state_idx = int(score_map[pro_id]['score'] / 10) %}
+                        {% if score_map[pro_id]['state'] == ChalConst.STATE_AC or state_idx > 10 %}
+                            {% set state_idx = 10 %}
+                        {% elif state_idx < 0 %}
+                            {% set state_idx = 0 %}
+                        {% end %}
+                        <td class="{{ score_color_class_map[state_idx] }} score">
+                            {{ score_map[pro_id]['score'] }}
+                        </td>
                     {% end %}
-                    <td class="{{ score_color_class_map[state_idx] }} score">
-                        {{ score_map[pro_id]['score'] }}
-                    </td>
 
                     {% if show_ac_ratio %}
                         {% set rate = score_map[pro_id]['rate_data'] %}
