@@ -314,7 +314,7 @@ class ContestService:
                     challenge_style = v.get('challenge_style', ChallengeResultStyle.FULL)
                     result = await con.fetch('''
                         INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "challenge_style", "order")
-                        VALUES ($1, $2, $3, $4)
+                        VALUES ($1, $2, $3, $4, $5)
                         ON CONFLICT (contest_id, pro_id) DO UPDATE
                         SET score_type = EXCLUDED.score_type, challenge_style = EXCLUDED.challenge_style, "order" = EXCLUDED."order"
                         WHERE
