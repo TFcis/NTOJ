@@ -8,7 +8,7 @@
 
 		const post_func = (reqtype, pro_id, score_type=null, fail_action=null) => {
 			if (pro_id.length == 0) {
-				index.show_notify_dialog('Input cannot empty.', index.DIALOG_TYPE.warning);
+				index.show_notify_dialog('Input invalid.', index.DIALOG_TYPE.warning);
 				return;
 			}
 

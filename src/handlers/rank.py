@@ -5,11 +5,26 @@ from services.rank import RankService
 
 class ProRankHandler(RequestHandler):
     @reqenv
-    async def get(self, pro_id):
-        pageoff = int(self.get_argument('pageoff', default=0))
-        pagenum = int(self.get_argument('pagenum', default=20))
+    async def get(self, pro_id: int = None):
+        try:
+            pageoff = int(self.get_argument('pageoff', default="0"))
+            if pageoff < 0:
+                pageoff = 0
+        except ValueError:
+            return self.error(("Eparam", "Invalid pageoff"))
 
-        pro_id = int(pro_id)
+        try:
+            pagenum = int(self.get_argument('pagenum', default="20"))
+            if pagenum <= 0:
+                pagenum = 20
+        except ValueError:
+            return self.error(("Eparam", "Invalid pagenum"))
+
+        try:
+            pro_id = int(pro_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid pro_id"))
+
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.acct.is_kernel():
             allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
@@ -30,8 +45,19 @@ class ProRankHandler(RequestHandler):
 class UserRankHandler(RequestHandler):
     @reqenv
     async def get(self):
-        pageoff = int(self.get_argument('pageoff', default=0))
-        pagenum = int(self.get_argument('pagenum', default=20))
+        try:
+            pageoff = int(self.get_argument('pageoff', default="0"))
+            if pageoff < 0:
+                pageoff = 0
+        except ValueError:
+            return self.error(("Eparam", "Invalid pageoff"))
+
+        try:
+            pagenum = int(self.get_argument('pagenum', default="20"))
+            if pagenum <= 0:
+                pagenum = 20
+        except ValueError:
+            return self.error(("Eparam", "Invalid pagenum"))
 
         err, (acctlist, total_cnt) = await RankService.inst.get_user_rank(pageoff, pagenum)
         if err:

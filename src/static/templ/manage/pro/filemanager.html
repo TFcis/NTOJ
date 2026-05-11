@@ -47,7 +47,6 @@
                 index.create_progress_bar(progressMsg);
                 pack.send(token, file).done(function () {
                     index.update_progress_bar_progress(100);
-                    index.remove_progress_bar();
                     callback(token);
                 }).progress(function(prog) {
                     index.update_progress_bar_progress(prog * 100);
@@ -134,6 +133,7 @@
                     'filename': filename,
                     'path': path,
                 }, function (res) {
+                    index.remove_progress_bar();
                     handleApiResponse(res,
                         (r) => `Save ${filename} successfully.`
                     );
@@ -204,6 +204,9 @@
 
 		document.querySelectorAll('button.delete-single-file').forEach(el => {
 			el.addEventListener('click', function (e) {
+                if (!confirm('Are you sure to delete this file?')) {
+                    return;
+                }
                 let path = $(this).parents('.accordion-collapse').attr('path');
 				let filename = $(this).parents('tr').attr('filename');
 
@@ -258,6 +261,7 @@
                     'filename': filename,
                     'path': path,
                 }, function (res) {
+                    index.remove_progress_bar();
                     handleApiResponse(res,
                         (r) => `Upload single file ${filename} successfully`
                     );
@@ -292,6 +296,7 @@
                         'filename': filename,
                         'path': path,
                     }, function (res) {
+                        index.remove_progress_bar();
                         handleApiResponse(res,
                             (r) => `Update ${filename} successfully.`
                         );

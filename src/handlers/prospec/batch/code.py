@@ -15,31 +15,29 @@ class BatchCodeHandler(RequestHandler):
     async def get(self):
         try:
             chal_id = int(self.get_argument('chal_id'))
+        except ValueError:
+            return self.error(("Eparam", "Invalid challenge id"))
 
-            err, chal = await ChalService.inst.get_chal(chal_id, self.acct)
-            if err:
-                return self.error(err)
+        err, chal = await ChalService.inst.get_chal(chal_id, self.acct)
+        if err:
+            return self.error(err)
+        assert chal is not None
 
-            assert chal is not None
+        if chal.pro.problem_type != ProType.BATCH:
+            return self.error(('Eparam', 'Invalid problem type for this handler'))
 
-            # Ensure this is a Batch problem
-            if chal.pro.problem_type != ProType.BATCH:
-                return self.error(('Eparam', 'Invalid problem type for this handler'))
+        await self.render(
+            'prospec/batch/code',
+            chal=chal
+        )
 
-            # Render Batch-specific code template
-            await self.render(
-                'prospec/batch/code',
-                chal=chal
-            )
-
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return self.error(('Eunk', f'Unknown error: {str(e)}'))
 
     @reqenv
     async def post(self):
-        chal_id = int(self.get_argument('chal_id'))
+        try:
+            chal_id = int(self.get_argument('chal_id'))
+        except ValueError:
+            return self.error(("Eparam", "Invalid challenge id"))
 
         err, code, compiler_type = await CodeService.inst.get_code(chal_id, self.acct)
         if err:

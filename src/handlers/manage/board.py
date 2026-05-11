@@ -49,13 +49,13 @@ class ManageBoardHandler(RequestHandler):
 
     @board_dispatcher.action('add')
     async def add_board(self):
-        """新增榜單"""
-        name = str(self.get_argument('name'))
-        status = int(self.get_argument('status'))
+        try:
+            status = int(self.get_argument('status'))
+        except ValueError:
+            return self.error(('Eparam', 'Invalid status'))
+        name = self.get_argument('name')
         start = self.get_argument('start')
         end = self.get_argument('end')
-        pro_list_str = str(self.get_argument('pro_list'))
-        acct_list_str = str(self.get_argument('acct_list'))
 
         err, start = trantime(start)
         if err:
@@ -65,9 +65,10 @@ class ManageBoardHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        acct_list = parse_str_to_list(acct_list_str)
-        pro_list = parse_str_to_list(pro_list_str)
-        await LogService.inst.add_log(
+        acct_list = parse_str_to_list(self.get_argument('acct_list'))
+        pro_list = parse_str_to_list(self.get_argument('pro_list'))
+
+        await self.add_log(
             f"{self.acct.name} was added to the board \"{name}\".", 'manage.board.add',
             {
                 "name": name,
@@ -87,10 +88,15 @@ class ManageBoardHandler(RequestHandler):
 
     @board_dispatcher.action('update')
     async def update_board(self):
-        """更新榜單"""
-        board_id = int(self.get_argument('board_id'))
-        name = str(self.get_argument('name'))
-        status = int(self.get_argument('status'))
+        try:
+            board_id = int(self.get_argument('board_id'))
+        except ValueError:
+            return self.error(('Eparam', 'Invalid board ID'))
+        try:
+            status = int(self.get_argument('status'))
+        except ValueError:
+            return self.error(('Eparam', 'Invalid status'))
+        name = self.get_argument('name')
         start = self.get_argument('start')
         end = self.get_argument('end')
         err, start = trantime(start)
@@ -101,12 +107,10 @@ class ManageBoardHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        pro_list_str = str(self.get_argument('pro_list'))
-        acct_list_str = str(self.get_argument('acct_list'))
-        acct_list = parse_str_to_list(acct_list_str)
-        pro_list = parse_str_to_list(pro_list_str)
+        acct_list = parse_str_to_list(self.get_argument('acct_list'))
+        pro_list = parse_str_to_list(self.get_argument('pro_list'))
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} was updated in the board \"{name}\".", 'manage.board.update',
             {
                 "name": name,
@@ -117,16 +121,23 @@ class ManageBoardHandler(RequestHandler):
                 "acct_list": acct_list,
             }
         )
-        await BoardService.inst.update_board(board_id, name, status, start, end, pro_list, acct_list)
+        err, _ = await BoardService.inst.update_board(board_id, name, status, start, end, pro_list, acct_list)
+        if err:
+            return self.error(err)
 
         self.error(('S', ''))
 
     @board_dispatcher.action('remove')
     async def remove_board(self):
-        """刪除榜單"""
-        board_id = int(self.get_argument('board_id'))
-        await BoardService.inst.remove_board(board_id)
-        await LogService.inst.add_log(
+        try:
+            board_id = int(self.get_argument('board_id'))
+        except ValueError:
+            return self.error(('Eparam', 'Invalid board ID'))
+        err, _ = await BoardService.inst.remove_board(board_id)
+        if err:
+            return self.error(err)
+
+        await self.add_log(
             f"{self.acct.name} was removed the board \"{board_id}\".", 'manage.board.remove'
         )
         self.error(('S', ''))

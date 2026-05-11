@@ -1,0 +1,63 @@
+{% extends 'contests/manage/manage.html' %}
+{% import config %}
+{% import json %}
+
+{% block content %}
+<div class="col-11">
+    <h3>Log Details</h3>
+
+    <div class="mb-3">
+        <a href="{{ url(f'/contests/{ contest_id }/manage/log/') }}" class="btn btn-secondary">← Back to Log List</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="" class="form-label"><strong>ID</strong></label>
+                <p>{{ log['log_id'] }}</p>
+            </div>
+
+            <div class="mb-3">
+                <label for="" class="form-label"><strong>Log Type</strong></label>
+                <p>{{ log['log_type'] if log['log_type'] else 'N/A' }}</p>
+            </div>
+
+            <div class="mb-3">
+                <label for="" class="form-label"><strong>Timestamp</strong></label>
+                <p>{{ log['timestamp'].astimezone(config.TIMEZONE) }}</p>
+            </div>
+
+            <div class="mb-3">
+                <label for="" class="form-label"><strong>Operator Account ID</strong></label>
+                <p>
+                    {% if log['operator_acct_id'] is not None %}
+                        <a href="{{ url(f'/acct/{ log['operator_acct_id'] }/') }}">{{ log['operator_acct_id'] }}</a>
+                    {% else %}
+                        <span class="text-muted">N/A (System operation)</span>
+                    {% end %}
+                </p>
+            </div>
+
+            <div class="mb-3">
+                <label for="" class="form-label"><strong>Operator IP</strong></label>
+                <p>{{ log['operator_ip'] if log['operator_ip'] else 'N/A' }}</p>
+            </div>
+
+            <div class="mb-3">
+                <label for="" class="form-label"><strong>Contest ID</strong></label>
+                <p>{{ log['contest_id'] }}</p>
+            </div>
+
+            <div class="mb-3">
+                <label for="" class="form-label"><strong>Message</strong></label>
+                <p>{{ log['message'] }}</p>
+            </div>
+
+            <div class="mb-3">
+                <label for="" class="form-label"><strong>Params</strong></label>
+                <pre style="white-space: pre-wrap; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">{{ json.loads(log['params']) }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% end %}

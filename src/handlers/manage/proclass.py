@@ -14,7 +14,12 @@ class ManageProClassHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, page=None):
         if page is None:
-            pageoff = int(self.get_argument("pageoff", default=0))
+            try:
+                pageoff = int(self.get_argument("pageoff", default="0"))
+                if pageoff < 0:
+                    pageoff = 0
+            except ValueError:
+                return self.error(("Eparam", "Invalid page offset"))
 
             _, proclass_list = await ProClassService.inst.get_proclass_list()
             proclass_list = list(
@@ -39,7 +44,10 @@ class ManageProClassHandler(RequestHandler):
             await self.render("manage/proclass/add", page="proclass")
 
         elif page == "update":
-            proclass_id = int(self.get_argument("proclassid"))
+            try:
+                proclass_id = int(self.get_argument("proclassid"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid proclass ID"))
             _, proclass = await ProClassService.inst.get_proclass(proclass_id)
             if proclass["type"] not in (
                 ProClassConst.OFFICIAL_PUBLIC,
@@ -87,7 +95,7 @@ class ManageProClassHandler(RequestHandler):
         if len(p_list) == 0:
             return self.error(("Eparam", "Problem list should not be empty"))
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} add proclass name={name}",
             "manage.proclass.add",
             {
@@ -131,7 +139,10 @@ class ManageProClassHandler(RequestHandler):
         if len(p_list) == 0:
             return self.error(("Eparam", "Problem list should not be empty"))
 
-        proclass_id = int(self.get_argument("proclass_id"))
+        try:
+            proclass_id = int(self.get_argument("proclass_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid proclass ID"))
         err, proclass = await ProClassService.inst.get_proclass(proclass_id)
         if err:
             return self.error(err)
@@ -140,13 +151,13 @@ class ManageProClassHandler(RequestHandler):
             ProClassConst.OFFICIAL_PUBLIC,
             ProClassConst.OFFICIAL_HIDDEN,
         ):
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried to update proclass name={proclass['name']}, but an admin cannot modify a user's own proclass",
                 "manage.proclass.update.failed",
             )
             return self.error(PERMISSION_DENIED_ERROR)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} update proclass name={name}",
             "manage.proclass.update",
             {
@@ -164,7 +175,10 @@ class ManageProClassHandler(RequestHandler):
 
     @proclass_dispatcher.action("remove")
     async def remove_proclass(self):
-        proclass_id = int(self.get_argument("proclass_id"))
+        try:
+            proclass_id = int(self.get_argument("proclass_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid proclass ID"))
         err, proclass = await ProClassService.inst.get_proclass(proclass_id)
         if err:
             return self.error(err)
@@ -173,13 +187,13 @@ class ManageProClassHandler(RequestHandler):
             ProClassConst.OFFICIAL_PUBLIC,
             ProClassConst.OFFICIAL_HIDDEN,
         ):
-            await LogService.inst.add_log(
+            await self.add_log(
                 f"{self.acct.name} tried to remove proclass name={proclass['name']}, but an admin cannot modify a user's own proclass",
                 "manage.proclass.remove.failed",
             )
             return self.error(PERMISSION_DENIED_ERROR)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} remove proclass name={proclass['name']}.",
             "manage.proclass.remove",
         )

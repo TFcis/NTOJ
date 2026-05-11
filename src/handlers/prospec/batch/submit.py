@@ -16,8 +16,15 @@ class BatchSubmitHandler(RequestHandler):
     @reqenv
     async def get(self):
         try:
-            pro_id = int(self.get_argument("pro_id"))
-            contest_id = int(self.get_argument("contest_id", default=0))
+            try:
+                pro_id = int(self.get_argument("pro_id"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid problem ID"))
+
+            try:
+                contest_id = int(self.get_argument("contest_id", default="0"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid contest ID"))
 
             allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
             if contest_id != 0:
@@ -84,7 +91,11 @@ class BatchSubmitHandler(RequestHandler):
             contest_id = self.contest.contest_id
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
 
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         code = self.get_argument("code")
         try:
             compiler_type = Compiler(int(self.get_argument("compiler_type")))
@@ -143,6 +154,17 @@ class BatchSubmitHandler(RequestHandler):
         if pro.status == ProConst.STATUS_ONLINE:
             await self.rs.publish("challist_sub", str(1))
 
+        await self.add_log(
+            f"Submit solution to problem #{pro_id} (challenge #{chal_id})",
+            "contest.submit" if contest_id != 0 else "pro.submit",
+            {
+                "pro_id": pro_id,
+                "chal_id": chal_id,
+                "compiler_type": compiler_type.value,
+                "contest_id": contest_id,
+            },
+        )
+
         self.error(("S", chal_id))
 
     @submit_dispatcher.action("rechal")
@@ -152,7 +174,11 @@ class BatchSubmitHandler(RequestHandler):
         if self.contest:
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
 
-        chal_id = int(self.get_argument("chal_id"))
+        try:
+            chal_id = int(self.get_argument('chal_id'))
+        except ValueError:
+            return self.error(("Eparam", "Invalid challenge id"))
+
         if (
             (self.contest is None and self.acct.is_kernel())  # not in contest
             or (self.contest and self.contest.is_admin(self.acct))
@@ -188,6 +214,16 @@ class BatchSubmitHandler(RequestHandler):
         )
         if err:
             return self.error(err)
+
+        await self.add_log(
+            f"Rejudge challenge #{chal_id} for problem #{pro_id}",
+            "contest.rechal" if self.contest else "pro.rechal",
+            {
+                "chal_id": chal_id,
+                "pro_id": pro_id,
+                "contest_id": self.contest.contest_id if self.contest else 0,
+            },
+        )
 
         self.error(("S", chal_id))
 

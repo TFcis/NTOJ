@@ -52,6 +52,9 @@
 
 		document.querySelectorAll('button.delete-single-file').forEach(el => {
 			el.addEventListener('click', function (e) {
+                if (!confirm('Are you sure to delete this testdata?')) {
+                    return;
+                }
 				let testdata_id = $(this).parents('tr').attr('testdata_id');
 
 				$.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
@@ -65,7 +68,7 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Delete Testdata ${testdata_id} successfully.`;
+                        msg = `Delete Testdata ${parseInt(testdata_id) + 1} successfully.`;
                     } else {
                         dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
@@ -98,6 +101,7 @@
 					'pro_id': pro_id,
                     'filename': filename,
 				}, function (res) {
+                    index.remove_progress_bar();
                     let msg = '';
 					let dialog_type = null;
 
@@ -144,7 +148,6 @@
 
                         pack.send(output_token, outputfile).done(function() {
                             index.update_progress_bar_progress(100);
-                            index.remove_progress_bar();
                             _update(input_token, output_token, filename);
 
                             j_add_single_file.find("input.inputfile").val("");
@@ -172,13 +175,14 @@
                     'testdata_id': testdata_id,
 					'type': type,
 				}, function (res) {
+                    index.remove_progress_bar();
                     let msg = '';
 					let dialog_type = null;
 
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Update Testdata ${testdata_id} with ${type} successfully.`;
+                        msg = `Update Testdata ${parseInt(testdata_id) + 1} with ${type} successfully.`;
                     } else {
                         dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
@@ -213,7 +217,6 @@
 
 					pack.send(token, file).done(function () {
 						index.update_progress_bar_progress(100);
-						index.remove_progress_bar();
 						_update(token, testdata_id, group);
 						j_input.val(''); // for the same file upload
 
@@ -280,6 +283,7 @@
 </div>
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h2>Update testdata will make all challenge NotStart. Be careful.</h2>
     <button class="btn btn-primary add-single-file">
         Add Single File
     </button>

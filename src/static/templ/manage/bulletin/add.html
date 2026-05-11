@@ -40,7 +40,7 @@
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
-                    index.go(`/manage/bulletin/update/?bulletin_id=${res.data}`);
+                    index.go(`{{ url('/manage/bulletin/update/?bulletin_id=${res.data}') }}`);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }

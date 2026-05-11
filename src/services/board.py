@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger("tornado.application")
+
 class BoardConst:
     STATUS_ONLINE = 0
     STATUS_HIDDEN = 1
@@ -11,21 +15,29 @@ class BoardService:
         BoardService.inst = self
 
     async def get_boardlist(self):
-        async with self.db.acquire() as con:
-            res = await con.fetch(
-                'SELECT "board_id", "name", "status", "start", "end" FROM "board" ORDER BY "board_id" ASC;'
-            )
+        try:
+            async with self.db.acquire() as con:
+                res = await con.fetch(
+                    'SELECT "board_id", "name", "status", "start", "end" FROM "board" ORDER BY "board_id" ASC;'
+                )
+        except Exception as e:
+            logger.error(f"Error fetching board list: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         return None, res
 
     async def get_board(self, board_id):
         board_id = int(board_id)
 
-        async with self.db.acquire() as con:
-            res = await con.fetchrow('SELECT * FROM "board" WHERE "board_id" = $1', board_id)
+        try:
+            async with self.db.acquire() as con:
+                res = await con.fetchrow('SELECT * FROM "board" WHERE "board_id" = $1', board_id)
 
-            if res is None:
-                return ('Enoext', BoardService.BOARD_NOT_FOUND), None
+                if res is None:
+                    return ('Enoext', BoardService.BOARD_NOT_FOUND), None
+        except Exception as e:
+            logger.error(f"Error fetching board {board_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         name, status, start, end, pro_list, acct_list = (
             res['name'],
@@ -51,24 +63,28 @@ class BoardService:
         pro_list = list(sorted(set(pro_list)))
         acct_list = list(sorted(set(acct_list)))
 
-        async with self.db.acquire() as con:
-            res = await con.fetch(
-                '''
-                    INSERT INTO "board" ("name", "status", "start", "end", "pro_list", "acct_list")
-                    VALUES ($1, $2, $3, $4, $5, $6) RETURNING "board_id";
-                ''',
-                name,
-                status,
-                start,
-                end,
-                pro_list,
-                acct_list,
-            )
+        try:
+            async with self.db.acquire() as con:
+                res = await con.fetch(
+                    '''
+                        INSERT INTO "board" ("name", "status", "start", "end", "pro_list", "acct_list")
+                        VALUES ($1, $2, $3, $4, $5, $6) RETURNING "board_id";
+                    ''',
+                    name,
+                    status,
+                    start,
+                    end,
+                    pro_list,
+                    acct_list,
+                )
+        except Exception as e:
+            logger.error(f"Error adding board: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
-            if len(res) != 1:
-                return ('Eunk', 'Unknown error'), None
+        if len(res) != 1:
+            return ('Eunk', 'Unknown error'), None
 
-            return None, res[0]['board_id']
+        return None, res[0]['board_id']
 
     async def update_board(self, board_id, name, status, start, end, pro_list: list[int], acct_list: list[int]):
         board_id = int(board_id)
@@ -76,31 +92,39 @@ class BoardService:
         pro_list = list(sorted(set(pro_list)))
         acct_list = list(sorted(set(acct_list)))
 
-        async with self.db.acquire() as con:
-            res = await con.fetch(
-                '''
-                    UPDATE "board" SET "name" = $1, "status" = $2, "start" = $3, "end" = $4, "pro_list" = $5,
-                    "acct_list" = $6 WHERE "board_id" = $7 RETURNING "board_id";
-                ''',
-                name,
-                status,
-                start,
-                end,
-                pro_list,
-                acct_list,
-                board_id,
-            )
-            if len(res) != 1:
-                return ('Enoext', BoardService.BOARD_NOT_FOUND), None
+        try:
+            async with self.db.acquire() as con:
+                res = await con.fetch(
+                    '''
+                        UPDATE "board" SET "name" = $1, "status" = $2, "start" = $3, "end" = $4, "pro_list" = $5,
+                        "acct_list" = $6 WHERE "board_id" = $7 RETURNING "board_id";
+                    ''',
+                    name,
+                    status,
+                    start,
+                    end,
+                    pro_list,
+                    acct_list,
+                    board_id,
+                )
+                if len(res) != 1:
+                    return ('Enoext', BoardService.BOARD_NOT_FOUND), None
+        except Exception as e:
+            logger.error(f"Error updating board {board_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         return None, None
 
     async def remove_board(self, board_id):
         board_id = int(board_id)
-        async with self.db.acquire() as con:
-            result: str = await con.execute('DELETE FROM "board" WHERE "board_id" = $1', board_id)
-            affected_row_cnt = int(result.split(" ")[1]) # DELETE \d+
-            if affected_row_cnt == 0:
-                return ('Enoext', BoardService.BOARD_NOT_FOUND), None
+        try:
+            async with self.db.acquire() as con:
+                result: str = await con.execute('DELETE FROM "board" WHERE "board_id" = $1', board_id)
+                affected_row_cnt = int(result.split(" ")[1]) # DELETE \d+
+                if affected_row_cnt == 0:
+                    return ('Enoext', BoardService.BOARD_NOT_FOUND), None
+        except Exception as e:
+            logger.error(f"Error removing board {board_id}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         return None, None

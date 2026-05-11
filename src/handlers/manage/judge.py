@@ -1,4 +1,3 @@
-import asyncio
 import base64
 
 from msgpack import packb
@@ -56,21 +55,24 @@ class ManageJudgeHandler(RequestHandler):
 
     @judge_dispatcher.action("connect")
     async def connect_judge(self):
-        index = int(self.get_argument("index"))
+        try:
+            index = int(self.get_argument("index"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid index"))
 
         err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
         if (server_name := server_inform["name"]) == "":
             server_name = f"server-{index}"
 
         if err := await JudgeServerClusterService.inst.connect_server(index):
-            await LogService.inst.add_log(
-                f"{self.acct.name} tried connected {server_name} but failed.",
+            await self.add_log(
+                f"{self.acct.name} tried to connect to {server_name} but failed",
                 "manage.judge.connect.failure",
             )
             return self.error(err)
 
-        await LogService.inst.add_log(
-            f"{self.acct.name} had been connected {server_name} succesfully.",
+        await self.add_log(
+            f"{self.acct.name} connected to {server_name} successfully",
             "manage.judge.connect",
         )
 
@@ -78,24 +80,27 @@ class ManageJudgeHandler(RequestHandler):
 
     @judge_dispatcher.action("disconnect")
     async def disconnect_judge(self):
-        index = int(self.get_argument("index"))
-        pwd = str(self.get_argument("pwd"))
+        try:
+            index = int(self.get_argument("index"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid index"))
+        pwd = self.get_argument("pwd")
 
         err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
         if (server_name := server_inform["name"]) == "":
             server_name = f"server-{index}"
 
         if config.unlock_pwd != base64.b64encode(packb(pwd)):
-            await LogService.inst.add_log(
-                f"{self.acct.name} tried to disconnect {server_name} but failed.",
+            await self.add_log(
+                f"{self.acct.name} tried to disconnect {server_name} but failed",
                 "manage.judge.disconnect.failure",
             )
             return self.error(("Eacces", "Wrong password"))
 
         if err := await JudgeServerClusterService.inst.disconnect_server(index):
             return self.error(err)
-        await LogService.inst.add_log(
-            f"{self.acct.name} had been disconnected {server_name} succesfully.",
+        await self.add_log(
+            f"{self.acct.name} disconnected {server_name} successfully",
             "manage.judge.disconnect",
         )
 

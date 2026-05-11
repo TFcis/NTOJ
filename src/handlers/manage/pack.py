@@ -1,5 +1,3 @@
-import json
-
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from services.pack import PackService
 from services.user import UserConst

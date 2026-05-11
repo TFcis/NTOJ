@@ -138,7 +138,10 @@ class ContestManageQuestionHandler(RequestHandler):
 
     @contest_manage_question_dispatcher.action("reply")
     async def reply_action(self):
-        question_id = int(self.get_argument("question_id"))
+        try:
+            question_id = int(self.get_argument("question_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid question ID"))
         content = self.get_argument("content").strip()
         if err := self.len_check(content, CONTENT_MIN, CONTENT_MAX, "Content"):
             return self.error(err)
@@ -161,6 +164,11 @@ class ContestManageQuestionHandler(RequestHandler):
                     "type": "reply",
                 }
             ),
+        )
+        await self.add_log(
+            f"{self.acct.name} replied to question #{question_id}",
+            "contest.manage.question.reply",
+            {"question_id": question_id}
         )
         return self.error(("S", ""))
 
@@ -211,11 +219,21 @@ class ContestManageAnnounceHandler(RequestHandler):
                     {"contest_id": self.contest.contest_id, "type": "add-announce"}
                 ),
             )
+
+        await self.add_log(
+            f"{self.acct.name} added announcement: '{subject}'",
+            "contest.manage.announce.add",
+            {"subject": subject}
+        )
+
         return self.error(("S", ""))
 
     @contest_manage_announce_dispatcher.action("edit-announce")
     async def edit_announce_action(self):
-        announce_id = int(self.get_argument("announce_id"))
+        try:
+            announce_id = int(self.get_argument("announce_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid announce ID"))
         subject = self.get_argument("subject").strip()
         content = self.get_argument("content").strip()
         if err := self.len_check(subject, SUBJECT_MIN, SUBJECT_MAX, "Subject"):
@@ -233,11 +251,21 @@ class ContestManageAnnounceHandler(RequestHandler):
                     {"contest_id": self.contest.contest_id, "type": "edit-announce"}
                 ),
             )
+
+        await self.add_log(
+            f"{self.acct.name} edited announcement #{announce_id}",
+            "contest.manage.announce.edit",
+            {"announce_id": announce_id, "subject": subject}
+        )
+
         return self.error(("S", ""))
 
     @contest_manage_announce_dispatcher.action("popup-announce")
     async def popup_announce_action(self):
-        announce_id = int(self.get_argument("announce_id"))
+        try:
+            announce_id = int(self.get_argument("announce_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid announce ID"))
         err, announce = await ContestService.inst.get_announce(
             self.contest.contest_id, announce_id
         )
@@ -258,6 +286,13 @@ class ContestManageAnnounceHandler(RequestHandler):
                 }
             ),
         )
+
+        await self.add_log(
+            f"{self.acct.name} sent popup announcement #{announce_id}",
+            "contest.manage.announce.popup",
+            {"announce_id": announce_id, "subject": announce["subject"]}
+        )
+
         return self.error(("S", ""))
 
     @reqenv

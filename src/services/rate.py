@@ -1,14 +1,16 @@
 import decimal
+import logging
 import datetime
 from collections import defaultdict
 
 from msgpack import packb, unpackb
 
+from services.pro import ProConst
 from services.chal import ChalConst
 from services.user import Account
 from services.contests import UserStatus
-from services.pro import ProConst
 
+logger = logging.getLogger("tornado.application")
 
 class RateService:
     def __init__(self, db, rs) -> None:
@@ -21,75 +23,87 @@ class RateService:
         acct_id = acct.acct_id
 
         if (rate_data := await self.rs.hget(key, acct_id)) is None:
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    f'''
-                        SELECT
-                            COUNT(*) AS all_chal_cnt,
-                            COUNT(CASE WHEN cs.state = {ChalConst.STATE_AC} THEN 1 END) AS ac_chal_cnt
-                        FROM
-                            challenge c
-                        INNER JOIN problem
-                            ON c.pro_id = problem.pro_id
-                        INNER JOIN total_result cs
-                            ON c.chal_id = cs.chal_id
-                        WHERE
-                            c.acct_id = $1 AND
-                            problem.status = {ProConst.STATUS_ONLINE} AND
-                            c.contest_id = 0;
-                    ''',
-                    acct_id,
-                )
-                if len(result) != 1:
-                    return ('Eunk', 'Unknown error'), None
-                result = result[0]
-
-                ac_chal_cnt, all_chal_cnt = (
-                    result['ac_chal_cnt'],
-                    result['all_chal_cnt'],
-                )
-
-                result = await con.fetch(
-                    f'''
-                    WITH accepted_tests AS (
-                        SELECT DISTINCT
-                            c.acct_id, t.pro_id, t.subtask_id, t.rate
-                        FROM
-                            subtask_result t
-                        INNER JOIN problem p
-                            ON t.pro_id = p.pro_id
-                        INNER JOIN challenge c
-                            ON t.chal_id = c.chal_id AND c.contest_id = 0
-                        WHERE
-                            p.status = {ProConst.STATUS_ONLINE}
-                            AND t.state IN ({ChalConst.STATE_AC}, {ChalConst.STATE_PC})
-                            AND c.acct_id = $1
+            try:
+                async with self.db.acquire() as con:
+                    result = await con.fetch(
+                        f'''
+                            SELECT
+                                COUNT(*) AS all_chal_cnt,
+                                COUNT(CASE WHEN cs.state = {ChalConst.STATE_AC} THEN 1 END) AS ac_chal_cnt
+                            FROM
+                                challenge c
+                            INNER JOIN problem
+                                ON c.pro_id = problem.pro_id
+                            INNER JOIN total_result cs
+                                ON c.chal_id = cs.chal_id
+                            WHERE
+                                c.acct_id = $1 AND
+                                problem.status = {ProConst.STATUS_ONLINE} AND
+                                c.contest_id = 0;
+                        ''',
+                        acct_id,
                     )
-                    SELECT
-                        SUM(at.rate) AS total_rate
-                    FROM
-                        accepted_tests at;
-                    ''',
-                    acct_id
-                )
-                if len(result) != 1:
-                    return ('Eunk', 'Unknown error'), None
-                rate = result[0]['total_rate']
-                if rate is None:
-                    rate = 0
+                    if len(result) != 1:
+                        return ('Eunk', 'Unknown error'), None
+                    result = result[0]
 
-                rate_data = {
-                    'rate': str(rate),
-                    'ac_cnt': ac_chal_cnt,
-                    'all_cnt': all_chal_cnt,
-                }
-                await self.rs.hset(key, acct_id, packb(rate_data))
+                    ac_chal_cnt, all_chal_cnt = (
+                        result['ac_chal_cnt'],
+                        result['all_chal_cnt'],
+                    )
+
+                    result = await con.fetch(
+                        f'''
+                        WITH accepted_tests AS (
+                            SELECT DISTINCT
+                                c.acct_id, t.pro_id, t.subtask_id, t.rate
+                            FROM
+                                subtask_result t
+                            INNER JOIN problem p
+                                ON t.pro_id = p.pro_id
+                            INNER JOIN challenge c
+                                ON t.chal_id = c.chal_id AND c.contest_id = 0
+                            WHERE
+                                p.status = {ProConst.STATUS_ONLINE}
+                                AND t.state IN ({ChalConst.STATE_AC}, {ChalConst.STATE_PC})
+                                AND c.acct_id = $1
+                        )
+                        SELECT
+                            SUM(at.rate) AS total_rate
+                        FROM
+                            accepted_tests at;
+                        ''',
+                        acct_id
+                    )
+                    if len(result) != 1:
+                        return ('Eunk', 'Unknown error'), None
+                    rate = result[0]['total_rate']
+                    if rate is None:
+                        rate = 0
+
+                    rate_data = {
+                        'rate': str(rate),
+                        'ac_cnt': ac_chal_cnt,
+                        'all_cnt': all_chal_cnt,
+                    }
+                    await self.rs.hset(key, acct_id, packb(rate_data))
+            except Exception as e:
+                logger.error(f"Error fetching AC rate for account {acct_id}: {e}", exc_info=True)
+                return ('Eunk', 'Unknown error'), None
         else:
             rate_data = unpackb(rate_data)
 
         rate_data['rate'] = decimal.Decimal(rate_data['rate'])
 
         return None, rate_data
+
+    async def refresh_acct_rate(self, acct_id: int = 0, all_account: bool = False):
+        if all_account:
+            await self.rs.delete('rate')
+            return None, None
+
+        await self.rs.hdel('rate', str(acct_id))
+
 
     async def get_pro_ac_rate(self, pro_id, contest_id: int = 0):
         # problem submission ac rate
@@ -141,18 +155,22 @@ class RateService:
         pro_id = int(pro_id)
 
         if (rate_data := await self.rs.hget(key, key2)) is None:
-            async with self.db.acquire() as con:
-                all_chal_cnt = await con.fetchrow(ALL_CHAL_SQL, pro_id, contest_id)
-                all_chal_cnt = all_chal_cnt['count']
+            try:
+                async with self.db.acquire() as con:
+                    all_chal_cnt = await con.fetchrow(ALL_CHAL_SQL, pro_id, contest_id)
+                    all_chal_cnt = all_chal_cnt['count']
 
-                ac_chal_cnt = await con.fetchrow(AC_CHAL_SQL, pro_id, contest_id)
-                ac_chal_cnt = ac_chal_cnt['count']
+                    ac_chal_cnt = await con.fetchrow(AC_CHAL_SQL, pro_id, contest_id)
+                    ac_chal_cnt = ac_chal_cnt['count']
 
-                user_all_chal_cnt = await con.fetchrow(USER_ALL_CHAL_SQL, pro_id, contest_id)
-                user_all_chal_cnt = user_all_chal_cnt['count']
+                    user_all_chal_cnt = await con.fetchrow(USER_ALL_CHAL_SQL, pro_id, contest_id)
+                    user_all_chal_cnt = user_all_chal_cnt['count']
 
-                user_ac_chal_cnt = await con.fetchrow(USER_AC_CHAL_SQL, pro_id, contest_id)
-                user_ac_chal_cnt = user_ac_chal_cnt['count']
+                    user_ac_chal_cnt = await con.fetchrow(USER_AC_CHAL_SQL, pro_id, contest_id)
+                    user_ac_chal_cnt = user_ac_chal_cnt['count']
+            except Exception as e:
+                logger.error(f"Error fetching AC rate for problem {pro_id} in contest {contest_id}: {e}", exc_info=True)
+                return ('Eunk', 'Unknown error'), None
 
             rate_data = {
                 'all_chal_cnt': all_chal_cnt,
@@ -167,7 +185,11 @@ class RateService:
 
         return None, rate_data
 
-    async def get_pro_topcoder(self, pro_id: int) -> tuple[None, int | None]:
+    async def refresh_pro_ac_rate(self, pro_id: int, contest_id: int = 0):
+        await self.rs.hdel('pro_rate', f'pro_id_{pro_id}_contest_id_{contest_id}')
+        return None, None
+
+    async def get_pro_topcoder(self, pro_id: int) -> tuple[None | tuple[str, str], int | None]:
         """
         Get the top coder for a given problem ID based on challenge performance.
 
@@ -194,41 +216,45 @@ class RateService:
         """
 
         if (topcoder := await self.rs.hget('pro_topcoder', str(pro_id))) is None:
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    f'''
-                    SELECT temp2.acct_id
-                    FROM (
-                        SELECT *
+            try:
+                async with self.db.acquire() as con:
+                    result = await con.fetch(
+                        f'''
+                        SELECT temp2.acct_id
                         FROM (
-                            SELECT DISTINCT ON ("challenge"."acct_id")
-                                "challenge"."chal_id",
-                                "challenge"."acct_id",
-                                "total_result"."time",
-                                "total_result"."memory",
-                                "total_result"."rate"
+                            SELECT *
+                            FROM (
+                                SELECT DISTINCT ON ("challenge"."acct_id")
+                                    "challenge"."chal_id",
+                                    "challenge"."acct_id",
+                                    "total_result"."time",
+                                    "total_result"."memory",
+                                    "total_result"."rate"
 
-                                FROM "challenge"
+                                    FROM "challenge"
 
-                                INNER JOIN "total_result"
-                                ON "challenge"."chal_id"="total_result"."chal_id"
+                                    INNER JOIN "total_result"
+                                    ON "challenge"."chal_id"="total_result"."chal_id"
 
-                                WHERE "total_result"."state"={ChalConst.STATE_AC} AND "challenge"."contest_id"=0 AND "challenge"."pro_id"=$1
+                                    WHERE "total_result"."state"={ChalConst.STATE_AC} AND "challenge"."contest_id"=0 AND "challenge"."pro_id"=$1
 
-                                ORDER BY "challenge"."acct_id" ASC, "total_result"."rate" DESC,
-                                "total_result"."time" ASC, "total_result"."memory" ASC,
-                                "challenge"."chal_id" ASC
-                        ) temp
+                                    ORDER BY "challenge"."acct_id" ASC, "total_result"."rate" DESC,
+                                    "total_result"."time" ASC, "total_result"."memory" ASC,
+                                    "challenge"."chal_id" ASC
+                            ) temp
 
-                        ORDER BY "rate" DESC, "time" ASC, "memory" ASC,
-                        "chal_id" ASC, "acct_id" ASC LIMIT 1
-                        ) temp2
+                            ORDER BY "rate" DESC, "time" ASC, "memory" ASC,
+                            "chal_id" ASC, "acct_id" ASC LIMIT 1
+                            ) temp2
 
-                    INNER JOIN "account"
-                    ON temp2."acct_id"="account"."acct_id";
-                    ''',
-                    pro_id,
-                )
+                        INNER JOIN "account"
+                        ON temp2."acct_id"="account"."acct_id";
+                        ''',
+                        pro_id,
+                    )
+            except Exception as e:
+                logger.error(f"Error fetching topcoder for problem {pro_id}: {e}", exc_info=True)
+                return ('Eunk', 'Unknown error'), None
             if len(result) == 0:
                 topcoder = None
             else:
@@ -238,11 +264,14 @@ class RateService:
         else:
             return None, unpackb(topcoder)
 
+    async def refresh_pro_topcoder(self, pro_id: int):
+        await self.rs.hdel('pro_topcoder', str(pro_id))
+        return None, None
+
     async def map_rate_acct(
             self, acct: Account, contest_id: int = 0, starttime='1970-01-01 00:00:00.000',
             endtime='2100-01-01 00:00:00.000'
     ):
-        from services.pro import ProConst
         if isinstance(starttime, str):
             starttime = datetime.datetime.fromisoformat(starttime)
 
@@ -255,26 +284,30 @@ class RateService:
         elif acct.is_kernel():
             allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                f'''
-                    SELECT "challenge"."pro_id",
-                    ROUND(MAX("total_result"."rate"), (SELECT rate_precision FROM problem WHERE pro_id = challenge.pro_id)) AS "score",
-                    COUNT("total_result") AS "count",
-                    MIN("total_result"."state") as "state"
-                    FROM "challenge"
-                    INNER JOIN "total_result"
-                    ON "challenge"."chal_id" = "total_result"."chal_id" AND "challenge"."acct_id" = $1
-                    INNER JOIN "problem"
-                    ON "challenge"."pro_id" = "problem"."pro_id" AND "problem"."status" IN ({",".join(map(str, allow_statuses))})
-                    WHERE "challenge"."contest_id" = $2 AND "challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4
-                    GROUP BY "challenge"."pro_id";
-                ''',
-                acct.acct_id,
-                contest_id,
-                starttime,
-                endtime,
-            )
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    f'''
+                        SELECT "challenge"."pro_id",
+                        ROUND(MAX("total_result"."rate"), (SELECT rate_precision FROM problem WHERE pro_id = challenge.pro_id)) AS "score",
+                        COUNT("total_result") AS "count",
+                        MIN("total_result"."state") as "state"
+                        FROM "challenge"
+                        INNER JOIN "total_result"
+                        ON "challenge"."chal_id" = "total_result"."chal_id" AND "challenge"."acct_id" = $1
+                        INNER JOIN "problem"
+                        ON "challenge"."pro_id" = "problem"."pro_id" AND "problem"."status" IN ({",".join(map(str, allow_statuses))})
+                        WHERE "challenge"."contest_id" = $2 AND "challenge"."timestamp" >= $3 AND "challenge"."timestamp" <= $4
+                        GROUP BY "challenge"."pro_id";
+                    ''',
+                    acct.acct_id,
+                    contest_id,
+                    starttime,
+                    endtime,
+                )
+        except Exception as e:
+            logger.error(f"Error fetching rate map for account {acct.acct_id} in contest {contest_id} between {starttime} and {endtime}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         statemap = {}
         for pro_id, rate, count, state in result:
@@ -293,25 +326,29 @@ class RateService:
         if isinstance(endtime, str):
             endtime = datetime.datetime.fromisoformat(endtime)
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                '''
-                    SELECT "challenge"."acct_id", "challenge"."pro_id",
-                    ROUND(MAX("total_result"."rate"), (SELECT rate_precision FROM problem WHERE pro_id = challenge.pro_id)) AS "rate",
-                    COUNT("total_result") AS "count",
-                    MIN("total_result"."state") AS "state"
-                    FROM "challenge"
-                    INNER JOIN "total_result"
-                    ON "challenge"."chal_id" = "total_result"."chal_id"
-                    INNER JOIN "problem"
-                    ON "challenge"."pro_id" = "problem"."pro_id"
-                    WHERE "challenge"."timestamp" >= $1 AND "challenge"."timestamp" <= $2 AND "challenge"."contest_id" = $3
-                    GROUP BY "challenge"."acct_id", "challenge"."pro_id";
-                ''',
-                starttime,
-                endtime,
-                contest_id,
-            )
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    '''
+                        SELECT "challenge"."acct_id", "challenge"."pro_id",
+                        ROUND(MAX("total_result"."rate"), (SELECT rate_precision FROM problem WHERE pro_id = challenge.pro_id)) AS "rate",
+                        COUNT("total_result") AS "count",
+                        MIN("total_result"."state") AS "state"
+                        FROM "challenge"
+                        INNER JOIN "total_result"
+                        ON "challenge"."chal_id" = "total_result"."chal_id"
+                        INNER JOIN "problem"
+                        ON "challenge"."pro_id" = "problem"."pro_id"
+                        WHERE "challenge"."timestamp" >= $1 AND "challenge"."timestamp" <= $2 AND "challenge"."contest_id" = $3
+                        GROUP BY "challenge"."acct_id", "challenge"."pro_id";
+                    ''',
+                    starttime,
+                    endtime,
+                    contest_id,
+                )
+        except Exception as e:
+            logger.error(f"Error fetching rate map for contest {contest_id} between {starttime} and {endtime}: {e}", exc_info=True)
+            return ('Eunk', 'Unknown error'), None
 
         statemap = defaultdict(dict)
         for acct_id, pro_id, rate, count, state in result:

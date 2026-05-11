@@ -1,6 +1,5 @@
 import copy
 import hashlib
-import time
 import asyncio
 import datetime
 import json
@@ -9,6 +8,7 @@ import unittest
 
 import requests
 from tornado.websocket import websocket_connect
+from tornado.httpclient import HTTPRequest
 
 from services.chal import Compiler
 from services.pro import ProConst, ProService
@@ -43,7 +43,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
     def get_isoformat(self, time: datetime.datetime) -> str:
         return time.isoformat(timespec="microseconds") + "Z"
 
-    async def upload_file(self, file, file_size: int, pack_token: str):
+    async def upload_file(self, file, file_size: int, pack_token: str, session):
         md5 = hashlib.md5()
         remain = file_size
         while True:
@@ -53,7 +53,9 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
 
             md5.update(data)
 
-        ws = await websocket_connect("ws://localhost:5501/be/pack")
+        cookie_value = session.cookies.get('id')
+        headers = {"Cookie": f"id={cookie_value}"}
+        ws = await websocket_connect(HTTPRequest("ws://localhost:5501/be/pack", headers=headers))
         await ws.write_message(
             json.dumps(
                 {
@@ -84,7 +86,7 @@ class AsyncTest(unittest.IsolatedAsyncioTestCase):
         file_path = f"tests/static_file/{file}"
         file_size = os.path.getsize(file_path)
         with open(file_path, "rb") as f:
-            await self.upload_file(f, file_size, pack_token)
+            await self.upload_file(f, file_size, pack_token, session)
 
         res = session.post(
             "manage/pro/add",

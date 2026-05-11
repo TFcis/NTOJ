@@ -331,6 +331,7 @@
                         <thead>
                             <tr>
                                 <th>Testdata</th>
+                                <th>Subtasks</th>
                                 <th>State</th>
                                 <th>Time</th>
                                 <th>Memory</th>
@@ -356,6 +357,11 @@
                             <td class="idx">{{ '%04d' % (testdata_result.testdata_id + 1) }}
                                     <span {% if not show_message %} style="display: none;" {% end %}> (Expand)<span>
                             </td>
+                                <td>
+                                    {% for subtask_id in testdata_to_subtasks[testdata_result.testdata_id] %}
+                                        <span class="badge rounded-pill bg-secondary">{{ subtask_id + 1 }}</span>
+                                    {% end %}
+                                </td>
                                 <td class="state state-{{ testdata_result.state }}">{{ ChalConst.STATE_LONG_STR[testdata_result.state] }}</td>
                                 <td class="time">{{ testdata_result.time }}</td>
                                 <td class="memory">{{ testdata_result.memory }}</td>

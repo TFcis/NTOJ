@@ -13,7 +13,11 @@ class ManageProSubtaskHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        pro_id = int(self.get_argument("proid"))
+        try:
+            pro_id = int(self.get_argument("proid"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)
@@ -24,9 +28,18 @@ class ManageProSubtaskHandler(RequestHandler):
 
     @subtask_dispatcher.action("updaterate")
     async def update_rate_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        subtask_id = int(self.get_argument("subtask"))
-        rate = int(self.get_argument("rate"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            subtask_id = int(self.get_argument("subtask"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid subtask ID"))
+        try:
+            rate = int(self.get_argument("rate"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid rate"))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
@@ -38,7 +51,7 @@ class ManageProSubtaskHandler(RequestHandler):
 
         subtask_configs[subtask_id].rate = rate
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to update rate of subtask#{subtask_id} for problem #{pro_id}",
             "manage.pro.update.subtask.updaterate",
             {"rate": rate},
@@ -47,8 +60,14 @@ class ManageProSubtaskHandler(RequestHandler):
 
     @subtask_dispatcher.action("setdepsubtasks")
     async def set_dep_subtasks_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        subtask_id = int(self.get_argument("subtask"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            subtask_id = int(self.get_argument("subtask"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid subtask ID"))
         dep_subtasks = set(
             map(lambda x: x - 1, parse_str_to_list(self.get_argument("dep_subtasks")))
         )
@@ -61,13 +80,17 @@ class ManageProSubtaskHandler(RequestHandler):
         if subtask_id not in subtask_configs:
             return self.error(("Enoext", "Subtask not found"))
 
+        for dep_subtask_id in dep_subtasks:
+            if dep_subtask_id not in subtask_configs:
+                return self.error(("Eparam", f"Dependency subtask {dep_subtask_id} not found"))
+
         subtask_configs[subtask_id].dependency_subtasks = set(dep_subtasks)
 
         if self.have_cycle(subtask_configs):
             return self.error(("Eparam", "Dependency subtasks have cycle"))
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to set dependency subtasks to subtask#{subtask_id} for problem #{pro_id}",
             "manage.pro.update.subtask.setdepsubtasks",
             {"dependency_subtasks": list(dep_subtasks)},
@@ -76,8 +99,14 @@ class ManageProSubtaskHandler(RequestHandler):
 
     @subtask_dispatcher.action("addsubtask")
     async def add_subtask_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        rate = int(self.get_argument("rate"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            rate = int(self.get_argument("rate"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid rate"))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
@@ -89,7 +118,7 @@ class ManageProSubtaskHandler(RequestHandler):
         )
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to add a new subtask for problem #{pro_id}",
             "manage.pro.update.subtask.addsubtask",
             {"rate": rate, "subtask_id": len(subtask_configs) - 1},
@@ -98,8 +127,14 @@ class ManageProSubtaskHandler(RequestHandler):
 
     @subtask_dispatcher.action("deletesubtask")
     async def delete_subtask_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        subtask_id = int(self.get_argument("subtask"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            subtask_id = int(self.get_argument("subtask"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid subtask ID"))
 
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
@@ -117,7 +152,7 @@ class ManageProSubtaskHandler(RequestHandler):
             subtask_configs[new_subtask_id] = subtask
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to delete a subtask for problem #{pro_id}",
             "manage.pro.update.subtask.deletesubtask",
         )
@@ -125,10 +160,16 @@ class ManageProSubtaskHandler(RequestHandler):
 
     @subtask_dispatcher.action("settestdata")
     async def set_testdata_action(self):
-        pro_id = int(self.get_argument("pro_id"))
-        subtask_id = int(self.get_argument("subtask"))
-        testdatas = parse_str_to_list(self.get_argument("testdatas"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+        try:
+            subtask_id = int(self.get_argument("subtask"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid subtask ID"))
 
+        testdatas = list(map(lambda x: x - 1, parse_str_to_list(self.get_argument("testdatas"))))
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)
@@ -146,7 +187,7 @@ class ManageProSubtaskHandler(RequestHandler):
             )
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to set testdatas to subtask#{subtask_id} for problem #{pro_id}",
             "manage.pro.update.subtask.settestdata",
             {

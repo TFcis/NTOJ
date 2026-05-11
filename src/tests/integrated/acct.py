@@ -45,13 +45,37 @@ class SignTest(AsyncTest):
             'mail': 'admin@test',
             'pw': 'testtest',
         })
-        self.assertAPIReturnValue(res.text, ('Esignip', 'Login failed'))
+        self.assertAPIReturnValue(res.text, ('Esignip', 'Your ip is not allowed'))
 
         err, acct = await UserService.inst.info_acct(1)
         self.assertIsNone(err)
         assert acct
         acct.specific_ip = ''
         await UserService.inst.update_acct(acct)
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            # NOTE: should not signin twice
+            res = admin_session.post('sign', data={
+                'reqtype': 'signin',
+                'mail': 'admin@test',
+                'pw': 'testtest',
+            })
+            self.assertAPIReturnValue(res.text, ('Esign', 'Already signed in'))
+
+            # NOTE: should not signup while signed in
+            res = admin_session.post('sign', data={
+                'reqtype': 'signup',
+                'name': 'test1',
+                'mail': 'test1@test',
+                'pw': 'test',
+            })
+            self.assertAPIReturnValue(res.text, ('Esign', 'Already signed in'))
+
+        # NOTE: should not signout without signin
+        res = requests.post('http://localhost:5501/be/sign', data={
+            'reqtype': 'signout',
+        })
+        self.assertAPIReturnValue(res.text, ('Esign', 'Not signed in'))
 
 
 class AcctPageTest(AsyncTest):
