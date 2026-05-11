@@ -5,6 +5,8 @@
 <script type="text/javascript" id="contjs">
 	function init() {
         let contest_id = "{{ contest.contest_id }}";
+        let contest_mode = {{ contest.contest_mode }};
+        let is_ioi_mode = contest_mode == {{ ContestMode.IOI }};
 
 		const post_func = (reqtype, pro_id, score_type=null, fail_action=null) => {
 			if (pro_id.length == 0) {
@@ -81,9 +83,36 @@
 			});
 		});
 
-		$("#addPro").on('click', () => post_func('add', $("#proId").val(), parseInt($("#proScoreType").val()), () => $("#proId").val('')));
+		// Handle challenge style change dropdown
+		$(".challenge-style-select").on('change', function() {
+			let pro_id = $(this).attr('pro_id');
+			let new_challenge_style = $(this).val();
+			let old_challenge_style = $(this).attr('data-old-value');
+
+			if (new_challenge_style == old_challenge_style) {
+				return;
+			}
+
+			$.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
+				reqtype: 'update_challenge_style',
+				pro_id: pro_id,
+				challenge_style: new_challenge_style
+			}, res => {
+				res = JSON.parse(res);
+				if (res.status == 'S') {
+					index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+					setTimeout(() => index.reload(), 1000);
+				} else {
+					index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+					// Reset to old value on error
+					$(this).val(old_challenge_style);
+				}
+			});
+		});
+
+		$("#addPro").on('click', () => post_func('add', $("#proId").val(), is_ioi_mode ? parseInt($("#proScoreType").val(), 10) : null, () => $("#proId").val('')));
 		$("#removePro").on('click', () => post_func('remove', $("#proId").val(), null, () => $("#proId").val('')));
-		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), parseInt($("#proListScoreType").val()), () => $("#proList").val('')));
+		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), is_ioi_mode ? parseInt($("#proListScoreType").val(), 10) : null, () => $("#proList").val('')));
 		$("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val(), null, () => $("#proList").val('')));
     }
 </script>
@@ -91,7 +120,7 @@
 
 {% block content %}
 {% from services.pro import ProConst %}
-{% from services.contests import ProblemScoreType %}
+{% from services.contests import ProblemScoreType, ChallengeResultStyle %}
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
 
@@ -144,6 +173,7 @@
 							<th scope="col">Pro ID</th>
 							<th scope="col">Problem Name</th>
 							<th scope="col">Score Type</th>
+							<th scope="col">Challenge Style</th>
 							<th scope="col">Operation</th>
 						</tr>
 					</thead>
@@ -153,23 +183,31 @@
 							<th scope="row"><a href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }}</a></th>
 							<td>{{ pro.name }}</td>
 							{% if contest.contest_mode == ContestMode.IOI %}
+                <td>
+                  <select class="form-select form-select-sm score-type-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id]['score_type'] }}" style="width: auto;">
+                    <option value="1" {% if contest.pro_list[pro.pro_id]['score_type'] == 1 %}selected{% end %}>IOI2017</option>
+                    <option value="0" {% if contest.pro_list[pro.pro_id]['score_type'] == 0 %}selected{% end %}>IOI2013</option>
+                  </select>
+                </td>
+							{% else %}
+							  <td>ICPC</td>
+							{% end %}
 							<td>
-								<select class="form-select form-select-sm score-type-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id]['score_type'] }}" style="width: auto;">
-									<option value="1" {% if contest.pro_list[pro.pro_id]['score_type'] == 1 %}selected{% end %}>IOI2017</option>
-									<option value="0" {% if contest.pro_list[pro.pro_id]['score_type'] == 0 %}selected{% end %}>IOI2013</option>
+								<select class="form-select form-select-sm challenge-style-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id].get('challenge_style', 1) }}" style="width: auto;">
+									<option value="{{ ChallengeResultStyle.FULL }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.FULL %}selected{% end %}>Full</option>
+									<option value="{{ ChallengeResultStyle.STATE_COUNT }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.STATE_COUNT %}selected{% end %}>State Count</option>
+									<option value="{{ ChallengeResultStyle.SUBTASK_ONLY }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.SUBTASK_ONLY %}selected{% end %}>Subtask Only</option>
+									<option value="{{ ChallengeResultStyle.TOTAL_ONLY }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.TOTAL_ONLY %}selected{% end %}>Total Only</option>
 								</select>
 							</td>
-							{% else %}
-							<td>ICPC</td>
-							{% end %}
 							<td>
 								<button class="btn btn-warning me-2 remove" pro_id="{{ pro.pro_id }}">Remove</button>
 								<button class="btn btn-danger me-2 rechal" pro_id="{{ pro.pro_id }}">Rechallenge</button>
-                                <button
-                                    class="btn btn-danger me-2 public"
-                                    pro_id="{{ pro.pro_id }}"
-                                    {% if not contest.is_end() or pro.status != ProConst.STATUS_CONTEST %} disabled {% end %}
-                                >Public Problem</button>
+                <button
+                    class="btn btn-danger me-2 public"
+                    pro_id="{{ pro.pro_id }}"
+                    {% if not contest.is_end() or pro.status != ProConst.STATUS_CONTEST %} disabled {% end %}
+                >Public Problem</button>
 							</td>
 						</tr>
 					{% end %}

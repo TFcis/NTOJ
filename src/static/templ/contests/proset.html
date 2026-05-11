@@ -103,7 +103,6 @@ font-weight: bolder;
                         </td>
                     {% end %}
 
-
                     {% if not is_icpc %}
                         {% set state_idx = int(score_map[pro_id]['score'] / 10) %}
                         {% if score_map[pro_id]['state'] == ChalConst.STATE_AC or state_idx > 10 %}

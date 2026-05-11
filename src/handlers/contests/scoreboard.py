@@ -155,7 +155,6 @@ class ContestScoreboardHandler(RequestHandler):
         cache_name = f'contest_{contest_id}_scores'
         for pro_id, pro_options in self.contest.pro_list.items():
             if has_end_time or (scores := (await self.rs.hget(cache_name, str(pro_id)))) is None:
-
                 score_type = pro_options["score_type"]
                 if score_type == ProblemScoreType.ICPC:
                     s[pro_id] = await ContestService.inst.get_icpc_scores(contest_id, pro_id, end_time)
@@ -170,7 +169,8 @@ class ContestScoreboardHandler(RequestHandler):
             else:
                 s[pro_id] = unpackb(scores, strict_map_key=False)
                 for pro_score in s[pro_id].values():
-                    pro_score['timestamp'] = datetime.datetime.fromtimestamp(pro_score['timestamp'])
+                    if pro_score['timestamp'] is not None:
+                        pro_score['timestamp'] = datetime.datetime.fromtimestamp(pro_score['timestamp'])
                     pro_score['score'] = Decimal(pro_score['score'])
 
             if is_ended:

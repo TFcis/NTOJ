@@ -24,6 +24,12 @@ class ProblemScoreType(enum.IntEnum):
     IOI2017 = 1
     ICPC = 2 # NOTE: ContestMode.ACM
 
+class ChallengeResultStyle(enum.IntEnum):
+    FULL = 1  # Total + Subtask + Testcase
+    STATE_COUNT = 2  # Total + Subtask + Testcase State Count
+    SUBTASK_ONLY = 3  # Total + Subtask
+    TOTAL_ONLY = 4  # Total Only
+
 class UserStatus(enum.IntEnum):
     REJECTED = 0
     REQUESTED = 1
@@ -160,10 +166,11 @@ class ContestService:
                 contest.contest_end = contest.contest_end
                 contest.reg_end = contest.reg_end
 
-                result = await con.fetch('SELECT pro_id, score_type FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
-                for pro_id, score_type in result:
+                result = await con.fetch('SELECT pro_id, score_type, challenge_style FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
+                for pro_id, score_type, challenge_style in result:
                     contest.pro_list[pro_id] = {
-                        "score_type": ProblemScoreType(int(score_type))
+                        "score_type": ProblemScoreType(int(score_type)),
+                        "challenge_style": ChallengeResultStyle(int(challenge_style))
                     }
 
                 result = await con.fetch('SELECT acct_id, status FROM contest_users WHERE contest_id = $1 ORDER BY acct_id', contest_id)
@@ -304,16 +311,18 @@ class ContestService:
                         contest.pro_list.pop(pro_id)
                         continue
 
+                    challenge_style = v.get('challenge_style', ChallengeResultStyle.FULL)
                     result = await con.fetch('''
-                        INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
-                        VALUES ($1, $2, $3, $4)
+                        INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "challenge_style", "order")
+                        VALUES ($1, $2, $3, $4, $5)
                         ON CONFLICT (contest_id, pro_id) DO UPDATE
-                        SET score_type = EXCLUDED.score_type, "order" = EXCLUDED."order"
+                        SET score_type = EXCLUDED.score_type, challenge_style = EXCLUDED.challenge_style, "order" = EXCLUDED."order"
                         WHERE
                             contest_problem_joints.score_type != EXCLUDED.score_type OR
+                            contest_problem_joints.challenge_style != EXCLUDED.challenge_style OR
                             contest_problem_joints.order != EXCLUDED.order
                         RETURNING pro_id;
-                    ''', contest.contest_id, pro_id, int(v['score_type']), order)
+                    ''', contest.contest_id, pro_id, int(v['score_type']), int(challenge_style), order)
 
                     current_pro_ids.add(pro_id)
                     order += 1

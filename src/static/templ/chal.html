@@ -1,5 +1,15 @@
 {% import config %}
 {% from services.chal import ChalConst, MessageType %}
+{% from services.contests import ChallengeResultStyle %}
+
+{% set challenge_style = ChallengeResultStyle.FULL %}
+{% if chal.contest_id != 0 and contest is not None %}
+    {% set challenge_style = contest.pro_list.get(chal.pro_id, {}).get('challenge_style', ChallengeResultStyle.FULL) %}
+    {% if contest.is_admin(acct_id=user.acct_id) %}
+        {% set challenge_style = ChallengeResultStyle.FULL %}
+    {% end %}
+{% end %}
+
 <script src="{{ url('/src/third/prism.js') }}"></script>
 <link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
 <style>
@@ -87,8 +97,29 @@
         }
     }
 
+    var testdata_state_count_element = document.getElementById("testdata-state-count");
+    function update_testdata_state_count(state_count) {
+        if (!testdata_state_count_element) return;
+
+        testdata_state_count_element.innerHTML = '';
+
+        // Sort by state value for consistent ordering
+        const sorted_states = Object.entries(state_count).sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+
+        for (const [state, count] of sorted_states) {
+            if (count > 0) {
+                let badge = document.createElement('span');
+                badge.className = `badge bg-secondary state-${state} me-2`;
+                badge.textContent = `${count}x ${state_map[state]}`;
+                testdata_state_count_element.appendChild(badge);
+            }
+        }
+    }
+
     function update_state_data(result) {
+        // Check if this is a summary update (has total_result)
         if (result.total_result != undefined) {
+            // Summary update - contains total_result, subtask_results, testdata_results
             let total_result = result.total_result;
             let message = "";
             let state = total_result.status;
@@ -99,14 +130,27 @@
             }
             update_total_result(total_result.time, total_result.memory, total_result.status, total_result.score, message, total_result.message_type);
 
-            for (const [subtask_id, subtask] of Object.entries(result.subtask_results)) {
-                update_subtask_result(subtask_id, subtask.time, subtask.memory, subtask.status, subtask.score);
+            if (result.subtask_results != undefined) {
+                for (const [subtask_id, subtask] of Object.entries(result.subtask_results)) {
+                    update_subtask_result(subtask_id, subtask.time, subtask.memory, subtask.status, subtask.score);
+                }
             }
 
-            for (const [testdata_id, testdata] of Object.entries(result.testdata_results)) {
-                update_testdata_result(testdata_id, testdata.time, testdata.memory, testdata.status, testdata.message, testdata.message_type);
+            if (result.testdata_results != undefined) {
+                // Check if testdata_results contains state_count
+                if (result.testdata_results.state_count != undefined) {
+                    update_testdata_state_count(result.testdata_results.state_count);
+                } else {
+                    for (const [testdata_id, testdata] of Object.entries(result.testdata_results)) {
+                        update_testdata_result(testdata_id, testdata.time, testdata.memory, testdata.status, testdata.message, testdata.message_type);
+                    }
+                }
             }
-        } else {
+        } else if (result.state_count != undefined) {
+            // State count update (for STATE_COUNT mode single testdata update)
+            update_testdata_state_count(result.state_count);
+        } else if (result.id != undefined && result.status != undefined) {
+            // Single testdata update (execute/scoring) - has id, status, time, memory at top level
             update_testdata_result(result.id, result.time, result.memory,
                                     result.status, result.message, result.message_type);
         }
@@ -253,6 +297,7 @@
     </div>
 
     <div class="col-lg-8">
+        <!-- Always show Total Result -->
         <table id="total" class="table mobile-table-sm">
             <thead>
                 <tr>
@@ -275,6 +320,8 @@
             </tbody>
         </table>
 
+        <!-- Show Subtask Table for FULL, STATE_COUNT, SUBTASK_ONLY -->
+        {% if challenge_style != ChallengeResultStyle.TOTAL_ONLY %}
         <table id="subtasks" class="table mobile-table-sm">
             <thead>
                 <tr>
@@ -297,11 +344,15 @@
             {% end %}
             </tbody>
         </table>
+        {% end %}
     </div>
 </div>
 
-{% set not_show_testdata_result_states = [ChalConst.STATE_ERR, ChalConst.STATE_JE, ChalConst.STATE_CE, ChalConst.STATE_CLE, ChalConst.STATE_REJECTED] %}
+{% set not_show_testdata_result_states = (ChalConst.STATE_ERR, ChalConst.STATE_JE, ChalConst.STATE_CE, ChalConst.STATE_CLE, ChalConst.STATE_REJECTED) %}
 {% set show_testdata_result = chal.total_result.state not in not_show_testdata_result_states %}
+{% set show_testdata_section = challenge_style in (ChallengeResultStyle.FULL, ChallengeResultStyle.STATE_COUNT) %}
+
+{% if show_testdata_section %}
 <div class="row">
 	<div class="accordion" id="testdatas-accordion">
 		<div class="accordion-item">
@@ -327,6 +378,42 @@
                 data-bs-parent="#testdatas-accordion"
             >
 				<div class="accordion-body">
+                    <!-- State Count Display (for STATE_COUNT mode) -->
+                    {% if challenge_style == ChallengeResultStyle.STATE_COUNT %}
+                    <div id="testdata-state-count" class="mb-3">
+                        {% set state_count = {} %}
+                        {% for testdata in chal.testdata_results.values() %}
+                            {% if testdata.state not in state_count %}
+                                {% set _ = state_count.update({testdata.state: 0}) %}
+                            {% end %}
+                            {% set _ = state_count.update({testdata.state: state_count[testdata.state] + 1}) %}
+                        {% end %}
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    {% for state, count in sorted(state_count.items()) %}
+                                        {% if count > 0 %}
+                                            <td class="state-{{ state }}">{{ ChalConst.STATE_LONG_STR[state] }}</td>
+                                        {% end %}
+                                    {% end %}
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <tr>
+                                    {% for state, count in sorted(state_count.items()) %}
+                                        {% if count > 0 %}
+                                            <td>{{ count }}</td>
+                                        {% end %}
+                                    {% end %}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    {% end %}
+
+                    <!-- Full Testdata Table (for FULL mode only) -->
+                    {% if challenge_style == ChallengeResultStyle.FULL %}
                     <table id="testdatas" class="table mobile-table-sm">
                         <thead>
                             <tr>
@@ -385,11 +472,13 @@
                         {% end %}
                         </tbody>
                     </table>
+                    {% end %}
 				</div>
 			</div>
 		</div>
 	</div>
 </div>
+{% end %}
 
 
 
