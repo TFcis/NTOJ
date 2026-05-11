@@ -110,9 +110,9 @@
 			});
 		});
 
-		$("#addPro").on('click', () => post_func('add', $("#proId").val(), parseInt($("#proScoreType").val()), () => $("#proId").val('')));
+		$("#addPro").on('click', () => post_func('add', $("#proId").val(), is_ioi_mode ? parseInt($("#proScoreType").val(), 10) : null, () => $("#proId").val('')));
 		$("#removePro").on('click', () => post_func('remove', $("#proId").val(), null, () => $("#proId").val('')));
-		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), parseInt($("#proListScoreType").val()), () => $("#proList").val('')));
+		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), is_ioi_mode ? parseInt($("#proListScoreType").val(), 10) : null, () => $("#proList").val('')));
 		$("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val(), null, () => $("#proList").val('')));
     }
 </script>
