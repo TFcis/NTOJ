@@ -21,16 +21,22 @@
   <script src="{{ url('/src/index.js') }}"></script>
   <script src="{{ url('/src/pack.js') }}"></script>
   <script type="module"> import pdfjsDist from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/+esm' </script>
-  <script src="{{ url('/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML') }}" async></script>
-  <script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        jax: ['output/SVG'],
-        tex2jax:{
-            inlineMath:[['$','$'],['\\(','\\)'], ['$$$', '$$$']],
-            displayMath: [['$$$$$$', '$$$$$$']]
-        }
-    });
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [
+          ['$', '$'],
+          ['\\(', '\\)'],
+          ['$$$', '$$$']
+        ],
+        displayMath: [
+          ['$$', '$$'],
+          ['$$$$$$', '$$$$$$']
+        ]
+      }
+    };
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-chtml.js" async></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" async></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.7/purify.min.js" integrity="sha512-BdRNuI8/lsyxkKQVxK1lVtfZshggfXPAwEP+JAOJEKx6Y8SLfcBSRdaWyXQmMxo+wG180uFqXYGjGRL0mh4/Jw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js" integrity="sha512-iWbxiCA4l1WTD0rRctt/BfDEmDC5PiVqFc6c1Rhj/GKjuj6tqrjrikTw3Sypm/eEgMa7jSOS9ydmDlOtxJKlSQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -118,10 +124,9 @@
                 console.warn('malformed contestnewqasub payload', data);
               }
             });
-            // Initialize channel with contest id + acct_id
+            // Initialize channel with contest id
             index.ws_send('contestnewqasub_init', JSON.stringify({
               contest_id: "{{ contest.contest_id }}",
-              acct_id: "{{ user.acct_id }}",
             }));
         {% end %}
     {% end %}
@@ -229,7 +234,7 @@
         <ul class="navbar-nav ms-auto">
           <li class="nav-link sign" style="display: none;"><a href="{{ url('/sign/') }}">Reg | Log</a></li>
           <li class="nav-link leave" style="display: none;"><a href="#">Leave</a></li>
-          <a class="nav-link" href="{{ url(f'/acct/{ user.acct_id }/') }}">{{ user.name }}</a>
+          <a class="nav-link account" href="{{ url(f'/acct/{ user.acct_id }/') }}" style="display: none;">{{ user.name }}</a>
         </ul>
       </div>
     </div>

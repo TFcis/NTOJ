@@ -1,19 +1,21 @@
 import datetime
 import os
 import platform
-import subprocess
 import sys
 import time
+import logging
 
 import psutil
 
 import config
 from handlers.base import ActionDispatcher, RequestHandler, UnifiedWebSocketHandler, reqenv, require_permission
 from services.user import UserConst, UserService
+from services.log import LogService
 
 info_dispatcher = ActionDispatcher()
 server_start_time = time.time()
 
+logger = logging.getLogger("tornado.application")
 
 class ManageInfoHandler(RequestHandler):
     @reqenv
@@ -69,30 +71,6 @@ class ManageInfoHandler(RequestHandler):
             "code": os.path.abspath("code"),
             "problem": os.path.abspath("problem"),
         }
-
-        try:
-            code_size = (
-                subprocess.check_output(
-                    ["du", "-sh", "code"], stderr=subprocess.DEVNULL
-                )
-                .decode()
-                .split()[0]
-            )
-            info["path"]["code_size"] = code_size
-        except Exception:
-            info["path"]["code_size"] = "N/A"
-
-        try:
-            problem_size = (
-                subprocess.check_output(
-                    ["du", "-sh", "problem"], stderr=subprocess.DEVNULL
-                )
-                .decode()
-                .split()[0]
-            )
-            info["path"]["problem_size"] = problem_size
-        except Exception:
-            info["path"]["problem_size"] = "N/A"
 
         info["config"] = {
             "timezone": str(getattr(config, "TIMEZONE", "N/A")),
@@ -197,6 +175,11 @@ class ManageInfoHandler(RequestHandler):
             finally:
                 await con.release()
 
+            await self.add_log(
+                f"{self.acct.name} performed a VACUUM ANALYZE on the database.",
+                "manage.info.vacuum",
+            )
             return self.error(("S", ""))
         except Exception as e:
-            return self.error(("E", f"VACUUM Failed: {str(e)}"))
+            logger.error(f"Failed to perform VACUUM ANALYZE: {e}", exc_info=True)
+            return self.error(("E", "VACUUM Failed"))

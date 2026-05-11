@@ -15,10 +15,10 @@ class SubmitHandler(RequestHandler):
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     @contest_require_permission("all")
     async def get(self, pro_id=None):
-        if pro_id is None:
-            return self.error(("Enoext", "Missing parameter pro_id"))
-
-        pro_id = int(pro_id)
+        try:
+            pro_id = int(pro_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid problem ID"))
 
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.contest:
@@ -133,12 +133,19 @@ class SubmitHandler(RequestHandler):
 
     @submit_dispatcher.action("submit")
     async def submit_problem(self):
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
         return await self._dispatch_to_problem_handler(pro_id)
 
     @submit_dispatcher.action("rechal")
     async def rejudge_challenge(self):
-        chal_id = int(self.get_argument("chal_id"))
+        try:
+            chal_id = int(self.get_argument("chal_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid challenge ID"))
+
         err, chal = await ChalService.inst.get_chal(chal_id)
         if err:
             return self.error(err)

@@ -32,7 +32,10 @@ class QuestionHandler(RequestHandler):
             self.error(('S', ''))
 
         elif reqtype == 'rm_ques':
-            index = int(self.get_argument('index'))
+            try:
+                index = int(self.get_argument('index'))
+            except ValueError:
+                return self.error(('E', 'Invalid index'))
             if err := await QuestionService.inst.rm_ques(self.acct.acct_id, index):
                 return self.error(err)
 

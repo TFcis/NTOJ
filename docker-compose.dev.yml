@@ -18,6 +18,9 @@ services:
         - path: ./migration/
           action: sync
           target: /ntoj/migration
+        - path: ./scripts
+          action: sync
+          target: /ntoj/scripts
     volumes:
       - /srv/ntoj-dev/static:/ntoj/static
       - /srv/ntoj-dev/problem:/ntoj/problem
@@ -56,7 +59,7 @@ services:
       - app
 
   judge:
-    build: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git
+    build: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git#main
     cap_add:
       - MKNOD
       - SYS_ADMIN

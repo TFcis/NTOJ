@@ -21,7 +21,7 @@ from .acct import SignTest, AcctPageTest
 from .board import BoardTest
 from .bulletin import BulletinTest
 from .chal import ChalTest, ChalListTest
-from .contest import ContestTest
+from .contest import ContestTest, ContestProblemPermissionTest
 from .proclass import ProClassTest
 from .ques import QuesTest
 from .submit import SubmitTest
@@ -203,7 +203,8 @@ class IntegratedTest(AsyncTest):
             BatchSubtaskTest().main,
             ManageProFileManagerTest().main,
             ManagePackTest().main,
-            ContestTest().main
+            ContestTest().main,
+            ContestProblemPermissionTest().main,
         ]
         for f in s:
             r = await f()

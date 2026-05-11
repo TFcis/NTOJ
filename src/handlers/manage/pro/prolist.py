@@ -12,15 +12,23 @@ from services.user import UserConst
 
 PERMISSION_DENIED_ERROR = ("Eacces", "Permission denied")
 
-general_dispatcher = ActionDispatcher()
+prolist_dispatcher = ActionDispatcher()
 
 
 class ManageProListHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        pageoff = int(self.get_argument("pageoff", default=0))
+        try:
+            pageoff = int(self.get_argument("pageoff", default="0"))
+            if pageoff < 0:
+                pageoff = 0
+        except ValueError:
+            return self.error(("Eparam", "Invalid page offset"))
+
         err, prolist = await ProService.inst.list_pro(ProConst.PRO_STATUS_FULL)
+        if err:
+            return self.error(err)
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff : pageoff + 40]
 
@@ -36,11 +44,15 @@ class ManageProListHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self):
         reqtype = self.get_argument("reqtype")
-        return await general_dispatcher.dispatch(self, reqtype)
+        return await prolist_dispatcher.dispatch(self, reqtype)
 
-    @general_dispatcher.action("rechal")
+    @prolist_dispatcher.action("rechal")
     async def rechal_pro(self):
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         can_submit = JudgeServerClusterService.inst.is_server_online()
         if not can_submit:
             return self.error(("Ejudge", "No available judge"))
@@ -60,7 +72,7 @@ class ManageProListHandler(RequestHandler):
                 pro_id,
             )
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
             "manage.chal.rechal",
         )
@@ -81,13 +93,17 @@ class ManageProListHandler(RequestHandler):
         await asyncio.create_task(_rechal(rechals=result))
         self.error(("S", ""))
 
-    @general_dispatcher.action("rechalall")
+    @prolist_dispatcher.action("rechalall")
     async def rechal_all_pro(self):
         pwd = self.get_argument("pwd")
         if config.unlock_pwd != base64.b64encode(packb(pwd)):
             return self.error(("Eacces", "Wrong password"))
 
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         can_submit = JudgeServerClusterService.inst.is_server_online()
         if not can_submit:
             return self.error(("Ejudge", "No available judge"))
@@ -107,7 +123,7 @@ class ManageProListHandler(RequestHandler):
                 pro_id,
             )
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} made a request to rejudge the problem #{pro_id} with {len(result)} chals",
             "manage.chal.rechalall",
         )

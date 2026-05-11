@@ -95,7 +95,7 @@ class BatchUpdateTest(AsyncTest):
             # Test uploadpackage
             pack_token = self.get_upload_token(admin_session)
             file = open('tests/static_file/toj3.tar.xz', 'rb')
-            await self.upload_file(file, os.path.getsize('tests/static_file/toj3.tar.xz'), pack_token)
+            await self.upload_file(file, os.path.getsize('tests/static_file/toj3.tar.xz'), pack_token, admin_session)
             file.close()
 
             res = admin_session.post('manage/pro/update', data={

@@ -6,6 +6,9 @@ class ReportHandler(RequestHandler):
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     async def get(self):
-        chal_id = int(self.get_argument('chal_id'))
+        try:
+            chal_id = int(self.get_argument('chal_id'))
+        except ValueError:
+            return self.error(("Eparam", "Invalid challenge ID"))
 
         await self.render('report-problem', chal_id=chal_id)

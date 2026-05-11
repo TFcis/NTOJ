@@ -49,6 +49,7 @@ class ChalTest(AsyncTest):
             ws = await websocket_connect('ws://localhost:5501/be/ws')
             await ws.write_message(json.dumps({'type': 'register', 'data': 'chalstatesub'}))
             await ws.write_message(json.dumps({'type': 'chalstatesub_init', 'data': '1'}))
+            ws.close() # TODO: Missing some test
 
             def callback():
                 res = admin_session.post('submit', data={
@@ -309,7 +310,7 @@ class ChalListTest(AsyncTest):
 
             await self.wait_for_judge_finish(callback3)
             ws_admin.close()
-            await asyncio.sleep(2) # HACK: workaround to ensure message is processed
+            await asyncio.sleep(5) # HACK: workaround to ensure message is processed
             self.assertTrue(got_message)
 
             flt = ChalSearchingParamBuilder().build()

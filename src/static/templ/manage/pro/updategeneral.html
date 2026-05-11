@@ -13,6 +13,13 @@
             let status = general_form.find('select#status').val();
             let allow_submit = general_form.find('input#allow-submit').is(":checked");
 
+            {% if pro.status == ProConst.STATUS_HIDDEN %}
+                if (status == {{ ProConst.STATUS_ONLINE }} && !confirm('Are you sure to change problem status from hidden to online?')) {
+                    return;
+                }
+            {% end %}
+
+
             $.post(`{{ url('/be/manage/pro/update') }}`, {
                 'reqtype': 'updategeneral',
                 'pro_id': pro_id,
@@ -38,6 +45,7 @@
                     'pro_id': pro_id,
                     'pack_token': token,
                 }, function(res) {
+                    index.remove_progress_bar();
                     res = JSON.parse(res);
                     if (res.status == 'S') {
                         index.show_notify_dialog('Update problem by uploading package successfully', index.DIALOG_TYPE.success);
@@ -59,7 +67,6 @@
                 pack.send(token, files[0]).done(function() {
                     index.update_progress_bar_progress(100);
                     index.update_progress_bar_title('Decompressing...');
-                    index.remove_progress_bar();
                     _update(token);
                 }).progress(function(prog) {
                     index.update_progress_bar_progress(prog * 100);
@@ -68,7 +75,7 @@
         });
 
         general_form.find('button.rechal').on('click', function (e) {
-            $.post(`{{ url('/be/manage/pro/update') }}`, {
+            $.post(`{{ url('/be/manage/pro') }}`, {
                 'reqtype': 'rechal',
                 'pro_id': pro_id
             }, function (res) {
@@ -83,7 +90,7 @@
 
         general_form.find('button.rechalall').on('click', function (e) {
             let pwd = prompt('server config password');
-            $.post(`{{ url('/be/manage/pro/update') }}`, {
+            $.post(`{{ url('/be/manage/pro') }}`, {
                 'reqtype': 'rechalall',
                 'pro_id': pro_id,
                 'pwd': pwd,

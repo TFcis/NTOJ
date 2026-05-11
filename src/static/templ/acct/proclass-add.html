@@ -11,8 +11,10 @@
         desc_textarea.style.height = 'auto';
         desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
         desc_textarea.addEventListener('input', (event) => {
-            desc_textarea.style.height = 'auto';
-            desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
+            const newHeight = desc_textarea.scrollHeight;
+            if (newHeight > desc_textarea.offsetHeight) {
+                desc_textarea.style.height = newHeight + 'px';
+            }
         });
 
         j_form.find('#preview').on('click', function(e) {
@@ -42,7 +44,7 @@
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog(`Add Proclass#${res} success`, index.DIALOG_TYPE.success);
-                    index.go(`{{ url(f'/acct/proclass/{ user.acct_id }?page=update&proclassid=${res.data}') }}`);
+                    index.go(`{{ url(f'/acct/proclass/{ user.acct_id }?page=update&proclassid=' + '${res.data}') }}`);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }

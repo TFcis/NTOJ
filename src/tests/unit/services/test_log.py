@@ -9,6 +9,11 @@ class TestLogService(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.fake_conn = AsyncMock()
 
+        fake_tx_cm = MagicMock()
+        fake_tx_cm.__aenter__ = AsyncMock(return_value=None)
+        fake_tx_cm.__aexit__ = AsyncMock(return_value=None)
+        self.fake_conn.transaction = MagicMock(return_value=fake_tx_cm)
+
         fake_acquire_cm = MagicMock()
         fake_acquire_cm.__aenter__ = AsyncMock(return_value=self.fake_conn)
         fake_acquire_cm.__aexit__ = AsyncMock(return_value=None)
@@ -53,7 +58,10 @@ class TestLogService(unittest.IsolatedAsyncioTestCase):
                 "message": "Log message",
                 "timestamp": timestamp,
                 "params": '{"key": "value"}',
-                'type': 'mock'
+                'type': 'mock',
+                'operator_acct_id': 1,
+                'operator_ip': '192.168.11.10',
+                'contest_id': 0,
             }
         ]
 
@@ -66,6 +74,9 @@ class TestLogService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(log["timestamp"], timestamp)
         self.assertEqual(json.loads(log["params"])["key"], "value")
         self.assertEqual(log["log_type"], "mock")
+        self.assertEqual(log["operator_acct_id"], 1)
+        self.assertEqual(log["operator_ip"], "192.168.11.10")
+        self.assertEqual(log["contest_id"], 0)
 
     async def test_view_log_not_found(self):
         self.fake_conn.fetch.return_value = []
@@ -86,6 +97,8 @@ class TestLogService(unittest.IsolatedAsyncioTestCase):
                     datetime.datetime(
                         2024, 1, 1, 10, 0, 0, tzinfo=datetime.timezone.utc
                     ),
+                    11,
+                    10,
                 ),
                 (
                     2,
@@ -93,6 +106,8 @@ class TestLogService(unittest.IsolatedAsyncioTestCase):
                     datetime.datetime(
                         2024, 1, 1, 11, 0, 0, tzinfo=datetime.timezone.utc
                     ),
+                    32,
+                    27,
                 ),
             ],
             [{"count": 2}],
@@ -111,6 +126,12 @@ class TestLogService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(logs[1]["log_id"], 2)
         self.assertEqual(logs[0]["message"], "Msg1")
         self.assertEqual(logs[1]["message"], "Msg2")
+        self.assertEqual(logs[0]["timestamp"], datetime.datetime(2024, 1, 1, 10, 0, tzinfo=datetime.timezone.utc))
+        self.assertEqual(logs[1]["timestamp"], datetime.datetime(2024, 1, 1, 11, 0, tzinfo=datetime.timezone.utc))
+        self.assertEqual(logs[0]["operator_acct_id"], 11)
+        self.assertEqual(logs[0]["contest_id"], 10)
+        self.assertEqual(logs[1]["operator_acct_id"], 32)
+        self.assertEqual(logs[1]["contest_id"], 27)
 
     async def test_get_log_types(self):
         self.fake_conn.fetch.side_effect = [

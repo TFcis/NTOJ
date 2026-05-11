@@ -10,6 +10,21 @@
 <label for="" class="form-control">Timestamp</label>
 <p>{{ log['timestamp'].astimezone(config.TIMEZONE) }}</p>
 
+<label for="" class="form-control">Operator Account ID</label>
+<p>
+    {% if log['operator_acct_id'] is not None %}
+        <a href="{{ url(f'/acct/{ log['operator_acct_id'] }/') }}">{{ log['operator_acct_id'] }}</a>
+    {% else %}
+        <span class="text-muted">N/A (System operation)</span>
+    {% end %}
+</p>
+
+<label for="" class="form-control">Operator IP</label>
+<p>{{ log['operator_ip'] if log['operator_ip'] else 'N/A' }}</p>
+
+<label for="" class="form-control">Contest ID</label>
+<p>{{ log['contest_id'] }}</p>
+
 <label for="" class="form-control">Message</label>
 <p>{{ log['message'] }}</p>
 

@@ -9,7 +9,12 @@ class LogHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self, log_id=None):
         if log_id is None:
-            pageoff = int(self.get_argument('pageoff', default=0))
+            try:
+                pageoff = int(self.get_argument('pageoff', default="0"))
+                if pageoff < 0:
+                    pageoff = 0
+            except ValueError:
+                return self.error(('Eparam', 'Invalid page offset'))
 
             logtype = str(self.get_argument('logtype', default=''))
             if not logtype:
@@ -31,6 +36,12 @@ class LogHandler(RequestHandler):
             )
             return
 
+        try:
+            log_id = int(log_id)
+            if log_id <= 0:
+                raise ValueError()
+        except ValueError:
+            return self.error(('Eparam', 'Invalid log ID'))
         err, log = await LogService.inst.view_log(log_id)
         if err:
             return self.error(err)

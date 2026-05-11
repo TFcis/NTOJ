@@ -11,10 +11,13 @@ from services.pro import ProService, ProType, ProConst
 class CodeHandler(RequestHandler):
     @reqenv
     async def post(self):
-        chal_id = int(self.get_argument('chal_id'))
+        try:
+            chal_id = int(self.get_argument('chal_id'))
+        except ValueError:
+            return self.error(('Eparam', 'Invalid challenge id'))
 
         # Get challenge to determine problem type
-        err, chal = await ChalService.inst.get_chal(chal_id, self.acct)
+        err, chal = await ChalService.inst.get_chal(chal_id)
         if err:
             return self.error(err)
 

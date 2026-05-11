@@ -55,7 +55,7 @@
                     {% if acct.photo == "" %}
                         {% set acct.photo = f"https://www.gravatar.com/avatar/{ acct.acct_id }?d=identicon&f=y&s=480;" %}
                     {% end %}
-                    <td><img class="img-fluid" width="30" height="30" src="{{ acct.photo }}" /></td>
+                    <td></td><img src="{{ acct.photo }}" style="max-width:30px; max-height:30px; position:relative; left:15px; transform:translateX(-50%);" /></td>
                     <td><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.name }}</a></td>
                     <td>{{ acct.motto }}</td>
                     <td>{{ acct.rate_data['ac_pro_cnt'] }}</td>

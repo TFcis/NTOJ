@@ -21,7 +21,10 @@ class ManageProAddHandler(RequestHandler):
     @add_dispatcher.action("addpro")
     async def add_pro(self):
         name = self.get_argument("name")
-        status = int(self.get_argument("status"))
+        try:
+            status = int(self.get_argument("status"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid status"))
         mode = self.get_argument("mode")
 
         pack_token = None
@@ -29,7 +32,7 @@ class ManageProAddHandler(RequestHandler):
             pack_token = self.get_argument("pack_token")
 
         err, pro_id = await ProService.inst.add_pro(name, status)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to add the problem #{pro_id}",
             "manage.pro.add.pro",
             {"acct_id": self.acct.acct_id},

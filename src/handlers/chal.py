@@ -1,5 +1,6 @@
 import decimal
 import json
+from collections import defaultdict
 from dataclasses import asdict, is_dataclass
 
 from handlers.base import (
@@ -14,6 +15,7 @@ from services.chal import (
     ChalService,
     ChalSearchingParamBuilder,
     ChalConst,
+    Compiler,
     COMPILER_INFOS,
     MessageType,
     Challenge,
@@ -21,8 +23,9 @@ from services.chal import (
 from services.pro import ProService, ProConst
 from services.user import UserService, UserConst
 from services.contests import UserStatus, ContestService, ChallengeResultStyle
-from utils.numeric import parse_str_to_list
+from services.rate import RateService
 from services.log import LogService
+from utils.numeric import parse_str_to_list
 
 chal_dispatcher = ActionDispatcher()
 
@@ -429,11 +432,29 @@ UnifiedWebSocketHandler.register_channel_callback("chalstatesub", _chal_state_ca
 class ChalListHandler(RequestHandler):
     @reqenv
     async def get(self):
-        pageoff = int(self.get_argument("pageoff", default=0))
-        ppro_id = str(self.get_argument("proid", default=""))
-        pacct_id = str(self.get_argument("acctid", default=""))
-        state = int(self.get_argument("state", default=0))
-        compiler_type = int(self.get_argument("compiler_type", default=-1))
+        try:
+            pageoff = int(self.get_argument("pageoff", default="0"))
+            if pageoff < 0:
+                pageoff = 0
+        except ValueError:
+            return self.error(("Eparam", "Invalid page offset"))
+        try:
+            state = int(self.get_argument("state", default="0"))
+            if state != 0 and state not in ChalConst.STATE_STR: # NOTE: 0 stands for all states
+                raise ValueError()
+        except ValueError:
+            return self.error(("Eparam", "Invalid state"))
+
+        try:
+            compiler_type = int(self.get_argument("compiler_type", default="-1"))
+            if compiler_type != -1:
+                Compiler(compiler_type)
+        except ValueError:
+            return self.error(("Eparam", "Invalid compiler type"))
+
+        ppro_id = self.get_argument("proid", default="")
+        pacct_id = self.get_argument("acctid", default="")
+
 
         query_pros = self._parse_problem_filter(ppro_id)
         query_accts = self._parse_account_filter(pacct_id)
@@ -528,8 +549,11 @@ class ChalListHandler(RequestHandler):
 class ChalHandler(RequestHandler):
     @reqenv
     @contest_require_permission("all")
-    async def get(self, chal_id):
-        chal_id = int(chal_id)
+    async def get(self, chal_id: int = None):
+        try:
+            chal_id = int(chal_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid challenge id"))
 
         err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
         if err:
@@ -576,14 +600,23 @@ class ChalHandler(RequestHandler):
         if self.contest:
             rechal = rechal and self.contest.is_admin(self.acct)
 
-        await self.render("chal", pro=pro, chal=chal, rechal=rechal, contest=self.contest)
+        testdata_to_subtasks = defaultdict(list)
+        for subtask_config in pro.config.subtask_configs.values():
+            for testdata_id in pro.config.testdatas.keys():
+                testdata_to_subtasks[testdata_id].append(subtask_config.subtask_id)
+
+        await self.render("chal", pro=pro, chal=chal, rechal=rechal, testdata_to_subtasks=testdata_to_subtasks)
         return
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
     @contest_require_permission("admin")
-    async def post(self, chal_id):
-        chal_id = int(chal_id)
+    async def post(self, chal_id: int = None):
+        try:
+            chal_id = int(chal_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid challenge id"))
+
         self.path_args = [chal_id]  # Store for action methods
         reqtype = self.get_argument("reqtype")
         return await chal_dispatcher.dispatch(self, reqtype)
@@ -622,9 +655,9 @@ class ChalHandler(RequestHandler):
             r.state = ChalConst.STATE_REJECTED
             await ChalService.inst.update_testdata_result(chal_id, r)
 
-        await self.rs.hdel("pro_topcoder", str(chal.pro_id))
+        await RateService.inst.refresh_pro_topcoder(chal.pro_id)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name}(#{self.acct.acct_id}) reject chal#{chal_id}.",
             "manage.chal.reject",
             {"reason": reason},

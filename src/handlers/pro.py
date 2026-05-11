@@ -17,11 +17,17 @@ pro_dispatcher = ActionDispatcher()
 class ProsetHandler(RequestHandler):
     @reqenv
     async def get(self):
-        pageoff = int(self.get_argument("pageoff", default=0))
+        try:
+            pageoff = int(self.get_argument("pageoff", default="0"))
+            if pageoff < 0:
+                pageoff = 0
+        except ValueError:
+            return self.error(("Eparam", "Invalid page offset"))
+
         order = self.get_argument("order", default=None)
         problem_show = self.get_argument("show", default="all")
-        show_only_online_pro = self.get_argument("online", default=False)
-        order_reverse = self.get_argument("reverse", default=False)
+        show_only_online_pro = self.get_argument("online", default=None)
+        order_reverse = self.get_argument("reverse", default=None)
         search_name = self.get_argument("name", default=None)
         search_tags = self.get_argument("tags", default=None)
 
@@ -38,9 +44,13 @@ class ProsetHandler(RequestHandler):
         if search_tags:
             search_tags = search_tags.lower()
 
-        proclass_id = int(self.get_argument("proclass_id", default=0))
-        if proclass_id == 0:
-            proclass_id = None
+        proclass_id = self.get_argument("proclass_id", default=None)
+        try:
+            proclass_id = int(proclass_id)
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem class ID"))
+        except TypeError:
+            pass
 
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.acct.is_kernel():
@@ -242,6 +252,14 @@ class ProsetHandler(RequestHandler):
                 return
 
             _, acct_states = await RateService.inst.map_rate_acct(self.acct)
+            err, prolist = await ProService.inst.list_pro(
+                self.acct.is_kernel()
+                and ProConst.PRO_STATUS_KERNEL_USER
+                or ProConst.PRO_STATUS_NORMAL_USER
+            )
+            if err:
+                return self.error(err)
+            pro_exists = {pro.pro_id for pro in prolist}
             for i in range(len(proclass_list)):
                 proclass_list[i] = dict(proclass_list[i])
                 proclass = proclass_list[i]
@@ -252,12 +270,16 @@ class ProsetHandler(RequestHandler):
                 if proclass["acct_id"]:
                     proclass["creator_name"] = accts[proclass["acct_id"]]
 
+                total_cnt = len(p["list"])
                 for pro_id in p["list"]:
+                    if pro_id not in pro_exists:
+                        total_cnt -= 1
+                        continue
                     if pro_id in acct_states:
                         ac_cnt += acct_states[pro_id]["state"] == ChalConst.STATE_AC
 
                 proclass["ac_cnt"] = ac_cnt
-                proclass["total_cnt"] = len(p["list"])
+                proclass["total_cnt"] = total_cnt
 
             self.error(("S", proclass_list))
 
@@ -265,7 +287,10 @@ class ProsetHandler(RequestHandler):
             if self.acct.is_guest():
                 return self.error(("Eacces", "Please login"))
 
-            proclass_id = int(self.get_argument("proclass_id"))
+            try:
+                proclass_id = int(self.get_argument("proclass_id"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid problem class ID"))
 
             if proclass_id in self.acct.proclass_collection:
                 return self.error(("Eexist", "Problem class is already collected"))
@@ -279,7 +304,10 @@ class ProsetHandler(RequestHandler):
             if self.acct.is_guest():
                 return self.error(("Eacces", "Please login"))
 
-            proclass_id = int(self.get_argument("proclass_id"))
+            try:
+                proclass_id = int(self.get_argument("proclass_id"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid problem class ID"))
 
             if proclass_id not in self.acct.proclass_collection:
                 return self.error(("Enoext", "Problem class is not in your collection"))
@@ -292,25 +320,47 @@ class ProsetHandler(RequestHandler):
 
 class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
     @reqenv
-    async def get(self, pro_id: int, path: str):
-        pro_id = int(pro_id)
+    async def get(self, pro_id: int = None, path: str = None):
+        if path is None:
+            return self.error(("Eparam", "Path is required"))
+
+        try:
+            pro_id = int(pro_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid problem ID"))
+
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.contest:
             if not self.contest.is_pro(pro_id):
-                return self.error(("Enoext", "Problem not in contest"))
+                self.set_status(404)
+                self.finish("Problem not in contest")
+                return
+
+            if not self.contest.is_member(self.acct):
+                self.set_status(403)
+                self.finish(PERMISSION_DENIED_ERROR[1])
+                return
+
+            if not self.contest.is_admin(self.acct) and not self.contest.is_running():
+                self.set_status(403)
+                self.finish(PERMISSION_DENIED_ERROR[1])
+                return
 
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
         else:
             if self.acct.is_kernel():
                 allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
-        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
+        err, _ = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
-            return self.error(err)
-
-        if pro.status == ProConst.STATUS_CONTEST:
-            if not (self.contest.is_running() or self.contest.is_admin(self.acct)):
-                return self.error(PERMISSION_DENIED_ERROR)
+            if err[0] == "Enoext":
+                self.set_status(404)
+            elif err[0] == "Eacces":
+                self.set_status(403)
+            else:
+                self.set_status(500)
+            self.finish(err[1])
+            return
 
         if path.endswith("pdf"):
             self.set_header("Pragma", "public")
@@ -329,7 +379,9 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
                 self.set_header("Content-Disposition", "inline")
 
         if not self._is_file_access_safe(f"problem/{pro_id}/http/", path):
-            return self.error(PERMISSION_DENIED_ERROR)
+            self.set_status(403)
+            self.finish(PERMISSION_DENIED_ERROR[1])
+            return
 
         await super().get(f"{pro_id}/http/{path}")
 
@@ -349,20 +401,21 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
 
 class ProHandler(RequestHandler):
     @reqenv
-    async def get(self, pro_id):
-        pro_id = int(pro_id)
+    async def get(self, pro_id: int = None):
+        try:
+            pro_id = int(pro_id)
+        except (ValueError, TypeError):
+            return self.error(("Eparam", "Invalid problem ID"))
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
 
         if self.contest:
             if not self.contest.is_pro(pro_id):
                 return self.error(("Enoext", "Problem not in contest"))
 
-            if not self.contest.is_start() and not self.contest.is_admin(self.acct):
+            if not self.contest.is_member(self.acct):
                 return self.error(PERMISSION_DENIED_ERROR)
 
-            elif not self.contest.is_running() and not self.contest.is_member(
-                self.acct
-            ):
+            if not self.contest.is_admin(self.acct) and not self.contest.is_running():
                 return self.error(PERMISSION_DENIED_ERROR)
 
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
@@ -430,7 +483,7 @@ class ProTagsHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        await LogService.inst.add_log(
+        await self.add_log(
             (
                 self.acct.name
                 + " updated the tag of problem #"
