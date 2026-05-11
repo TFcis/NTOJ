@@ -605,7 +605,7 @@ class ChalHandler(RequestHandler):
             for testdata_id in pro.config.testdatas.keys():
                 testdata_to_subtasks[testdata_id].append(subtask_config.subtask_id)
 
-        await self.render("chal", pro=pro, chal=chal, rechal=rechal, testdata_to_subtasks=testdata_to_subtasks)
+        await self.render("chal", pro=pro, chal=chal, contest=contest, rechal=rechal, testdata_to_subtasks=testdata_to_subtasks)
         return
 
     @reqenv
