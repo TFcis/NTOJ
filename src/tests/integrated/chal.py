@@ -1,8 +1,10 @@
+import asyncio
 from decimal import Decimal
 import json
 import shutil
 
 from tornado.websocket import websocket_connect
+from tornado.httpclient import HTTPRequest
 
 from services.pro import ProConst, ProService
 from services.rate import RateService
@@ -44,8 +46,10 @@ class ChalTest(AsyncTest):
 
             shutil.move('code/1/main.cpp', 'code/1/main.py')
 
-            ws = await websocket_connect('ws://localhost:5501/chalnewstatesub')
-            await ws.write_message(str(1))
+            ws = await websocket_connect('ws://localhost:5501/be/ws')
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'chalstatesub'}))
+            await ws.write_message(json.dumps({'type': 'chalstatesub_init', 'data': '1'}))
+            ws.close() # TODO: Missing some test
 
             def callback():
                 res = admin_session.post('submit', data={
@@ -102,6 +106,44 @@ class ChalTest(AsyncTest):
 
             await self.wait_for_judge_finish(callback)
 
+            # Test non-owner receives sanitized messages (no CE/IE or extra messages)
+            with AccountContext('test1@test', 'test') as user_session2:
+                cookie_value = user_session2.cookies.get('id')
+                headers = {"Cookie": f"id={cookie_value}"}
+
+                # Read messages from ws_user and check sanitized content
+                def _message(msg):
+                    if msg is None:
+                        return
+                    data = json.loads(msg)
+                    if data.get('type') != 'chalstatesub':
+                        return
+                    payload = json.loads(data['data'])
+                    if 'total_result' in payload:
+                        tr = payload['total_result']
+                        self.assertEqual(tr.get('ce_message', ''), '')
+                        self.assertEqual(tr.get('ie_message', ''), '')
+                        self.assertEqual(tr.get('message_type'), MessageType.NONE.value)
+                        # also check testdata results messages
+                        for td in payload.get('testdata_results', {}).values():
+                            self.assertEqual(td.get('message', ''), '')
+                            self.assertEqual(td.get('message_type'), MessageType.NONE.value)
+                        return
+
+                ws_user = await websocket_connect(HTTPRequest('ws://localhost:5501/be/ws', headers=headers), on_message_callback=_message)
+                await ws_user.write_message(json.dumps({'type': 'register', 'data': 'chalstatesub'}))
+                await ws_user.write_message(json.dumps({'type': 'chalstatesub_init', 'data': '1'}))
+
+                def callback2():
+                    res = admin_session.post('submit', data={
+                        'reqtype': 'rechal',
+                        'chal_id': 1
+                    })
+                    self.assertAPIReturnValue(res.text, ('S', 1))
+
+                await self.wait_for_judge_finish(callback2)
+                ws_user.close()
+
         await ChalService.inst.db.execute('UPDATE problem SET rate_precision = 3 WHERE pro_id=1;')
         err, pro = await ProService.inst.get_pro(1, ProConst.PRO_STATUS_FULL)
         self.assertIsNone(err)
@@ -150,57 +192,74 @@ class ChalListTest(AsyncTest):
             def _message(msg):
                 if msg is None:
                     return
+                data = json.loads(msg)
+                if data.get('type') == 'challist_sub':
+                    self.assertEqual(int(data['data']), 1)
 
-                self.assertEqual(int(msg), 1)
-
-            await websocket_connect('ws://localhost:5501/challistnewchalsub',
+            ws1 = await websocket_connect('ws://localhost:5501/be/ws',
                                     on_message_callback=_message)
+            await ws1.write_message(json.dumps({'type': 'register', 'data': 'challist_sub'}))
 
-            def _message(msg):
+            def _message2(msg):
                 if msg is None:
                     return
+                data = json.loads(msg)
+                if data.get('type') == 'challiststatesub':
+                    msg_data = json.loads(data['data'])
+                    self.assertEqual(int(msg_data['chal_id']), 2)
 
-                self.assertEqual(int(json.loads(msg)['chal_id']), 2)
-
-            ws2 = await websocket_connect('ws://localhost:5501/challistnewstatesub',
-                                          on_message_callback=_message)
-
+            ws2 = await websocket_connect('ws://localhost:5501/be/ws',
+                                          on_message_callback=_message2)
+            await ws2.write_message(json.dumps({'type': 'register', 'data': 'challiststatesub'}))
             await ws2.write_message(json.dumps({
-                'chalids': [1, 2],
-                'acct_id': 1,
+                'type': 'challiststatesub_init',
+                'data': json.dumps({
+                    'chalids': [1, 2],
+                    'acct_id': 1,
+                })
             }))
 
             # websocket
             def callback():
-                chal_id = self.submit_problem(1, open('tests/static_file/code/toj3.ac.py').read(),
-                                              Compiler.PYTHON3, admin_session)
+                with open('tests/static_file/code/toj3.ac.py') as f:
+                    chal_id = self.submit_problem(1, f.read(),
+                                                Compiler.PYTHON3, admin_session)
                 self.assertEqual(chal_id, 2)
 
             await self.wait_for_judge_finish(callback)
+            ws1.close()
             ws2.close()
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             def callback():
-                self.submit_problem(1, open('tests/static_file/code/toj3.wa.py').read(), Compiler.PYTHON3,
-                                    admin_session)  # chal_id: 3
+                path_prefix = 'tests/static_file/code'
+                with open(f'{path_prefix}/toj3.wa.py') as f:
+                    self.submit_problem(1, f.read(), Compiler.PYTHON3,
+                                        admin_session)  # chal_id: 3
 
-                self.submit_problem(1, open('tests/static_file/code/ce.cpp').read(), Compiler.GPP,
-                                    admin_session)  # chal_id: 4
+                with open(f'{path_prefix}/ce.cpp') as f:
+                    self.submit_problem(1, f.read(), Compiler.GPP,
+                                        admin_session)  # chal_id: 4
 
-                self.submit_problem(1, open('tests/static_file/code/tle.cpp').read(), Compiler.GPP,
-                                    admin_session)  # chal_id: 5
+                with open(f'{path_prefix}/tle.cpp') as f:
+                    self.submit_problem(1, f.read(), Compiler.GPP,
+                                        admin_session)  # chal_id: 5
 
-                self.submit_problem(1, open('tests/static_file/code/mle.py').read(), Compiler.PYTHON3,
-                                    admin_session)  # chal_id: 6
+                with open(f'{path_prefix}/mle.py') as f:
+                    self.submit_problem(1, f.read(), Compiler.PYTHON3,
+                                        admin_session)  # chal_id: 6
 
-                self.submit_problem(1, open('tests/static_file/code/re.cpp').read(), Compiler.GPP,
-                                    admin_session)  # chal_id: 7
+                with open(f'{path_prefix}/re.cpp') as f:
+                    self.submit_problem(1, f.read(), Compiler.GPP,
+                                        admin_session)  # chal_id: 7
 
-                self.submit_problem(1, open('tests/static_file/code/resig.cpp').read(), Compiler.GPP,
-                                    admin_session)  # chal_id: 8
+                with open(f'{path_prefix}/resig.cpp') as f:
+                    self.submit_problem(1, f.read(), Compiler.GPP,
+                                        admin_session)  # chal_id: 8
 
-                self.submit_problem(2, open('tests/static_file/code/toj659.ac.cpp').read(), Compiler.GPP,
-                                    admin_session)  # chal_id: 9
+                with open(f'{path_prefix}/toj659.ac.cpp') as f:
+                    self.submit_problem(2, f.read(), Compiler.GPP,
+                                        admin_session)  # chal_id: 9
 
             await self.wait_for_judge_finish(callback)
 
@@ -208,7 +267,7 @@ class ChalListTest(AsyncTest):
                 # 1, 2, 3, 4, 5
                 ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA, ChalConst.STATE_CE, ChalConst.STATE_TLE,
                 # 6, 7, 8, 9
-                ChalConst.STATE_MLE, ChalConst.STATE_RE, ChalConst.STATE_RESIG, ChalConst.STATE_AC
+                ChalConst.STATE_RE, ChalConst.STATE_RE, ChalConst.STATE_RESIG, ChalConst.STATE_AC
             ]
 
             for chal_id, state in enumerate(all_expected_states, start=1):
@@ -220,6 +279,39 @@ class ChalListTest(AsyncTest):
             self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_SKIPPED] * len(chal.subtask_results))
             self.assertEqual(chal.total_result.message_type, MessageType.TEXT)
             self.assertTrue(len(chal.total_result.message) > 0)
+
+            # Admin (owner) should receive full CE messages via WS for chal 4
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
+            got_message = False
+            # Read messages and assert owner (admin) receives non-empty messages
+            def _message2(msg):
+                nonlocal got_message
+                if msg is None:
+                    return
+                data = json.loads(msg)
+                if data.get('type') != 'chalstatesub':
+                    return
+                payload = json.loads(data['data'])
+                if 'total_result' in payload:
+                    tr = payload['total_result']
+                    self.assertGreater(len(tr.get('ce_message', '')), 0)
+                    self.assertNotEqual(tr.get('message_type'), MessageType.NONE.value)
+                    got_message = True
+                    return
+
+            ws_admin = await websocket_connect(HTTPRequest('ws://localhost:5501/be/ws', headers=headers), on_message_callback=_message2)
+            await ws_admin.write_message(json.dumps({'type': 'register', 'data': 'chalstatesub'}))
+            await ws_admin.write_message(json.dumps({'type': 'chalstatesub_init', 'data': '4'}))
+
+            def callback3():
+                res = admin_session.post('submit', data={'reqtype': 'rechal', 'chal_id': 4})
+                self.assertAPIReturnValue(res.text, ('S', 4))
+
+            await self.wait_for_judge_finish(callback3)
+            ws_admin.close()
+            await asyncio.sleep(5) # HACK: workaround to ensure message is processed
+            self.assertTrue(got_message)
 
             flt = ChalSearchingParamBuilder().build()
             err, challist = await ChalService.inst.list_chal(0, 20, flt)

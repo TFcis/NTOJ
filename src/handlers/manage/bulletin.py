@@ -1,7 +1,10 @@
-from handlers.base import RequestHandler, reqenv, require_permission
+from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from services.bulletin import BulletinConst, BulletinService
 from services.log import LogService
 from services.user import UserConst
+
+
+bulletin_dispatcher = ActionDispatcher()
 
 
 class ManageBulletinHandler(RequestHandler):
@@ -13,7 +16,10 @@ class ManageBulletinHandler(RequestHandler):
             await self.render('manage/bulletin/bulletin-list', page='bulletin', bulletin_list=bulletin_list)
 
         elif page == "update":
-            bulletin_id = int(self.get_argument('bulletinid'))
+            try:
+                bulletin_id = int(self.get_argument('bulletin_id'))
+            except ValueError:
+                return self.error(('Eparam', 'Invalid bulletin ID'))
             _, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
 
             await self.render('manage/bulletin/update', page='bulletin', bulletin_id=bulletin_id, bulletin=bulletin)
@@ -25,67 +31,93 @@ class ManageBulletinHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self, page=None):
         reqtype = self.get_argument('reqtype')
+        return await bulletin_dispatcher.dispatch(self, reqtype)
 
-        if (page == 'add' and reqtype == 'add') or (page == 'update' and reqtype == 'update'):
-            title = self.get_argument('title')
-            content = self.get_argument('content')
-            pinned = self.get_argument('pinned')
-            if pinned == "false":
-                pinned = False
-            elif pinned == "true":
-                pinned = True
-            else:
-                pinned = False
-            color = self.get_argument('color')
-            if err := self.len_check(title, BulletinConst.TITLE_MIN, BulletinConst.TITLE_MAX, 'Title'):
-                return self.error(err)
+    @bulletin_dispatcher.action('add')
+    async def add_bulletin(self):
+        title = self.get_argument('title')
+        content = self.get_argument('content')
+        pinned = self.get_argument('pinned')
+        if pinned == "false":
+            pinned = False
+        elif pinned == "true":
+            pinned = True
+        else:
+            pinned = False
+        color = self.get_argument('color')
+        if err := self.len_check(title, BulletinConst.TITLE_MIN, BulletinConst.TITLE_MAX, 'Title'):
+            return self.error(err)
 
-            if err := self.len_check(content, BulletinConst.CONTENT_MIN, BulletinConst.CONTENT_MAX, 'Content'):
-                return self.error(err)
+        if err := self.len_check(content, BulletinConst.CONTENT_MIN, BulletinConst.CONTENT_MAX, 'Content'):
+            return self.error(err)
 
-            if reqtype == 'add':
-                err, bulletin_id = await BulletinService.inst.add_bulletin(title, content, self.acct.acct_id, color, pinned)
-                if err:
-                    return self.error(err)
+        err, bulletin_id = await BulletinService.inst.add_bulletin(title, content, self.acct.acct_id, color, pinned)
+        if err:
+            return self.error(err)
 
-                await LogService.inst.add_log(
-                    f"{self.acct.name} added a line on bulletin: \"{title}\".", 'manage.inform.add',
-                    {
-                        "content": content,
-                        "is_pinned": pinned,
-                        "color": color,
-                    }
-                )
-                self.error(('S', bulletin_id))
+        await self.add_log(
+            f"{self.acct.name} added bulletin entry: \"{title}\"", 'manage.inform.add',
+            {
+                "content": content,
+                "is_pinned": pinned,
+                "color": color,
+            }
+        )
+        await self.rs.publish('bulletinsub', 1)
+        self.error(('S', bulletin_id))
 
-            elif reqtype == 'update':
-                bulletin_id = int(self.get_argument('bulletin_id'))
-
-                await LogService.inst.add_log(
-                    f"{self.acct.name} updated a line on bulletin: \"{title}\" which id is #{bulletin_id}.",
-                    'manage.inform.update',
-                    {
-                        "content": content,
-                        "is_pinned": pinned,
-                        "color": color,
-                    }
-                )
-                err, _ = await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct.acct_id, color, pinned)
-                if err:
-                    return self.error(err)
-
-                self.error(('S', ''))
-
-            await self.rs.publish('bulletinsub', 1)
-
-        elif page == 'update' and reqtype == 'remove':
+    @bulletin_dispatcher.action('update')
+    async def update_bulletin(self):
+        try:
             bulletin_id = int(self.get_argument('bulletin_id'))
-            await LogService.inst.add_log(
-                f"{self.acct.name} removed a line on bulletin which id is #{bulletin_id}.", 'manage.inform.remove'
-            )
-            err, _ = await BulletinService.inst.del_bulletin(bulletin_id)
-            if err:
-                return self.error(err)
+        except ValueError:
+            return self.error(('Eparam', 'Invalid bulletin ID'))
 
-            await self.rs.publish('bulletinsub', 1)
-            self.error(('S', ''))
+        title = self.get_argument('title')
+        content = self.get_argument('content')
+        pinned = self.get_argument('pinned')
+        if pinned == "false":
+            pinned = False
+        elif pinned == "true":
+            pinned = True
+        else:
+            pinned = False
+        color = self.get_argument('color')
+        if err := self.len_check(title, BulletinConst.TITLE_MIN, BulletinConst.TITLE_MAX, 'Title'):
+            return self.error(err)
+
+        if err := self.len_check(content, BulletinConst.CONTENT_MIN, BulletinConst.CONTENT_MAX, 'Content'):
+            return self.error(err)
+
+        await self.add_log(
+            f"{self.acct.name} updated bulletin entry #{bulletin_id}: \"{title}\"",
+            'manage.inform.update',
+            {
+                "content": content,
+                "is_pinned": pinned,
+                "color": color,
+            }
+        )
+        err, _ = await BulletinService.inst.edit_bulletin(bulletin_id, title, content, self.acct.acct_id, color, pinned)
+        if err:
+            return self.error(err)
+
+        await self.rs.publish('bulletinsub', 1)
+        self.error(('S', ''))
+
+    @bulletin_dispatcher.action('remove')
+    async def remove_bulletin(self):
+        try:
+            bulletin_id = int(self.get_argument('bulletin_id'))
+        except ValueError:
+            return self.error(('Eparam', 'Invalid bulletin ID'))
+
+        await self.add_log(
+            f"{self.acct.name} removed bulletin entry #{bulletin_id}", 'manage.inform.remove'
+        )
+        err, _ = await BulletinService.inst.del_bulletin(bulletin_id)
+        if err:
+            return self.error(err)
+
+        await self.rs.publish('bulletinsub', 1)
+        self.error(('S', ''))

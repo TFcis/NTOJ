@@ -2,13 +2,13 @@
 	function init() {
         $("button.submit").on('click', function(e) {
             let name = $("#name").val();
-            $.post('/oj/be/contests/manage/add', {
+            $.post(`{{ url('/be/contests/manage/add') }}`, {
                 reqtype: 'add',
                 name: name,
             }, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
-                    index.go(`/oj/contests/${res.data}/manage/general/`);
+                    index.go(`{{ url('/contests/${res.data}/manage/general/') }}`);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }

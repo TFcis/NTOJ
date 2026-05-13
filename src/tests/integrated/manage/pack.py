@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 
 from tornado.websocket import websocket_connect
+from tornado.httpclient import HTTPRequest
 
 from tests.integrated.util import AsyncTest, AccountContext
 
@@ -12,6 +13,9 @@ class ManagePackTest(AsyncTest):
     # TODO: we should test a file larger than 65535 bytes
     async def s(self):
         with AccountContext("admin@test", "testtest") as admin_session:
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
+
             pack_token = self.get_upload_token(admin_session)
 
             file = open("tests/static_file/code/toj3.ac.py", "rb")
@@ -27,7 +31,7 @@ class ManagePackTest(AsyncTest):
                 md5.update(data)
             file.seek(0, 0)
 
-            ws = await websocket_connect("ws://localhost:5501/pack")
+            ws = await websocket_connect(HTTPRequest("ws://localhost:5501/be/pack", headers=headers))
             await ws.write_message(
                 json.dumps(
                     {
@@ -52,12 +56,15 @@ class ManagePackTest(AsyncTest):
                 if msg is None:
                     break
 
+            file.close()
             ws.close()
             self.assertTrue(os.path.exists(f"tmp/{pack_token}"))
             os.remove(f"tmp/{pack_token}")
 
     async def h(self):
         with AccountContext("admin@test", "testtest") as admin_session:
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
             pack_token = self.get_upload_token(admin_session)
 
             file = open("tests/static_file/code/toj3.ac.py", "rb")
@@ -67,7 +74,7 @@ class ManagePackTest(AsyncTest):
             remain = filesize
             md5.update(b'123')
 
-            ws = await websocket_connect("ws://localhost:5501/pack")
+            ws = await websocket_connect(HTTPRequest("ws://localhost:5501/be/pack", headers=headers))
             await ws.write_message(
                 json.dumps(
                     {
@@ -92,11 +99,14 @@ class ManagePackTest(AsyncTest):
                 if msg is None:
                     break
 
+            file.close()
             ws.close()
             self.assertFalse(os.path.exists(f"tmp/{pack_token}"))
 
     async def d(self):
         with AccountContext("admin@test", "testtest") as admin_session:
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
             pack_token = self.get_upload_token(admin_session)
 
             file = open("tests/static_file/code/toj3.ac.py", "rb")
@@ -112,7 +122,7 @@ class ManagePackTest(AsyncTest):
                 md5.update(data)
             file.seek(0, 0)
 
-            ws = await websocket_connect("ws://localhost:5501/pack")
+            ws = await websocket_connect(HTTPRequest("ws://localhost:5501/be/pack", headers=headers))
             await ws.write_message(
                 json.dumps(
                     {
@@ -138,6 +148,7 @@ class ManagePackTest(AsyncTest):
                     break
                 break
 
+            file.close()
             ws.close()
             await asyncio.sleep(1)
             self.assertFalse(os.path.exists(f"tmp/{pack_token}"))

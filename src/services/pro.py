@@ -2,13 +2,14 @@ import enum
 import json
 import os
 import re
-import shutil
+import logging
+import asyncio
 from dataclasses import asdict, dataclass
+from typing import Sequence
 
-import config
 from msgpack import packb, unpackb
 
-from services.pack import PackService
+logger = logging.getLogger("tornado.application")
 
 ErrorType = tuple[tuple[str, str], None]
 
@@ -31,6 +32,12 @@ class SummaryType(enum.IntEnum):
     GROUPMIN = 1
     OVERWRITE = 2
     CUSTOM = 3
+
+class ProType(enum.IntEnum):
+    BATCH = 1
+    COMMUNICATION = 2
+    TWOSTEP = 3
+    OUTPUTONLY = 4
 
 class ProConst:
     """
@@ -81,26 +88,50 @@ class ProConst:
     }
 
     # NOTE: collection for problem status
-    PRO_STATUS_NORMAL_USER = [STATUS_ONLINE]
-    PRO_STATUS_KERNEL_USER = [STATUS_ONLINE, STATUS_HIDDEN]
-    PRO_STATUS_CONTEST_USER = [STATUS_ONLINE, STATUS_CONTEST]
-    PRO_STATUS_FULL = [STATUS_ONLINE, STATUS_CONTEST, STATUS_HIDDEN]
+    PRO_STATUS_NORMAL_USER = (STATUS_ONLINE, )
+    PRO_STATUS_KERNEL_USER = (STATUS_ONLINE, STATUS_HIDDEN)
+    PRO_STATUS_CONTEST_USER = (STATUS_ONLINE, STATUS_CONTEST)
+    PRO_STATUS_FULL = (STATUS_ONLINE, STATUS_CONTEST, STATUS_HIDDEN)
 
-
-
+# TODO: Move this to prospec
 @dataclass(slots=True)
-class Testdata:
+class BaseTestdata:
+    """Base class for all problem type testdata, used for type checking only."""
     testdata_id: int
-    inputfile: str
-    outputfile: str
+    metadata: dict = None
+
+    def __post_init__(self):
+        if self.metadata is None:
+            self.metadata = {}
+
+    def has_tag(self, tag: str) -> bool:
+        """Check if testdata has a specific tag."""
+        return tag in self.metadata.get('tags', [])
+
+    def is_system_test(self) -> bool:
+        """Check if testdata is marked as system test."""
+        return self.has_tag('system-test')
 
 
 @dataclass(slots=True)
 class SubtaskConfig:
     subtask_id: int
-    testdatas: list[Testdata]
+    testdatas: list[BaseTestdata]
     dependency_subtasks: set[int]
     rate: int
+    metadata: dict = None
+
+    def __post_init__(self):
+        if self.metadata is None:
+            self.metadata = {}
+
+    def has_tag(self, tag: str) -> bool:
+        """Check if subtask has a specific tag."""
+        return tag in self.metadata.get('tags', [])
+
+    def is_system_test(self) -> bool:
+        """Check if subtask is marked as system test."""
+        return self.has_tag('system-test')
 
 
 @dataclass(slots=True)
@@ -114,17 +145,17 @@ class Limit:
         assert self.memory >= 0
         assert self.output >= 0
 
+# TODO: Move this to prospec
+@dataclass(slots=True)
+class BaseConfig:
+    """Base class for all problem type configs, used for type checking only."""
+    pass
+
+
 @dataclass(slots=True)
 class ProblemConfig:
     """
-    - has_grader (bool): Whether the problem uses a Makefile-based compilation.
-    See: https://wiki.tfcis.org/TOJ#Makefile%E9%A1%8C%E7%9B%AE_(%E7%B7%A8%E8%AD%AF%E4%BA%92%E5%8B%95%E9%A1%8C)
-
-    - chalmeta (str): For IORedir Problem
-    See: https://wiki.tfcis.org/TOJ#IORedir
-
-    - checker_type (int): One of the values defined in ProConst.CHECKER_TYPE, indicating
-    the type of checker (e.g., diff, float-diff, ioredir).
+    Common problem configuration shared across all problem types.
 
     - limits (dict[str, Limit]): Per-language time and memory limits.
         - Keys are compiler types (e.g., "gcc", "clang", "default").
@@ -138,33 +169,45 @@ class ProblemConfig:
 
     - testdatas (dict[int, Testdata]): Configuration for each testdata. Each key is
     a testdata id.
+
+    - spec_config (BaseConfig): Problem type-specific configuration (BatchConfig, etc.)
     """
-    chalmeta: str
     limits: dict[str, Limit]
-    userprog_compile_args: str
-    checker_type: CheckerType
-    checker_compiler: int | None
-    checker_compile_args: str
-    summary_type: SummaryType
-    summary_compiler: int | None
-    summary_compile_args: str
-    has_grader: bool
-    allow_compilers: set[int]
     subtask_configs: dict[int, SubtaskConfig]
-    testdatas: dict[int, Testdata]
+    testdatas: dict[int, BaseTestdata]
     rate_precision: int
+    spec_config: BaseConfig
 
     def __post_init__(self):
-        assert 'default' in self.limits
-        assert ProConst.RATE_PRECISION_MIN <= self.rate_precision <= ProConst.RATE_PRECISION_MAX
+        # Only validate if limits is populated (allows empty dict during construction)
+        if self.limits:
+            assert 'default' in self.limits
+        if self.rate_precision != 0:  # Allow 0 as placeholder during construction
+            assert ProConst.RATE_PRECISION_MIN <= self.rate_precision <= ProConst.RATE_PRECISION_MAX
 
-    def get_effective_testdatas(self) -> list[Testdata]:
+    def get_effective_testdatas(self) -> list[BaseTestdata]:
         s = set()
         for cfg in self.subtask_configs.values():
             for t in cfg.testdatas:
                 s.add(t.testdata_id)
 
         return [self.testdatas[t_id] for t_id in s]
+
+    def get_pretest_subtasks(self) -> dict[int, SubtaskConfig]:
+        """Get subtasks without system-test tag (for contest pretest)."""
+        return {
+            subtask_id: subtask
+            for subtask_id, subtask in self.subtask_configs.items()
+            if not subtask.is_system_test()
+        }
+
+    def get_system_test_subtasks(self) -> dict[int, SubtaskConfig]:
+        """Get subtasks with system-test tag."""
+        return {
+            subtask_id: subtask
+            for subtask_id, subtask in self.subtask_configs.items()
+            if subtask.is_system_test()
+        }
 
 
 @dataclass(slots=True)
@@ -174,6 +217,7 @@ class Problem:
     status: int
     tags: str
     allow_submit: bool
+    problem_type: int  # ProType enum value
     config: ProblemConfig | None
 
     def __post_init__(self):
@@ -185,14 +229,14 @@ class ProService:
         self.rs = rs
         ProService.inst = self
 
-    async def get_pro(self, pro_id: int, allow_statuses: list[int]) -> tuple[None, Problem] | ErrorType:
-        from services.chal import Compiler
+    async def get_pro(self, pro_id: int, allow_statuses: Sequence[int]) -> tuple[None, Problem] | ErrorType:
+        from services.prospec.batch import batch_spec
         """
         Fetch problem configuration and metadata by ID, ensuring it's in the allowed status.
 
         Args:
             pro_id (int): The ID of the problem to fetch.
-            allow_statuses (list[int]): Allowed problem statuses for access.
+            allow_statuses (Sequence[int]): Allowed problem statuses for access.
 
         Returns:
             Tuple[Optional[Tuple[str, str]], Optional[Problem]]:
@@ -207,10 +251,7 @@ class ProService:
             result = await con.fetch(
                 """
                     SELECT "name", "status", "tags", "allow_submit",
-                    "allow_compilers", "userprog_compile_args",
-                    "checker_type", "checker_compiler", "checker_compile_args",
-                    "summary_type", "summary_compiler", "summary_compile_args",
-                    "has_grader", "chalmeta", "limits", "rate_precision"
+                    "problem_type", "config", "limits", "rate_precision"
                     FROM "problem" WHERE "pro_id" = $1;
                 """,
                 pro_id,
@@ -219,111 +260,95 @@ class ProService:
                 return ("Enoext", "Problem not found"), None
             result = result[0]
 
-            (
-                name,
-                status,
-                tags,
-                allow_submit,
-                allow_compilers,
-                userprog_compile_args,
-                checker_type,
-                checker_compiler,
-                checker_compile_args,
-                summary_type,
-                summary_compiler,
-                summary_compile_args,
-                has_grader,
-                rate_precision,
-                limits,
-                chalmeta,
-            ) = (
-                result["name"],
-                result["status"],
-                result["tags"],
-                result["allow_submit"],
-                result["allow_compilers"],
-                result["userprog_compile_args"],
-                result["checker_type"],
-                result["checker_compiler"],
-                result["checker_compile_args"],
-                result["summary_type"],
-                result["summary_compiler"],
-                result["summary_compile_args"],
-                result["has_grader"],
-                result["rate_precision"],
-                json.loads(result["limits"]),
-                json.loads(result["chalmeta"]),
-            )
+            name = result["name"]
+            status = result["status"]
+            tags = result["tags"]
+            allow_submit = result["allow_submit"]
+            problem_type = result["problem_type"]
+            config_json = json.loads(result["config"])
+            limits = json.loads(result["limits"])
+            rate_precision = result["rate_precision"]
+
             if tags is None:
                 tags = ""
-
-            if checker_compiler:
-                checker_compiler = Compiler(checker_compiler)
-            if summary_compiler:
-                summary_compiler = Compiler(summary_compiler)
 
             if status not in allow_statuses:
                 return ("Eacces", "Permission denied"), None
 
+            # Get testdata with new files structure
             result = await con.fetch(
                 """
-                    SELECT "id", "inputfile", "outputfile"
+                    SELECT "id", "files", "metadata"
                     FROM "testdata" WHERE "pro_id" = $1;
                 """,
                 pro_id,
             )
-            testdatas: dict[int, Testdata] = {}
-            for id, inputfile, outputfile in result:
-                testdatas[id] = Testdata(id, inputfile, outputfile)
+            testdatas: dict[int, BaseTestdata] = {}
+
+            # TODO: Support different problem types, for now only Batch
+            if problem_type == ProType.BATCH:
+                try:
+                    spec = batch_spec
+                    for id, files_json, metadata_json in result:
+                        testdata = spec.parse_testdata_files(id, json.loads(files_json))
+                        testdata.metadata = json.loads(metadata_json) if metadata_json else {}
+                        testdatas[id] = testdata
+                except Exception as e:
+                    logger.error(f"Error parsing testdata for problem {pro_id}: {e}", exc_info=True)
+                    return ("Eunk", "Unknown error"), None
 
             result = await con.fetch(
                 """
-                    SELECT "subtask_id", "rate", "testdatas", "dep_subtasks"
+                    SELECT "subtask_id", "rate", "testdatas", "dep_subtasks", "metadata"
                     FROM "subtask_config" WHERE "pro_id" = $1 ORDER BY "subtask_id" ASC;
                 """,
                 pro_id,
             )
             subtask_configs: dict[int, SubtaskConfig] = {}
-            for subtask_id, rate, testdata_ids, dep_subtasks in result:
+            for subtask_id, rate, testdata_ids, dep_subtasks, metadata_json in result:
                 subtask_configs[subtask_id] = SubtaskConfig(
                     subtask_id,
                     [testdatas[testdata_id] for testdata_id in testdata_ids],
                     set(dep_subtasks),
                     rate,
+                    json.loads(metadata_json) if metadata_json else {},
                 )
 
-        proconfig = ProblemConfig(
-            chalmeta=chalmeta,
-            limits={
-                compiler: Limit(**limit)
-                for compiler, limit in limits.items()
-            },
-            userprog_compile_args=userprog_compile_args,
-            checker_type=checker_type,
-            checker_compiler=checker_compiler,
-            checker_compile_args=checker_compile_args,
-            summary_type=summary_type,
-            summary_compiler=summary_compiler,
-            summary_compile_args=summary_compile_args,
-            subtask_configs=subtask_configs,
-            testdatas=testdatas,
-            rate_precision=rate_precision,
-            has_grader=has_grader,
-            allow_compilers=set(map(Compiler, allow_compilers)),
-        )
+        # Parse config using ProSpec
+        # TODO: Support different problem types, for now only Batch
+        proconfig: ProblemConfig | None = None
+        if problem_type == ProType.BATCH:
+            spec = batch_spec
+            try:
+                spec_config = spec.from_json(config_json)
+            except Exception as e:
+                logger.error(f"Error parsing problem config for problem {pro_id}: {e}", exc_info=True)
+                return ("Eunk", "Unknown error"), None
 
-        return None, Problem(pro_id, name, status, tags, allow_submit, proconfig)
+            # Build common ProblemConfig
+            proconfig = ProblemConfig(
+                limits={
+                    compiler: Limit(**limit)
+                    for compiler, limit in limits.items()
+                },
+                subtask_configs=subtask_configs,
+                testdatas=testdatas,
+                rate_precision=rate_precision,
+                spec_config=spec_config,
+            )
+
+        return None, Problem(pro_id, name, status, tags, allow_submit, problem_type, proconfig)
 
     async def get_pro_config(self, pro_id: int):
         # TODO: get_pro_config
         pass
 
-    async def list_pro(self, allow_pro_statuses: list[int]) -> tuple[None, list[Problem]]:
+    async def list_pro(self, allow_pro_statuses: Sequence[int]) -> tuple[None, list[Problem]] | ErrorType:
         """
         List problems with statuses in `allow_pro_statuses`, with Redis caching.
 
         Args:
-            allow_pro_statuses (list[int]): List of allowed statuses.
+            allow_pro_statuses (Sequence[int]): List of allowed statuses.
 
         Returns:
             Tuple[None, list[dict]]:
@@ -334,25 +359,29 @@ class ProService:
         for status in allow_pro_statuses:
             assert ProConst.STATUS_ONLINE <= status <= ProConst.STATUS_HIDDEN
 
-        field = f"{allow_pro_statuses}"
+        field = str(allow_pro_statuses)
         if (prolist := (await self.rs.hget("prolist", field))) is not None:
             prolist = unpackb(prolist)
             for i in range(len(prolist)):
                 prolist[i] = Problem(**prolist[i], config=None)
 
         else:
-            async with self.db.acquire() as con:
-                result = await con.fetch(
-                    f"""
-                        SELECT p.pro_id, p.name, p.status, p.tags, p.allow_submit
-                        FROM "problem" p
-                        WHERE p."status" IN ({",".join(map(str, allow_pro_statuses))})
-                        ORDER BY pro_id ASC;
-                    """
-                )
+            try:
+                async with self.db.acquire() as con:
+                    result = await con.fetch(
+                        f"""
+                            SELECT p.pro_id, p.name, p.status, p.tags, p.allow_submit, p.problem_type
+                            FROM "problem" p
+                            WHERE p."status" IN ({",".join(map(str, allow_pro_statuses))})
+                            ORDER BY pro_id ASC;
+                        """
+                    )
+            except Exception as e:
+                logger.error(f"Error listing problems with statuses {allow_pro_statuses}: {e}", exc_info=True)
+                return ("Eunk", "Unknown error"), None
 
             prolist = []
-            for pro_id, name, status, tags, allow_submit in result:
+            for pro_id, name, status, tags, allow_submit, problem_type in result:
                 if tags is None:
                     tags = ""
 
@@ -363,6 +392,7 @@ class ProService:
                         "status": status,
                         "tags": tags,
                         "allow_submit": allow_submit,
+                        "problem_type": problem_type,
                     }
                 )
 
@@ -396,32 +426,52 @@ class ProService:
         if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                """
-                    INSERT INTO "problem"
-                    ("name", "status")
-                    VALUES ($1, $2) RETURNING "pro_id";
-                """,
-                name,
-                status,
-            )
-            if len(result) != 1:
-                return ("Eunk", "Unknown error"), None
+        try:
+            async with self.db.acquire() as con:
+                result = await con.fetch(
+                    """
+                        INSERT INTO "problem"
+                        ("name", "status")
+                        VALUES ($1, $2) RETURNING "pro_id";
+                    """,
+                    name,
+                    status,
+                )
+                if len(result) != 1:
+                    return ("Eunk", "Unknown error"), None
 
-            pro_id = int(result[0]["pro_id"])
+                pro_id = int(result[0]["pro_id"])
+                from services.prospec.batch import batch_spec
 
-            os.mkdir(f"problem/{pro_id}")
-            os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-            os.mkdir(f"problem/{pro_id}/res")
-            os.mkdir(f"problem/{pro_id}/http")
-            os.mkdir(f"problem/{pro_id}/res/testdata")
-            os.symlink(
-                os.path.abspath(f"problem/{pro_id}/http"),
-                f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
-            )
+                config_json = batch_spec.to_json(batch_spec.get_default_config())
 
-        await self.rs.delete("prolist")
+                await con.execute(
+                    '''
+                    UPDATE problem SET config = $1
+                    WHERE pro_id = $2;
+                    ''',
+                    json.dumps(config_json),
+                    pro_id,
+                )
+
+                try:
+                    for folder in (f"problem/{pro_id}", f"problem/{pro_id}/res", f"problem/{pro_id}/res/testdata", f"problem/{pro_id}/http"):
+                        os.mkdir(folder)
+                    os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
+                except OSError as e:
+                    # NOTE: rollback database entry if directory creation fails
+                    for folder in (f"problem/{pro_id}/res/testdata", f"problem/{pro_id}/res", f"problem/{pro_id}/http", f"problem/{pro_id}"):
+                        try:
+                            os.rmdir(folder)
+                        except:
+                            pass
+                    logger.error(f"Error creating directories for problem {pro_id}: {e}", exc_info=True)
+                    raise
+            await self.rs.delete("prolist")
+
+        except Exception as e:
+            logger.error(f"Error adding problem '{name}': {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         return None, pro_id
 
@@ -449,28 +499,43 @@ class ProService:
         if pro.tags and not re.match(r"^[a-zA-Z0-9-_, ]+$", pro.tags):
             return ("Etags", "Invalid problem tag"), None
 
-        async with self.db.acquire() as con:
-            result = await con.fetch(
-                """
-                    UPDATE "problem"
-                    SET "name" = $1, "status" = $2, "tags" = $3, "allow_submit" = $4
-                    WHERE "pro_id" = $5 RETURNING "pro_id";
-                """,
-                pro.name, pro.status, pro.tags, pro.allow_submit, pro.pro_id
-            )
-            if len(result) != 1:
-                return ("Enoext", "Problem not found"), None
+        try:
+            async with self.db.acquire() as con:
+                async with con.transaction():
+                    result = await con.fetch(
+                        """
+                            UPDATE "problem"
+                            SET "name" = $1, "status" = $2, "tags" = $3, "allow_submit" = $4
+                            WHERE "pro_id" = $5 RETURNING "pro_id";
+                        """,
+                        pro.name, pro.status, pro.tags, pro.allow_submit, pro.pro_id
+                    )
+                    if len(result) != 1:
+                        return ("Enoext", "Problem not found"), None
+
+                    if pro.status == ProConst.STATUS_HIDDEN:
+                        res = await con.fetch('DELETE FROM contest_problem_joints WHERE pro_id = $1 RETURNING contest_id;', pro.pro_id)
+                        async with self.rs.pipeline() as pipe:
+                            for r in res:
+                                contest_id = r['contest_id']
+                                await pipe.hdel(f"contest_{contest_id}_scores", str(pro.pro_id))
+                                await pipe.hdel("contest", str(contest_id))
+                            await pipe.execute()
+        except Exception as e:
+            logger.error(f"Error updating problem {pro.pro_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         await self.rs.delete("prolist")
 
         return None, None
 
-    async def update_pro_config(self, pro_id: int, config: ProblemConfig):
+    async def update_pro_config(self, pro_id: int, problem_type: ProType, config: ProblemConfig):
         """
-        Update the test configuration (testm_conf) for a given problem.
+        Update the test configuration for a given problem.
 
         Args:
             pro_id (int): The ID of the problem to update.
+            problem_type (ProType): The type of the problem.
             config (ProblemConfig): The problem configuration.
 
         Returns:
@@ -481,232 +546,141 @@ class ProService:
             the `NotStart` state, due to test configuration changes.
             - Related Redis cache (`rate`, `pro_rate`) will be invalidated.
         """
+        from services.prospec.batch import batch_spec
+        from services.rate import RateService
 
         insert_subtask_config_values = []
         insert_testdatas_values = []
         for subtask_id, subtask_config in config.subtask_configs.items():
             rate = subtask_config.rate
+            metadata_json = json.dumps(subtask_config.metadata if subtask_config.metadata else {})
             insert_subtask_config_values.append(
                 (
                     pro_id, subtask_id, rate,
-                    [testdata.testdata_id for testdata in subtask_config.testdatas], subtask_config.dependency_subtasks
+                    [testdata.testdata_id for testdata in subtask_config.testdatas],
+                    subtask_config.dependency_subtasks,
+                    metadata_json
                 )
             )
 
-        for testdata in config.testdatas.values():
-            insert_testdatas_values.append(
-                (pro_id, testdata.testdata_id, testdata.inputfile, testdata.outputfile)
-            )
+        # TODO: Support different problem types, for now only Batch
+        if problem_type == ProType.BATCH:
+            spec = batch_spec
+            for testdata in config.testdatas.values():
+                files_json = spec.build_testdata_files(testdata)
+                metadata_json = json.dumps(testdata.metadata if testdata.metadata else {})
+                insert_testdatas_values.append(
+                    (pro_id, testdata.testdata_id, json.dumps(files_json), metadata_json)
+                )
 
-        async with self.db.acquire() as con:
-            await con.execute(
-                'DELETE FROM "subtask_config" WHERE "pro_id" = $1;', int(pro_id)
-            )
-            await con.execute(
-                'DELETE FROM "testdata" WHERE "pro_id" = $1;', int(pro_id)
-            )
-            await con.execute(
-                '''
-                UPDATE problem SET allow_compilers = $1, has_grader = $2, chalmeta = $3,
-                limits = $4, rate_precision = $5, userprog_compile_args = $6,
-                checker_type = $7, checker_compiler = $8, checker_compile_args = $9,
-                summary_type = $10, summary_compiler = $11, summary_compile_args = $12
-                WHERE pro_id = $13;
-                ''',
-                config.allow_compilers,
-                config.has_grader,
-                json.dumps(config.chalmeta),
-                json.dumps({
-                    comp: asdict(limit)
-                    for comp, limit in config.limits.items()
-                }),
-                config.rate_precision,
-                config.userprog_compile_args,
-                config.checker_type, config.checker_compiler, config.checker_compile_args,
-                config.summary_type, config.summary_compiler, config.summary_compile_args,
-                pro_id,
-            )
+        try:
+            async with self.db.acquire() as con:
+                async with con.transaction():
+                    await con.execute(
+                        'DELETE FROM "subtask_config" WHERE "pro_id" = $1;', int(pro_id)
+                    )
+                    await con.execute(
+                        'DELETE FROM "testdata" WHERE "pro_id" = $1;', int(pro_id)
+                    )
 
-            await con.executemany(
-                """INSERT INTO "subtask_config"
-                    ("pro_id", "subtask_id", "rate", "testdatas", "dep_subtasks")
-                    VALUES ($1, $2, $3, $4, $5);""",
-                insert_subtask_config_values,
-            )
+                    # Update problem config using ProSpec
+                    # TODO: Support different problem types, for now only Batch
+                    if problem_type == ProType.BATCH:
+                        from services.prospec.batch import BatchConfig
+                        spec = batch_spec
+                        # Type assertion: we know spec_config is BatchConfig for BATCH type
+                        assert isinstance(config.spec_config, BatchConfig)
+                        config_json = spec.to_json(config.spec_config)
 
-            await con.executemany(
-                """
-                    INSERT INTO "testdata" ("pro_id", "id", "inputfile", "outputfile")
-                    VALUES ($1, $2, $3, $4);
-                """,
-                insert_testdatas_values,
-            )
+                        await con.execute(
+                            '''
+                            UPDATE problem SET config = $1, limits = $2, rate_precision = $3
+                            WHERE pro_id = $4;
+                            ''',
+                            json.dumps(config_json),
+                            json.dumps({
+                                comp: asdict(limit)
+                                for comp, limit in config.limits.items()
+                            }),
+                            config.rate_precision,
+                            pro_id,
+                        )
 
-            res = await con.fetch("SELECT chal_id FROM challenge WHERE pro_id=$1;", pro_id)
+                    await con.executemany(
+                        """INSERT INTO "subtask_config"
+                            ("pro_id", "subtask_id", "rate", "testdatas", "dep_subtasks", "metadata")
+                            VALUES ($1, $2, $3, $4, $5, $6);""",
+                        insert_subtask_config_values,
+                    )
 
-            insert_testdata_values = []
-            for testdata_id in config.testdatas:
-                for chal_id in res:
-                    insert_testdata_values.append((chal_id['chal_id'], pro_id, testdata_id))
+                    await con.executemany(
+                        """
+                            INSERT INTO "testdata" ("pro_id", "id", "files", "metadata")
+                            VALUES ($1, $2, $3, $4);
+                        """,
+                        insert_testdatas_values,
+                    )
 
-            insert_subtask_values = []
-            for subtask_id in config.subtask_configs:
-                for chal_id in res:
-                    insert_subtask_values.append((chal_id['chal_id'], pro_id, subtask_id))
+                    res = await con.fetch("SELECT chal_id FROM challenge WHERE pro_id=$1;", pro_id)
 
-            for chal_id in res:
-                await con.execute('UPDATE total_result SET state=DEFAULT, time=DEFAULT, memory=DEFAULT, rate=DEFAULT WHERE chal_id=$1;',
-                                  chal_id['chal_id'])
+                    insert_testdata_values = []
+                    for testdata_id in config.testdatas:
+                        for chal_id in res:
+                            insert_testdata_values.append((chal_id['chal_id'], pro_id, testdata_id))
 
-            await con.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id) VALUES ($1, $2, $3);', insert_subtask_values)
-            await con.executemany('INSERT INTO testdata_result (chal_id, pro_id, id) VALUES ($1, $2, $3);', insert_testdata_values)
+                    insert_subtask_values = []
+                    for subtask_id in config.subtask_configs:
+                        for chal_id in res:
+                            insert_subtask_values.append((chal_id['chal_id'], pro_id, subtask_id))
 
-            # NOTE: Remove cache
-            res = await con.fetch("SELECT contest_id FROM contest_problem_joints WHERE pro_id = $1;", pro_id)
-            for r in res:
-                contest_id = r['contest_id']
+                    for chal_id in res:
+                        await con.execute('UPDATE total_result SET state=DEFAULT, time=DEFAULT, memory=DEFAULT, rate=DEFAULT WHERE chal_id=$1;',
+                                        chal_id['chal_id'])
 
-                key2 = f"pro_id_{pro_id}_contest_id_{contest_id}"
-                await self.rs.hdel("pro_rate", key2)
-            await self.rs.delete("rate")
-            await self.rs.hdel("pro_topcoder", str(pro_id))
+                    await con.executemany('INSERT INTO subtask_result (chal_id, pro_id, subtask_id) VALUES ($1, $2, $3);', insert_subtask_values)
+                    await con.executemany('INSERT INTO testdata_result (chal_id, pro_id, id) VALUES ($1, $2, $3);', insert_testdata_values)
+
+                    # NOTE: Remove cache
+                    res = await con.fetch("SELECT contest_id FROM contest_problem_joints WHERE pro_id = $1;", pro_id)
+                    refresh_tasks = []
+                    for r in res:
+                        contest_id = r['contest_id']
+                        task = RateService.inst.refresh_pro_ac_rate(pro_id, contest_id)
+                        refresh_tasks.append(task)
+
+                    await RateService.inst.refresh_acct_rate(all_account=True)
+                    await RateService.inst.refresh_pro_topcoder(pro_id)
+                    await asyncio.gather(*refresh_tasks)
+        except Exception as e:
+            logger.error(f"Error updating problem config for problem {pro_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         return None, None
 
-    async def unpack_pro(self, pro_id: int, pack_token: str):
+    async def unpack_pro(self, pro_id: int, pack_token: str, problem_type: ProType = ProType.BATCH):
         """
-        Unpack and apply a packed problem archive.
-        If failed, this function will call PackService.inst.clear() to clear tmp file and clear problem/{pro_id}.
+        Unpack and apply a packed problem archive by delegating to ProSpec.
 
         Args:
             pro_id (int): The ID of the problem to unpack into.
             pack_token (str): Token for identifying the uploaded archive.
+            problem_type (ProType): Type of the problem (default: BATCH).
 
         Returns:
             Tuple[Optional[Tuple[str, str]], None]:
                 - Error code and message if unpacking or config fails.
                 - None if successful.
         """
+        from services.prospec.batch import batch_spec
 
-        from services.chal import Compiler, ChalConst
+        # TODO: Support different problem types
+        if problem_type == ProType.BATCH:
+            spec = batch_spec
+        else:
+            return ('Enotsupport', 'Problem type not yet supported'), None
 
-        failed = True
-        try:
-            err, _ = await PackService.inst.unpack(pack_token, f"problem/{pro_id}", True)
-            if err:
-                return err, None
-
-            try:
-                os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
-                os.symlink(
-                    os.path.abspath(f"problem/{pro_id}/http"),
-                    f"{config.WEB_PROBLEM_STATIC_FILE_DIRECTORY}/{pro_id}",
-                )
-
-            except FileExistsError:
-                pass
-
-            try:
-                with open(f"problem/{pro_id}/conf.json") as conf_f:
-                    conf = json.load(conf_f)
-            except json.decoder.JSONDecodeError:
-                return ("Econf", "Problem config json syntax error"), None
-
-            has_grader = False
-            if "compile" in conf:
-                has_grader = conf["compile"] == "makefile"
-            elif "has_grader" in conf:
-                has_grader = conf["has_grader"]
-
-            if "limit" in conf:
-                limits = {}
-                for compiler_type, conf_limit in conf["limit"].items():
-                    if compiler_type in ChalConst.OLD_STR_2_COMPILER:
-                        compiler_type = ChalConst.OLD_STR_2_COMPILER[compiler_type]
-                    elif compiler_type != "default":
-                        continue
-
-                    limit = Limit(0, 0, 0)
-                    if "timelimit" in conf_limit and "memlimit" in conf_limit:
-                        try:
-                            limit.time = max(int(conf_limit["timelimit"]), 0)
-                            limit.memory = max(int(conf_limit["memlimit"]), 0)
-                            limit.output = 65536
-                        except ValueError:
-                            continue
-
-                    elif "time" in conf_limit and "memory" in conf_limit and "output" in conf_limit:
-                        try:
-                            limit.time = max(int(conf_limit["time"]), 0)
-                            limit.memory = max(int(conf_limit["memory"]), 0)
-                            limit.output = max(int(conf_limit["output"]), 0)
-                        except ValueError:
-                            continue
-                    else:
-                        continue
-
-                    limits[compiler_type] = limit
-
-                if "default" not in limits:
-                    return ("Econf", "Problem limit config require default value"), None
-
-            elif "timelimit" in conf and "memlimit" in conf:
-                try:
-                    limits = {
-                        "default": Limit(int(conf["timelimit"]), int(conf["memlimit"]), 65536)
-                    }
-                except ValueError:
-                    return ("Econf", "Problem limit config have invalid value"), None
-            else:
-                return (
-                    "Econf",
-                    "Problem config require limit or timelimit/memlimit",
-                ), None
-
-            chalmeta = conf["metadata"]  # INFO: ioredir data
-
-            subtask_configs: dict[int, SubtaskConfig] = {}
-            testdatas: dict[int, Testdata] = {}
-            testdata_name_2_id: dict[str, int] = {}
-            testdata_id_counter = 0
-            for test_idx, test_conf in enumerate(conf["test"]):
-                for t in test_conf["data"]:
-                    if t not in testdata_name_2_id:
-                        t = os.path.basename(str(t))
-                        testdata_name_2_id[t] = testdata_id_counter
-                        testdatas[testdata_id_counter] = Testdata(testdata_id_counter, f"{t}.in", f"{t}.out")
-                        testdata_id_counter += 1
-
-                subtask_configs[test_idx] = SubtaskConfig(test_idx, [], set(), int(test_conf["weight"]))
-
-
-            for test_idx, test_conf in enumerate(conf["test"]):
-                for t in test_conf["data"]:
-                    t = os.path.basename(str(t))
-                    subtask_configs[test_idx].testdatas.append(testdatas[testdata_name_2_id[t]])
-
-
-            if has_grader:
-                allow_compilers = {Compiler.CLANGPP, Compiler.GPP}
-            else:
-                allow_compilers = {v for v in Compiler}
-            checker_type = ProConst.OLD_STR_2_CHECKER_TYPE[conf["check"]]
-            proconfig = ProblemConfig(chalmeta, limits, "",
-                                      checker_type, Compiler.GPP, "",
-                                      SummaryType.GROUPMIN, Compiler.GPP, "",
-                                      has_grader, allow_compilers, subtask_configs, testdatas, rate_precision=0)
-            failed = False
-
-        finally:
-            # NOTE: Like golang defer
-            if failed and os.path.exists(f"problem/{pro_id}"):
-                shutil.rmtree(f"problem/{pro_id}")
-            await PackService.inst.clear(pack_token)
-
-        await self.update_pro_config(pro_id, proconfig)
-        await self.rs.delete("prolist")
-
-        return None, None
+        # Delegate to ProSpec implementation
+        return await spec.unpack_pro(self.db, self.rs, pro_id, pack_token)
 
 
 class ProClassConst:
@@ -726,57 +700,77 @@ class ProClassService:
         ProClassService.inst = self
 
     async def get_proclass(self, proclass_id: int):
-        async with self.db.acquire() as con:
-            res = await con.fetch(
-                'SELECT "proclass_id", "name", "desc", "list", "acct_id", "type" FROM "proclass" WHERE "proclass_id" = $1;',
-                int(proclass_id),
-            )
+        try:
+            async with self.db.acquire() as con:
+                res = await con.fetch(
+                    'SELECT "proclass_id", "name", "desc", "list", "acct_id", "type" FROM "proclass" WHERE "proclass_id" = $1;',
+                    int(proclass_id),
+                )
 
-            if len(res) != 1:
-                return ("Enoext", "Problem class not found"), None
-            res = res[0]
+                if len(res) != 1:
+                    return ("Enoext", "Problem class not found"), None
+                res = res[0]
+        except Exception as e:
+            logger.error(f"Error fetching problem class {proclass_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         return None, res
 
     async def get_proclass_list(self):
-        async with self.db.acquire() as con:
-            res = await con.fetch('SELECT "proclass_id", "name", "acct_id", "type" FROM "proclass" ORDER BY "proclass_id" ASC;')
+        try:
+            async with self.db.acquire() as con:
+                res = await con.fetch('SELECT "proclass_id", "name", "acct_id", "type" FROM "proclass" ORDER BY "proclass_id" ASC;')
+        except Exception as e:
+            logger.error(f"Error fetching problem class list: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         return None, res
 
     async def add_proclass(self, name: str, p_list: list[int], desc: str, acct_id: int, proclass_type: int):
-        async with self.db.acquire() as con:
-            res = await con.fetchrow(
-                """
-                    INSERT INTO "proclass" ("name", "list", "desc", "acct_id", "type")
-                    VALUES ($1, $2, $3, $4, $5) RETURNING "proclass_id";
-                """,
-                name,
-                p_list,
-                desc,
-                acct_id,
-                proclass_type,
-            )
+        try:
+            async with self.db.acquire() as con:
+                res = await con.fetchrow(
+                    """
+                        INSERT INTO "proclass" ("name", "list", "desc", "acct_id", "type")
+                        VALUES ($1, $2, $3, $4, $5) RETURNING "proclass_id";
+                    """,
+                    name,
+                    p_list,
+                    desc,
+                    acct_id,
+                    proclass_type,
+                )
+        except Exception as e:
+            logger.error(f"Error adding problem class '{name}': {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
         return None, res[0]
 
     async def remove_proclass(self, proclass_id: int):
-        async with self.db.acquire() as con:
-            result: str = await con.execute(
-                'DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id)
-            )
-            affected_row_cnt = int(result.split(" ")[1])  # NOTE: DELETE \d+
-            if affected_row_cnt == 0:
-                return ("Enoext", "Bulletin not found"), None
+        try:
+            async with self.db.acquire() as con:
+                result: str = await con.execute(
+                    'DELETE FROM "proclass" WHERE "proclass_id" = $1', int(proclass_id)
+                )
+                affected_row_cnt = int(result.split(" ")[1])  # NOTE: DELETE \d+
+                if affected_row_cnt == 0:
+                    return ("Enoext", "Bulletin not found"), None
+        except Exception as e:
+            logger.error(f"Error removing problem class {proclass_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
     async def update_proclass(self, proclass_id, name, p_list, desc, proclass_type):
         proclass_id = int(proclass_id)
-        async with self.db.acquire() as con:
-            await con.execute(
-                'UPDATE "proclass" SET "name" = $1, "list" = $2, "desc" = $3, "type" = $4 WHERE "proclass_id" = $5',
-                name,
-                p_list,
-                desc,
-                proclass_type,
-                proclass_id,
-            )
+        try:
+            async with self.db.acquire() as con:
+                await con.execute(
+                    'UPDATE "proclass" SET "name" = $1, "list" = $2, "desc" = $3, "type" = $4 WHERE "proclass_id" = $5',
+                    name,
+                    p_list,
+                    desc,
+                    proclass_type,
+                    proclass_id,
+                )
+        except Exception as e:
+            logger.error(f"Error updating problem class {proclass_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None

@@ -103,28 +103,30 @@ logging.basicConfig(level=args.loglevel, format='%(asctime)s %(levelname)s %(mes
 
 import config
 
-db = asyncio.get_event_loop().run_until_complete(
-    asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host='localhost')
-)
-rs = aioredis.Redis(host='localhost', port=6379, db=1)
-err, acct_id = asyncio.get_event_loop().run_until_complete(sign_up(args.mail, args.password, args.username, db, rs))
+async def main():
+    db = await asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host=config.DBHOST_OJ)
 
-if err == 'Eexist':
-    logging.error("Mail: {args.mail} already existed!!!")
+    rs = aioredis.Redis(host=config.REDIS_HOST, port=6379, db=config.REDIS_DB)
+    err, acct_id = await sign_up(args.mail, args.password, args.username, db, rs)
 
-elif err in ['Emailmin', 'Emailmax']:
-    logging.error("Mail is too long or too short. The range is from 1 to 1024.")
+    if err == 'Eexist':
+        logging.error("Mail: {args.mail} already existed!!!")
 
-elif err in ['Epwmin', 'Epwmax']:
-    logging.error("Password is too long or too short. The range is from 8 to 1024.")
+    elif err in ['Emailmin', 'Emailmax']:
+        logging.error("Mail is too long or too short. The range is from 1 to 1024.")
 
-elif err == 'Epwcomplex':
-    logging.error("Password is too simple. Please use more complex password!!!")
-    logging.error("Password must contain digit and english alphabat")
+    elif err in ['Epwmin', 'Epwmax']:
+        logging.error("Password is too long or too short. The range is from 8 to 1024.")
 
-elif err in ['Enamemin', 'Enamemax']:
-    logging.error("Name is too long or too short. The range is from 1 to 27.")
+    elif err == 'Epwcomplex':
+        logging.error("Password is too simple. Please use more complex password!!!")
+        logging.error("Password must contain digit and english alphabat")
 
-else:
-    logging.info(f"Your admin account id is {acct_id}")
-    logging.info("Add admin account successfully")
+    elif err in ['Enamemin', 'Enamemax']:
+        logging.error("Name is too long or too short. The range is from 1 to 27.")
+
+    else:
+        logging.info(f"Your admin account id is {acct_id}")
+        logging.info("Add admin account successfully")
+
+asyncio.run(main())

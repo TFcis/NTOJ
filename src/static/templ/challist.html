@@ -1,10 +1,9 @@
 {% import config %}
 {% from services.chal import ChalConst, COMPILER_INFOS, Compiler %}
 
-<link rel="stylesheet" type="text/css" href="/oj/challist.css">
+<link rel="stylesheet" type="text/css" href="{{ url('/src/challist.css') }}">
 
 <script type="text/javascript">
-    var newchal_ws, newstate_ws;
     var state_map = {
         {% for state, desc in ChalConst.STATE_LONG_STR.items() %}
             {% raw f"{state}: '{desc}'," %}
@@ -61,6 +60,13 @@
             }
 	    });
 
+        j_filter.find('#yourIDFilter').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            j_filter.find('#acctid').val('{{ user.acct_id }}');
+            index.go(get_goto_filtered_challist_url());
+        });
+
         j_filter.find('button.submit').on('click', function(e) {
             index.go(get_goto_filtered_challist_url());
         });
@@ -73,19 +79,24 @@
             chalsub_count = 0;
 
             {% if contest %}
-                newchal_ws = index.get_ws('contests/{{ contest.contest_id }}/scoreboardsub');
-                newchal_ws.onopen = function(e) {
-                    newchal_ws.send('{{ contest.contest_id }}')
+                // Contest scoreboard uses different channel
+                index.register_ws_callback('contestnewchalsub', function(data) {
+                    chalsub_count += 1;
+                    j_chalsub.find('a').text(chalsub_count + ' new challenges');
+                    j_chalsub.show();
+                });
+                // Send contest_id after registration (for backward compatibility with old handler)
+                if (index.ws && index.ws.readyState === WebSocket.OPEN) {
+                    index.ws_send('contestnewchalsub_init', '{{ contest.contest_id }}');
                 }
             {% else %}
-                newchal_ws = index.get_ws('challistnewchalsub');
+                // Normal challenge list
+                index.register_ws_callback('challist_sub', function(data) {
+                    chalsub_count += 1;
+                    j_chalsub.find('a').text(chalsub_count + ' new challenges');
+                    j_chalsub.show();
+                });
             {% end %}
-
-            newchal_ws.onmessage = function(e) {
-                chalsub_count += 1;
-                j_chalsub.find('a').text(chalsub_count + ' new challenges');
-                j_chalsub.show();
-            };
         })();
 
         (() => {
@@ -100,26 +111,39 @@
                 state_el.innerText = state_map[state];
             };
 
-            newstate_ws = index.get_ws('challistnewstatesub');
+            // Register callback for challenge state updates
+            index.register_ws_callback('challiststatesub', function(data) {
+                update_state(JSON.parse(data));
+            });
 
-            newstate_ws.onopen = (e) => {
+            // Send initial subscription data after WebSocket is ready
+            let send_subscription = () => {
                 let chalids = [
                     {% for chal in challist %}
                         {{ chal.chal_id }},
                     {% end %}
                 ];
-                newstate_ws.send(JSON.stringify({
-                    acct_id: '{{ user.acct_id }}',
+                index.ws_send('challiststatesub_init', JSON.stringify({
                     chalids: chalids,
                 }));
             };
 
-            newstate_ws.onmessage = (e) => {
-                update_state(JSON.parse(e['data']));
-            };
+            // If WebSocket is already open, send immediately
+            if (index.ws && index.ws.readyState === WebSocket.OPEN) {
+                send_subscription();
+            } else {
+                // Otherwise, wait for onopen
+                if (index.ws) {
+                    let original_onopen = index.ws.onopen;
+                    index.ws.onopen = function(e) {
+                        if (original_onopen) original_onopen(e);
+                        send_subscription();
+                    };
+                }
+            }
         })();
 
-        {% if (flt.state == 100 or flt.state == 101) and isadmin %}
+        {% if (flt.state == ChalConst.STATE_NOTSTARTED or flt.state == ChalConst.STATE_JUDGE) and isadmin and challist %}
             let chalids = [
                 {% for chal in challist %}
                     {{ chal.chal_id }},
@@ -131,6 +155,12 @@
                 let url = '/oj/be/submit';
             {% end %}
             $('#rechalall').on('click', function(e) {
+                {% if chal.contest_id == 0 %}
+                    let url = `{{ url('/be/submit') }}`;
+                {% else %}
+                    let url = `{{ url(f'/be/contests/{ chal.contest_id }/submit') }}`;
+                {% end %}
+
                 chalids.forEach(function(chalid) {
                     $.post(url, {
                         'reqtype': 'rechal',
@@ -143,8 +173,15 @@
     }
 
     function destroy() {
-        newchal_ws.close();
-        newstate_ws.close();
+        // Unregister callbacks when leaving page
+        if (index.ws && index.ws.readyState === WebSocket.OPEN) {
+            {% if contest %}
+                index.ws_send('unregister', 'contestnewchalsub');
+            {% else %}
+                index.ws_send('unregister', 'challist_sub');
+            {% end %}
+            index.ws_send('unregister', 'challiststatesub');
+        }
     }
 </script>
 
@@ -163,8 +200,19 @@
         <form id="filter">
             <label class="form-label">過濾器</label>
 
+            {% set your_id_query_params = f'?acctid={ user.acct_id }' %}
+            {% if flt.pro != None %}
+                {% set your_id_query_params = your_id_query_params + f"&proid={ppro_id}" %}
+            {% end %}
+            {% if flt.state != 0 %}
+                {% set your_id_query_params = your_id_query_params + f"&state={flt.state}" %}
+            {% end %}
+            {% if flt.compiler != -1 %}
+            {% set your_id_query_params = your_id_query_params + f"&compiler_type={flt.compiler}" %}
+            {% end %}
+
             <div class="mb-1">
-                <label class="form-label">Your ID: <a href="?acctid={{ user.acct_id }}">{{ user.acct_id }}</a></label>
+                <label class="form-label">Your ID: <a id="yourIDFilter" href="{{ your_id_query_params }}">{{ user.acct_id }}</a></label>
                 <input id="proid" class="form-control mb-1" type="text" value="{% if flt.pro != None %}{{ ppro_id }}{% end %}" placeholder="Problem ID">
                 <input id="acctid" class="form-control mb-1" type="text" value="{% if flt.acct != None %}{{ pacct_id }}{% end %}" placeholder="Account ID">
             </div>
@@ -223,14 +271,14 @@
             {% for chal in challist %}
                 <tr id="chal{{ chal.chal_id }}">
                     {% if chal.contest_id == 0 %}
-                        <td><a href="/oj/chal/{{ chal.chal_id }}/">{{ chal.chal_id }}</a></td>
-                        <td><a href="/oj/pro/{{ chal.pro_id }}/">{{ chal.pro_id }}</a></td>
+                        <td><a href="{{ url(f'/chal/{ chal.chal_id }/') }}">{{ chal.chal_id }}</a></td>
+                        <td><a href="{{ url(f'/pro/{ chal.pro_id }/') }}">{{ chal.pro_id }}</a></td>
                     {% else %}
-                        <td><a href="/oj/contests/{{ chal.contest_id }}/chal/{{ chal.chal_id }}/">{{ chal.chal_id }}</a></td>
-                        <td><a href="/oj/contests/{{ chal.contest_id }}/pro/{{ chal.pro_id }}/">{{ chal.pro_id }}</a></td>
+                        <td><a href="{{ url(f'/contests/{ chal.contest_id }/chal/{ chal.chal_id }/') }}">{{ chal.chal_id }}</a></td>
+                        <td><a href="{{ url(f'/contests/{ chal.contest_id }/pro/{ chal.pro_id }/') }}">{{ chal.pro_id }}</a></td>
                     {% end %}
 
-                    <td><a href="/oj/acct/{{ chal.acct_id }}/">{{ chal.acct_name }}</a></td>
+                    <td><a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a></td>
                     <td id="state" class="state-{{ chal.total_result.state }}">{{ ChalConst.STATE_LONG_STR[chal.total_result.state] }}</td>
                     <td id="time">{{ chal.total_result.time }}</td>
                     <td id="memory">{{ chal.total_result.memory }}</td>

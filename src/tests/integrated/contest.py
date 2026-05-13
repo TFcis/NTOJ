@@ -3,6 +3,7 @@ import datetime
 import json
 
 from tornado.websocket import websocket_connect
+from tornado.httpclient import HTTPRequest
 
 from services.contests import ContestService, ContestMode, RegMode, UserStatus
 from services.pro import ProService, ProConst
@@ -87,7 +88,15 @@ class ContestTest(AsyncTest):
             self.assertEqual(contest.freeze_scoreboard_period, 0)
             self.assertEqual(contest.contest_start, to_utc(contest_start))
             self.assertEqual(contest.contest_end, to_utc(contest_end))
-            self.assertEqual(contest.reg_end, to_utc(reg_end))
+            # NOTE: If reg_mode is INVITED, reg_end should be the same as contest_end
+            self.assertEqual(contest.reg_end, to_utc(contest_end))
+            self.assertEqual(contest.contest_creator, 1)
+
+            # NOTE: Should not let contest_end <= contest_start
+            config = copy.deepcopy(default_config)
+            config['contest_start'] = self.get_isoformat(contest_end + datetime.timedelta(days=1))
+            res = admin_session.post('contests/1/manage/general', data=config)
+            self.assertAPIReturnValue(res.text, ('Eparam', 'Contest end time should be later than start time'))
 
             # test desc
             res = admin_session.post('contests/1/manage/desc', data={
@@ -184,7 +193,116 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(pro.status, ProConst.STATUS_CONTEST)
 
+            # NOTE: Contest problem status
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_HIDDEN,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': 1
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Cannot add hidden status problem 1'))
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'multi_add',
+                'pro_id': '1'
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(1, contest.pro_list)
+
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_ONLINE,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
+            res = admin_session.post('contests/1/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': 1
+            })
+            self.assertAPIReturnSuccess(res.text)
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_HIDDEN,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(1, contest.pro_list)
+            admin_session.post('manage/pro/update', data={
+                'reqtype': 'updategeneral',
+                'pro_id': 1,
+                'name': 'GCD',
+                'status': ProConst.STATUS_ONLINE,
+                'tags': '',
+                'allow_submit': 'true',
+            })
+
         with AccountContext('admin@test', 'testtest') as admin_session:
+            # NOTE: Should not remove contest_creator or change contest_creator permission
+            for list_type in ('admin', 'normal'):
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'remove',
+                    'acct_id': 1,
+                    'type': list_type,
+                })
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Cannot remove contest creator'))
+                err, contest = await ContestService.inst.get_contest(1)
+                self.assertIsNone(err)
+                assert contest
+                self.assertIn(1, contest.user_list)
+                self.assertEqual(contest.user_list[1]['status'], UserStatus.ADMIN)
+
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'multi_remove',
+                    'acct_id': 1,
+                    'type': list_type,
+                })
+                self.assertAPIReturnSuccess(res.text)
+                err, contest = await ContestService.inst.get_contest(1)
+                self.assertIsNone(err)
+                assert contest
+                self.assertIn(1, contest.user_list)
+                self.assertEqual(contest.user_list[1]['status'], UserStatus.ADMIN)
+
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'add',
+                    'acct_id': 1,
+                    'type': list_type,
+                })
+                self.assertAPIReturnValue(res.text, ("Eexist", "Contest creator already exists"))
+                err, contest = await ContestService.inst.get_contest(1)
+                self.assertIsNone(err)
+                assert contest
+                self.assertIn(1, contest.user_list)
+                self.assertEqual(contest.user_list[1]['status'], UserStatus.ADMIN)
+
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'multi_add',
+                    'acct_id': 1,
+                    'type': list_type,
+                })
+                self.assertAPIReturnSuccess(res.text)
+                err, contest = await ContestService.inst.get_contest(1)
+                self.assertIsNone(err)
+                assert contest
+                self.assertIn(1, contest.user_list)
+                self.assertEqual(contest.user_list[1]['status'], UserStatus.ADMIN)
+
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'add',
                 'acct_id': 4,
@@ -195,7 +313,16 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
 
-        with AccountContext('admin@test', 'testtest') as admin_session:
+            res = admin_session.post('contests/1/manage/acct', data={
+                'reqtype': 'remove',
+                'acct_id': 4,
+                'type': 'admin',
+            })
+            self.assertAPIReturnValue(res.text, ('Eacces', f'Cannot remove user with status {UserStatus.APPROVED.name} from admin list'))
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
             res = admin_session.post('contests/1/manage/acct', data={
                 'reqtype': 'remove',
                 'acct_id': 4,
@@ -205,6 +332,22 @@ class ContestTest(AsyncTest):
             err, contest = await ContestService.inst.get_contest(1)
             self.assertIsNone(err)
             self.assertNotIn(4, contest.user_list)
+
+        with AccountContext('contest1@test', 'test') as user_session:
+            # NOTE: Should not allow register in INVITED mode
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
+            })
+            self.assertAPIReturnValue(res.text, ("Eacces", "Invited mode does not allow register"))
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
+
+            # NOTE: Should not allow unregister in INVITED mode
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnValue(res.text, ("Eacces", "Invited mode does not allow unregister"))
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             config = copy.deepcopy(default_config)
@@ -223,6 +366,29 @@ class ContestTest(AsyncTest):
             err, contest = await ContestService.inst.get_contest(1)
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
+            # NOTE: Should not register again when already approved
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
+            })
+            self.assertAPIReturnValue(res.text, ("Eexist", "Your registration has been approved, you cannot register again"))
+
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            # NOTE: Should not unregister again when not registered
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnValue(res.text, ("Enoext", "You have not registered yet"))
+
+            # NOTE: Restore
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
+            })
+            self.assertAPIReturnSuccess(res.text)
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
@@ -252,12 +418,55 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.REQUESTED)
 
+            # NOTE: Should not allow remove account in request status from manage account page
+            with AccountContext('admin@test', 'testtest') as admin_session:
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'remove',
+                    'acct_id': 4,
+                    'type': 'normal',
+                })
+                self.assertAPIReturnValue(res.text, ('Eacces', f'Cannot remove user with status {UserStatus.REQUESTED.name} from normal list'))
+
+            # NOTE: Should not register again when already requested
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
+            })
+            self.assertAPIReturnValue(res.text, ("Eacces", "Your registration is in request status, please wait for approval"))
+
+            # NOTE: Should allow cancel register when in request status
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'cancelreq'
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            # NOTE: Should not unregister again when not registered or requested
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnValue(res.text, ("Enoext", "You have not registered yet"))
+
+            # NOTE: Restore
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
+            })
+            self.assertAPIReturnSuccess(res.text)
+
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/reg', data={
-                'reqtype': 'approval',
+                'reqtype': 'approve',
                 'acct_id': 4,
             })
             self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
+            # NOTE: Should not allow reject when already approved
+            res = admin_session.post('contests/1/manage/reg', data={
+                'reqtype': 'reject',
+                'acct_id': 4,
+            })
+            self.assertAPIReturnValue(res.text, ("Enoext", "Account(#4) should be in the request status"))
             err, contest = await ContestService.inst.get_contest(1)
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
@@ -271,7 +480,6 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertNotIn(4, contest.user_list)
 
-        with AccountContext('contest1@test', 'test') as user_session:
             res = user_session.post('contests/1/reg', data={
                 'reqtype': 'reg'
             })
@@ -280,15 +488,56 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(contest.user_list[4]['status'], UserStatus.REQUESTED)
 
-        with AccountContext('admin@test', 'testtest') as admin_session:
-            res = admin_session.post('contests/1/manage/reg', data={
-                'reqtype': 'reject',
-                'acct_id': 4,
+            with AccountContext('admin@test', 'testtest') as admin_session:
+                res = admin_session.post('contests/1/manage/reg', data={
+                    'reqtype': 'reject',
+                    'acct_id': 4,
+                })
+                self.assertAPIReturnSuccess(res.text)
+                err, contest = await ContestService.inst.get_contest(1)
+                self.assertIsNone(err)
+                self.assertEqual(contest.user_list[4]['status'], UserStatus.REJECTED)
+
+                # NOTE: Should not allow remove account in rejected status from manage account page
+                res = admin_session.post('contests/1/manage/acct', data={
+                    'reqtype': 'remove',
+                    'acct_id': 4,
+                    'type': 'normal',
+                })
+                self.assertAPIReturnValue(res.text, ('Eacces', f'Cannot remove user with status {UserStatus.REJECTED.name} from normal list'))
+
+                # NOTE: Should allow re-approve rejected account
+                res = admin_session.post('contests/1/manage/reg', data={
+                    'reqtype': 'approve',
+                    'acct_id': 4,
+                })
+                self.assertAPIReturnValue(res.text, ('S', 'Re-approve account(#4) successfully.'))
+                err, contest = await ContestService.inst.get_contest(1)
+                assert contest
+                self.assertIsNone(err)
+                self.assertEqual(contest.user_list[4]['status'], UserStatus.APPROVED)
+
+                # NOTE: Restore to rejected
+                contest.user_list[4]['status'] = UserStatus.REJECTED
+                await ContestService.inst.update_contest(None, contest, userlist_updated=True)
+                err, contest = await ContestService.inst.get_contest(1)
+                assert contest
+                self.assertIsNone(err)
+                self.assertEqual(contest.user_list[4]['status'], UserStatus.REJECTED)
+
+
+            # NOTE: Should not allow request register when already rejected
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'reg'
             })
-            self.assertAPIReturnSuccess(res.text)
-            err, contest = await ContestService.inst.get_contest(1)
-            self.assertIsNone(err)
-            self.assertEqual(contest.user_list[4]['status'], UserStatus.REJECTED)
+            self.assertAPIReturnValue(res.text, ("Eacces", "Your registration has been rejected, you cannot register"))
+
+            # NOTE: Should not allow cancel register request when already rejected
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'cancelreq'
+            })
+            self.assertAPIReturnValue(res.text, ("Eacces", "Your registration is not in request status, you cannot cancel request"))
+
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             res = admin_session.post('contests/1/manage/acct', data={
@@ -302,10 +551,10 @@ class ContestTest(AsyncTest):
             for acct_id in range(3, 9 + 1, 1):
                 self.assertIn(acct_id, contest.user_list)
 
-        with AccountContext('admin@test', 'testtest') as admin_session:
             contest_start = now - datetime.timedelta(days=2)
             config = copy.deepcopy(default_config)
             config['contest_start'] = self.get_isoformat(contest_start)
+            config['reg_mode'] = RegMode.FREE_REG
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
             err, contest = await ContestService.inst.get_contest(1)
@@ -315,7 +564,13 @@ class ContestTest(AsyncTest):
 
         with AccountContext('contest1@test', 'test') as user_session:
             res = user_session.get('contests/1/pro/5/cont.pdf')
-            self.assertIn('X-Accel-Redirect', res.headers)
+            self.assertEqual(res.status_code, 200)
+
+            # NOTE: Should not allow unregister when contest has started
+            res = user_session.post('contests/1/reg', data={
+                'reqtype': 'unreg'
+            })
+            self.assertAPIReturnValue(res.text, ("Etime", "Contest has started, you cannot unregister now"))
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
@@ -333,32 +588,37 @@ class ContestTest(AsyncTest):
             })
             self.assertAPIReturnValue(res.text, ('Ecomp', 'The compiler is not allowed'))
 
-            res = user_session.post('contests/1/submit', data={
-                'reqtype': 'submit',
-                'pro_id': 5,
-                'code': open('tests/static_file/code/toj674.ac.cpp').read(),
-                'compiler_type': Compiler.GPP,
-            })
-            self.assertAPIReturnValue(res.text, ('S', 13))
+            with open('tests/static_file/code/toj674.ac.cpp') as f:
+                res = user_session.post('contests/1/submit', data={
+                    'reqtype': 'submit',
+                    'pro_id': 5,
+                    'code': f.read(),
+                    'compiler_type': Compiler.GPP,
+                })
+                self.assertAPIReturnValue(res.text, ('S', 13))
 
-            ws = await websocket_connect('ws://localhost:5501/manage/judgecntws')
+            ws = await websocket_connect('ws://localhost:5501/be/ws')
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'judgechalcnt_sub'}))
 
             def _message(msg):
                 if msg is None:
                     return
+                data = json.loads(msg)
+                if data.get('type') == 'contestnewchalsub':
+                    self.assertEqual(int(data['data']), 1)
 
-                self.assertEqual(int(msg), 1)
+            ws2 = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            await ws2.write_message(json.dumps({'type': 'register', 'data': 'contestnewchalsub'}))
+            await ws2.write_message(json.dumps({'type': 'contestnewchalsub_init', 'data': '1'}))
 
-            ws2 = await websocket_connect('ws://localhost:5501/contests/1/scoreboardsub', on_message_callback=_message)
-            await ws2.write_message('1')
-
-            res = user_session.post('contests/1/submit', data={
-                'reqtype': 'submit',
-                'pro_id': 5,
-                'code': open('tests/static_file/code/toj674.ac.cpp').read(),
-                'compiler_type': Compiler.GPP,
-            })
-            self.assertAPIReturnValue(res.text, ('Esame', 'Do not submit same code'))
+            with open('tests/static_file/code/toj674.ac.cpp') as f:
+                res = user_session.post('contests/1/submit', data={
+                    'reqtype': 'submit',
+                    'pro_id': 5,
+                    'code': f.read(),
+                    'compiler_type': Compiler.GPP,
+                })
+                self.assertAPIReturnValue(res.text, ('Esame', 'Do not submit same code'))
 
             res = user_session.post('contests/1/submit', data={
                 'reqtype': 'submit',
@@ -373,9 +633,12 @@ class ContestTest(AsyncTest):
                 if msg is None:
                     break
 
-                if json.loads(msg)['chal_cnt'] == 0:
-                    ws.close()
-                    break
+                data = json.loads(msg)
+                if data.get('type') == 'judgechalcnt_sub':
+                    judge_data = json.loads(data['data'])
+                    if judge_data['chal_cnt'] == 0:
+                        ws.close()
+                        break
 
             # TODO: map_rate_acct
             # TODO: get_pro_ac_rate
@@ -410,12 +673,14 @@ class ContestTest(AsyncTest):
             def _message(msg):
                 if msg is None:
                     return
-
-                self.assertEqual(int(msg), 1)
-            ws = await websocket_connect('ws://localhost:5501/contests/1/manage/qasub', on_message_callback=_message)
+                data = json.loads(msg)
+                if data.get('type') == 'contestnewquessub':
+                    self.assertEqual(int(data['data']), 1)
+            ws = await websocket_connect('ws://localhost:5501/be/ws', on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewquessub'}))
             await ws.write_message(json.dumps({
-                "contest_id": 1,
-                "acct_id": 4,
+                'type': 'contestnewquessub_init',
+                'data': '1'
             }))
 
             self.assertTable(
@@ -469,14 +734,22 @@ class ContestTest(AsyncTest):
                 if msg is None:
                     return
 
-                j = json.loads(msg)
-                self.assertEqual(j['contest_id'], 1)
-                self.assertEqual(j['type'], 'reply')
-                self.assertEqual(j['ask_acct_id'], 4)
-            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+                data = json.loads(msg)
+                if data.get('type') == 'contestnewqasub':
+                    j = json.loads(data['data'])
+                    self.assertEqual(j['contest_id'], 1)
+                    self.assertEqual(j['type'], 'reply')
+                    self.assertEqual(j['ask_acct_id'], 4)
+
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
+            ws = await websocket_connect(HTTPRequest('ws://localhost:5501/be/ws', headers=headers), on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
             await ws.write_message(json.dumps({
-                "contest_id": 1,
-                "acct_id": 4,
+                'type': 'contestnewqasub_init',
+                'data': json.dumps({
+                    "contest_id": 1,
+                })
             }))
 
             res = admin_session.post('contests/1/manage/question', data={
@@ -512,14 +785,21 @@ class ContestTest(AsyncTest):
                 if msg is None:
                     return
 
-                j = json.loads(msg)
-                self.assertEqual(j['contest_id'], 1)
-                self.assertEqual(j['type'], 'add-announce')
+                data = json.loads(msg)
+                if data.get('type') == 'contestnewqasub':
+                    j = json.loads(data['data'])
+                    self.assertEqual(j['contest_id'], 1)
+                    self.assertEqual(j['type'], 'add-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
+            ws = await websocket_connect(HTTPRequest('ws://localhost:5501/be/ws', headers=headers), on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
             await ws.write_message(json.dumps({
-                "contest_id": 1,
-                "acct_id": 4,
+                'type': 'contestnewqasub_init',
+                'data': json.dumps({
+                    "contest_id": 1,
+                })
             }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'add-announce',
@@ -539,36 +819,58 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(a, announce)
 
-            for reqtype in ['add-announce', 'edit-announce']:
-                self.assertTable(
-                    'contests/1/manage/announce',
-                    {
-                        'reqtype': reqtype,
-                        'subject': 'subject',
-                        'content': 'content',
-                    },
-                    [
-                        {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
-                        {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
-                        {'content': '', 'equal_value': ('Eparam', 'Content too short')},
-                        {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
-                    ],
-                    admin_session
-                )
+            self.assertTable(
+                'contests/1/manage/announce',
+                {
+                    'reqtype': 'add-announce',
+                    'subject': 'subject',
+                    'content': 'content',
+                },
+                [
+                    {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
+                    {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
+                    {'content': '', 'equal_value': ('Eparam', 'Content too short')},
+                    {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
+                ],
+                admin_session
+            )
+            self.assertTable(
+                'contests/1/manage/announce',
+                {
+                    'reqtype': 'edit-announce',
+                    'announce_id': announce['announce_id'],
+                    'subject': 'subject',
+                    'content': 'content',
+                },
+                [
+                    {'subject': '', 'equal_value': ('Eparam', 'Subject too short')},
+                    {'subject': 'subject' * 10000, 'equal_value': ('Eparam', 'Subject too long')},
+                    {'content': '', 'equal_value': ('Eparam', 'Content too short')},
+                    {'content': 'content' * 10000, 'equal_value': ('Eparam', 'Content too long')},
+                ],
+                admin_session
+            )
 
         with AccountContext('admin@test', 'testtest') as admin_session:
             def _message(msg):
                 if msg is None:
                     return
 
-                j = json.loads(msg)
-                self.assertEqual(j['contest_id'], 1)
-                self.assertEqual(j['type'], 'edit-announce')
+                data = json.loads(msg)
+                if data.get('type') == 'contestnewqasub':
+                    j = json.loads(data['data'])
+                    self.assertEqual(j['contest_id'], 1)
+                    self.assertEqual(j['type'], 'edit-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
+            ws = await websocket_connect(HTTPRequest('ws://localhost:5501/be/ws', headers=headers), on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
             await ws.write_message(json.dumps({
-                "contest_id": 1,
-                "acct_id": 4,
+                'type': 'contestnewqasub_init',
+                'data': json.dumps({
+                    "contest_id": 1,
+                })
             }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'edit-announce',
@@ -597,10 +899,15 @@ class ContestTest(AsyncTest):
                 self.assertEqual(j['contest_id'], 1)
                 self.assertEqual(j['type'], 'popup-announce')
 
-            ws = await websocket_connect('ws://localhost:5501/contests/1/qasub', on_message_callback=_message)
+            cookie_value = admin_session.cookies.get('id')
+            headers = {"Cookie": f"id={cookie_value}"}
+            ws = await websocket_connect(HTTPRequest('ws://localhost:5501/be/ws', headers=headers), on_message_callback=_message)
+            await ws.write_message(json.dumps({'type': 'register', 'data': 'contestnewqasub'}))
             await ws.write_message(json.dumps({
-                "contest_id": 1,
-                "acct_id": 4
+                'type': 'contestnewqasub_init',
+                'data': json.dumps({
+                    "contest_id": 1,
+                })
             }))
             res = admin_session.post('contests/1/manage/announce', data={
                 'reqtype': 'popup-announce',
@@ -614,8 +921,10 @@ class ContestTest(AsyncTest):
 
         # NOTE: contest end
         with AccountContext('admin@test', 'testtest') as admin_session:
+            contest_start = now - datetime.timedelta(days=2)
             contest_end = now - datetime.timedelta(days=1)
             config = copy.deepcopy(default_config)
+            config['contest_start'] = self.get_isoformat(contest_start)
             config['contest_end'] = self.get_isoformat(contest_end)
             res = admin_session.post('contests/1/manage/general', data=config)
             self.assertAPIReturnSuccess(res.text)
@@ -636,6 +945,20 @@ class ContestTest(AsyncTest):
             self.assertIsNone(err)
             self.assertEqual(pro.status, ProConst.STATUS_CONTEST)
 
+            # NOTE: Make sure account removed in Cache && DB
+            res = admin_session.post('contests/1/manage/acct', data={
+                'reqtype': 'remove',
+                'acct_id': 4,
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
+            err, contest = await ContestService.inst.get_contest(1)
+            self.assertIsNone(err)
+            self.assertNotIn(4, contest.user_list)
+
         with AccountContext('test1@test', 'test') as user_session:
             res = user_session.get('pro/5')
             self.assertNotIn('Eacces', res.text)
@@ -647,3 +970,22 @@ class ContestTest(AsyncTest):
         # test scoreboard, challist
         # hide_admin: bool = True
         # test rechal
+
+class ContestProblemPermissionTest(AsyncTest):
+    async def main(self):
+        for mail, password in (('admin@test', 'testtest'), ('test1@test', 'test'), ('contest1@test', 'test')):
+            with AccountContext(mail, password) as user_session:
+                for pro_id in range(6, 11 + 1): # 5 already public after contest
+                    res = user_session.get(f'pro/{pro_id}')
+                    print(res.text)
+                    self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+                    res = user_session.get(url='', full_url=f'http://localhost:5501/pro/{pro_id}/cont.pdf')
+                    self.assertEqual(res.status_code, 403)
+                    self.assertIn('Permission denied', res.text)
+                    res = user_session.post('submit', data={
+                        'reqtype': 'submit',
+                        'pro_id': pro_id,
+                        'code': 'code',
+                        'compiler_type': Compiler.GPP,
+                    })
+                    self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))

@@ -32,6 +32,12 @@ class DummyContest:
 class TestCodeService(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.fake_conn = AsyncMock()
+
+        fake_tx_cm = MagicMock()
+        fake_tx_cm.__aenter__ = AsyncMock(return_value=None)
+        fake_tx_cm.__aexit__ = AsyncMock(return_value=None)
+        self.fake_conn.transaction = MagicMock(return_value=fake_tx_cm)
+
         fake_acquire_cm = MagicMock()
         fake_acquire_cm.__aenter__ = AsyncMock(return_value=self.fake_conn)
         fake_acquire_cm.__aexit__ = AsyncMock(return_value=None)

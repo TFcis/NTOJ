@@ -14,8 +14,10 @@
         content_textarea.style.height = 'auto';
         content_textarea.style.height = content_textarea.scrollHeight + 'px';
         content_textarea.addEventListener('input', (event) => {
-            content_textarea.style.height = 'auto';
-            content_textarea.style.height = content_textarea.scrollHeight + 'px';
+            const newHeight = content_textarea.scrollHeight;
+            if (newHeight > content_textarea.offsetHeight) {
+                content_textarea.style.height = newHeight + 'px';
+            }
         });
 
         j_form.find('#preview').on('click', function(e) {
@@ -31,7 +33,7 @@
             let color = j_form.find("#color").val();
             let content = content_textarea.value;
 
-            $.post('/oj/be/manage/bulletin/update', {
+            $.post(`{{ url('/be/manage/bulletin/update') }}`, {
                 reqtype: 'update',
 				bulletin_id: "{{ bulletin_id }}",
                 pinned: pinned,
@@ -50,21 +52,24 @@
         });
 
 		j_form.find("#remove").on('click', (event) => {
-			$.post('/oj/be/manage/bulletin/update', {
+            if (!confirm('Are you sure to remove this bulletin?')) {
+                return;
+            }
+			$.post(`{{ url('/be/manage/bulletin/update') }}`, {
 				reqtype: 'remove',
 				bulletin_id: "{{ bulletin_id }}"
 			}, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Remove Successfully', index.DIALOG_TYPE.success);
-                    setTimeout(() => index.go("/oj/manage/bulletin/"), 1000);
+                    setTimeout(() => index.go(`{{ url('/manage/bulletin/') }}`), 1000);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
 			});
 		});
 
-        j_form.find("#cancel").on('click', (event) => index.go("/oj/manage/bulletin/"));
+        j_form.find("#cancel").on('click', (event) => index.go(`{{ url('/manage/bulletin/') }}`));
     }
 </script>
 {% end %}

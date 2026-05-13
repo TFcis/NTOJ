@@ -1,12 +1,12 @@
-import asyncio
 import base64
 
 from msgpack import packb
 
 import config
 from handlers.base import (
+    ActionDispatcher,
     RequestHandler,
-    WebSocketSubHandler,
+    UnifiedWebSocketHandler,
     reqenv,
     require_permission,
 )
@@ -15,69 +15,93 @@ from services.log import LogService
 from services.user import UserConst
 
 
+class JudgeCntCallback:
+    """Judge server challenge count update callback - simple message forwarding"""
+
+    async def register(self, conn):
+        """Registering does not require special handling"""
+        pass
+
+    async def message(self, conn, data):
+        """Directly forward the message"""
+        return data
+
+    async def unregister(self, conn):
+        """Unsubscribing does not require special handling"""
+        pass
+
+
+_judge_cnt_callback = JudgeCntCallback()
+UnifiedWebSocketHandler.register_channel_callback("judgechalcnt_sub", _judge_cnt_callback)
+
+
+judge_dispatcher = ActionDispatcher()
+
+
 class ManageJudgeHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
         judge_status_list = JudgeServerClusterService.inst.get_servers_status()
-        await self.render('manage/judge', page='judge', judge_status_list=judge_status_list)
+        await self.render(
+            "manage/judge", page="judge", judge_status_list=judge_status_list
+        )
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self):
-        reqtype = self.get_argument('reqtype')
+        reqtype = self.get_argument("reqtype")
+        return await judge_dispatcher.dispatch(self, reqtype)
 
-        if reqtype == 'connect':
-            index = int(self.get_argument('index'))
+    @judge_dispatcher.action("connect")
+    async def connect_judge(self):
+        try:
+            index = int(self.get_argument("index"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid index"))
 
-            err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
-            if (server_name := server_inform['name']) == '':
-                server_name = f"server-{index}"
+        err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
+        if (server_name := server_inform["name"]) == "":
+            server_name = f"server-{index}"
 
-            if err := await JudgeServerClusterService.inst.connect_server(index):
-                await LogService.inst.add_log(
-                    f"{self.acct.name} tried connected {server_name} but failed.", 'manage.judge.connect.failure'
-                )
-                return self.error(err)
-
-            await LogService.inst.add_log(
-                f"{self.acct.name} had been connected {server_name} succesfully.", 'manage.judge.connect'
+        if err := await JudgeServerClusterService.inst.connect_server(index):
+            await self.add_log(
+                f"{self.acct.name} tried to connect to {server_name} but failed",
+                "manage.judge.connect.failure",
             )
+            return self.error(err)
 
-            self.error(('S', ''))
+        await self.add_log(
+            f"{self.acct.name} connected to {server_name} successfully",
+            "manage.judge.connect",
+        )
 
-        elif reqtype == 'disconnect':
-            index = int(self.get_argument('index'))
-            pwd = str(self.get_argument('pwd'))
+        self.error(("S", ""))
 
-            err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
-            if (server_name := server_inform['name']) == '':
-                server_name = f"server-{index}"
+    @judge_dispatcher.action("disconnect")
+    async def disconnect_judge(self):
+        try:
+            index = int(self.get_argument("index"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid index"))
+        pwd = self.get_argument("pwd")
 
-            if config.unlock_pwd != base64.b64encode(packb(pwd)):
-                await LogService.inst.add_log(
-                    f"{self.acct.name} tried to disconnect {server_name} but failed.", 'manage.judge.disconnect.failure'
-                )
-                return self.error(('Eacces', 'Wrong password'))
+        err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
+        if (server_name := server_inform["name"]) == "":
+            server_name = f"server-{index}"
 
-            if err := await JudgeServerClusterService.inst.disconnect_server(index):
-                return self.error(err)
-            await LogService.inst.add_log(
-                f"{self.acct.name} had been disconnected {server_name} succesfully.", 'manage.judge.disconnect'
+        if config.unlock_pwd != base64.b64encode(packb(pwd)):
+            await self.add_log(
+                f"{self.acct.name} tried to disconnect {server_name} but failed",
+                "manage.judge.disconnect.failure",
             )
+            return self.error(("Eacces", "Wrong password"))
 
-            self.error(('S', ''))
+        if err := await JudgeServerClusterService.inst.disconnect_server(index):
+            return self.error(err)
+        await self.add_log(
+            f"{self.acct.name} disconnected {server_name} successfully",
+            "manage.judge.disconnect",
+        )
 
-
-class JudgeChalCntSub(WebSocketSubHandler):
-    async def listen_newchal(self):
-        async for msg in self.p.listen():
-            if msg['type'] != 'message':
-                continue
-
-            await self.write_message(msg['data'].decode('utf-8'))
-
-    async def open(self):
-        await self.p.subscribe('judgechalcnt_sub')
-
-        self.task = asyncio.tasks.Task(self.listen_newchal())
+        self.error(("S", ""))

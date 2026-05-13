@@ -1,8 +1,8 @@
 {% extends 'manage.html' %}
 
 {% block head %}
-<script src="/oj/third/tempus-dominus.min.js"></script> <!-- 6.9.4 -->
-<link rel="stylesheet" href="/oj/third/tempus-dominus.min.css"> <!-- 6.9.4 -->
+<script src="{{ url('/src/third/tempus-dominus.min.js') }}"></script> <!-- 6.9.4 -->
+<link rel="stylesheet" href="{{ url('/src/third/tempus-dominus.min.css') }}"> <!-- 6.9.4 -->
 
 <style>
     .svg-inline--fa {
@@ -25,12 +25,42 @@
 
             localization: {
                 locale: 'zh-tw',
-                format: 'yyyy/MM/dd HH:mm',
+                format: 'yyyy/MM/dd hh:mm T',
             },
         };
         contest_start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestStart'), options);
         contest_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestEnd'), options);
         reg_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerRegEnd'), options);
+
+        // Update Submission CD Time default and show/hide Penalty Value based on contest mode
+        const updateContestModeUI = () => {
+            let contest_mode = $("#contestMode").val();
+            let current_value = parseInt($("#submitCdTime").val());
+            // If current value is default (30 for IOI or 1 for ACM), update to new mode default
+            if ((contest_mode == {{ ContestMode.ACM }} && current_value == 30) ||
+                (contest_mode == {{ ContestMode.IOI }} && current_value == 1)) {
+                let new_default = contest_mode == {{ ContestMode.ACM }} ? 1 : 30;
+                $("#submitCdTime").val(new_default);
+            }
+            // Show/hide Penalty Value based on contest mode (ACM = 1)
+            if (contest_mode == {{ ContestMode.ACM }}) {
+                $("#penaltyValueContainer").show();
+            } else {
+                $("#penaltyValueContainer").hide();
+            }
+        };
+
+        $("#contestMode").on('change', updateContestModeUI);
+        updateContestModeUI(); // Initialize on page load
+
+        $("#regMode").on('change', function(e) {
+            if ($(this).val() === "{{ RegMode.INVITED }}") {
+                $("#datepickerRegEndInput").val(contest_end_date_picker.viewDate);
+                $("#datepickerRegEndInput").attr('disabled', true);
+            } else {
+                $("#datepickerRegEndInput").attr('disabled', false);
+            }
+        });
 
         $("button.submit").on('click', function(e) {
             let start_time = null, end_time = null, reg_end_time = null;
@@ -82,7 +112,14 @@
                 index.show_notify_dialog("Freeze Scoreboard Period必須是正整數(包含0)", index.DIALOG_TYPE.warning);
                 return;
             }
-            $.post("/oj/be/contests/{{ contest_id }}/manage/general", {
+
+            let penalty_value = parseInt($("#penaltyValue").val());
+            if (isNaN(penalty_value) || penalty_value < 0) {
+                index.show_notify_dialog("Penalty Value必須是正整數(包含0)", index.DIALOG_TYPE.warning);
+                return;
+            }
+
+            $.post(`{{ url(f'/be/contests/{ contest_id }/manage/general') }}`, {
                 reqtype: "update",
                 name: contest_name,
 
@@ -99,6 +136,8 @@
                 hide_admin: hide_admin,
                 submission_cd_time: submit_cd_time,
                 freeze_scoreboard_period: freeze_period,
+                penalty_value: penalty_value,
+                enable_system_test: $("#enableSystemTest").is(":checked"),
             }, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
@@ -184,7 +223,16 @@
         <div class="mb-1">
             <label for="datepickerRegEnd" class="form-label">Registration End Time</label>
             <div class="input-group" id="datepickerRegEnd">
-                <input id="datepickerRegEndInput" class="form-control" value="{{ contest.reg_end.astimezone(config.TIMEZONE) }}">
+                <input
+                    id="datepickerRegEndInput"
+                    class="form-control"
+                    {% if contest.reg_mode == RegMode.INVITED %}
+                        value="{{ contest.contest_end.astimezone(config.TIMEZONE) }}"
+                        disabled
+                    {% else %}
+                        value="{{ contest.reg_end.astimezone(config.TIMEZONE) }}"
+                    {% end %}
+                >
                 <span class="input-group-text" data-td-target="#datepickerRegEnd" data-td-toggle="datepickerRegEnd">
                     <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg>
                 </span>
@@ -213,6 +261,14 @@
             </div>
         </div>
 
+        <div class="mb-1" id="penaltyValueContainer">
+            <label for="penaltyValue" class="form-label">Penalty Value (for ICPC Scoring)</label>
+            <div class="input-group">
+                <input type="number" id="penaltyValue" class="form-control" value="{{ contest.penalty_value }}">
+                <span class="input-group-text">Minutes</span>
+            </div>
+        </div>
+
         <div class="mb-1 form-check">
             <label for="hideAdmin" class="form-check-label">Hide Admin In Challenge & Scoreboard</label>
             <input type="checkbox" id="hideAdmin" class="form-check-input" {% if contest.hide_admin %} checked {% end %}>
@@ -226,6 +282,11 @@
         <div class="mb-1 form-check">
             <label for="allowViewOtherPage" class="form-check-label">Allow View Other Page During Contest (WIP)</label>
             <input type="checkbox" id="allowViewOtherPage" class="form-check-input" {% if contest.allow_view_other_page %} checked {% end %}>
+        </div>
+
+        <div class="mb-1 form-check">
+            <label for="enableSystemTest" class="form-check-label">Enable System Test (Pretest/Final Test)</label>
+            <input type="checkbox" id="enableSystemTest" class="form-check-input" {% if contest.enable_system_test %} checked {% end %}>
         </div>
 
         <div class="mb-1">

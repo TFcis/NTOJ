@@ -1,127 +1,260 @@
 {% extends 'manage.html' %}
 
 {% block head %}
+{% from services.contests import ContestMode %}
 <script type="text/javascript" id="contjs">
-	function init() {
+    function init() {
         let contest_id = "{{ contest.contest_id }}";
+        let contest_mode = {{ contest.contest_mode }};
+        let is_ioi_mode = contest_mode == {{ ContestMode.IOI }};
 
-		const post_func = (reqtype, pro_id, fail_action=null) => {
-			if (pro_id.length == 0) {
-				index.show_notify_dialog('Input cannot empty.', index.DIALOG_TYPE.warning);
-				return;
-			}
+        const post_func = (reqtype, pro_id, score_type=null, fail_action=null) => {
+            if (pro_id.length == 0) {
+                index.show_notify_dialog('Input invalid.', index.DIALOG_TYPE.warning);
+                return;
+            }
 
-			$.post('/oj/be/contests/{{ contest.contest_id }}/manage/pro', {
-				reqtype: reqtype,
-				pro_id: pro_id,
-			}, res => {
+            let data = {
+                reqtype: reqtype,
+                pro_id: pro_id,
+            };
+            if (score_type !== null) {
+                data.score_type = score_type;
+            }
+
+            $.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, data, res => {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
-					setTimeout(() => index.reload(), 1000);
+                    setTimeout(() => index.reload(), 1000);
                 } else {
                     if (fail_action != null) fail_action();
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
-			});
-		};
+            });
+        };
 
-		document.querySelectorAll('button.remove').forEach(el => {
-			el.addEventListener('click', () => post_func('remove', $(el).attr('pro_id')));
-		});
+        document.querySelectorAll('button.remove').forEach(el => {
+            el.addEventListener('click', () => post_func('remove', $(el).attr('pro_id')));
+        });
 
-		document.querySelectorAll('button.rechal').forEach(el => {
-			el.addEventListener('click', () => post_func('rechal', $(el).attr('pro_id')));
-		});
+        document.querySelectorAll('button.rechal').forEach(el => {
+            el.addEventListener('click', () => post_func('rechal', $(el).attr('pro_id')));
+        });
+
+        document.querySelectorAll('button.system-test').forEach(el => {
+            el.addEventListener('click', () => {
+                if (confirm('Make sure you want to perform System Test? This will rejudge all AC submissions.')) {
+                    post_func('system_test', $(el).attr('pro_id'));
+                }
+            });
+        });
 
         document.querySelectorAll('button.public').forEach(el => {
             el.addEventListener('click', () => post_func('public', $(el).attr('pro_id')));
         });
 
+        $("button.systemtestall").on('click', function(e) {
+            if (!confirm('Make sure you want to perform System Test for all problems? This will rejudge all AC submissions.')) {
+                return;
+            }
+            document.querySelectorAll('button.system-test:not([disabled])').forEach(el => {
+                let pro_id = $(el).attr('pro_id');
+                $.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
+                    reqtype: "system_test",
+                    pro_id: pro_id
+                });
+            });
+            index.show_notify_dialog('System Test started for all problems', index.DIALOG_TYPE.success);
+        });
+
         $("button.publicall").on('click', function(e) {
             document.querySelectorAll('button.public').forEach(el => {
                 let pro_id = $(el).attr('pro_id');
-                $.post('/oj/be/contests/{{ contest.contest_id }}/manage/pro', {
+                $.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
                     reqtype: "public",
                     pro_id: pro_id
                 });
             });
         });
 
-		$("#addPro").on('click', () => post_func('add', $("#proId").val(), () => $("#proID").val('')));
-		$("#removePro").on('click', () => post_func('remove', $("#proId").val(), () => $("#proID").val('')));
-		$("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), () => $("#proList").val('')));
-		$("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val(), () => $("#proList").val('')));
+        // Handle score type change dropdown
+        $(".score-type-select").on('change', function() {
+            let pro_id = $(this).attr('pro_id');
+            let new_score_type = $(this).val();
+            let old_score_type = $(this).attr('data-old-value');
+
+            if (new_score_type == old_score_type) {
+                return;
+            }
+
+            $.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
+                reqtype: 'update_score_type',
+                pro_id: pro_id,
+                score_type: new_score_type
+            }, res => {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+                    setTimeout(() => index.reload(), 1000);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                    // Reset to old value on error
+                    $(this).val(old_score_type);
+                }
+            });
+        });
+
+        // Handle challenge style change dropdown
+        $(".challenge-style-select").on('change', function() {
+            let pro_id = $(this).attr('pro_id');
+            let new_challenge_style = $(this).val();
+            let old_challenge_style = $(this).attr('data-old-value');
+
+            if (new_challenge_style == old_challenge_style) {
+                return;
+            }
+
+            $.post(`{{ url(f'/be/contests/{ contest.contest_id }/manage/pro') }}`, {
+                reqtype: 'update_challenge_style',
+                pro_id: pro_id,
+                challenge_style: new_challenge_style
+            }, res => {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.success);
+                    setTimeout(() => index.reload(), 1000);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                    // Reset to old value on error
+                    $(this).val(old_challenge_style);
+                }
+            });
+        });
+
+        $("#addPro").on('click', () => post_func('add', $("#proId").val(), is_ioi_mode ? parseInt($("#proScoreType").val(), 10) : null, () => $("#proId").val('')));
+        $("#removePro").on('click', () => post_func('remove', $("#proId").val(), null, () => $("#proId").val('')));
+        $("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), is_ioi_mode ? parseInt($("#proListScoreType").val(), 10) : null, () => $("#proList").val('')));
+        $("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val(), null, () => $("#proList").val('')));
     }
 </script>
 {% end %}
 
 {% block content %}
 {% from services.pro import ProConst %}
+{% from services.contests import ProblemScoreType, ChallengeResultStyle %}
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
 
-	<div class="accordion">
-		<div class="accordion-item">
-			<h2 class="accordion-header" id="headingOne">
-				<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-					Problem List
-				</button>
-			</h2>
+    <div class="accordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingOne">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                    Problem List
+                </button>
+            </h2>
 
-			<div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
-				<div class="accordion-body">
-					<form id="form">
-						<label for="#name" class="form-label">Problem ID (Single)</label>
-						<div class="input-group mb-1">
-							<input type="number" class="form-control" placeholder="pro id" id="proId">
-							<button class="btn btn-primary" id="addPro" type="button">Add</button>
-							<button class="btn btn-warning" id="removePro" type="button">Remove</button>
-						</div>
+            <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+                <div class="accordion-body">
+                    <form id="form">
+                        <label for="#name" class="form-label">Problem ID (Single)</label>
+                        <div class="input-group mb-1">
+                            <input type="number" class="form-control" placeholder="pro id" id="proId">
+                            {% if contest.contest_mode == ContestMode.IOI %}
+                            <select class="form-select" id="proScoreType" style="max-width: 150px;">
+                                <option value="{{ ProblemScoreType.IOI2017 }}">IOI2017</option>
+                                <option value="{{ ProblemScoreType.IOI2013 }}">IOI2013</option>
+                            </select>
+                            {% end %}
+                            <button class="btn btn-primary" id="addPro" type="button">Add</button>
+                            <button class="btn btn-warning" id="removePro" type="button">Remove</button>
+                        </div>
 
-						<label for="#name" class="form-label">Problem ID List (Multi)</label>
-						<div class="input-group mb-1">
-							<input type="text" class="form-control" placeholder="pro id list" id="proList">
-							<button class="btn btn-primary" id="addProList" type="button">Add</button>
-							<button class="btn btn-warning" id="removeProList" type="button">Remove</button>
-						</div>
-					</form>
+                        <label for="#name" class="form-label">Problem ID List (Multi)</label>
+                        <div class="input-group mb-1">
+                            <input type="text" class="form-control" placeholder="pro id list" id="proList">
+                            {% if contest.contest_mode == ContestMode.IOI %}
+                            <select class="form-select" id="proListScoreType" style="max-width: 150px;">
+                                <option value="{{ ProblemScoreType.IOI2017 }}">IOI2017</option>
+                                <option value="{{ ProblemScoreType.IOI2013 }}">IOI2013</option>
+                            </select>
+                            {% end %}
+                            <button class="btn btn-primary" id="addProList" type="button">Add</button>
+                            <button class="btn btn-warning" id="removeProList" type="button">Remove</button>
+                        </div>
+                    </form>
 
+                    {% if contest.enable_system_test %}
+                    <button
+                        class="btn btn-info me-2 systemtestall"
+                        {% if not contest.is_end() %} disabled {% end %}
+                    >System Test All</button>
+                    {% end %}
                     <button
                         class="btn btn-danger me-2 publicall"
                         {% if not contest.is_end() %} disabled {% end %}
                     >Public All Problem</button>
 
-					<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-					<thead>
-						<tr>
-							<th scope="col">Pro ID</th>
-							<th scope="col">Problem Name</th>
-							<th scope="col">Operation</th>
-						</tr>
-					</thead>
-					<tbody>
-					{% for pro in pro_list %}
-						<tr>
-							<th scope="row"><a href="/oj/contests/{{ contest.contest_id }}/pro/{{ pro.pro_id }}/">{{ pro.pro_id }}</a></th>
-							<td>{{ pro.name }}</td>
-							<td>
-								<button class="btn btn-warning me-2 remove" pro_id="{{ pro.pro_id }}">Remove</button>
-								<button class="btn btn-danger me-2 rechal" pro_id="{{ pro.pro_id }}">Rechallenge</button>
+                    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+                    <thead>
+                        <tr>
+                            <th scope="col">Pro ID</th>
+                            <th scope="col">Problem Name</th>
+                            <th scope="col">Score Type</th>
+                            <th scope="col">Challenge Style</th>
+                            <th scope="col">Operation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for pro in pro_list %}
+                        <tr>
+                            <th scope="row"><a href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }}</a></th>
+                            <td>{{ pro.name }}</td>
+                            {% if contest.contest_mode == ContestMode.IOI %}
+                                <td>
+                                <select class="form-select form-select-sm score-type-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id]['score_type'] }}" style="width: auto;">
+                                    <option value="1" {% if contest.pro_list[pro.pro_id]['score_type'] == 1 %}selected{% end %}>IOI2017</option>
+                                    <option value="0" {% if contest.pro_list[pro.pro_id]['score_type'] == 0 %}selected{% end %}>IOI2013</option>
+                                </select>
+                                </td>
+                            {% else %}
+                                <td>ICPC</td>
+                            {% end %}
+                            <td>
+                                <select class="form-select form-select-sm challenge-style-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id].get('challenge_style', 1) }}" style="width: auto;">
+                                    <option value="{{ ChallengeResultStyle.FULL }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.FULL %}selected{% end %}>Full</option>
+                                    <option value="{{ ChallengeResultStyle.STATE_COUNT }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.STATE_COUNT %}selected{% end %}>State Count</option>
+                                    <option value="{{ ChallengeResultStyle.SUBTASK_ONLY }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.SUBTASK_ONLY %}selected{% end %}>Subtask Only</option>
+                                    <option value="{{ ChallengeResultStyle.TOTAL_ONLY }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.TOTAL_ONLY %}selected{% end %}>Total Only</option>
+                                </select>
+                            </td>
+                            <td>
+                                <button class="btn btn-warning me-2 remove" pro_id="{{ pro.pro_id }}">Remove</button>
+                                <button class="btn btn-danger me-2 rechal" pro_id="{{ pro.pro_id }}">Rechallenge</button>
+
+                                {% if contest.enable_system_test %}
+                                    <button
+                                        class="btn btn-info me-2 system-test"
+                                        pro_id="{{ pro.pro_id }}"
+                                        {% if not contest.is_end() %} disabled {% end %}
+                                        title="{% if not contest.is_end() %}Contest 尚未結束{% else %}執行 System Test (重新評測所有 AC 提交){% end %}"
+                                    >System Test</button>
+                                {% end %}
+
                                 <button
                                     class="btn btn-danger me-2 public"
                                     pro_id="{{ pro.pro_id }}"
                                     {% if not contest.is_end() or pro.status != ProConst.STATUS_CONTEST %} disabled {% end %}
                                 >Public Problem</button>
-							</td>
-						</tr>
-					{% end %}
-					</tbody>
-					</table>
-				</div>
-			</div>
-		</div>
-	</div>
+                            </td>
+                        </tr>
+                    {% end %}
+                    </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% end %}

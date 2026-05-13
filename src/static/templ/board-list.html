@@ -1,47 +1,64 @@
 {% import datetime %}
 {% from services.board import BoardConst %}
+
+{% set now = datetime.datetime.now(datetime.UTC) %}
+{% set running = [] %}
+{% set over = [] %}
+{% set future = [] %}
+
+{% for board in boardlist %}
+    {% if not user.is_kernel() and board['status'] == BoardConst.STATUS_HIDDEN %}
+		{% continue %}
+	{% end %}
+    {% set end_delta = board['end'] - now %}
+	{% set start_delta = board['start'] - now %}
+    {% if end_delta.total_seconds() < 0 %}
+        {% set over = over + [board] %}
+    {% elif start_delta.total_seconds() < 0 %}
+        {% set running = running + [board] %}
+	{% else %}
+		{% set future = future + [board] %}
+    {% end %}
+{% end %}
+
 <script type="text/javascript" id="contjs">
     function init() {
     }
 </script>
+
+{% set board_category = [[running, "running"], [future, "future"], [over, "over"]] %}
+
 <div class="col-lg-12 ms-lg-2">
-    <table id="prolist" class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-	<thead>
-	    <tr>
-			<th scope="col">#</th>
-			<th scope="col">Board Name</th>
-            <th scope="col">Expire Status</th>
-            {% if user.is_kernel() %}
-                <th scope="col">Public Status</th>
-            {% end %}
-	    </tr>
-	</thead>
-	<tbody>
-	{% for board in boardlist %}
-        {% if not user.is_kernel() and board['status'] != BoardConst.STATUS_ONLINE %}
-            {% continue %}
-        {% end %}
-	    <tr>
-			<th scope="row">{{ board['board_id'] }}</th>
-            <td><a href="/oj/board/{{ board['board_id'] }}/">{{ board['name'] }}</a></td>
-            <td>
-				{% set delta = board['end'] - datetime.datetime.now(datetime.UTC) %}
-				{% set deltasecond = delta.days * 24 * 60 * 60 + delta.seconds %}
-				{% if deltasecond <= 0 %}
-				    Over
-				{% else %}
-				    Online
+	{% for [board_list, board_name] in board_category %}
+		<h4 class="mt-3">{{ board_name.capitalize() }} Boards</h4>
+		<table class="table table-hover table-sm table-responsive-sm col mx-lg-3">	
+		<thead>
+			<tr>
+				<th scope="col">#</th>
+				<th scope="col">Board Name</th>
+				{% if user.is_kernel() %}
+					<th>Public Status</th>
 				{% end %}
-			</td>
-            {% if user.is_kernel() %}
-                {% if board['status'] == BoardConst.STATUS_ONLINE %}
-                    <td>Public</td>
-                {% elif board['status'] == BoardConst.STATUS_HIDDEN %}
-                    <td>Hidden</td>
-                {% end %}
-            {% end %}
-	    </tr>
+			</tr>
+		</thead>
+		<tbody>
+		{% for board in board_list %}
+			<tr>
+				<th scope="row">{{ board['board_id'] }}</th>
+				<td><a href="{{ url(f'/board/{ board['board_id'] }/') }}">{{ board['name'] }}</a></td>
+				{% if user.is_kernel() %}
+					{% if board['status'] == BoardConst.STATUS_ONLINE %}
+						<td>Public</td>
+					{% elif board['status'] == BoardConst.STATUS_HIDDEN %}
+						<td>Hidden</td>
+					{% end %}
+				{% end %}
+			</tr>
+		{% end %}
+		{% if len(board_list) == 0 %}
+			<tr><td colspan="4" class="text-center text-muted">No {{ board_name }} boards</td></tr>
+		{% end %}
+		</tbody>
+		</table>
 	{% end %}
-	</tbody>
-    </table>
 </div>

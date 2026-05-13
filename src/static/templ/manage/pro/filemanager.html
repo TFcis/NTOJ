@@ -1,14 +1,58 @@
 {% extends '../manage.html' %}
 {% block head %}
-<script src="/oj/third/prism.js"></script>
-<link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
-<link rel="stylesheet" href="/oj/third/prism.css">
+<style>
+   #editor { height: 400px; width: 100%; }
+   #keybindingSelect {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+        background: #222;
+        color: #fff;
+        border-radius: 4px;
+        padding: 2px 8px;
+        border: 1px solid #444;
+    }
+</style>
+<script src="{{ url('/src/third/prism.js') }}"></script>
+<link rel="stylesheet" type="text/css" href="{{ url('/src/manage-pro.css') }}">
+<link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js"></script>
 
 <script type="text/javascript" id="contjs">
 	function init() {
 		let pro_id = "{{ pro_id }}";
 		let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
         let add_single_file_modal = new bootstrap.Modal(document.getElementById('addSingleFileModal'));
+        let aceEditor = null;
+        let isEditorModified = false;
+
+        const handleApiResponse = (res, onSuccess, onError) => {
+            let msg = '';
+            let dialog_type = null;
+            res = JSON.parse(res);
+            if (res.status == 'S') {
+                dialog_type = index.DIALOG_TYPE.success;
+                msg = onSuccess ? onSuccess(res) : res.data;
+            } else {
+                msg = res.data;
+                dialog_type = index.DIALOG_TYPE.error;
+                if (onError) onError(res);
+            }
+            index.show_notify_dialog(msg, dialog_type);
+        };
+
+        const uploadFile = (file, progressMsg, callback) => {
+            pack.get_token().done(function(token) {
+                index.create_progress_bar(progressMsg);
+                pack.send(token, file).done(function () {
+                    index.update_progress_bar_progress(100);
+                    callback(token);
+                }).progress(function(prog) {
+                    index.update_progress_bar_progress(prog * 100);
+                });
+            });
+        };
 
 		document.querySelectorAll('a.preview-file').forEach(el => {
 			el.addEventListener('click', function (e) {
@@ -17,7 +61,7 @@
 				let filename = tr.attr('filename');
 
 				let file_content = '';
-				$.post('/oj/be/manage/pro/filemanager', {
+				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
 					'reqtype': 'preview',
 					'pro_id': pro_id,
                     'filename': filename,
@@ -26,12 +70,41 @@
                     res = JSON.parse(res);
                     file_content = res.data;
 
-					$("#code").find("code").html(file_content);
+                    const ext = filename.split('.').pop();
+                    const langMap = {
+                        'html': 'html',
+                        'htm': 'html',
+                        'css': 'css',
+                        'js': 'javascript',
+                        'json': 'json',
+                        'xml': 'xml',
+                        'md': 'markdown',
+                        'sh': 'sh',
+                        'c': 'c_cpp',
+                        'cpp': 'c_cpp',
+                        'h': 'c_cpp',
+                        'py': 'python',
+                        'java': 'java',
+                        'rs': 'rust',
+                        's': 'assembly_x86',
+                    };
+                    const lang = langMap[ext] || 'text';
+
+                    $('#langList').val(lang);
+
                     $("#preview-title").text(filename);
                     $("#preview-title").attr("filename", filename);
                     $("#preview-title").attr("path", path);
                     Prism.highlightAll();
 					preview_modal.show();
+                    if (!aceEditor) {
+                        aceEditor = ace.edit("editor");
+                        aceEditor.setTheme("ace/theme/twilight");
+                        aceEditor.session.on("change", editorChangeHandler);
+                    }
+                    aceEditor.session.setMode("ace/mode/" + lang);
+                    aceEditor.setValue(file_content, -1);
+                    isEditorModified = false;
 				});
 			});
 		});
@@ -40,7 +113,72 @@
             let filename = $("#preview-title").attr("filename");
             let path = $("#preview-title").attr("path");
 
-            window.open(`/oj/be/manage/pro/filemanager?proid=${pro_id}&download=1&filename=${filename}&path=${path}`);
+			let url = "{{ url('/be/manage/pro/filemanager') }}";
+            window.open(`${url}?proid=${pro_id}&download=1&filename=${filename}&path=${path}`);
+        });
+
+        $("#previewModal").find("button.save").on('click', function(e) {
+            const filename = $("#preview-title").attr("filename");
+            const path = $("#preview-title").attr("path");
+            const content = aceEditor.getValue();
+
+            // Create a file-like object
+            const file = new File([content], filename, { type: "text/plain" });
+
+            uploadFile(file, 'Saving...', function(token) {
+                $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
+                    'reqtype': 'updatesinglefile',
+                    'pack_token': token,
+                    'pro_id': pro_id,
+                    'filename': filename,
+                    'path': path,
+                }, function (res) {
+                    index.remove_progress_bar();
+                    handleApiResponse(res,
+                        (r) => `Save ${filename} successfully.`
+                    );
+                    resetEditor();
+                    isEditorModified = false;
+                    preview_modal.hide();
+                    index.reload();
+                });
+            });
+		});
+
+        $('#keybindingSelect').on('change', function(e) {
+            const kb = $(this).val();
+            aceEditor.setKeyboardHandler("ace/keyboard/" + kb);
+        });
+
+        $('#langList').on('change', function(e) {
+            const lang = $(this).val();
+            aceEditor.session.setMode("ace/mode/" + lang);
+        });
+
+        const editorChangeHandler = () => {
+            isEditorModified = true;
+        };
+
+        const resetEditor = () => {
+            if (aceEditor) {
+                aceEditor.session.getUndoManager().reset();
+                aceEditor.clearSelection();
+                aceEditor.setValue('', -1);
+            }
+        };
+
+        document.getElementById('previewModal').addEventListener('hide.bs.modal', function (e) {
+            if (isEditorModified) {
+                e.preventDefault();
+                const confirmed = confirm('There are unsaved changes. Are you sure you want to close?');
+                if (confirmed) {
+                    isEditorModified = false;
+                    resetEditor();
+                    preview_modal.hide();
+                }
+            } else {
+                resetEditor();
+            }
         });
 
 		document.querySelectorAll('button.rename-single-file').forEach(el => {
@@ -49,25 +187,16 @@
 				let old_filename = $(this).parents('tr').attr('filename');
                 let new_filename = prompt('New filename', old_filename);
 
-				$.post('/oj/be/manage/pro/filemanager', {
+				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
 					'reqtype': 'renamesinglefile',
 					'pro_id': pro_id,
                     'old_filename': old_filename,
                     'new_filename': new_filename,
                     'path': path,
 				}, function (res) {
-					let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Rename ${old_filename} to ${new_filename} successfully.`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
+                    handleApiResponse(res,
+                        (r) => `Rename ${old_filename} to ${new_filename} successfully.`
+                    );
                     index.reload();
 				});
 			});
@@ -75,27 +204,21 @@
 
 		document.querySelectorAll('button.delete-single-file').forEach(el => {
 			el.addEventListener('click', function (e) {
+                if (!confirm('Are you sure to delete this file?')) {
+                    return;
+                }
                 let path = $(this).parents('.accordion-collapse').attr('path');
 				let filename = $(this).parents('tr').attr('filename');
 
-				$.post('/oj/be/manage/pro/filemanager', {
+				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
 					'reqtype': 'deletesinglefile',
 					'pro_id': pro_id,
                     'filename': filename,
                     'path': path,
 				}, function (res) {
-                    let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Delete ${filename} successfully.`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
+                    handleApiResponse(res,
+                        (r) => `Delete ${filename} successfully.`
+                    );
                     index.reload();
 				});
 			});
@@ -115,31 +238,6 @@
 
         j_add_single_file.find("button.upload").on('click', function(e) {
             let path = j_add_single_file.attr('path');
-			function _update(token, filename) {
-				$.post('/oj/be/manage/pro/filemanager', {
-					'reqtype': 'addsinglefile',
-					'pack_token': token,
-					'pro_id': pro_id,
-                    'filename': filename,
-                    'path': path,
-				}, function (res) {
-                    let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Upload single file ${filename} successfully`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
-                    index.reload();
-				});
-			}
-            add_single_file_modal.hide();
-
             let filename = j_add_single_file.find("input.filename").val();
             if (filename.length == 0) {
                 index.show_notify_dialog('Filename should not empty', index.DIALOG_TYPE.error);
@@ -153,18 +251,22 @@
                 return;
             }
             let file = files[0];
+            add_single_file_modal.hide();
 
-            pack.get_token().done(function(token) {
-                index.create_progress_bar('File Uploading...');
-
-                pack.send(token, file).done(function () {
-                    index.update_progress_bar_progress(100);
+            uploadFile(file, 'File Uploading...', function(token) {
+                $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
+                    'reqtype': 'addsinglefile',
+                    'pack_token': token,
+                    'pro_id': pro_id,
+                    'filename': filename,
+                    'path': path,
+                }, function (res) {
                     index.remove_progress_bar();
-                    _update(token, filename);
-
+                    handleApiResponse(res,
+                        (r) => `Upload single file ${filename} successfully`
+                    );
                     j_add_single_file.find("input.file").val("");
-                }).progress(function(prog) {
-                    index.update_progress_bar_progress(prog * 100);
+                    index.reload();
                 });
             });
         });
@@ -172,30 +274,6 @@
 		document.querySelectorAll('button.update-single-file').forEach(el => {
 			let j_input = $(el).siblings('input');
             let path = $(el).parents('.accordion-collapse').attr('path');
-
-			function _update(pack_token, filename) {
-				$.post('/oj/be/manage/pro/filemanager', {
-					'reqtype': 'updatesinglefile',
-					'pack_token': pack_token,
-					'pro_id': pro_id,
-                    'filename': filename,
-                    'path': path,
-				}, function (res) {
-                    let msg = '';
-					let dialog_type = null;
-
-                    res = JSON.parse(res);
-                    if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Update ${filename} successfully.`;
-                    } else {
-                        msg = res.data;
-                    }
-
-					index.show_notify_dialog(msg, dialog_type);
-                    index.reload();
-				});
-			}
 
 			el.addEventListener('click', function (e) {
 				j_input.click();
@@ -210,18 +288,21 @@
 
 				let filename = $(this).parents('tr').attr('filename');
 				let file = e.target.files[0];
-				pack.get_token().done(function(token) {
-					index.create_progress_bar('Uploading...');
-
-					pack.send(token, file).done(function () {
-						index.update_progress_bar_progress(100);
-						index.remove_progress_bar();
-						_update(token, filename);
-						j_input.val(''); // for the same file upload
-
-					}).progress(function(prog) {
-						index.update_progress_bar_progress(prog * 100);
-					});
+				uploadFile(file, 'Uploading...', function(token) {
+                    $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
+                        'reqtype': 'updatesinglefile',
+                        'pack_token': token,
+                        'pro_id': pro_id,
+                        'filename': filename,
+                        'path': path,
+                    }, function (res) {
+                        index.remove_progress_bar();
+                        handleApiResponse(res,
+                            (r) => `Update ${filename} successfully.`
+                        );
+                        j_input.val(''); // for the same file upload
+                        index.reload();
+                    });
 				});
 			});
 		});
@@ -238,16 +319,36 @@
 			</div>
 
 			<div class="modal-body">
-				<pre id="code"
-					data-language=""
-					data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"
-				>
-					<code class=""></code>
-				</pre>
+                <div style="position: relative;">
+                    <select id="keybindingSelect">
+                        <option value="ace">Default</option>
+                        <option value="vim">Vim</option>
+                        <option value="emacs">Emacs</option>
+                        <option value="sublime">Sublime</option>
+                    </select>
+                    <div id="editor">place holder</div>
+                </div>
+                <label for="langList" class="form-label">Language</label>
+                <select id="langList" class="form-select">
+                    <option value="html">HTML</option>
+                    <option value="markdown">Markdown</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="css">CSS</option>
+                    <option value="xml">XML</option>
+                    <option value="json">JSON</option>
+                    <option value="c_cpp">C/C++</option>
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="rust">Rust</option>
+                    <option value="assembly_x86">Assembly</option>
+                    <option value="sh">Shell Script</option>
+                    <option value="text">Plain Text</option>
+                </select>
 			</div>
 
 			<div class="modal-footer">
 				<button class="btn btn-primary download">Download</button>
+                <button class="btn btn-primary save">Save</button>
 			</div>
 		</div>
 	</div>

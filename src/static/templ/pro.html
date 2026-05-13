@@ -1,23 +1,16 @@
 {% from services.chal import COMPILER_INFOS %}
 {% from utils.numeric import merge_list_to_str %}
-<link rel="stylesheet" type="text/css" href="/oj/pro.css">
-<link rel="stylesheet" href="/oj/third/pdf_viewer.min.css"/>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        tex2jax:{
-            inlineMath:[['$','$'],['\\(','\\)']]
-        }
-    });
-</script>
+<link rel="stylesheet" type="text/css" href="{{ url('/src/pro.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url('/src/third/pdf_viewer.min.css') }}">
 <script type="text/javascript">
     var pdf_url = '';
     var html_url = '';
     {% if contest %}
-        pdf_url = '/oj/contests/{{ contest.contest_id }}/pro/{{ pro.pro_id }}/cont.pdf';
-        html_url = '/oj/contests/{{ contest.contest_id }}/pro/{{ pro.pro_id }}/cont.html'
+        pdf_url = `{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/cont.pdf') }}`;
+        html_url = `{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/cont.html') }}`
     {% else %}
-        pdf_url = '/oj/pro/{{ pro.pro_id }}/cont.pdf';
-        html_url = '/oj/pro/{{ pro.pro_id }}/cont.html';
+        pdf_url = `{{ url(f'/pro/{ pro.pro_id }/cont.pdf') }}`;
+        html_url = `{{ url(f'/pro/{ pro.pro_id }/cont.html') }}`;
     {% end %}
 
     function init() {
@@ -34,7 +27,7 @@
             if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1 || tags.length == 0) {
                 // valid
                 $('#tags-invalid').hide();
-                $.post('/oj/be/set-tags', {
+                $.post(`{{ url('/be/set-tags') }}`, {
                     'pro_id': {{ pro.pro_id }},
                     'tags': tags,
                 }, function() {
@@ -71,10 +64,6 @@
         let j_cont = $('#cont');
 
         function _load_html() {
-            scriptTag = document.createElement('script');
-            scriptTag.src = '/oj/third/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
-            document.head.appendChild(scriptTag);
-
             j_cont.load(html_url, function(res, status, xhr) {
                 if (status == 'error') {
                     $('#pdfbtn').show();
@@ -87,7 +76,11 @@
                         viewer = 2;
                     }
                 } else {
-                    MathJax.Hub.Queue(["Typeset",MathJax.Hub,j_cont[0]]);
+                    try {
+                        MathJax.typeset();
+                    } catch (e) {
+                        console.warn('MathJax typeset error', e);
+                    }
                     j_cont.find('pre > code').each(function(i, e) {
                         $(e).addClass('html');
                         hljs.highlightBlock(e);
@@ -156,9 +149,9 @@
         <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
         {% if can_submit and pro.allow_submit %}
             {% if contest and not contest.is_end() %}
-                <a class="btn btn-primary btn-lg my-lg-1" href="/oj/contests/{{ contest.contest_id }}/submit/{{ pro.pro_id }}/">Submit</a><br />
+                <a class="btn btn-primary btn-lg my-lg-1" href="{{ url(f'/contests/{ contest.contest_id }/submit/{ pro.pro_id }/') }}">Submit</a><br />
             {% else %}
-                <a class="btn btn-primary btn-lg my-lg-1" href="/oj/submit/{{ pro.pro_id }}/">Submit</a><br />
+                <a class="btn btn-primary btn-lg my-lg-1" href="{{ url(f'/submit/{ pro.pro_id }/') }}">Submit</a><br />
             {% end %}
         {% else %}
             <a class="btn btn-warning btn-lg my-lg-1">Cannot Submit</a><br />
@@ -166,11 +159,11 @@
 
         <div class="my-lg-1">
             {% if contest %}
-                <a class="btn btn-success" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro.pro_id }}&acctid={{ user.acct_id }}">My Status</a>
-                <a class="btn btn-secondary" href="/oj/contests/{{ contest.contest_id }}/chal/?proid={{ pro.pro_id }}">Status</a>
+                <a class="btn btn-success" href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }&acctid={ user.acct_id }') }}">My Status</a>
+                <a class="btn btn-secondary" href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }') }}">Status</a>
             {% else %}
-                <a class="btn btn-success" href="/oj/rank/{{ pro.pro_id }}/">&nbsp;Rank&nbsp;</a>
-                <a class="btn btn-secondary" href="/oj/chal/?proid={{ pro.pro_id }}">Status</a>
+                <a class="btn btn-success" href="{{ url(f'/rank/{ pro.pro_id }/') }}">&nbsp;Rank&nbsp;</a>
+                <a class="btn btn-secondary" href="{{ url(f'/chal/?proid={ pro.pro_id }') }}">Status</a>
             {% end %}
 
         </div>
@@ -200,33 +193,13 @@
                         {% if topcoder.photo == "" %}
                         {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
                         {% end %}
-                        <img class="card-photo" width="100" height="100" src="{{ topcoder.photo }}" />
+                        <img src="{{ topcoder.photo }}" style="max-width:100px; max-height:100px; position:relative; left:50px; transform:translateX(-50%);" />
                         <div class="card-text-group">
-                            <h5 class="card-title"><a href="/oj/acct/{{ topcoder.acct_id }}/">{{ topcoder.name }}</a></h5>
+                            <h5 class="card-title"><a href="{{ url(f'/acct/{ topcoder.acct_id }/') }}">{{ topcoder.name }}</a></h5>
                             <p class="card-text">{{ topcoder.motto }}</p>
                         </div>
                     </div>
                     </div>
-                    <style>
-                        .card-body {
-                            display: flex;
-                            align-items: center;
-                            gap: 10px;
-                        }
-
-                        .card-photo {
-                            flex-shrink: 0;
-                            border-radius: 4px;
-                        }
-
-                        .card-text-group {
-                            display: flex;
-                            flex-direction: column;
-                        }
-                        .card-text {
-                            word-break: break-all;
-                        }
-                    </style>
                 </div>
             {% else %}
                 <div class="my-lg-1" id="topcoder">
@@ -291,7 +264,7 @@
                 </tbody>
             </table>
             {% if user.is_kernel() %}
-                <a class="btn btn-warning" href="/oj/manage/pro/update/?proid={{pro.pro_id}}">Manage</a>
+                <a class="btn btn-warning" href="{{ url(f'/manage/pro/update/?proid={ pro.pro_id }') }}">Manage</a>
             {% end %}
         </div>
     </div>

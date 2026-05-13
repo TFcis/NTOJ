@@ -1,0 +1,233 @@
+{% extends '../manage.html' %}
+{% block head %}
+{% from services.pro import ProConst %}
+
+<script type="text/javascript" id="contjs" async>
+    function init() {
+        let pro_id = "{{ pro.pro_id }}";
+        let general_form = $('#general');
+
+        general_form.find('button.submit').on('click', function(e) {
+            let name = general_form.find('input.name').val();
+            let tags = general_form.find('input.tags').val();
+            let status = general_form.find('select#status').val();
+            let allow_submit = general_form.find('input#allow-submit').is(":checked");
+
+            {% if pro.status == ProConst.STATUS_HIDDEN %}
+                if (status == {{ ProConst.STATUS_ONLINE }} && !confirm('Are you sure to change problem status from hidden to online?')) {
+                    return;
+                }
+            {% end %}
+
+
+            $.post(`{{ url('/be/manage/pro/update') }}`, {
+                'reqtype': 'updategeneral',
+                'pro_id': pro_id,
+                'name': name,
+                'tags': tags,
+                'status': status,
+                'allow_submit': allow_submit,
+            }, function(res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
+                    index.reload();
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        });
+
+        general_form.find('button.upload').on('click', function(e) {
+            function _update(token) {
+                $.post(`{{ url('/be/manage/pro/update') }}`, {
+                    'reqtype': 'uploadpackage',
+                    'pro_id': pro_id,
+                    'pack_token': token,
+                }, function(res) {
+                    index.remove_progress_bar();
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        index.show_notify_dialog('Update problem by uploading package successfully', index.DIALOG_TYPE.success);
+                        index.reload();
+                    } else {
+                        index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                    }
+                });
+            }
+
+            let files = general_form.find('input.file')[0].files;
+            if (files.length == 0) {
+                index.show_notify_dialog('Package file should not empty');
+                return;
+            }
+
+            pack.get_token().done(function(token) {
+                index.create_progress_bar('Uploading...');
+                pack.send(token, files[0]).done(function() {
+                    index.update_progress_bar_progress(100);
+                    index.update_progress_bar_title('Decompressing...');
+                    _update(token);
+                }).progress(function(prog) {
+                    index.update_progress_bar_progress(prog * 100);
+                });
+            });
+        });
+
+        general_form.find('button.rechal').on('click', function (e) {
+            $.post(`{{ url('/be/manage/pro') }}`, {
+                'reqtype': 'rechal',
+                'pro_id': pro_id
+            }, function (res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Processing...', index.DIALOG_TYPE.success);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        });
+
+        general_form.find('button.rechalall').on('click', function (e) {
+            let pwd = prompt('server config password');
+            $.post(`{{ url('/be/manage/pro') }}`, {
+                'reqtype': 'rechalall',
+                'pro_id': pro_id,
+                'pwd': pwd,
+            }, function (res) {
+                res = JSON.parse(res);
+                if (res.status == 'S') {
+                    index.show_notify_dialog('Processing...', index.DIALOG_TYPE.success);
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                }
+            });
+        });
+    }
+</script>
+{% end %}
+
+{% block content %}
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h3><i class="bi bi-pencil-square"></i> Problem General Settings - {{ pro.name }}</h3>
+
+    <form id="general">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Basic Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="problemName" class="form-label fw-bold">Problem Name</label>
+                    <input type="text" id="problemName" class="form-control name"
+                           placeholder="Problem Name" value="{{ pro.name }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="problemTags" class="form-label fw-bold">Problem Tags</label>
+                    <input type="text" id="problemTags" class="form-control tags"
+                           placeholder="Tags (comma separated)" value="{{ pro.tags }}">
+                    <div class="form-text">Separate multiple tags with commas</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="status" class="form-label fw-bold">Problem Status</label>
+                    <select id="status" class="form-select">
+                        <option value="{{ ProConst.STATUS_ONLINE }}"
+                                {% if pro.status == ProConst.STATUS_ONLINE %} selected {% end %}>
+                            Online
+                        </option>
+                        <option value="{{ ProConst.STATUS_CONTEST }}"
+                                {% if pro.status == ProConst.STATUS_CONTEST %} selected {% end %}>
+                            Contest Only
+                        </option>
+                        <option value="{{ ProConst.STATUS_HIDDEN }}"
+                                {% if pro.status == ProConst.STATUS_HIDDEN %} selected {% end %}>
+                            Hidden
+                        </option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" id="allow-submit" class="form-check-input"
+                               {% if pro.allow_submit %} checked {% end %}>
+                        <label for="allow-submit" class="form-check-label fw-bold">
+                            Allow Submit
+                        </label>
+                    </div>
+                    <div class="form-text">Enable or disable submissions for this problem</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mb-3">
+            <button type="button" class="btn btn-primary btn-lg submit">
+                <i class="bi bi-save"></i> Update Information
+            </button>
+        </div>
+
+        <div class="card mb-3 border-warning">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Rejudge Operations</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Rejudge submissions for this problem</p>
+                <div class="d-grid gap-2 d-md-flex">
+                    <button type="button" class="btn btn-warning rechal">
+                        <i class="bi bi-arrow-clockwise"></i> Rejudge Pending
+                    </button>
+                    <button type="button" class="btn btn-danger rechalall">
+                        <i class="bi bi-exclamation-circle"></i> Rejudge All (Requires Password)
+                    </button>
+                </div>
+                <div class="form-text mt-2">
+                    <strong>Warning:</strong> Rejudging all submissions may take a long time and requires server password.
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-danger">
+            <div class="card-header bg-danger bg-opacity-10">
+                <h5 class="mb-0 text-danger">
+                    <i class="bi bi-shield-exclamation"></i> Danger Zone
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-danger fw-bold">Upload Problem Package (.tar.xz)</p>
+                <p class="mb-3">
+                    <strong>Warning:</strong> This will overwrite all problem data including testdata,
+                    checker, grader, and configuration. This operation cannot be undone.
+                </p>
+                <div class="mb-3">
+                    <input type="file" class="form-control file" accept=".tar.xz">
+                    <div class="form-text">Only .tar.xz files are allowed</div>
+                </div>
+                <button type="button" class="btn btn-danger upload">
+                    <i class="bi bi-upload"></i> Upload Package
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <div class="mt-4">
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatelimit/?proid={ pro.pro_id }') }}">
+            <i class="bi bi-speedometer"></i> Configure Limits
+        </a>
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatesubtask/?proid={ pro.pro_id }') }}">
+            <i class="bi bi-list-check"></i> Configure Subtasks
+        </a>
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatetestdata/?proid={ pro.pro_id }') }}">
+            <i class="bi bi-file-earmark-binary"></i> Manage Testdata
+        </a>
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/filemanager/?proid={ pro.pro_id }') }}">
+            <i class="bi bi-folder"></i> File Manager
+        </a>
+        {% if pro.problem_type == 1 %}
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatejudge/?proid={ pro.pro_id }') }}">
+            <i class="bi bi-gear"></i> Judge Configuration
+        </a>
+        {% end %}
+    </div>
+</div>
+{% end %}

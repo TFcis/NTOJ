@@ -1,8 +1,8 @@
 {% extends '../manage.html' %}
 {% block head %}
-<script src="/oj/third/prism.js"></script>
-<link rel="stylesheet" type="text/css" href="/oj/manage-pro.css">
-<link rel="stylesheet" href="/oj/third/prism.css">
+<script src="{{ url('/src/third/prism.js') }}"></script>
+<link rel="stylesheet" type="text/css" href="{{ url('/src/manage-pro.css') }}">
+<link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
 
 <script type="text/javascript" id="contjs">
 	function init() {
@@ -19,7 +19,7 @@
 					return;
 				}
 
-                $.post('/oj/be/manage/pro/updatetests', {
+                $.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
 					'reqtype': 'updaterate',
 					'pro_id': pro_id,
 					'subtask': subtask,
@@ -31,8 +31,9 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Update rate of subtask#${subtask} successfully.`;
+                        msg = `Update rate of subtask#${parseInt(subtask) + 1} successfully.`;
                     } else {
+                        dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
@@ -44,7 +45,7 @@
 
         $("button.add-subtask").on('click', function(e) {
             let rate = parseInt(prompt('New subtask rate: '));
-            $.post('/oj/be/manage/pro/updatetests', {
+            $.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
                 'reqtype': 'addsubtask',
                 'pro_id': pro_id,
                 'rate': rate,
@@ -57,6 +58,7 @@
                     dialog_type = index.DIALOG_TYPE.success;
                     msg = `Add subtask successfully.`;
                 } else {
+                    dialog_type = index.DIALOG_TYPE.error;
                     msg = res.data;
                 }
 
@@ -67,8 +69,11 @@
 
         document.querySelectorAll('button.delete-subtask').forEach(el => {
             el.addEventListener('click', function(e) {
+                if (!confirm('Are you sure to delete this subtask?')) {
+                    return;
+                }
                 let subtask = $(this).parents('.accordion-collapse').attr('subtask');
-				$.post('/oj/be/manage/pro/updatetests', {
+				$.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
 					'reqtype': 'deletesubtask',
 					'pro_id': pro_id,
                     'subtask': subtask
@@ -79,8 +84,9 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Delete subtask #${subtask} successfully.`;
+                        msg = `Delete subtask #${parseInt(subtask) + 1} successfully.`;
                     } else {
+						dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
@@ -99,7 +105,7 @@
                     return;
                 }
 
-				$.post('/oj/be/manage/pro/updatetests', {
+				$.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
 					'reqtype': 'settestdata',
 					'pro_id': pro_id,
                     'subtask': subtask,
@@ -111,8 +117,9 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Subtask #${subtask} set testdatas successfully.`;
+                        msg = `Subtask #${parseInt(subtask) + 1} set testdatas successfully.`;
                     } else {
+						dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
@@ -126,12 +133,12 @@
             el.addEventListener('click', function(e) {
                 let subtask = $(this).parents('.accordion-collapse').attr('subtask');
                 let dep_subtasks = $(this).siblings('#depsubtasks').val();
-                if (!re.test(dep_subtasks)) {
+                if (dep_subtasks.length != 0 && !re.test(dep_subtasks)) {
                     index.show_notify_dialog("Dependency subtasks wrong. Please follow the instruction", index.DIALOG_TYPE.warning);
                     return;
                 }
 
-				$.post('/oj/be/manage/pro/updatetests', {
+				$.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
 					'reqtype': 'setdepsubtasks',
 					'pro_id': pro_id,
                     'subtask': subtask,
@@ -143,8 +150,9 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
 						dialog_type = index.DIALOG_TYPE.success;
-                        msg = `Subtask #${subtask} set dependency subtasks successfully.`;
+                        msg = `Subtask #${parseInt(subtask) + 1} set dependency subtasks successfully.`;
                     } else {
+						dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
@@ -153,13 +161,43 @@
 				});
             });
         });
-	}
+
+        document.querySelectorAll('button.set-metadata-tags').forEach(el => {
+            el.addEventListener('click', function(e) {
+                let subtask = $(this).parents('.accordion-collapse').attr('subtask');
+                let tags = $(this).siblings('#metadata-tags').val();
+
+                $.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
+                    'reqtype': 'updatemetadata',
+                    'pro_id': pro_id,
+                    'subtask': subtask,
+                    'tags': tags,
+                }, function (res) {
+                    let msg = '';
+                    let dialog_type = null;
+
+                    res = JSON.parse(res);
+                    if (res.status == 'S') {
+                        dialog_type = index.DIALOG_TYPE.success;
+                        msg = `Subtask #${parseInt(subtask) + 1} metadata tags updated successfully.`;
+                    } else {
+                        dialog_type = index.DIALOG_TYPE.error;
+                        msg = res.data;
+                    }
+
+                    index.show_notify_dialog(msg, dialog_type);
+                    index.reload();
+                });
+            });
+        });
+    }
 </script>
 {% end %}
 
 {% block content %}
 {% from utils.numeric import merge_list_to_str %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h2>Update subtask will make all challenge NotStart. Be careful.</h2>
 	<button class="btn btn-primary add-subtask">Add Subtask</button>
 
 	<div class="accordion" id="subtasks">
@@ -182,13 +220,13 @@
                     <button class="btn btn-danger delete-subtask">Delete Current Subtask</button>
 
                     <div class="input-group mb-3">
-                        <input id="weight" class="form-control mb-1" type="number" value="{{ subtask_config.rate }}" placeholder="Weight">
-                        <button class="btn btn-primary edit-weight">Update Rate</button>
+                        <input id="rate" class="form-control mb-1" type="number" value="{{ subtask_config.rate }}" placeholder="Rate">
+                        <button class="btn btn-primary edit-rate">Update Rate</button>
                     </div>
 
-                    <label for="testdatas" class="form-label">Testdata id. Starts from 0, for examples: <code>0</code>, <code>1-4</code>, <code>2,4,9-11,13-18</code></label>
+                    <label for="testdatas" class="form-label">Testdata id. Starts from 1, for examples: <code>1</code>, <code>1-4</code>, <code>2,4,9-11,13-18</code></label>
                     <div class="input-group mb-3">
-                        <input id="testdatas" class="form-control mb-1" type="text" value="{{ merge_list_to_str([testdata.testdata_id for testdata in subtask_config.testdatas]) }}" placeholder="Testdata">
+                        <input id="testdatas" class="form-control mb-1" type="text" value="{{ merge_list_to_str([testdata.testdata_id + 1 for testdata in subtask_config.testdatas]) }}" placeholder="Testdata">
                         <button class="btn btn-primary set-testdatas">Update Testdatas</button>
                     </div>
 
@@ -196,6 +234,12 @@
                     <div class="input-group mb-3">
                         <input id="depsubtasks" class="form-control mb-1" type="text" value="{{ merge_list_to_str(list(map(lambda x: x+1, subtask_config.dependency_subtasks))) }}" placeholder="Dependency Subtasks">
                         <button class="btn btn-primary set-depsubtasks">Update Dependency Subtasks</button>
+                    </div>
+
+                    <label for="metadata-tags" class="form-label">Metadata Tags (comma-separated). Use <code>system-test</code> to mark as system test (final test)</label>
+                    <div class="input-group mb-3">
+                        <input id="metadata-tags" class="form-control mb-1" type="text" value="{{ ','.join(subtask_config.metadata.get('tags', [])) }}" placeholder="e.g., system-test">
+                        <button class="btn btn-primary set-metadata-tags">Update Tags</button>
                     </div>
 				</div>
 			</div>

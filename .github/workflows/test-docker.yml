@@ -1,0 +1,334 @@
+name: test-docker
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.14
+          cache: 'poetry'
+
+      - name: Install Project dependencies
+        run: |
+          $HOME/.local/bin/poetry lock
+          $HOME/.local/bin/poetry install
+          $HOME/.local/bin/poetry add --dev coverage
+
+      - name: Run Unit Test
+        id: run-tests
+        run: |
+          cd src
+          chmod +x rununittest.sh
+          set +e
+          ./rununittest.sh
+          rc=$?
+          set -e
+          echo "exit_code=$rc" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-reports
+          path: src/htmlcov
+
+      - name: Fail job if tests failed
+        if: steps.run-tests.outputs.exit_code != '0'
+        run: |
+          echo "Unit tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
+          exit 1
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    env:
+      TEST_SERVICE: backend
+      REPORTS_PATH_IN_CONTAINER: /ntoj/htmlcov
+      REPORTS_DIR_ON_RUNNER: ${{ github.workspace }}/reports
+      POSTGRES_IMAGE: postgres:18-alpine
+      REDIS_IMAGE: redis:8-alpine
+      JUDGE_REPO: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git
+      CACHE_SUFFIX: v1
+    steps:
+      - name: Get judge repo commit
+        id: get-judge-commit
+        run: |
+          set -euo pipefail
+          commit=$(git ls-remote "${JUDGE_REPO}" HEAD | cut -f1)
+          echo "judge_commit=$commit" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Restore cached images (tarballs)
+        id: restore-cache
+        uses: actions/cache@v4
+        with:
+          path: cached-images
+          key: ${{ runner.os }}-docker-images-${{ env.CACHE_SUFFIX }}-${{ env.POSTGRES_IMAGE }}-${{ env.REDIS_IMAGE }}-${{ steps.get-judge-commit.outputs.judge_commit }}
+
+      - name: Load images from cache if present, otherwise pull and save
+        run: |
+          set -euo pipefail
+          mkdir -p cached-images
+
+          echo "POSTGRES=${POSTGRES_IMAGE}"
+          echo "REDIS=${REDIS_IMAGE}"
+
+          if [ -f "cached-images/postgres.tar" ]; then
+            echo "Found cached postgres.tar — loading into docker"
+            docker load -i cached-images/postgres.tar
+          else
+            echo "No cached postgres.tar — pulling ${POSTGRES_IMAGE}"
+            docker pull "${POSTGRES_IMAGE}"
+            echo "Saving ${POSTGRES_IMAGE} to cached-images/postgres.tar"
+            docker save -o cached-images/postgres.tar "${POSTGRES_IMAGE}"
+          fi
+
+          if [ -f "cached-images/redis.tar" ]; then
+            echo "Found cached redis.tar — loading into docker"
+            docker load -i cached-images/redis.tar
+          else
+            echo "No cached redis.tar — pulling ${REDIS_IMAGE}"
+            docker pull "${REDIS_IMAGE}"
+            echo "Saving ${REDIS_IMAGE} to cached-images/redis.tar"
+            docker save -o cached-images/redis.tar "${REDIS_IMAGE}"
+          fi
+
+          # Handle judge image cache (use commit hash as key)
+          JUDGE_COMMIT=${{ steps.get-judge-commit.outputs.judge_commit }}
+          if [ -f "cached-images/judge.tar" ]; then
+            echo "Found cached judge.tar — loading into docker"
+            docker load -i cached-images/judge.tar
+          else
+            echo "No cached judge.tar — building judge image at ${JUDGE_COMMIT}"
+            docker build -t judge:${JUDGE_COMMIT} "${JUDGE_REPO}#${JUDGE_COMMIT}"
+            echo "Saving judge:${JUDGE_COMMIT} to cached-images/judge.tar"
+            docker save -o cached-images/judge.tar "judge:${JUDGE_COMMIT}"
+          fi
+
+      - name: Prepare reports dir
+        run: mkdir -p "${REPORTS_DIR_ON_RUNNER}"
+
+      - name: Build backend image with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: development
+          tags: backend:dev
+          load: true
+          cache-from: type=gha,scope=backend-dev
+          cache-to: type=gha,mode=max,scope=backend-dev
+
+      - name: Create CI override to avoid /srv mounts and mount reports
+        run: |
+          cat > docker-compose.ci.yml <<YAML
+          version: "3.8"
+          services:
+            backend:
+              image: backend:dev
+              volumes:
+                - ./reports:/ntoj/htmlcov/
+                - backend_static:/ntoj/static
+                - backend_problem:/ntoj/problem
+                - backend_code:/ntoj/code
+            db:
+              volumes:
+                - db_data:/var/lib/postgresql/18/docker
+            cache:
+              volumes:
+                - cache_data:/data
+            judge:
+              image: judge:${{ steps.get-judge-commit.outputs.judge_commit }}
+              volumes:
+                - backend_problem:/problem:ro
+                - backend_code:/code:ro
+          volumes:
+            backend_static:
+            backend_problem:
+            backend_code:
+            db_data:
+            cache_data:
+          YAML
+
+      - name: Start compose
+        run: |
+          set -euo pipefail
+          export DOCKER_BUILDKIT=1
+          docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml up -d
+
+      - name: Run integration tests (runintegratedtest.sh)
+        id: run-tests
+        run: |
+          set -o pipefail
+          set +e
+          docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml run --rm -T "$TEST_SERVICE" bash -c "./runintegratedtest.sh"
+          rc=$?
+          echo "exit_code=$rc" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-reports
+          path: ${{ env.REPORTS_DIR_ON_RUNNER }}
+
+      - name: Tear down compose
+        if: always()
+        run: |
+          docker compose -f docker-compose.dev.yml -f docker-compose.ci.yml down -v
+
+      - name: Fail job if tests failed
+        if: steps.run-tests.outputs.exit_code != '0'
+        run: |
+          echo "Integration tests failed with exit code: ${{ steps.run-tests.outputs.exit_code }}"
+          exit 1
+
+  release-build:
+    name: Release Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env for release build
+        run: |
+          cat > .env <<'ENV'
+          DB_PASSWORD=ntoj_test_password
+          UNLOCK_PASSWORD=ntoj-test-unlock
+          TIMEDELTA=8
+          SITE_TITLE=ntoj-test
+          ADMIN_NAME=admin
+          ADMIN_MAIL=admin@example.com
+          ADMIN_PASSWORD=admin
+          BASE_URL=/
+          ENV
+
+      - name: Ensure reports dir
+        run: mkdir -p reports
+
+      - name: Build backend release image with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: release
+          tags: backend:release
+          load: true
+          cache-from: type=gha,scope=backend-release
+          cache-to: type=gha,mode=min,scope=backend-release
+          build-args: |
+            DB_PASSWORD=ntoj_test_password
+            UNLOCK_PASSWORD=ntoj-test-unlock
+            TIMEDELTA=8
+            SITE_TITLE=ntoj-test
+            ADMIN_NAME=admin
+            ADMIN_MAIL=admin@example.com
+            ADMIN_PASSWORD=admin
+            BASE_URL=/
+
+      - name: Create CI override compose file
+        run: |
+          cat > docker-compose.ci.yml <<'YAML'
+          version: "3.8"
+          services:
+            release-backend:
+              image: backend:release
+              volumes:
+                - ./reports:/ntoj/htmlcov/
+                - backend_static:/ntoj/static
+                - backend_problem:/ntoj/problem
+                - backend_code:/ntoj/code
+            release-db:
+              volumes:
+                - db_data:/var/lib/postgresql/18/docker
+            release-cache:
+              volumes:
+                - cache_data:/data
+          volumes:
+            backend_static:
+            backend_problem:
+            backend_code:
+            db_data:
+            cache_data:
+          YAML
+
+      - name: Build and start release compose
+        id: release-up
+        run: |
+          set -euo pipefail
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          # Build and start
+          set +e
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+          rc=$?
+          set -e
+          echo "exit_code=$rc" >> $GITHUB_OUTPUT
+
+      - name: Collect backend logs
+        if: always()
+        run: |
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          mkdir -p reports
+          docker compose logs --no-color release-backend > reports/backend.log || true
+
+      - name: Wait and verify backend container
+        if: steps.release-up.outputs.exit_code == '0'
+        run: |
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          # Wait for backend container to show Up status
+          for i in {1..20}; do
+            status=$(docker compose ps release-backend --format "{{.State}}" || true)
+            echo "backend state: $status"
+            if [[ "$status" == "running" || "$status" == "Up" || "$status" == *"Up"* ]]; then
+              echo "backend is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "backend did not reach running state"
+          docker compose logs --no-color release-backend || true
+          exit 1
+
+      - name: Upload release logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-logs
+          path: reports
+
+      - name: Tear down release compose
+        if: always()
+        run: |
+          export COMPOSE_PROJECT_NAME=ntoj_release_test
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+
+      - name: Fail job if build failed
+        if: steps.release-up.outputs.exit_code != '0'
+        run: |
+          echo "Release build failed (docker compose up exit code: ${{ steps.release-up.outputs.exit_code }})"
+          exit 1

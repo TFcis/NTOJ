@@ -24,8 +24,10 @@
         };
 
         const auto_scroll = () => {
-            desc_textarea.style.height = 'auto';
-            desc_textarea.style.height = desc_textarea.scrollHeight + 'px';
+            const newHeight = desc_textarea.scrollHeight;
+            if (newHeight > desc_textarea.offsetHeight) {
+                desc_textarea.style.height = newHeight + 'px';
+            }
         }
         desc_textarea.value = desc_before_contest;
         desc_textarea.addEventListener('input', (event) => auto_scroll());
@@ -71,7 +73,7 @@
 
         $("button.submit").on('click', function(e) {
             let desc_type = $("#descType").val();
-            $.post("/oj/be/contests/{{ contest_id }}/manage/desc", {
+            $.post(`{{ url(f'/be/contests/{ contest_id }/manage/desc') }}`, {
                 reqtype: 'update',
                 desc_type: desc_type,
                 desc: desc_textarea.value,

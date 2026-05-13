@@ -21,7 +21,7 @@
 
             localization: {
                 locale: 'zh-tw',
-                format: 'yyyy/MM/dd HH:mm',
+                format: 'yyyy/MM/dd hh:mm T',
             },
         };
         start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerStart'), options);
@@ -65,7 +65,7 @@
                 return;
             }
 
-            $.post('/oj/be/manage/board/update', {
+            $.post(`{{ url('/be/manage/board/update') }}`, {
                 reqtype: 'update',
 				board_id: board_id,
                 name: name,
@@ -86,7 +86,10 @@
         });
 
 		j_form.find("#remove").on('click', (event) => {
-			$.post('/oj/be/manage/board/update', {
+            if (!confirm('Are you sure to remove this board?')) {
+                return;
+            }
+			$.post(`{{ url('/be/manage/board/update') }}`, {
 				reqtype: 'remove',
 				board_id: board_id,
 			}, function(res) {
@@ -101,7 +104,7 @@
 		});
 
         j_form.find("#cancel").on('click', (event) => {
-            index.go("/oj/manage/board/")
+            index.go(`{{ url('/manage/board/') }}`)
         });
     }
 

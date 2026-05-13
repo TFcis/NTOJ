@@ -4,7 +4,7 @@
     var j_form = $("#form");
     function init() {
         j_form.find("#logtype_list").on('change', function(e) {
-            var url = '/oj/log/';
+            var url = `{{ url('/log/') }}`;
             var logtype = $(this).val();
             if (logtype != 'All Type') {
                 url += '?logtype=' + logtype;
@@ -30,14 +30,22 @@
                 <tr>
                     <th scope="col">#</th>
                     <th scope="col">Message</th>
+                    <th scope="col">Operator Acct ID</th>
                     <th scope="col">Timestamp</th>
                 </tr>
             </thead>
             <tbody>
             {% for log in loglist %}
                 <tr>
-                    <td class="id"><a href="/oj/log/{{ log['log_id'] }}/">{{ log['log_id'] }}</a></td>
+                    <td class="id"><a href="{{ url(f'/log/{ log['log_id'] }/') }}">{{ log['log_id'] }}</a></td>
                     <td>{{ log['message'] }}</td>
+                    <td>
+                        {% if log['operator_acct_id'] is not None %}
+                            <a href="{{ url(f'/acct/{ log['operator_acct_id'] }/') }}">{{ log['operator_acct_id'] }}</a>
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% end %}
+                    </td>
                     <td>{{ log['timestamp'].astimezone(config.TIMEZONE) }}</td>
                 </tr>
             {% end %}

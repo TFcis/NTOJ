@@ -1,8 +1,26 @@
-import asyncio
-
-from handlers.base import RequestHandler, WebSocketSubHandler, reqenv
+from handlers.base import RequestHandler, UnifiedWebSocketHandler, reqenv
 from services.bulletin import BulletinService
 from services.judge import JudgeServerClusterService
+
+
+class BulletinCallback:
+    """Callback for bulletin updates - simple message forwarding"""
+
+    async def register(self, conn):
+        """Registering does not require special handling"""
+        pass
+
+    async def message(self, conn, data):
+        """Directly forward the bulletin ID"""
+        return data
+
+    async def unregister(self, conn):
+        """Unsubscribing does not require special handling"""
+        pass
+
+
+_bulletin_callback = BulletinCallback()
+UnifiedWebSocketHandler.register_channel_callback("bulletinsub", _bulletin_callback)
 
 
 class BulletinHandler(RequestHandler):
@@ -16,29 +34,14 @@ class BulletinHandler(RequestHandler):
             await self.render('info', bulletin_list=bulletin_list, judge_server_status=can_submit)
             return
 
-        bulletin_id = int(bulletin_id)
+        try:
+            bulletin_id = int(bulletin_id)
+        except ValueError:
+            return self.error(('Eparam', 'Invalid bulletin id'))
+
         err, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
         if err:
             return self.error(err)
 
         await self.render('bulletin', bulletin=bulletin)
 
-
-class BulletinSub(WebSocketSubHandler):
-    async def listen_newbulletin(self):
-        async for msg in self.p.listen():
-            if msg['type'] != 'message':
-                continue
-
-            await self.on_message(str(int(msg['data'])))
-
-    async def open(self):
-        await self.p.subscribe('bulletinsub')
-
-        self.task = asyncio.tasks.Task(self.listen_newbulletin())
-
-    async def on_message(self, msg):
-        await self.write_message(msg)
-
-    def on_close(self) -> None:
-        super().on_close()

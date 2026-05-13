@@ -15,6 +15,7 @@
                 <th>Name</th>
                 <th>Mail</th>
                 <th>Last IP</th>
+                <th>Specific IP</th>
                 <th>Level</th>
                 <th></th>
             </tr>
@@ -23,9 +24,10 @@
         {% for acct in acctlist %}
             <tr>
                 <td>{{ acct.acct_id }}</td>
-                <td><a href="/oj/acct/{{ acct.acct_id }}/">{{ acct.name }}</a></td>
+                <td><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.name }}</a></td>
                 <td>{{ acct.mail }}</td>
                 <td>{{ acct.lastip }}</td>
+                <td>{{ acct.specific_ip}}</td>
                 <td>
                     {% if acct.is_kernel() %}
                         Kernel
@@ -34,7 +36,7 @@
                     {% end %}
                 </td>
                 <td>
-                    <a class="btn btn-secondary" href="/oj/manage/acct/update/?acctid={{ acct.acct_id }}">&#x2699</a>
+                    <a class="btn btn-secondary" href="{{ url(f'/manage/acct/update/?acctid={ acct.acct_id }') }}">&#x2699</a>
                 </td>
             </tr>
         {% end %}

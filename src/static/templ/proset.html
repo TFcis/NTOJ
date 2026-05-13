@@ -16,7 +16,7 @@
                 proclass_id = $("#curProclassId").attr("proclass");
             let is_online = j_filter.find("#online").is(":checked");
             let is_reversed = j_filter.find("#reverse").is(":checked");
-            let url = '/oj/proset/?';
+            let url = `{{ url('/proset/?') }}`;
 
             if (order != '') {
                 url += `&order=${order}`;
@@ -39,11 +39,11 @@
             }
 
             if (search_name != '') {
-                url += `&name=${search_name}`;
+                url += `&name=${encodeURIComponent(search_name)}`;
             }
 
             if (search_tags != '') {
-                url += `&tags=${search_tags}`;
+                url += `&tags=${encodeURIComponent(search_tags)}`;
             }
 
             return url;
@@ -61,7 +61,7 @@
                 select_prob.val('');
                 return;
             }
-            index.go(`/oj/pro/${pro_id}/`);
+            index.go(`{{ url('/pro/${pro_id}/') }}`);
         };
 
         let select_prob = j_filter.find('input#select_prob');
@@ -103,9 +103,9 @@
                     let tr = $("<tr></tr>")
                     tr.append($("<td></td>").text(proclass.proclass_id));
                     tr.append($("<td></td>").text(proclass.name));
-                    tr.append($("<td></td>").html(`<a href="/oj/proset/?proclass_id=${proclass.proclass_id}&show=onlyac">${proclass.ac_cnt}</a> / ${proclass.total_cnt}`));
+                    tr.append($("<td></td>").html(`<a href="{{ url('/proset/?proclass_id=${proclass.proclass_id}&show=onlyac') }}">${proclass.ac_cnt}</a> / ${proclass.total_cnt}`));
                     if (proclass.acct_id != null) {
-                        tr.append($("<td></td>").append($(`<a href="/oj/acct/${proclass.acct_id}/"></a>`).text(proclass.creator_name)));
+                        tr.append($("<td></td>").append($(`<a href="{{ url('/acct/${proclass.acct_id}/') }}"></a>`).text(proclass.creator_name)));
                     } else {
                         tr.append($("<td></td>").text("Official"));
                     }
@@ -119,7 +119,7 @@
                     collect_td.find("button").on('click', function (e) {
                         let action = $(this).attr("actionType");
                         let j_this = $(this);
-                        $.post("/oj/be/proset", data={
+                        $.post(`{{ url('/be/proset') }}`, data={
                             'reqtype': action,
                             'proclass_id': proclass.proclass_id,
                         }, function(res) {
@@ -132,7 +132,7 @@
                                     j_this.attr("actionType", 'decollect');
                                     j_this.text("Decollect");
                                 }
-                                $.post("/oj/be/proset", {
+                                $.post(`{{ url('/be/proset') }}`, {
                                     "reqtype": "listproclass",
                                     "proclass_type": "collection",
                                 }, function (e) {
@@ -161,7 +161,7 @@
             }
 
             if (proclass_cata[proclass_type] === undefined) {
-                $.post("/oj/be/proset", {
+                $.post(`{{ url('/be/proset') }}`, {
                     "reqtype": "listproclass",
                     "proclass_type": proclass_type,
                 }, function (e) {
@@ -177,7 +177,7 @@
             document.querySelectorAll('.proclass-tab').forEach(el => el.classList.remove('active'));
             document.querySelector('.proclass-tab[proclassType="official"]').classList.add('active');
             proclass_cata = {};
-            $.post("/oj/be/proset", {
+            $.post(`{{ url('/be/proset') }}`, {
                 "reqtype": "listproclass",
                 "proclass_type": "collection",
             }, function (e) {
@@ -216,7 +216,7 @@
         <div class="modal-header">
             <h2>{{ cur_proclass['name'] }}</h2>
             {% if cur_proclass['acct_id'] %}
-                <h2><a href="/oj/acct/{{ cur_proclass['acct_id'] }}/">Created By: {{ cur_proclass['creator_name'] }}</a></h2>
+                <h2><a href="{{ url(f'/acct/{ cur_proclass['acct_id'] }/') }}">Created By: {{ cur_proclass['creator_name'] }}</a></h2>
             {% else %}
                 <h2>Created By: Official</h2>
             {% end %}
@@ -277,9 +277,9 @@
             <label class="form-label">Current Problem Class</label>
             {% if cur_proclass %}
                 <label class="form-label">{{ cur_proclass['name'] }}</label>
-                <p>Progress: <a href="/oj/proset/?proclass_id={{ cur_proclass['proclass_id'] }}&show=onlyac">{{ ac_pro_cnt }}</a> / {{ len(cur_proclass['list']) }}</p>
+                <p>Progress: <a href="{{ url(f'/proset/?proclass_id={ cur_proclass['proclass_id'] }&show=onlyac') }}">{{ ac_pro_cnt }}</a> / {{ len(prolist) }}</p>
                 <div class="progress">
-                    <div class="progress-bar" role="progressbar" style="width: {{ ac_pro_cnt / len(cur_proclass['list']) * 100 }}%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar" role="progressbar" style="width: {{ ac_pro_cnt / len(prolist) * 100 }}%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <div style="display: none;" id="curProclassId" proclass="{{ cur_proclass['proclass_id'] }}"></div>
             {% else %}
@@ -293,7 +293,7 @@
                 {% end %}
 
                 {% if not user.is_guest() %}
-                    <a class="btn btn-warning" href="/oj/acct/proclass/{{ user.acct_id }}/">Manage</a>
+                    <a class="btn btn-warning" href="{{ url(f'/acct/proclass/{ user.acct_id }/') }}">Manage</a>
                 {% end %}
             </div>
         </form>
@@ -347,7 +347,7 @@
 
             <div class="mb-1">
                 <label for="select_prob" class="form-label">Go to Problem</label>
-                <input type="text" id="select_prob" class="form-control" placeholder="problem number">
+                <input type="number" id="select_prob" class="form-control" placeholder="problem number">
             </div>
 
             <div class="mb-1">
@@ -378,10 +378,10 @@
                     {% if score_map[pro_id]['state'] is None %}
                         <td>Todo</td>
                     {% else %}
-                        <td><a href="/oj/chal/?proid={{ pro_id }}&acctid={{ user.acct_id }}" class="state-{{ score_map[pro_id]['state'] }}">{{ChalConst.STATE_LONG_STR[score_map[pro_id]['state']]}}</a></td>
+                        <td><a href="{{ url(f'/chal/?proid={ pro_id }&acctid={ user.acct_id }') }}" class="state-{{ score_map[pro_id]['state'] }}">{{ChalConst.STATE_LONG_STR[score_map[pro_id]['state']]}}</a></td>
                     {% end %}
                     <td class="name">
-                        <a href="/oj/pro/{{ pro_id }}/">{{ pro.name }}</a>
+                        <a href="{{ url(f'/pro/{ pro_id }/') }}">{{ pro.name }}</a>
                     </td>
                     {% set topcoder = score_map[pro_id]['topcoder'] %}
                     {% if topcoder %}
@@ -389,7 +389,7 @@
                             {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
                         {% end %}
                         <td class="text-center">
-                            <a href="/oj/acct/{{ topcoder.acct_id }}/">
+                            <a href="{{ url(f'/acct/{ topcoder.acct_id }/') }}">
                                 <img width="30" height="30" src="{{ topcoder.photo }}" />
                             </a>
                         </td>
@@ -405,7 +405,7 @@
                             {{ '0.00%' }}
                         {% end %}
 
-                        (<a href="/oj/rank/{{ pro_id }}/">{{ rate['user_ac_chal_cnt'] }}</a>
+                        (<a href="{{ url(f'/rank/{ pro_id }/') }}">{{ rate['user_ac_chal_cnt'] }}</a>
                         / {{ rate['user_all_chal_cnt'] }})
                     </td>
 
@@ -415,9 +415,9 @@
                         {% else %}
                             {{ '0.00%' }}
                         {% end %}
-                        (<a href="/oj/chal/?proid={{ pro_id }}&state={{ ChalConst.STATE_AC }}">{{ rate['ac_chal_cnt'] }}</a>
+                        (<a href="{{ url(f'/chal/?proid={ pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
                         /
-                        <a href="/oj/chal/?proid={{ pro_id }}">{{ rate['all_chal_cnt'] }}</a>)
+                        <a href="{{ url(f'/chal/?proid={ pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
                     </td>
 
                     <td class="name">{{ pro.tags }}</td>

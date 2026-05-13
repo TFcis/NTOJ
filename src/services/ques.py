@@ -14,7 +14,7 @@ class QuestionService:
 
     # TODO: Migrate Question data from redis to database
 
-    async def get_queslist(self, acct_id):
+    async def get_queslist(self, acct_id: int):
         if (await self.rs.get(f'{acct_id}_msg_active')) is None:
             await self.rs.set(f'{acct_id}_msg_active', packb(True))
             await self.rs.set(f'{acct_id}_msg_ask', packb(False))
@@ -49,10 +49,10 @@ class QuestionService:
         await self.rs.set(f'{acct_id}_msg_list', packb(ques_list))
         return None
 
-    async def reply(self, qacct_id, index, rtext):
+    async def reply(self, qacct_id: int, index: int, rtext: str):
         _, ques_list = await self.get_queslist(acct_id=qacct_id)
 
-        ques_list[int(index)]['A'] = rtext
+        ques_list[index]['A'] = rtext
         # await self.rs.set('someoneask', packb(False))
         await self.rs.set(f'{qacct_id}_msg_list', packb(ques_list))
         await self.rs.set(f'{qacct_id}_msg_ask', packb(False))
@@ -61,7 +61,7 @@ class QuestionService:
     async def rm_ques(self, acct_id: int, index: int):
         _, ques_list = await self.get_queslist(acct_id)
 
-        ques_list.pop(int(index))
+        ques_list.pop(index)
         if len(ques_list) == 0:
             await self.rs.set(f"{acct_id}_msg_ask", packb(False))
 

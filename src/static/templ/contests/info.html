@@ -42,17 +42,17 @@
             </div>
 
             <div class="card mb-1">
-                <div class="card-header">Registration Before</div>
+                <div class="card-header">Registration Mode</div>
                 <div class="card-body">
                     {% if contest.reg_mode is RegMode.INVITED %}
                         <h5>Invited</h5>
                     {% else %}
-                        <h5>{{ contest.reg_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
                         {% if contest.reg_mode is RegMode.FREE_REG %}
                             <h5>Free Registration, no approval needed</h5>
                         {% elif contest.reg_mode is RegMode.REG_APPROVAL %}
                             <h5>Free Registration, approval needed </h5>
                         {% end %}
+                        <h5>{{ contest.reg_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
                     {% end %}
                 </div>
             </div>
@@ -66,7 +66,7 @@
                     {% else %}
                         {% set now = datetime.datetime.now(datetime.UTC) %}
                         {% set can_reg = True %}
-                        {% if now >= contest.reg_end %}
+                        {% if now >= contest.reg_end and contest.reg_mode is not RegMode.INVITED %}
                             {% set can_reg = False %}
                             <h5>Registration Ended</h5>
                         {% end %}
@@ -84,18 +84,20 @@
                                 <h5>Not Registered</h5>
                             {% end %}
                             {% if can_reg %}
-                                <a href="/oj/contests/{{ contest.contest_id }}/reg/" class="btn btn-primary">Go to Register</a>
+                                <a href="{{ url(f'/contests/{ contest.contest_id }/reg/') }}" class="btn btn-primary">Go to Register</a>
                             {% end %}
                         {% else %}
                             {% if contest.member_is_status(user, UserStatus.REQUESTED) %}
                                 <h5>Waiting Approval</h5>
                             {% elif contest.member_is_status(user, UserStatus.APPROVED) %}
                                 <h5>Registered</h5>
+                            {% elif contest.member_is_status(user, UserStatus.REJECTED) %}
+                                <h5>Rejected</h5>
                             {% else %}
                                 <h5>Not Registered</h5>
                             {% end %}
                             {% if can_reg %}
-                                <a href="/oj/contests/{{ contest.contest_id }}/reg/" class="btn btn-primary">Go to Register</a>
+                                <a href="{{ url(f'/contests/{ contest.contest_id }/reg/') }}" class="btn btn-primary">Go to Register</a>
                             {% end %}
                         {% end %}
                     {% end %}

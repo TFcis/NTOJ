@@ -14,7 +14,6 @@ omit =
     *.generated.py
     runintegratedtest.py
     rununittest.py
-    rune2etest.py
     tests/*
     server.py
     upgrade.py
@@ -26,5 +25,8 @@ rm .coverage
 rm -r ./htmlcov
 
 COVERAGE_PROCESS_START=.coveragerc $HOME/.local/bin/poetry run coverage run --branch --source=./ rununittest.py
+rc=$?
 $HOME/.local/bin/poetry run coverage combine
 $HOME/.local/bin/poetry run coverage html
+
+exit $rc

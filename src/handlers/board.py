@@ -15,7 +15,11 @@ class BoardHandler(RequestHandler):
             await self.render('board-list', boardlist=board_list)
             return
 
-        board_id = int(board_id)
+        try:
+            board_id = int(board_id)
+        except ValueError:
+            return self.error(('Eparam', 'Invalid board id'))
+
         err, meta = await BoardService.inst.get_board(board_id)
         if err:
             return self.error(err)

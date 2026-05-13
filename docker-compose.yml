@@ -1,0 +1,89 @@
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "100m"
+    max-file: "2"
+
+services:
+  release-backend:
+    build:
+      context: ./
+      target: release
+      args:
+        DB_PASSWORD: ${DB_PASSWORD:?Missing DB_PASSWORD. Maybe .env setting error or .env file not found. Please check .env file or install guide to fix problem.}
+        UNLOCK_PASSWORD: ${UNLOCK_PASSWORD:?Missing UNLOCK_PASSWORD. Maybe .env setting error or .env file not found. Please check .env file or install guide to fix problem.}
+        TIMEDELTA: ${TIMEDELTA:?Missing TIMEDELTA. Maybe .env setting error or .env file not found. Please check .env file or install guide to fix problem.}
+        SITE_TITLE: ${SITE_TITLE:?Missing SITE_TITLE. Maybe .env setting error or .env file not found. Please check .env file or install guide to fix problem.}
+        ADMIN_NAME: ${ADMIN_NAME:?Missing ADMIN_NAME. Maybe .env setting error or .env file not found. Please check .env file or install guide to fix problem.}
+        ADMIN_MAIL: ${ADMIN_MAIL:?Missing ADMIN_MAIL. Maybe .env setting error or .env file not found. Please check .env file or install guide to fix problem.}
+        ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Missing ADMIN_PASSWORD. Maybe .env setting error or .env file not found. Please check .env file or install guide to fix problem.}
+        BASE_URL: ${BASE_URL:?Missing BASE_URL. Maybe .env setting error or .env file not found. Please check .env file or install guide to fix problem.}
+    volumes:
+      - /srv/ntoj/static:/ntoj/static
+      - /srv/ntoj/problem:/ntoj/problem
+      - /srv/ntoj/code:/ntoj/code
+      - /srv/ntoj/config:/ntoj/config
+      # - /srv/ntoj/config.py:/ntoj/config.py
+    depends_on:
+      - release-db
+      - release-cache
+    networks:
+      - release-app
+      - release-judge_net
+    ports:
+      - "5500:5500"
+    logging: *default-logging
+
+  release-db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ntoj
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ntoj
+    volumes:
+      - /srv/ntoj/db:/var/lib/postgresql/18/docker
+    networks:
+      - release-app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ntoj -d ntoj"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+
+  release-cache:
+    image: redis:8-alpine
+    volumes:
+      - /srv/ntoj/cache:/data
+    networks:
+      - release-app
+    logging: *default-logging
+
+  release-judge:
+    build: https://github.com/tobiichi3227/NTOJ-Judge-Rewrite.git#main
+    cap_add:
+      - MKNOD
+      - SYS_ADMIN
+      - SYS_CHROOT
+      - SYS_RESOURCE
+    cgroup: host
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+      - label:disable
+    tmpfs:
+      - /dev/shm:rw,exec,size=755,size=4G
+    volumes:
+      - /srv/ntoj/problem:/problem:ro
+      - /srv/ntoj/code:/code:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    networks:
+      - release-judge_net
+
+    privileged: true
+    logging: *default-logging
+
+networks:
+  release-app:
+  release-judge_net:

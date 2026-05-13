@@ -12,12 +12,37 @@ const newEnum = (descriptions) => {
 var index = new function() {
     var that = this;
     var curr_url = null;
+    that.cont_destroy = null;
+    that.containerLoadDone = false;
 
+    /**
+     * @var {number|null} that.acct_id - current account id, null if not logged in
+     */
     that.acct_id = null;
+    that.base_url = null;
     that.prev_url = null;
 
+    /**
+     * @var {WebSocket|null} that.ws - current WebSocket connection, null if none, if contest_id set, it will connect to contest ws, otherwise normal ws
+     */
+    that.ws = null;
+
+    /**
+     * @var {Map<string, function>} that.ws_callback_map - map of websocket message type to callback function
+     */
+    that.ws_callback_map = new Map();
+
+    /**
+     * @var {Array<string>} that.ws_pending_registers - pending register types waiting for WebSocket to open
+     */
+    that.ws_pending_registers = [];
+    /**
+     * @var {Array<{type: string, data: any}>} that.ws_pending_messages - pending messages waiting for WebSocket to open
+     */
+    that.ws_pending_messages = [];
+
     /*
-	Reload new page
+        Reload new page
     */
     function update(force) {
         var i;
@@ -52,12 +77,14 @@ var index = new function() {
         curr_url = parts[0];
 
         parts = curr_url.split('/');
-        if (parts[4] == '') {
+        let skip_count = 3 + that.base_url_slash_count;
+        // ["http:", "", "localhost:8080"].length == 3
+        if (parts[skip_count] == '') {
             page = 'info';
             req = '/info';
 
         } else {
-            page = parts[4];
+            page = parts[skip_count];
             if (parts[parts.length - 1] !== "") {
                 let t = parts[parts.length - 1].match(/(.*)\?([^#]+)/);
                 let flag = false;
@@ -81,7 +108,8 @@ var index = new function() {
             }
 
             req = '';
-            for (i = 4 ; i < parts.length - 1; i++) {
+
+            for (i = skip_count; i < parts.length - 1; i++) {
                 req += '/' + parts[i];
             }
 
@@ -105,46 +133,112 @@ var index = new function() {
         j_navlist.find('li').removeClass('active');
         j_navlist.find('li.' + page).addClass('active');
 
-        if (typeof(destroy) == 'function') {
+        if (typeof(destroy) == 'function' && that.cont_destroy === destroy) {
             destroy();
         }
 
         cont_defer.done(function(res) {
-            j_cont.html(res).ready(function() {
-                var defer;
+            that.containerLoadDone = false;
+            var tmp = $('<div>').html(res);
 
-                defer = Array();
-                j_cont.find('script').each(function(i, e) {
-                    defer[i] = $.Deferred();
-
-                    $(e).on('load', function() {
-                        defer[i].resolve();
+            var externalScripts = [];
+            var inlineScripts = [];
+            tmp.find('script').each(function() {
+                var src = $(this).attr('src');
+                if (src) {
+                    externalScripts.push({
+                        src: src,
+                        attrs: (function(e){
+                            var at = {};
+                            $.each(e.attributes, function(i,a){ if (a.specified) at[a.name]=a.value; });
+                            return at;
+                        })(this)
                     });
-                });
-
-                j_cont.find('link').each(function(i, e) {
-                    defer[i] = $.Deferred();
-
-                    $(e).on('load', function() {
-                        defer[i].resolve();
-                    });
-                });
-
-                if (typeof(init) == 'function') {
-                    init();
+                } else {
+                    inlineScripts.push($(this).html());
                 }
+            });
 
-                $.when.apply($, defer).done(function() {
-                    j_cont.stop().fadeIn(100);
+            var links = [];
+            tmp.find('link[rel=stylesheet][href]').each(function() {
+                links.push($(this).attr('href'));
+            });
+
+            tmp.find('script[src], link[rel=stylesheet][href]').remove();
+            j_cont.html(tmp.html());
+
+            var promises = [];
+
+            links.forEach(function(href) {
+                var d = $.Deferred();
+                var link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = href;
+                link.onload = function(){ console.log('CSS loaded', href); d.resolve(); };
+                link.onerror = function(){ console.warn('CSS failed', href); d.resolve(); };
+                document.head.appendChild(link);
+                promises.push(d.promise());
+            });
+
+            externalScripts.forEach(function(s) {
+                var d = $.Deferred();
+                var sc = document.createElement('script');
+                sc.src = s.src;
+                if (s.attrs) {
+                    if (s.attrs.type) sc.type = s.attrs.type;
+                    if (s.attrs.async) sc.async = s.attrs.async;
+                    if (s.attrs.defer) sc.defer = s.attrs.defer;
+                }
+                sc.onload = function(){ console.log('script loaded', s.src); d.resolve(); };
+                sc.onerror = function(){ console.warn('script load error', s.src); d.resolve(); };
+                document.body.appendChild(sc);
+                promises.push(d.promise());
+            });
+
+            var executeInline = function() {
+                inlineScripts.forEach(function(code) {
+                    try {
+                        $.globalEval(code); // safe-ish; globalEval，new Function(code)()
+                    } catch (e) {
+                        console.error('inline script error', e);
+                    }
                 });
+            };
+
+            $.when.apply($, promises.length ? promises : [$.Deferred().resolve()]).done(function() {
+                console.log('all external resources loaded');
+                executeInline();
+                if (typeof init === 'function') {
+                    try { init(); console.log('init executed'); }
+                    catch (e) { console.error('init error', e); }
+                } else {
+                    console.log('no init function');
+                }
+                if (typeof destroy === 'function' && that.cont_destroy !== destroy) {
+                    that.cont_destroy = destroy;
+                } else {
+                    that.cont_destroy = null;
+                }
+                try {
+                    MathJax.typesetPromise();
+                } catch (e) {
+                    console.warn('MathJax typeset error', e);
+                }
+                that.containerLoadDone = true;
             });
 
             _scroll();
         });
 
         $(window).scrollTop(0);
-        $.get('/oj/be' + req, args, function(res) {
-            cont_defer.resolve(res);
+        $.ajax({
+            url: `${that.base_url}/be${req}`,
+            data: args,
+            method: "GET",
+            headers: {
+                'req-by-frontend': 'true'
+            },
+            success: function(res) { cont_defer.resolve(res); },
         });
     }
 
@@ -200,21 +294,28 @@ var index = new function() {
             update(false);
         });
 
+        acct_id = $('#indexjs').attr('acct_id');
+        contest_id = $('#indexjs').attr('contest_id');
+        that.base_url = $('#indexjs').attr('base_url');
+        that.base_url_slash_count = that.base_url.split('/').length - 1;
+
         j_navlist.find('li.leave').on('click', function(e) {
-            $.post('/oj/be/sign', {
+            $.post(`${that.base_url}/be/sign`, {
                 'reqtype': 'signout',
             }, function(res) {
-                location.href = '/oj/sign/';
+                location.href = `${that.base_url}/sign/`;
             });
         });
 
-        acct_id = $('#indexjs').attr('acct_id');
-        contest_id = $('#indexjs').attr('contest_id');
+        that.ws = that.ws_init('ws');
+
         if (acct_id != '0') {
             that.acct_id = parseInt(acct_id);
             j_navlist.find('li.leave').show();
+            j_navlist.find('a.account').show();
         } else {
             j_navlist.find('li.sign').show();
+            j_navlist.find('a.account').hide();
         }
 
         update(false);
@@ -305,7 +406,8 @@ var index = new function() {
         }
 
         let progressbar_modal = bootstrap.Modal.getInstance(progressbar);
-        progressbar_modal.hide();
+        progressbar_modal.dispose();
+        progressbar.remove();
     };
 
     that.DIALOG_TYPE = newEnum({
@@ -355,7 +457,7 @@ var index = new function() {
         </div>
         </div>
         `;
-        document.body.insertAdjacentHTML('afterbegin', dialog_html);
+        document.body.insertAdjacentHTML('afterbegin', DOMPurify.sanitize(dialog_html));
         let dialog = document.getElementById('indexNotifyDialog');
 
         // show modal
@@ -393,15 +495,99 @@ var index = new function() {
         }, 3000));
     };
 
-    that.get_ws = function(ws_url) {
+    that.ws_init = function(ws_url) {
         let ws_link = '';
         if (location.protocol !== 'https:') {
-            ws_link = `ws://${location.host}/oj/be/${ws_url}`;
+            ws_link = `ws://${location.host}${that.base_url}/be/${ws_url}`;
         } else {
-            ws_link = `wss://${location.host}/oj/be/${ws_url}`;
+            ws_link = `wss://${location.host}${that.base_url}/be/${ws_url}`;
         }
-	    return new WebSocket(ws_link);
-    };
+        let ws = new WebSocket(ws_link);
+
+        ws.onopen = function() {
+            console.log('WebSocket connected');
+            // Send all pending register messages
+            for (let type of that.ws_pending_registers) {
+                console.log(`Registering pending callback: ${type}`);
+                ws.send(JSON.stringify({'type': 'register', 'data': type}));
+            }
+            that.ws_pending_registers = [];
+            // Send all pending messages
+            for (let msg of that.ws_pending_messages) {
+                try {
+                    ws.send(JSON.stringify(msg));
+                } catch (e) {
+                    console.error('Failed to send pending ws message', e);
+                }
+            }
+            that.ws_pending_messages = [];
+        };
+
+        ws.onmessage = function(event) {
+            let data = JSON.parse(event.data);
+            if (data.type == "ping") {
+                ws.send(JSON.stringify({'type': 'pong', 'data': ''}));
+            } else if (that.ws_callback_map.has(data.type)) {
+                that.ws_callback_map.get(data.type)(data.data);
+            } else {
+                console.warn(`no callback registered for ws message type ${data.type}`);
+            }
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = function() {
+            console.log('WebSocket closed');
+        };
+
+        return ws;
+    }
+
+    /**
+     *
+     * @param {string} type
+     * @param {Function} callback
+     */
+    that.register_ws_callback = function(type, callback) {
+        if (that.ws == null) {
+            console.error('ws is null, cannot register callback');
+            return;
+        }
+        if (that.ws_callback_map.has(type)) {
+            console.warn(`ws callback for type ${type} already registered, overwriting`);
+        }
+        that.ws_callback_map.set(type, callback);
+
+        // If WebSocket is already open, send register immediately
+        if (that.ws.readyState === WebSocket.OPEN) {
+            that.ws.send(JSON.stringify({'type': 'register', 'data': type}));
+        } else {
+            // Otherwise, add to pending list
+            console.log(`WebSocket not ready, queuing register for: ${type}`);
+            that.ws_pending_registers.push(type);
+        }
+    }
+
+    /**
+     *
+     * @param {string} type
+     * @param {object} data
+     */
+    that.ws_send = function(type, data) {
+        if (that.ws == null) {
+            // Socket not initialized yet: queue message
+            that.ws_pending_messages.push({'type': type, 'data': data});
+            return;
+        }
+        if (that.ws.readyState === WebSocket.OPEN) {
+            that.ws.send(JSON.stringify({'type': type, 'data': data}));
+        } else {
+            // WebSocket not open (yet or reconnecting); queue the message
+            that.ws_pending_messages.push({'type': type, 'data': data});
+        }
+    }
 
     that.unescape_html = function(html) {
         const parser = new DOMParser();
@@ -409,4 +595,3 @@ var index = new function() {
         return doc.documentElement.textContent;
     };
 };
-

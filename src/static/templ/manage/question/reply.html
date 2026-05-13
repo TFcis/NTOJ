@@ -6,7 +6,7 @@
 		var j_form = $('#form');
 		var rtext = j_form.find(`textarea#${idx}`).val();
 
-		$.post('/oj/be/manage/question/reply', {
+		$.post(`{{ url('/be/manage/question/reply') }}`, {
 		    'reqtype': 'rpl',
 		    'qacct_id': {{ qacct_id }},
 		    'index': idx,
@@ -26,7 +26,7 @@
 		var j_form = $('#form');
         var rtext = j_form.find(`textarea#${idx}`).val();
 
-		$.post('/oj/be/manage/question/reply', {
+		$.post(`{{ url('/be/manage/question/reply') }}`, {
 		    'reqtype': 'rrpl',
 		    'qacct_id': {{ qacct_id }},
 		    'index': idx,
@@ -47,7 +47,7 @@
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <div id="form">
 		<p>
-		    <a href="/oj/acct/{{ str(qacct_id) }}/">
+		    <a href="{{ url(f'/acct/{ str(qacct_id) }/') }}">
                 Account ID: {{ str(qacct_id) }}
             </a>
 		</p>

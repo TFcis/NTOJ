@@ -5,7 +5,7 @@ import pickle
 
 import asyncpg
 
-from services.chal import Compiler
+from services.chal import Compiler, ChalConst
 from services.user import Account
 
 
@@ -17,11 +17,18 @@ class RegMode(enum.IntEnum):
 
 class ContestMode(enum.IntEnum):
     IOI = 0
-    ACM = 1
+    ACM = 1 # NOTE: ACM/ICPC
 
 class ProblemScoreType(enum.IntEnum):
     IOI2013 = 0
     IOI2017 = 1
+    ICPC = 2 # NOTE: ContestMode.ACM
+
+class ChallengeResultStyle(enum.IntEnum):
+    FULL = 1  # Total + Subtask + Testcase
+    STATE_COUNT = 2  # Total + Subtask + Testcase State Count
+    SUBTASK_ONLY = 3  # Total + Subtask
+    TOTAL_ONLY = 4  # Total Only
 
 class UserStatus(enum.IntEnum):
     REJECTED = 0
@@ -59,6 +66,8 @@ class Contest:
     hide_admin: bool = True
     submission_cd_time: int = 30
     freeze_scoreboard_period: int = 0
+    penalty_value: int = 20
+    enable_system_test: bool = False  # Enable system test feature (pretest/final test)
 
     def is_start(self) -> bool:
         return datetime.datetime.now(datetime.UTC) >= self.contest_start
@@ -85,10 +94,10 @@ class Contest:
 
     def is_member(self, acct: Account | None = None, acct_id: int | None = None) -> bool:
         if acct is not None:
-            return acct.acct_id in self.user_list
+            return acct.acct_id in self.user_list and self.user_list[acct.acct_id]['status'] in (UserStatus.APPROVED, UserStatus.ADMIN)
 
         if acct_id is not None:
-            return acct_id in self.user_list
+            return acct_id in self.user_list and self.user_list[acct_id]['status'] in (UserStatus.APPROVED, UserStatus.ADMIN)
 
         assert acct is not None and acct_id is not None, 'one of args(acct or acct_id) must not None'
 
@@ -139,7 +148,9 @@ class ContestService:
                         "allow_view_other_page",
                         "hide_admin",
                         "submission_cd_time",
-                        "freeze_scoreboard_period"
+                        "freeze_scoreboard_period",
+                        "penalty_value",
+                        "enable_system_test"
                         FROM "contest" WHERE "contest_id" = $1;
                     ''',
                     contest_id
@@ -157,10 +168,11 @@ class ContestService:
                 contest.contest_end = contest.contest_end
                 contest.reg_end = contest.reg_end
 
-                result = await con.fetch('SELECT pro_id, score_type FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
-                for pro_id, score_type in result:
+                result = await con.fetch('SELECT pro_id, score_type, challenge_style FROM contest_problem_joints WHERE contest_id = $1 ORDER BY "order";', contest_id)
+                for pro_id, score_type, challenge_style in result:
                     contest.pro_list[pro_id] = {
-                        "score_type": ProblemScoreType(int(score_type))
+                        "score_type": ProblemScoreType(int(score_type)),
+                        "challenge_style": ChallengeResultStyle(int(challenge_style))
                     }
 
                 result = await con.fetch('SELECT acct_id, status FROM contest_users WHERE contest_id = $1 ORDER BY acct_id', contest_id)
@@ -230,6 +242,9 @@ class ContestService:
         return None, contest_id
 
     async def update_contest(self, acct: Account, contest: Contest, prolist_updated=False, userlist_updated=False):
+        from services.pro import ProConst
+        error_group = []
+
         # update db
         async with self.db.acquire() as con:
             result = await con.fetch(
@@ -247,8 +262,10 @@ class ContestService:
                     "allow_view_other_page" = $12,
                     "hide_admin" = $13,
                     "submission_cd_time" = $14,
-                    "freeze_scoreboard_period" = $15
-                    WHERE "contest_id" = $16;
+                    "freeze_scoreboard_period" = $15,
+                    "penalty_value" = $16,
+                    "enable_system_test" = $17
+                    WHERE "contest_id" = $18;
                 ''',
                 contest.name,
                 contest.desc_before_contest,
@@ -264,54 +281,108 @@ class ContestService:
                 contest.hide_admin,
                 contest.submission_cd_time,
                 contest.freeze_scoreboard_period,
+                contest.penalty_value,
+                contest.enable_system_test,
                 contest.contest_id
             )
 
             if prolist_updated:
+                # Get existing problems to track operations
+                existing_pros = await con.fetch(
+                    'SELECT pro_id FROM contest_problem_joints WHERE contest_id = $1',
+                    contest.contest_id
+                )
+                existing_pro_ids = {row['pro_id'] for row in existing_pros}
+
                 order = 0
-                failed = []
-                for pro_id, v in contest.pro_list.items():
-                    try:
-                        await con.execute('''
-                            INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "order")
-                            VALUES ($1, $2, $3, $4) ON CONFLICT (contest_id, pro_id) DO UPDATE
-                            SET score_type = EXCLUDED.score_type, "order" = EXCLUDED."order"
-                            WHERE
-                                contest_problem_joints.score_type != EXCLUDED.score_type OR
-                                contest_problem_joints.order != EXCLUDED.order;
-                        ''', contest.contest_id, pro_id, int(v['score_type']), order)
-                        order += 1
-                    except asyncpg.ForeignKeyViolationError:
-                        failed.append(pro_id)
+                current_pro_ids = set()
+
+                for pro_id, v in list(contest.pro_list.items()):
+                    pro_status_result = await con.fetch(
+                        'SELECT status FROM problem WHERE pro_id = $1',
+                        pro_id
+                    )
+
+                    if len(pro_status_result) == 0:
+                        error_group.append(('Enoext', f'Problem {pro_id} not found'))
+                        contest.pro_list.pop(pro_id)
                         continue
 
-                await con.execute('DELETE FROM contest_problem_joints WHERE contest_id = $1 AND "order" > $2', contest.contest_id, order)
-                for failed_pro_id in failed:
-                    contest.pro_list.pop(failed_pro_id)
+                    pro_status = pro_status_result[0]['status']
+                    # STATUS_HIDDEN = 2, cannot be added to contest
+                    if pro_status == ProConst.STATUS_HIDDEN:
+                        error_group.append(('Eacces', f'Cannot add hidden status problem {pro_id}'))
+                        contest.pro_list.pop(pro_id)
+                        continue
+
+                    challenge_style = v.get('challenge_style', ChallengeResultStyle.FULL)
+                    result = await con.fetch('''
+                        INSERT INTO contest_problem_joints ("contest_id", "pro_id", "score_type", "challenge_style", "order")
+                        VALUES ($1, $2, $3, $4, $5)
+                        ON CONFLICT (contest_id, pro_id) DO UPDATE
+                        SET score_type = EXCLUDED.score_type, challenge_style = EXCLUDED.challenge_style, "order" = EXCLUDED."order"
+                        WHERE
+                            contest_problem_joints.score_type != EXCLUDED.score_type OR
+                            contest_problem_joints.challenge_style != EXCLUDED.challenge_style OR
+                            contest_problem_joints.order != EXCLUDED.order
+                        RETURNING pro_id;
+                    ''', contest.contest_id, pro_id, int(v['score_type']), int(challenge_style), order)
+
+                    current_pro_ids.add(pro_id)
+                    order += 1
+
+                removed_pros = existing_pro_ids - current_pro_ids
+                if removed_pros:
+                    await con.execute(
+                        'DELETE FROM contest_problem_joints WHERE contest_id = $1 AND pro_id = ANY($2)',
+                        contest.contest_id, list(removed_pros)
+                    )
 
             if userlist_updated:
-                failed = []
-                for acct_id, v in contest.user_list.items():
+                # Ensure contest creator is always admin
+                contest.user_list[contest.contest_creator] = {
+                    "status": UserStatus.ADMIN
+                }
+
+                # Get existing users to track operations
+                existing_users = await con.fetch(
+                    'SELECT acct_id FROM contest_users WHERE contest_id = $1',
+                    contest.contest_id
+                )
+                existing_acct_ids = {row['acct_id'] for row in existing_users}
+
+                current_acct_ids = set()
+
+                for acct_id, v in list(contest.user_list.items()):
                     try:
                         await con.execute('''
-                            INSERT INTO contest_users ("contest_id", "acct_id", "status")
-                            VALUES ($1, $2, $3) ON CONFLICT (contest_id, acct_id) DO UPDATE
+                            INSERT INTO contest_users (contest_id, acct_id, status)
+                            VALUES ($1, $2, $3)
+                            ON CONFLICT (contest_id, acct_id) DO UPDATE
                             SET status = EXCLUDED.status
                             WHERE contest_users.status != EXCLUDED.status;
                         ''', contest.contest_id, acct_id, int(v['status']))
+
+                        current_acct_ids.add(acct_id)
                     except asyncpg.ForeignKeyViolationError:
-                        failed.append(acct_id)
+                        error_group.append(('Enoext', f'Account {acct_id} not found'))
+                        contest.user_list.pop(acct_id)
                         continue
 
-                for failed_acct_id in failed:
-                    contest.user_list.pop(failed_acct_id)
+                # Remove users that are no longer in the list
+                removed_users = existing_acct_ids - current_acct_ids
+                if removed_users:
+                    await con.execute(
+                        'DELETE FROM contest_users WHERE contest_id = $1 AND acct_id = ANY($2)',
+                        contest.contest_id, list(removed_users)
+                    )
 
         b_contest = pickle.dumps(contest)
         await self.rs.hset('contest', str(contest.contest_id), b_contest)
 
         # log
 
-        return None, None
+        return error_group, None
 
     async def add_announce(self, contest_id: int, acct_id: int, subject: str, content: str):
         res = await self.db.fetch('INSERT INTO contest_announcement ("contest_id", "acct_id", "subject", "content", "timestamp") VALUES ($1, $2, $3, $4, NOW()) RETURNING announce_id',
@@ -378,9 +449,178 @@ class ContestService:
         res = await self.db.fetch('SELECT COUNT(*) FROM contest_question WHERE contest_id = $1 AND reply_acct_id IS NULL;', contest_id)
         return None, res[0]['count']
 
+    async def get_unread_notification_cnt(self, contest_id: int, acct_id: int):
+        """Get unread notification count for user
+
+        Args:
+            contest_id: Contest ID
+            acct_id: User ID
+
+        Returns:
+            tuple: (err, cnt) Unread notification count
+        """
+        new_cnt = await self.db.fetch('''
+        SELECT
+            (SELECT COUNT(*) FROM contest_announcement WHERE contest_id = $1) +
+            (SELECT COUNT(*) FROM contest_question WHERE contest_id = $1 AND ask_acct_id = $2 AND reply_acct_id IS NOT NULL)
+        AS total_count;
+        ''', contest_id, acct_id)
+        new_cnt = new_cnt[0]['total_count']
+
+        old_cnt = await self.db.fetch('SELECT notification_read_count FROM contest_users WHERE contest_id = $1 AND acct_id = $2',
+                                      contest_id, acct_id)
+        old_cnt = old_cnt[0]['notification_read_count']
+
+        return None, max(new_cnt - old_cnt, 0)
+
+    async def mark_notifications_as_read(self, contest_id: int, acct_id: int):
+        """Mark notifications as read
+
+        Args:
+            contest_id: Contest ID
+            acct_id: User ID
+
+        Returns:
+            tuple: (err, None)
+        """
+        await self.db.execute(
+            '''
+            UPDATE contest_users
+            SET notification_read_count = sub.total_count
+            FROM (
+                SELECT
+                    (SELECT COUNT(*) FROM contest_announcement WHERE contest_id = $1) +
+                    (SELECT COUNT(*) FROM contest_question WHERE contest_id = $1 AND ask_acct_id = $2 AND reply_acct_id IS NOT NULL)
+                    AS total_count
+            ) AS sub
+            WHERE contest_users.contest_id = $1
+            AND contest_users.acct_id = $2;
+            ''',
+            contest_id, acct_id
+        )
+
+        return None, None
+
+    async def get_icpc_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
+        """
+        Calculate ICPC scores for a problem.
+
+        Score (Spend Time) = (first_ac_timestamp) + fail_cnt * penalty_value (Minute)
+        where fail_cnt is the number of submissions before first AC.
+
+        For users without AC: Score = 0, first_ac_timestamp = NULL, chal_id = latest submission chal_id,
+                             fail_cnt = total number of valid submissions
+
+        Filters out invalid/non-verdictable states: CE, CLE, ERR, JE, JUDGE, NOTSTARTED, REJECTED
+        """
+        _, contest = await self.get_contest(contest_id)
+
+        # States to filter out (invalid/non-verdictable submissions)
+        invalid_states = [
+            ChalConst.STATE_CE,
+            ChalConst.STATE_CLE,
+            ChalConst.STATE_ERR,
+            ChalConst.STATE_JE,
+            ChalConst.STATE_JUDGE,
+            ChalConst.STATE_NOTSTARTED,
+            ChalConst.STATE_REJECTED
+        ]
+
+        res = await self.db.fetch('''
+        WITH valid_challenges AS (
+            -- Get all challenges that are valid (not in invalid states) and before before_time
+            SELECT
+                challenge.chal_id,
+                acct_id,
+                pro_id,
+                timestamp,
+                state
+            FROM challenge
+            INNER JOIN total_result
+                ON challenge.chal_id = total_result.chal_id
+            WHERE contest_id = $1
+                AND pro_id = $2
+                AND timestamp < $3::timestamptz
+                AND state NOT IN (SELECT unnest($4::int[]))
+        ),
+        acct_challenges AS (
+            -- Partition challenges by acct_id and pro_id, ordered by timestamp
+            SELECT
+                acct_id,
+                chal_id,
+                pro_id,
+                timestamp,
+                state,
+                ROW_NUMBER() OVER (PARTITION BY acct_id, pro_id ORDER BY timestamp ASC) AS submission_order
+            FROM valid_challenges
+        ),
+        first_ac_challenges AS (
+            -- Find first AC for each acct (may be empty if no AC)
+            SELECT
+                acct_id,
+                chal_id,
+                pro_id,
+                timestamp AS first_ac_timestamp,
+                submission_order - 1 AS fail_cnt  -- Number of submissions before first AC
+            FROM acct_challenges
+            WHERE state = $5  -- Only AC state
+                AND submission_order = (
+                    -- Get the first AC submission order for this acct
+                    SELECT MIN(submission_order)
+                    FROM acct_challenges ac2
+                    WHERE ac2.acct_id = acct_challenges.acct_id
+                        AND ac2.pro_id = acct_challenges.pro_id
+                        AND ac2.state = $5
+                )
+        ),
+        acct_submission_counts AS (
+            -- Count total valid submissions for each acct (for those without AC)
+            SELECT
+                acct_id,
+                pro_id,
+                COUNT(*) AS total_submissions,
+                MAX(chal_id) AS latest_chal_id,
+                MAX(timestamp) AS latest_timestamp
+            FROM acct_challenges
+            GROUP BY acct_id, pro_id
+        )
+        SELECT
+            COALESCE(fac.acct_id, ascsub.acct_id) AS acct_id,
+            COALESCE(fac.chal_id, ascsub.latest_chal_id) AS chal_id,
+            COALESCE(fac.first_ac_timestamp, ascsub.latest_timestamp) AS timestamp,
+            COALESCE(fac.fail_cnt, ascsub.total_submissions) AS fail_cnt,
+            CASE
+                WHEN fac.acct_id IS NOT NULL THEN (EXTRACT(EPOCH FROM (fac.first_ac_timestamp - $6::timestamptz))::integer / 60) + (fac.fail_cnt * $7)::integer
+                ELSE 0
+            END AS score
+        FROM first_ac_challenges fac
+        FULL OUTER JOIN acct_submission_counts ascsub
+            ON fac.acct_id = ascsub.acct_id AND fac.pro_id = ascsub.pro_id
+        ORDER BY acct_id;
+        ''', contest_id, pro_id, before_time,
+            invalid_states,  # $4: array of invalid states to filter out
+            ChalConst.STATE_AC,  # $5: AC state
+            contest.contest_start,  # $6: contest start time for score calculation
+            contest.penalty_value, # $7: penalty value
+        )
+
+        if len(res) == 0:
+            return {}
+
+        scores = {
+            acct_id: {
+                'acct_id': acct_id,
+                'chal_id': chal_id,
+                'score': score,
+                'timestamp': first_ac_timestamp,
+                'fail_cnt': fail_cnt
+            }
+            for acct_id, chal_id, first_ac_timestamp, fail_cnt, score in res
+        }
+
+        return scores
 
     async def get_ioi2013_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
-        _, contest = await self.get_contest(contest_id)
         res = await self.db.fetch(
             f'''
         WITH ranked_challenges AS (
@@ -534,4 +774,3 @@ class ContestService:
         }
 
         return scores
-

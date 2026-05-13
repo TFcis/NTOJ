@@ -21,7 +21,7 @@
 
             localization: {
                 locale: 'zh-tw',
-                format: 'yyyy/MM/dd HH:mm',
+                format: 'yyyy/MM/dd hh:mm T',
             },
         };
         start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerStart'), options);
@@ -64,7 +64,7 @@
                 return;
             }
 
-            $.post('/oj/be/manage/board/add', {
+            $.post(`{{ url('/be/manage/board/add') }}`, {
                 reqtype: 'add',
                 name: name,
                 status: status,
@@ -75,7 +75,7 @@
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
-                    index.go(`/oj/manage/board/update/?boardid=${res.data}`);
+                    index.go(`{{ url('/manage/board/update/?boardid=${res.data}') }}`);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
@@ -83,7 +83,7 @@
         });
 
         j_form.find("#cancel").on('click', (event) => {
-            index.go("/oj/manage/board/")
+            index.go(`{{ url('/manage/board/') }}`)
         });
     }
 
