@@ -176,30 +176,61 @@ class ContestScoreboardHandler(RequestHandler):
             if is_ended:
                 await self.rs.expire(cache_name, time=60 * 60)
 
+        try:
+            sa_mode = self.get_argument('sa_mode') == "sa072686"
+        except (tornado.web.MissingArgumentError, ValueError):
+            sa_mode = False
+
         all_scores = []
-        for acct_id in acct_list:
-            _, acct = await UserService.inst.info_acct(acct_id)
-            total_score = 0
-            scores = {}
-            for pro_id, pro_scores in s.items():
-                if acct_id not in pro_scores:
-                    continue
+        if not sa_mode:
+            for acct_id in acct_list:
+                _, acct = await UserService.inst.info_acct(acct_id)
+                total_score = 0
+                scores = {}
+                for pro_id, pro_scores in s.items():
+                    if acct_id not in pro_scores:
+                        continue
 
-                p = pro_scores[acct_id]
-                scores[pro_id] = {
-                    'pro_id': pro_id,
-                    'chal_id': p['chal_id'],
-                    'timestamp': (p['timestamp'].astimezone(config.TIMEZONE) - start_time),
-                    'score': p['score'],
-                    'fail_cnt': p['fail_cnt']
-                }
-                total_score += p['score']
+                    p = pro_scores[acct_id]
+                    scores[pro_id] = {
+                        'pro_id': pro_id,
+                        'chal_id': p['chal_id'],
+                        'timestamp': (p['timestamp'].astimezone(config.TIMEZONE) - start_time),
+                        'score': p['score'],
+                        'fail_cnt': p['fail_cnt']
+                    }
+                    total_score += p['score']
 
-            all_scores.append({
-                'acct_id': acct_id,
-                'name': acct.name,
-                'scores': scores,
-                'total_score': total_score
-            })
+                all_scores.append({
+                    'acct_id': acct_id,
+                    'name': acct.name,
+                    'scores': scores,
+                    'total_score': total_score
+                })
+        else:
+            for acct_id in acct_list:
+                _, acct = await UserService.inst.info_acct(acct_id)
+                total_score = 0
+                scores = {}
+                for pro_id, pro_scores in s.items():
+                    if acct_id not in pro_scores:
+                        continue
+
+                    p = pro_scores[acct_id]
+                    scores[pro_id] = {
+                        'pro_id': pro_id,
+                        'chal_id': p['chal_id'],
+                        'timestamp': (p['timestamp'].astimezone(config.TIMEZONE) - start_time),
+                        'score': p['score'],
+                        'fail_cnt': p['fail_cnt']
+                    }
+                    total_score += p['score']
+
+                all_scores.append({
+                    'acct_id': acct_id,
+                    'name': acct.name,
+                    'scores': scores,
+                    'total_score': total_score
+                })
 
         self.error(('S', all_scores), encoder=_JsonDatetimeEncoder)
