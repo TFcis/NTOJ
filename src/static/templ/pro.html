@@ -15,7 +15,7 @@
 
     function init() {
         let PDFJS = pdfjsLib;
-        PDFJS.GlobalWorkerOptions.workerSrc = '/oj/third/pdf.worker.min.mjs';
+        PDFJS.GlobalWorkerOptions.workerSrc = `{{ url('/src/third/pdf.worker.min.mjs') }}`;
 
         $('#tags').keydown(function(event) {
             if (event.which == 13) // return
