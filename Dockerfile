@@ -1,4 +1,4 @@
-# TODO: fix upgrade.py, install.sh
+# TODO: fix install.sh
 
 # == development image ==
 
@@ -101,7 +101,7 @@ RUN UNLOCK_PASSWORD_PROCESSED=$(echo "${UNLOCK_PASSWORD}" | python3 scripts/get_
 && COOKIE_SEC=$(python3 -c "import sys; print(open('/dev/urandom','rb').read(32).hex())") \
 && rm -rf tests \
 && rm runintegratedtest.sh runintegratedtest.py \
-&& rm rununittest.sh rununittest.py upgrade.py \
+&& rm rununittest.sh rununittest.py \
 && mv /ntoj/static /ntoj/static-tmp \
 && echo -e "import datetime\n\
 TIMEZONE   = datetime.timezone(datetime.timedelta(hours=${TIMEDELTA}))\n\
