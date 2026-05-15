@@ -187,6 +187,8 @@ class UserService:
         handler = Object()
         handler.acct = Object()
         handler.acct.acct_id = acct_id
+        handler.request = Object()
+        handler.request.remote_ip = ip
         if acct_cache is None:
             async with self.db.acquire() as con:
                 result = await con.fetch('SELECT "acct_id","lastip" FROM "account" WHERE "acct_id" = $1;', acct_id)

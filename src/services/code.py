@@ -14,7 +14,7 @@ class CodeService:
         self.rs = rs
         CodeService.inst = self
 
-    async def get_code(self, chal_id: int, query_acct: Account):
+    async def get_code(self, chal_id: int, query_acct: Account, query_acct_ip: str):
         chal_id = int(chal_id)
 
         try:
@@ -47,6 +47,8 @@ class CodeService:
             handler = Object()
             handler.acct = Object()
             handler.acct.acct_id = query_acct.acct_id
+            handler.request = Object()
+            handler.request.remote_ip = query_acct_ip
             await LogService.inst.add_log(f"{query_acct.name} viewed challenge #{chal_id}", "manage.chal.view", handler=handler)
             can_see = True
 
