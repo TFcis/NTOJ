@@ -16,6 +16,15 @@
                 proclass_id = $("#curProclassId").attr("proclass");
             let is_online = j_filter.find("#online").is(":checked");
             let is_reversed = j_filter.find("#reverse").is(":checked");
+            let topcoder_filter = j_filter.find("#topcoder").val();
+            if (topcoder_filter === "specific") {
+                let topcoder_id = j_filter.find("#topcoder_id").val();
+                if (topcoder_id === "") {
+                    index.show_notify_dialog('請輸入 TopCoder 帳號', index.DIALOG_TYPE.warning);
+                    return null;
+                }
+                topcoder_filter = topcoder_id;
+            }
             let url = `{{ url('/proset/?') }}`;
 
             if (order != '') {
@@ -46,6 +55,10 @@
                 url += `&tags=${encodeURIComponent(search_tags)}`;
             }
 
+            if (topcoder_filter != '') {
+                url += `&topcoder=${topcoder_filter}`;
+            }
+
             return url;
         }
 
@@ -57,7 +70,7 @@
             let pro_id = select_prob.val();
             // NOTE: When the input type is set to number, Bootstrap returns an emtpy string if the input value is not a valid number.
             if (pro_id === "") {
-                index.show_notify_dialog('請輸入數字', index.DIALOG_TYPE.info);
+                index.show_notify_dialog('請輸入數字', index.DIALOG_TYPE.warning);
                 select_prob.val('');
                 return;
             }
@@ -69,6 +82,13 @@
             if (e.keyCode == 13) goto_pro_id();
         });
         j_filter.find('button#select_prob_button').on('click', goto_pro_id);
+        j_filter.find('#topcoder').on('change', function(e) {
+            if ($(this).val() === "specific") {
+                j_filter.find('#topcoder_id').show();
+            } else {
+                j_filter.find('#topcoder_id').hide();
+            }
+        });
 
         {% if cur_proclass %}
             let cur_proclass_desc = `{{ markdown_escape(cur_proclass['desc']) }}`;
@@ -332,6 +352,29 @@
             </div>
 
             <div class="mb-1">
+                <label for="topcoder">TopCoder Filter</label>
+                <select id="topcoder" class="form-select">
+                    <option value="ignore" {% if flt['topcoder_filter'] == 'ignore' %} selected {% end %}>None</option>
+                    {% if not user.is_guest() %}
+                        <option value="myself" {% if flt['topcoder_filter'] == 'myself' %} selected {% end %}>Myself</option>
+                    {% end %}
+                    <option value="other" {% if flt['topcoder_filter'] == 'other' %} selected {% end %}>Other</option>
+                    <option value="specific" {% if flt['topcoder_filter'].isdigit() %} selected {% end %}>Specific Account</option>
+                </select>
+                <input
+                    type="number"
+                    id="topcoder_id"
+                    class="form-control"
+                    {% if not flt['topcoder_filter'].isdigit() %}
+                        style="display: none;"
+                    {% else %}
+                        value="{{ flt['topcoder_filter'] }}"
+                    {% end %}
+                    placeholder="TopCoder Account ID"
+                />
+            </div>
+
+            <div class="mb-1">
                 <label for="name" class="form-label">Search Name</label>
                 <input type="text" id="name" class="form-control" placeholder="problem name" value="{{ flt['name'] if flt['name'] else '' }}">
             </div>
@@ -448,6 +491,9 @@
         {% end %}
         {% if flt['tags'] %}
         {% set postfix = postfix + f"&tags={flt['tags']}" %}
+        {% end %}
+        {% if flt['topcoder_filter'] %}
+        {% set postfix = postfix + f"&topcoder={flt['topcoder_filter']}" %}
         {% end %}
 
         <div class="row">
