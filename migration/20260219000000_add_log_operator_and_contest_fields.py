@@ -2,7 +2,7 @@ import re
 import json
 
 
-async def dochange(db, rs):
+async def dochange(db, _):
     """Add operator_acct_id, operator_ip, and contest_id fields to log table"""
 
     # Add operator_acct_id column (nullable, because system operations may not have an operator)
@@ -10,7 +10,6 @@ async def dochange(db, rs):
         'ALTER TABLE log ADD COLUMN operator_acct_id INTEGER DEFAULT NULL;'
     )
 
-    # Add foreign key constraint for operator_acct_id
     await db.execute(
         '''
         ALTER TABLE log
@@ -21,7 +20,6 @@ async def dochange(db, rs):
         '''
     )
 
-    # Add operator_ip column (nullable)
     await db.execute(
         'ALTER TABLE log ADD COLUMN operator_ip VARCHAR(64) DEFAULT NULL;'
     )
@@ -31,23 +29,15 @@ async def dochange(db, rs):
         'ALTER TABLE log ADD COLUMN contest_id INTEGER NOT NULL DEFAULT 0;'
     )
 
-    # Add index for contest_id to speed up queries
     await db.execute(
-        'CREATE INDEX log_contest_id_idx ON log(contest_id);'
-    )
-
-    # Add index for operator_acct_id to speed up queries
-    await db.execute(
-        'CREATE INDEX log_operator_acct_id_idx ON log(operator_acct_id);'
+        'CREATE INDEX IF NOT EXISTS log_idx_log_id ON log(log_id);'
     )
 
     # Try to fill operator_acct_id for existing logs
     print("Attempting to populate operator_acct_id for existing logs...")
 
-    # Fetch all logs
-    logs = await db.fetch('SELECT log_id, message, params, type FROM log WHERE operator_acct_id IS NULL;')
+    logs = await db.fetch('SELECT log_id, message, params, type FROM log;')
 
-    # Build account name to ID mapping for quick lookup
     accounts = await db.fetch('SELECT acct_id, name FROM account;')
     name_to_id = {account['name']: account['acct_id'] for account in accounts}
     # Sort names by length (longest first) to avoid partial matches
@@ -128,6 +118,14 @@ async def dochange(db, rs):
                 skipped_count += 1
         else:
             skipped_count += 1
+
+    await db.execute(
+        'CREATE INDEX log_idx_operator_acct_id ON log(operator_acct_id);'
+    )
+
+    await db.execute(
+        'CREATE INDEX log_idx_contest_id ON log(contest_id);'
+    )
 
     print(f"Successfully populated operator_acct_id for {updated_count} out of {len(logs)} existing logs.")
     print(f"Skipped {skipped_count} logs (system operations or unable to determine operator).")
