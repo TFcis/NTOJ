@@ -4,10 +4,9 @@ import tornado.web
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from services.chal import ChalConst
 from services.judge import JudgeServerClusterService
-from services.log import LogService
 from services.pro import ProClassService, ProClassConst, ProConst, ProService, Problem
 from services.rate import RateService
-from services.user import UserService, UserConst
+from services.user import UserService, UserConst, GUEST_ACCOUNT
 
 PERMISSION_DENIED_ERROR = ("Eacces", "Permission denied")
 
@@ -30,6 +29,7 @@ class ProsetHandler(RequestHandler):
         order_reverse = self.get_argument("reverse", default=None)
         search_name = self.get_argument("name", default=None)
         search_tags = self.get_argument("tags", default=None)
+        topcoder_filter = self.get_argument("topcoder", default="ignore")
 
         flt = {
             "order": order,
@@ -38,6 +38,7 @@ class ProsetHandler(RequestHandler):
             "reverse": order_reverse,
             "name": search_name,
             "tags": search_tags,
+            "topcoder_filter": topcoder_filter,
         }
         if search_name:
             search_name = search_name.lower()
@@ -50,6 +51,13 @@ class ProsetHandler(RequestHandler):
         except ValueError:
             return self.error(("Eparam", "Invalid problem class ID"))
         except TypeError:
+            pass
+
+        try:
+            topcoder_filter = int(topcoder_filter)
+            if topcoder_filter <= GUEST_ACCOUNT.acct_id:
+                return self.error(("Eparam", "Invalid topcoder filter"))
+        except ValueError:
             pass
 
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
@@ -85,6 +93,7 @@ class ProsetHandler(RequestHandler):
         score_map: dict[int, dict] = {}
         ac_pro_cnt = 0
         new_prolist: list[Problem] = []
+        pro_2_topcoder: dict[int, int] = {}
         for pro in prolist:
             pro_id = pro.pro_id
             pro_state = acct_states.get(pro_id, {}).get("state")
@@ -109,6 +118,20 @@ class ProsetHandler(RequestHandler):
 
             if search_tags and pro.tags.lower().find(search_tags) == -1:
                 continue
+
+            if topcoder_filter != "ignore":
+                _, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
+                pro_2_topcoder[pro_id] = topcoder_id
+                if topcoder_filter == "myself":
+                    if topcoder_id != self.acct.acct_id:
+                        continue
+
+                elif topcoder_filter == "other":
+                    if topcoder_id == self.acct.acct_id:
+                        continue
+
+                elif topcoder_filter != topcoder_id:
+                    continue
 
             rate = None
             if order is not None:
@@ -161,18 +184,23 @@ class ProsetHandler(RequestHandler):
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff : pageoff + 40]
 
+        acct_cache = {}
         for pro in prolist:
             pro_id = pro.pro_id
 
-            topcoder = None
-            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
-            if err:
-                return self.error(err)
+            topcoder, topcoder_id = None, None
+            try:
+                topcoder_id = pro_2_topcoder[pro_id]
+            except KeyError:
+                err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
 
-            if topcoder_id:
-                err, topcoder = await UserService.inst.info_acct(topcoder_id)
-                if err:
-                    return self.error(err)
+            if topcoder_id is not None:
+                try:
+                    topcoder = acct_cache[topcoder_id]
+                except KeyError:
+                    err, topcoder = await UserService.inst.info_acct(topcoder_id)
+                    if err is None:
+                        acct_cache[topcoder_id] = topcoder
 
             score_map[pro_id]["topcoder"] = topcoder
             if order is None:
