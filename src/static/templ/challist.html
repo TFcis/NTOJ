@@ -207,7 +207,11 @@
             {% end %}
 
             <div class="mb-1">
-                <label class="form-label">Your ID: <a id="yourIDFilter" href="{{ your_id_query_params }}">{{ user.acct_id }}</a></label>
+                {% if user.is_guest() %}
+                    <label class="form-label">Your ID: <a href="url(f'/sign/')">Please Login</a></label>
+                {% else %}
+                    <label class="form-label">Your ID: <a id="yourIDFilter" href="{{ your_id_query_params }}">{{ user.acct_id }}</a></label>
+                {% end %}
                 <input id="proid" class="form-control mb-1" type="text" value="{% if flt.pro != None %}{{ ppro_id }}{% end %}" placeholder="Problem ID">
                 <input id="acctid" class="form-control mb-1" type="text" value="{% if flt.acct != None %}{{ pacct_id }}{% end %}" placeholder="Account ID">
             </div>
