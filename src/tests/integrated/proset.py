@@ -3,6 +3,7 @@ from tests.integrated.util import AsyncTest, AccountContext
 
 
 # FIXME: chal cnt need recalculate
+# TODO: topcoder filter
 class ProsetTest(AsyncTest):
     async def main(self):
         with AccountContext('admin@test', 'testtest') as admin_session:
