@@ -147,10 +147,13 @@ class TestCodeService(unittest.IsolatedAsyncioTestCase):
         acct = DummyAccount(99, "contest_admin")
         dummy_contest = DummyContest([99])
         from services.contests import ContestService
+        from services.log import LogService
 
+        LogService.inst = MagicMock()
         ContestService.inst = MagicMock()
         with (
             patch("services.chal.Compiler", side_effect=lambda x: x),
+            patch("services.log.LogService.inst.add_log", new_callable=AsyncMock),
             patch(
                 "services.contests.ContestService.inst.get_contest",
                 new_callable=AsyncMock,
