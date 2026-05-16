@@ -1,4 +1,4 @@
-{% extends 'contests/manage/manage.html' %}
+{% extends 'manage.html' %}
 {% import config %}
 
 {% block head %}
@@ -76,7 +76,7 @@
                     {% set _p_pagenum = 50 %}
                     {% set _p_total_cnt = lognum %}
                     {% set _p_postfix = postfix %}
-                    {% include "pagination.html" %}
+                    {% include "../../pagination.html" %}
                 </div>
             </div>
         </div>

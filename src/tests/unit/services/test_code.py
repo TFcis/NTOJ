@@ -63,7 +63,7 @@ class TestCodeService(unittest.IsolatedAsyncioTestCase):
         acct = DummyAccount(1, "user1")
         self.fake_rs.get.return_value = None
         with patch("services.chal.Compiler", side_effect=lambda x: x):
-            err, code, compiler_type = await self.service.get_code(123, acct)
+            err, code, compiler_type = await self.service.get_code(123, acct, '192.168.11.10')
         self.fake_conn.fetch.assert_awaited_once()
         self.assertIsNone(err)
         self.assertIn("print('hello')", code)
@@ -83,7 +83,7 @@ class TestCodeService(unittest.IsolatedAsyncioTestCase):
         acct = DummyAccount(1, "user1")
         self.fake_rs.get.return_value = None
         with patch("services.chal.Compiler", side_effect=lambda x: x):
-            err, code, compiler_type = await self.service.get_code(123, acct)
+            err, code, compiler_type = await self.service.get_code(123, acct, '192.168.11.10')
         self.assertIsNone(err)
         self.assertIn("ERROR", code)
         mock_file.assert_called_once()
@@ -91,7 +91,7 @@ class TestCodeService(unittest.IsolatedAsyncioTestCase):
     async def test_get_code_challenge_not_found(self):
         self.fake_conn.fetch.return_value = []
         acct = DummyAccount(1, "user1")
-        err, code, compiler_type = await self.service.get_code(999, acct)
+        err, code, compiler_type = await self.service.get_code(999, acct, '192.168.11.10')
         self.fake_conn.fetch.assert_awaited_once()
         self.assertIsNotNone(err)
         self.assertIsNone(code)
@@ -125,7 +125,7 @@ class TestCodeService(unittest.IsolatedAsyncioTestCase):
                 new=MagicMock(lock_user_list=[10], can_see_code_user=[10]),
             ),
         ):
-            err, code, compiler_type = await self.service.get_code(555, acct)
+            err, code, compiler_type = await self.service.get_code(555, acct, '192.168.11.10')
         self.assertIsNone(err)
         self.assertIn("int main()", code)
         mock_file.assert_called_once()
@@ -147,17 +147,20 @@ class TestCodeService(unittest.IsolatedAsyncioTestCase):
         acct = DummyAccount(99, "contest_admin")
         dummy_contest = DummyContest([99])
         from services.contests import ContestService
+        from services.log import LogService
 
+        LogService.inst = MagicMock()
         ContestService.inst = MagicMock()
         with (
             patch("services.chal.Compiler", side_effect=lambda x: x),
+            patch("services.log.LogService.inst.add_log", new_callable=AsyncMock),
             patch(
                 "services.contests.ContestService.inst.get_contest",
                 new_callable=AsyncMock,
             ) as mock_get_contest,
         ):
             mock_get_contest.return_value = (None, dummy_contest)
-            err, code, compiler_type = await self.service.get_code(888, acct)
+            err, code, compiler_type = await self.service.get_code(888, acct, '192.168.11.10')
         self.assertIsNone(err)
         self.assertIn("int main()", code)
         mock_file.assert_called_once()
@@ -180,7 +183,7 @@ class TestCodeService(unittest.IsolatedAsyncioTestCase):
                 new=MagicMock(lock_user_list=[], can_see_code_user=[]),
             ),
         ):
-            err, code, compiler_type = await self.service.get_code(123, acct)
+            err, code, compiler_type = await self.service.get_code(123, acct, '192.168.11.10')
         self.assertIsNotNone(err)
         self.assertIsNone(code)
         self.assertIsNone(compiler_type)

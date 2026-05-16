@@ -320,7 +320,7 @@ class BatchTestdataHandler(RequestHandler):
         testdatas[testdata_id].metadata["tags"] = tags
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to update metadata tags of testdata {testdata_id} for problem #{pro_id}",
             "manage.pro.update.testdata.updatemetadata",
             {"tags": tags},
