@@ -224,7 +224,7 @@ class ManageProSubtaskHandler(RequestHandler):
         subtask_configs[subtask_id].metadata["tags"] = tags
 
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)
-        await LogService.inst.add_log(
+        await self.add_log(
             f"{self.acct.name} has sent a request to update metadata tags of subtask#{subtask_id} for problem #{pro_id}",
             "manage.pro.update.subtask.updatemetadata",
             {"tags": tags},

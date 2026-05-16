@@ -483,7 +483,7 @@
         {% if user.is_kernel() and flt['online'] %}
         {% set postfix = postfix + f"&online={flt['online']}" %}
         {% end %}
-        {% if flt['reverse'] != False %}
+        {% if flt['reverse'] %}
         {% set postfix = postfix + f"&reverse={flt['reverse']}" %}
         {% end %}
         {% if flt['name'] %}
