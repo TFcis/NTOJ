@@ -14,7 +14,7 @@ class CodeService:
         self.rs = rs
         CodeService.inst = self
 
-    async def get_code(self, chal_id: int, query_acct: Account):
+    async def get_code(self, chal_id: int, query_acct: Account, query_acct_ip: str):
         chal_id = int(chal_id)
 
         try:
@@ -42,13 +42,29 @@ class CodeService:
               and (owner is None or query_acct.acct_id in config.lock_user_list)
               and query_acct.acct_id in config.can_see_code_user):
 
-            await LogService.inst.add_log(f"{query_acct.name} viewed challenge #{chal_id}", "manage.chal.view")
+            class Object:
+                pass
+            handler = Object()
+            handler.acct = Object()
+            handler.acct.acct_id = query_acct.acct_id
+            handler.request = Object()
+            handler.request.remote_ip = query_acct_ip
+            await LogService.inst.add_log(f"{query_acct.name} viewed challenge #{chal_id}", "manage.chal.view", handler=handler)
             can_see = True
 
         elif contest_id != 0:
             _, contest = await ContestService.inst.get_contest(contest_id)
             if contest.is_admin(query_acct):
                 can_see = True
+                class Object:
+                    pass
+                handler = Object()
+                handler.acct = Object()
+                handler.acct.acct_id = query_acct.acct_id
+                handler.request = Object()
+                handler.request.remote_ip = query_acct_ip
+                handler.contest = contest
+                await LogService.inst.add_log(f"{query_acct.name} viewed challenge #{chal_id}", "manage.chal.view", handler=handler)
 
         if can_see:
             source_ext = COMPILER_INFOS[compiler_type].source_ext

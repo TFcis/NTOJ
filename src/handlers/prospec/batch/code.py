@@ -39,7 +39,7 @@ class BatchCodeHandler(RequestHandler):
         except ValueError:
             return self.error(("Eparam", "Invalid challenge id"))
 
-        err, code, compiler_type = await CodeService.inst.get_code(chal_id, self.acct)
+        err, code, compiler_type = await CodeService.inst.get_code(chal_id, self.acct, self.request.remote_ip)
         if err:
             return self.error(err)
 

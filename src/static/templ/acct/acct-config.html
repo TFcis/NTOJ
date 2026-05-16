@@ -90,8 +90,9 @@
             $.post(`{{ url('/be/acctedit') }}`, {
                 'reqtype': 'remote-logout-all',
                 'acct_id': acct_id,
+            }, function(e) {
+                location.href = `{{ url('/sign/') }}`;
             });
-            location.href = `{{ url('/sign/') }}`;
         });
 
         j_login.find('button.logout').each(function(_, __) {

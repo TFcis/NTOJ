@@ -184,6 +184,13 @@ class UserService:
 
         session_data['ip'] = ip
         acct_cache = await self.rs.get(f'account@{acct_id}')
+        class Object:
+            pass
+        handler = Object()
+        handler.acct = Object()
+        handler.acct.acct_id = acct_id
+        handler.request = Object()
+        handler.request.remote_ip = ip
         if acct_cache is None:
             async with self.db.acquire() as con:
                 result = await con.fetch('SELECT "acct_id","lastip" FROM "account" WHERE "acct_id" = $1;', acct_id)
@@ -194,7 +201,9 @@ class UserService:
 
                 if (lastip := result['lastip']) != ip and ip != '':
                     await LogService.inst.add_log(
-                        f"Updated last IP of account #{acct_id} from {lastip} to {ip}", 'acct.updateip'
+                        f"Update acct #{acct_id} lastip from {lastip} to {ip}", 'acct.updateip',
+                        params={'from_ip': lastip, 'to_ip': ip},
+                        handler=handler,
                     )
                     await con.execute('UPDATE "account" SET "lastip" = $1 WHERE "acct_id" = $2;', ip, acct_id)
                     await self.rs.delete(f'account@{acct_id}')
@@ -207,7 +216,9 @@ class UserService:
 
                 if lastip != ip and ip != '':
                     await LogService.inst.add_log(
-                        f"Updated last IP of account #{acct_id} from {lastip} to {ip}", 'acct.updateip'
+                        f"Update acct #{acct_id} lastip from {lastip} to {ip}", 'acct.updateip',
+                        params={'from_ip': lastip, 'to_ip': ip},
+                        handler=handler,
                     )
 
                     async with self.db.acquire() as con:

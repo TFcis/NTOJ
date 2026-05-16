@@ -545,8 +545,8 @@ class ChalHandler(RequestHandler):
 
         testdata_to_subtasks = defaultdict(list)
         for subtask_config in pro.config.subtask_configs.values():
-            for testdata_id in pro.config.testdatas.keys():
-                testdata_to_subtasks[testdata_id].append(subtask_config.subtask_id)
+            for testdata in subtask_config.testdatas:
+                testdata_to_subtasks[testdata.testdata_id].append(subtask_config.subtask_id)
 
         show_history = rechal and self.get_argument("history", default=None) is not None
         history = None

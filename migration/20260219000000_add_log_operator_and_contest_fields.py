@@ -40,6 +40,18 @@ async def dochange(db, _):
 
     accounts = await db.fetch('SELECT acct_id, name FROM account;')
     name_to_id = {account['name']: account['acct_id'] for account in accounts}
+    res = await db.fetch('''
+        SELECT name
+        FROM account
+        WHERE name IN (
+            SELECT name
+            FROM account
+            GROUP BY name
+            HAVING COUNT(*) > 1
+        )
+        ORDER BY name, acct_id;
+    ''')
+    same_name_accounts = set(row['name'] for row in res)
     # Sort names by length (longest first) to avoid partial matches
     sorted_names = sorted(name_to_id.keys(), key=len, reverse=True)
 
@@ -54,13 +66,13 @@ async def dochange(db, _):
         operator_acct_id = None
 
         # Skip system logs (no operator)
-        if log_type in ('judge.offline', 'system.startup', 'system.shutdown'):
+        if log_type in ('judge.offline', 'signin.failure'):
             skipped_count += 1
             continue
 
         # Strategy 1: Extract from message - pattern like "#{acct_id}"
-        # Example: "username(#123) sign out"
-        acct_id_match = re.search(r'\(#(\d+)\)', message)
+        # Example: "username(#123) sign out", "#3227 sign in successfully"
+        acct_id_match = re.search(r'#(\d+)', message)
         if acct_id_match:
             operator_acct_id = int(acct_id_match.group(1))
 
@@ -86,6 +98,10 @@ async def dochange(db, _):
                 # Check if message starts with the account name
                 # Use word boundary to avoid partial matches
                 if message.startswith(name + ' '):
+                    if name in same_name_accounts:
+                        print(f"Warning: Multiple accounts with name '{name}' found. Cannot reliably determine operator for log_id {log_id}.")
+                        break
+
                     operator_acct_id = name_to_id[name]
                     break
 
