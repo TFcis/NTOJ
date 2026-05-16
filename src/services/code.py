@@ -56,6 +56,15 @@ class CodeService:
             _, contest = await ContestService.inst.get_contest(contest_id)
             if contest.is_admin(query_acct):
                 can_see = True
+                class Object:
+                    pass
+                handler = Object()
+                handler.acct = Object()
+                handler.acct.acct_id = query_acct.acct_id
+                handler.request = Object()
+                handler.request.remote_ip = query_acct_ip
+                handler.contest = contest
+                await LogService.inst.add_log(f"{query_acct.name} viewed challenge #{chal_id}", "manage.chal.view", handler=handler)
 
         if can_see:
             source_ext = COMPILER_INFOS[compiler_type].source_ext
