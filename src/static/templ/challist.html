@@ -213,7 +213,7 @@
 
             <div class="mb-1">
                 {% if user.is_guest() %}
-                    <label class="form-label">Your ID: <a href="url(f'/sign/')">Please Login</a></label>
+                    <label class="form-label">Your ID: <a href="{{ url('/sign/') }}">Please Login</a></label>
                 {% else %}
                     <label class="form-label">Your ID: <a id="yourIDFilter" href="{{ your_id_query_params }}">{{ user.acct_id }}</a></label>
                 {% end %}
