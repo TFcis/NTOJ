@@ -103,7 +103,11 @@
                     el.addEventListener('click', _ => info_dialog_modal.hide() && index.reload());
                 })
 
-                MathJax.Hub.Queue(["Typeset", MathJax.Hub, body]);
+                try {
+                    MathJax.typeset();
+                } catch (e) {
+                    console.warn('MathJax typeset error', e);
+                }
                 info_dialog_modal.show();
             });
         {% end %}
