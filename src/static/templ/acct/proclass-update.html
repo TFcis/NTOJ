@@ -22,7 +22,11 @@
         j_form.find('#preview').on('click', function(e) {
             let body = desc_preview.querySelector('.modal-body');
             body.innerHTML = DOMPurify.sanitize(marked.parse(desc_textarea.value));
-            MathJax.Hub.Queue(["Typeset", MathJax.Hub, body]);
+            try {
+                MathJax.typeset();
+            } catch (e) {
+                console.warn('MathJax typeset error', e);
+            }
             desc_preview_modal.show();
         });
 
