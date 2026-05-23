@@ -81,10 +81,6 @@
                     } catch (e) {
                         console.warn('MathJax typeset error', e);
                     }
-                    j_cont.find('pre > code').each(function(i, e) {
-                        $(e).addClass('html');
-                        hljs.highlightBlock(e);
-                    });
                 }
             });
         }

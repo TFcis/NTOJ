@@ -5,7 +5,11 @@
 
         let descEle = document.getElementById('content');
         descEle.innerHTML = DOMPurify.sanitize(marked.parse(index.unescape_html(desc_tex)));
-        MathJax.Hub.Queue(["Typeset", MathJax.Hub, descEle]);
+        try {
+            MathJax.typeset();
+        } catch (e) {
+            console.warn('MathJax typeset error', e);
+        }
     }
 </script>
 
