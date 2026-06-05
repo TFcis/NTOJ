@@ -18,7 +18,7 @@ import utils.htmlgen
 base_url = config.BASE_URL.removesuffix("/")
 
 TEMPLATE_NAMESPACE = {
-    "set_page_title": utils.htmlgen.set_page_title,
+    "gen_page_title": utils.htmlgen.gen_page_title,
     "markdown_escape": utils.htmlgen.markdown_escape,
     "url": lambda path: base_url + path,
 }
@@ -89,17 +89,11 @@ class RequestHandler(tornado.web.RequestHandler):
 
         super().__init__(*args, **kwargs)
 
-        try:
-            self.get_argument("json")
-            self.res_json = True
-
-        except tornado.web.MissingArgumentError:
-            self.res_json = False
-
     def error(self, err: tuple[str, Any], encoder=None):
+        # TODO: need title
         self.finish(json.dumps({"status": err[0], "data": err[1]}, cls=encoder))
 
-    async def render(self, templ, **kwargs):
+    async def render(self, templ, title: str | None ='', **kwargs):
         class _encoder(json.JSONEncoder):
             def default(self, o):
                 if isinstance(o, datetime.datetime):
@@ -111,12 +105,12 @@ class RequestHandler(tornado.web.RequestHandler):
         kwargs["user"] = self.acct
         kwargs["base_url"] = self.base_url
 
-        if self.res_json is True:
-            self.finish(json.dumps(kwargs, cls=_encoder))
+        if title is not None:
+            title_header = utils.htmlgen.gen_page_title(title, config.SITE_TITLE)
+            self.write(title_header)
 
-        else:
-            data = self.tpldr.load(templ + ".html").generate(**kwargs)
-            self.finish(data)
+        data = self.tpldr.load(templ + ".html").generate(**kwargs)
+        self.finish(data)
 
     def len_check(
         self, obj, min_len: int, max_len: int, field_name: str

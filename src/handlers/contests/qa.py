@@ -133,6 +133,7 @@ class ContestQAHandler(RequestHandler):
 
         await self.render(
             "contests/qa",
+            f"{self.contest.name} - Q&A",
             contest=self.contest,
             announces=announces,
             questions=questions,

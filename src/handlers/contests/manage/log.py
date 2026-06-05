@@ -42,6 +42,7 @@ class ContestManageLogHandler(RequestHandler):
 
             await self.render(
                 'contests/manage/log-list',
+                f"{self.contest.name} - Logs",
                 page='log',
                 contest_id=self.contest.contest_id,
                 pageoff=pageoff,
@@ -70,6 +71,7 @@ class ContestManageLogHandler(RequestHandler):
 
         await self.render(
             'contests/manage/log',
+            f"{self.contest.name} - Log {log_id}",
             page='log',
             contest_id=self.contest.contest_id,
             log=log_detail

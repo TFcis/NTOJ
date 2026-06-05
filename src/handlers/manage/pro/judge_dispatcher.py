@@ -7,13 +7,17 @@ class ManageProJudgeHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        pro_id = int(self.get_argument("proid"))
+        try:
+            pro_id = int(self.get_argument("proid"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)
 
         if pro.problem_type == ProType.BATCH:
-            await self.render("prospec/batch/manage/updatejudge", page="pro", pro=pro)
+            await self.render("prospec/batch/manage/updatejudge", "Update Problem Judge Config", page="pro", pro=pro)
         elif pro.problem_type == ProType.COMMUNICATION:
             return self.error(
                 ("Enotsupport", "Communication problem type not yet supported")
@@ -30,7 +34,11 @@ class ManageProJudgeHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self):
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
+
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)

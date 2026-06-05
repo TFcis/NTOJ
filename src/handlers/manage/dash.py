@@ -6,4 +6,4 @@ class ManageDashHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        await self.render('manage/dash', page='dash')
+        await self.render('manage/dash', "Manage", page='dash')

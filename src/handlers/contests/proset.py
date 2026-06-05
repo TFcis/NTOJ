@@ -45,5 +45,5 @@ class ContestProsetHandler(RequestHandler):
         pro_total_cnt = len(prolist)
         prolist = prolist[pageoff: pageoff + 40]
 
-        await self.render('contests/proset', contest=self.contest, show_ac_ratio=show_ac_ratio,
+        await self.render('contests/proset', f"{self.contest.name} - Problems", contest=self.contest, show_ac_ratio=show_ac_ratio,
                           prolist=prolist, pro_total_cnt=pro_total_cnt, score_map=score_map, pageoff=pageoff)

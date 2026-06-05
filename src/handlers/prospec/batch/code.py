@@ -28,6 +28,7 @@ class BatchCodeHandler(RequestHandler):
 
         await self.render(
             'prospec/batch/code',
+            title=None,
             chal=chal
         )
 

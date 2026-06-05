@@ -31,15 +31,23 @@ class ManageBoardHandler(RequestHandler):
     async def get(self, page=None):
         if page is None:
             _, boardlist = await BoardService.inst.get_boardlist()
-            await self.render('manage/board/board-list', page='board', boardlist=boardlist)
+            await self.render('manage/board/board-list', "Manage Boards",
+                              page='board', boardlist=boardlist)
 
         elif page == "add":
-            await self.render('manage/board/add', page='add')
+            await self.render('manage/board/add', "Add Board", page='add')
 
         elif page == "update":
-            board_id = int(self.get_argument('boardid'))
-            _, board = await BoardService.inst.get_board(board_id)
-            await self.render('manage/board/update', page='add', board_id=board_id, board=board)
+            try:
+                board_id = int(self.get_argument("boardid"))
+            except ValueError:
+                return self.error(("Eparam", "Invalid board ID"))
+
+            err, board = await BoardService.inst.get_board(board_id)
+            if err:
+                return self.error(err)
+            await self.render('manage/board/update', f"Update Board {board['name']}(#{board_id})",
+                              page='update', board_id=board_id, board=board)
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)

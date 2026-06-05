@@ -27,6 +27,7 @@ class ManageAcctHandler(RequestHandler):
             acctlist = acctlist[pageoff : pageoff + 40]
             await self.render(
                 "manage/acct/acct-list",
+                "Manage Accounts",
                 page="acct",
                 acctlist=acctlist,
                 pageoff=pageoff,
@@ -39,8 +40,11 @@ class ManageAcctHandler(RequestHandler):
             except ValueError:
                 return self.error(("Eparam", "Invalid account ID"))
 
-            _, acct = await UserService.inst.info_acct(acct_id)
-            await self.render("manage/acct/update", page="acct", acct=acct)
+            err, acct = await UserService.inst.info_acct(acct_id)
+            if err:
+                return self.error(err)
+            await self.render("manage/acct/update", f"Update Account {acct.name}(#{acct_id})",
+                              page="acct", acct=acct)
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)

@@ -22,7 +22,7 @@ class ManageInfoHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
         info = await self._get_system_info()
-        await self.render("manage/info", page="info", info=info)
+        await self.render("manage/info", "System Information", page="info", info=info)
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)

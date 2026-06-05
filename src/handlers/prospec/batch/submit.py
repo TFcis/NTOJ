@@ -61,6 +61,7 @@ class BatchSubmitHandler(RequestHandler):
 
             await self.render(
                 "prospec/batch/submit",
+                f"Submit - {pro.name}",
                 pro=pro,
                 allow_compilers=allow_compilers,
                 contest_id=contest_id,

@@ -22,6 +22,7 @@ class ContestManageAcctHandler(RequestHandler):
 
         await self.render(
             "contests/manage/acct",
+            f"{self.contest.name} - Manage Accounts",
             page="acct",
             contest_id=self.contest.contest_id,
             acct_list=acct_list,
