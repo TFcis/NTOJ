@@ -1,7 +1,7 @@
 import config
 
 
-def set_page_title(title: str, site_title: str = None):
+def gen_page_title(title: str, site_title: str = None):
     if site_title is None:
         site_title = config.SITE_TITLE
 
@@ -10,9 +10,10 @@ def set_page_title(title: str, site_title: str = None):
     else:
         t = f"{title} | {site_title}"
 
+    t = t.replace("`", "\\`")
     return f"""
     <script>
-        document.title = "{t}";
+        document.title = `{t}`;
     </script>
     """
 

@@ -12,7 +12,7 @@ class BoardHandler(RequestHandler):
     async def get(self, board_id=None):
         _, board_list = await BoardService.inst.get_boardlist()
         if board_id is None:
-            await self.render('board-list', boardlist=board_list)
+            await self.render('board-list', 'Board List', boardlist=board_list)
             return
 
         try:
@@ -97,6 +97,7 @@ class BoardHandler(RequestHandler):
 
         await self.render(
             'board',
+            meta['name'],
             prolist=prolist,
             acctlist=acctlist2,
             ratemap=ratemap,

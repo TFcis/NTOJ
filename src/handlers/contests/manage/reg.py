@@ -23,6 +23,7 @@ class ContestManageRegHandler(RequestHandler):
 
         await self.render(
             "contests/manage/reg",
+            f"{self.contest.name} - Manage Registration",
             page="reg",
             contest_id=self.contest.contest_id,
             contest=self.contest,

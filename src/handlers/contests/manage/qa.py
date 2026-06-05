@@ -130,6 +130,7 @@ class ContestManageQuestionHandler(RequestHandler):
 
         await self.render(
             "contests/manage/question",
+            f"{self.contest.name} - Manage Q&A",
             page="question",
             contest_id=self.contest.contest_id,
             contest=self.contest,
@@ -194,6 +195,7 @@ class ContestManageAnnounceHandler(RequestHandler):
 
         await self.render(
             "contests/manage/announce",
+            f"{self.contest.name} - Manage Announcements",
             page="announce",
             contest_id=self.contest.contest_id,
             contest=self.contest,

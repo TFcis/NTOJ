@@ -72,6 +72,7 @@ class BatchTestdataHandler(RequestHandler):
 
         await self.render(
             "prospec/batch/manage/updatetestdata",
+            "Update Problem Testdatas Config",
             page="pro",
             pro_id=pro_id,
             config=pro.config,

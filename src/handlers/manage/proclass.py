@@ -34,6 +34,7 @@ class ManageProClassHandler(RequestHandler):
 
             await self.render(
                 "manage/proclass/proclass-list",
+                "Manage ProClasses",
                 page="proclass",
                 proclass_list=proclass_list,
                 pageoff=pageoff,
@@ -41,7 +42,7 @@ class ManageProClassHandler(RequestHandler):
             )
 
         elif page == "add":
-            await self.render("manage/proclass/add", page="proclass")
+            await self.render("manage/proclass/add", "Add ProClass", page="proclass")
 
         elif page == "update":
             try:
@@ -57,6 +58,7 @@ class ManageProClassHandler(RequestHandler):
 
             await self.render(
                 "manage/proclass/update",
+                f"Update ProClass {proclass['name']}(#{proclass_id})",
                 page="proclass",
                 proclass_id=proclass_id,
                 proclass=proclass,

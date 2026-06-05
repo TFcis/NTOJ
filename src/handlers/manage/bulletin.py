@@ -13,19 +13,23 @@ class ManageBulletinHandler(RequestHandler):
     async def get(self, page=None):
         if page is None:
             _, bulletin_list = await BulletinService.inst.list_bulletin()
-            await self.render('manage/bulletin/bulletin-list', page='bulletin', bulletin_list=bulletin_list)
+            await self.render('manage/bulletin/bulletin-list', "Manage Bulletins",
+                              page='bulletin', bulletin_list=bulletin_list)
 
         elif page == "update":
             try:
                 bulletin_id = int(self.get_argument('bulletin_id'))
             except ValueError:
                 return self.error(('Eparam', 'Invalid bulletin ID'))
-            _, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
+            err, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
+            if err:
+                return self.error(err)
 
-            await self.render('manage/bulletin/update', page='bulletin', bulletin_id=bulletin_id, bulletin=bulletin)
+            await self.render('manage/bulletin/update', f"Update Bulletin {bulletin['title']}(#{bulletin_id})",
+                              page='bulletin', bulletin_id=bulletin_id, bulletin=bulletin)
 
         elif page == "add":
-            await self.render('manage/bulletin/add', page='bulletin')
+            await self.render('manage/bulletin/add', "Add Bulletin", page='bulletin')
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)

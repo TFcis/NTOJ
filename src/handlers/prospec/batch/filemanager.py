@@ -93,7 +93,7 @@ class BatchFilemanagerHandler(RequestHandler):
         # Use ProSpec to get file structure
         dirs = batch_spec.get_file_structure(batch_config, pro_id)
 
-        await self.render('manage/pro/filemanager', page='pro', pro_id=pro_id, dirs=dirs)
+        await self.render('manage/pro/filemanager', 'Update Problem File', page='pro', pro_id=pro_id, dirs=dirs)
 
     @batch_filemanager_dispatcher.action('preview')
     async def preview_action(self):

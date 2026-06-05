@@ -7,7 +7,7 @@ class IndexHandler(RequestHandler):
     @reqenv
     async def get(self, page: str):
         if self.request.headers.get("req-by-frontend"):
-            await self.render("404")
+            await self.render("404", "Page Not Found")
             return
 
         is_in_contest = False
@@ -54,6 +54,7 @@ class IndexHandler(RequestHandler):
 
         await self.render(
             "index",
+            title='',
             ask_cnt=ask_cnt,
             reply=reply,
             contest_ask_cnt=contest_ask_cnt,
@@ -68,10 +69,10 @@ class IndexHandler(RequestHandler):
 class AbouotHandler(RequestHandler):
     @reqenv
     async def get(self):
-        await self.render("about")
+        await self.render("about", "About")
 
 
 class DevInfoHandler(RequestHandler):
     @reqenv
     async def get(self):
-        await self.render("dev-info")
+        await self.render("dev-info", "Dev Info")

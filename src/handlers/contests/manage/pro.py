@@ -26,6 +26,7 @@ class ContestManageProHandler(RequestHandler):
 
         await self.render(
             "contests/manage/pro",
+            f"{self.contest.name} - Manage Problems",
             page="pro",
             contest_id=self.contest.contest_id,
             contest=self.contest,

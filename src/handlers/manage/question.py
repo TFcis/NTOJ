@@ -27,6 +27,7 @@ class ManageQuestionHandler(RequestHandler):
 
             await self.render(
                 "manage/question/question-list",
+                "Manage Questions",
                 page="question",
                 acctlist=acctlist,
                 asklist=asklist,
@@ -38,9 +39,12 @@ class ManageQuestionHandler(RequestHandler):
             except ValueError:
                 return self.error(("Eparam", "Invalid question account ID"))
 
-            _, ques_list = await QuestionService.inst.get_queslist(acct_id=qacct_id)
+            err, ques_list = await QuestionService.inst.get_queslist(acct_id=qacct_id)
+            if err:
+                return self.error(err)
             await self.render(
                 "manage/question/reply",
+                f"Reply {qacct_id}",
                 page="question",
                 qacct_id=qacct_id,
                 ques_list=ques_list,

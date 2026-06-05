@@ -613,8 +613,13 @@ class ChalListHandler(RequestHandler):
         for chal in challist:
             chal.compiler_type = COMPILER_INFOS[chal.compiler_type].version_name
 
+        title = "Challenges"
+        if self.contest:
+            title = f"{self.contest.name} - Challenges"
+
         await self.render(
             "challist",
+            title,
             chal_cnt=chal_cnt,
             challist=challist,
             flt=flt,
@@ -746,7 +751,7 @@ class ChalHandler(RequestHandler):
             for testdata in subtask_config.testdatas:
                 testdata_to_subtasks[testdata.testdata_id].append(subtask_config.subtask_id)
 
-        await self.render("chal", pro=pro, chal=chal, contest=self.contest, rechal=rechal, testdata_to_subtasks=testdata_to_subtasks)
+        await self.render("chal", f"Challenge - {chal.chal_id}", pro=pro, chal=chal, contest=self.contest, rechal=rechal, testdata_to_subtasks=testdata_to_subtasks)
         return
 
     @reqenv

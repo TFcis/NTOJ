@@ -17,7 +17,7 @@ class ContestRegHandler(RequestHandler):
         if self.contest.is_admin(self.acct):
             return self.error(("Eacces", "Contest admin cannot register"))
 
-        await self.render("contests/reg", contest=self.contest)
+        await self.render("contests/reg", f"{self.contest.name} - Registration", contest=self.contest)
 
     def check(self, action_name):
         if self.contest.is_admin(self.acct):

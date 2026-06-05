@@ -34,6 +34,7 @@ class ManageProListHandler(RequestHandler):
 
         await self.render(
             "manage/pro/pro-list",
+            "Manage Problems",
             page="pro",
             prolist=prolist,
             pageoff=pageoff,
