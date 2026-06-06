@@ -21,7 +21,7 @@ class ManageProUpdateGeneralHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        await self.render("manage/pro/updategeneral", page="pro", pro=pro)
+        await self.render("manage/pro/updategeneral", "Update Problem General Config", page="pro", pro=pro)
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)

@@ -19,7 +19,7 @@
     function init() {
         let contest_id = "{{ contest_id }}";
 
-        const options = {
+        const option_template = {
             display: {
                 calendarWeeks: true,
             },
@@ -29,8 +29,20 @@
                 format: 'yyyy/MM/dd hh:mm T',
             },
         };
+        let options = structuredClone(option_template);
+        options.defaultDate = new Date("{{ contest.contest_start.astimezone(config.TIMEZONE) }}");
         contest_start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestStart'), options);
+
+        options = structuredClone(option_template);
+        options.defaultDate = new Date("{{ contest.contest_end.astimezone(config.TIMEZONE) }}");
         contest_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerContestEnd'), options);
+
+        options = structuredClone(option_template);
+        {% if contest.reg_mode != RegMode.INVITED %}
+            options.defaultDate = new Date("{{ contest.reg_end.astimezone(config.TIMEZONE) }}");
+        {% else %}
+            options.defaultDate = new Date("{{ contest.contest_end.astimezone(config.TIMEZONE) }}");
+        {% end %}
         reg_end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerRegEnd'), options);
 
         // Update Submission CD Time default and show/hide Penalty Value based on contest mode
@@ -189,7 +201,7 @@
         <div class="mb-1">
             <label for="datepickerContestStart" class="form-label">Contest Start Time</label>
             <div class="input-group" id="datepickerContestStart">
-                <input id="datepickerContestStartInput" class="form-control" value="{{ contest.contest_start.astimezone(config.TIMEZONE) }}">
+                <input id="datepickerContestStartInput" class="form-control">
                 <span class="input-group-text" data-td-target="#datepickerContestStart" data-td-toggle="datepickerContestStart">
                     <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg><!-- <span class="fa-solid fa-calendar"></span> Font Awesome fontawesome.com -->
                 </span>
@@ -199,7 +211,7 @@
         <div class="mb-1">
             <label for="datepickerContestEnd" class="form-label">Contest End Time</label>
             <div class="input-group" id="datepickerContestEnd">
-                <input id="datepickerContestEndInput" class="form-control" value="{{ contest.contest_end.astimezone(config.TIMEZONE) }}">
+                <input id="datepickerContestEndInput" class="form-control">
                 <span class="input-group-text" data-td-target="#datepickerContestEnd" data-td-toggle="datepickerContestEnd">
                     <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg>
                 </span>
@@ -227,12 +239,6 @@
                 <input
                     id="datepickerRegEndInput"
                     class="form-control"
-                    {% if contest.reg_mode == RegMode.INVITED %}
-                        value="{{ contest.contest_end.astimezone(config.TIMEZONE) }}"
-                        disabled
-                    {% else %}
-                        value="{{ contest.reg_end.astimezone(config.TIMEZONE) }}"
-                    {% end %}
                 >
                 <span class="input-group-text" data-td-target="#datepickerRegEnd" data-td-toggle="datepickerRegEnd">
                     <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg>

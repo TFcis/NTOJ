@@ -28,6 +28,7 @@ class LogHandler(RequestHandler):
 
             await self.render(
                 'loglist',
+                "Logs",
                 pageoff=pageoff,
                 lognum=log['lognum'],
                 loglist=log['loglist'],
@@ -46,5 +47,6 @@ class LogHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        await self.render('log', log=log)
+        await self.render('log', f"Log - {log_id}",
+                          log=log)
 

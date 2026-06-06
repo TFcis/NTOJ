@@ -209,6 +209,7 @@ class ProsetHandler(RequestHandler):
 
         await self.render(
             "proset",
+            "Problems",
             user=self.acct,
             pro_total_cnt=pro_total_cnt,
             ac_pro_cnt=ac_pro_cnt,
@@ -488,6 +489,7 @@ class ProHandler(RequestHandler):
 
         await self.render(
             "pro",
+            f"{pro_id} - {pro.name}",
             pro=pro,
             can_submit=can_submit,
             contest=self.contest,

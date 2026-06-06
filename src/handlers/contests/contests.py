@@ -7,7 +7,7 @@ from services.contests import ContestService
 class ContestInfoHandler(RequestHandler):
     @reqenv
     async def get(self):
-        await self.render("contests/info", contest=self.contest)
+        await self.render("contests/info", self.contest.name, contest=self.contest)
 
 
 class ContestListHandler(RequestHandler):
@@ -52,6 +52,7 @@ class ContestListHandler(RequestHandler):
         contest_category["recent"] = contest_category["recent"][pageoff : pageoff + 20]
         await self.render(
             "contests/contests-list",
+            "Contests",
             contest_category=contest_category,
             pageoff=pageoff,
             recent_length=recent_length,

@@ -14,7 +14,7 @@
     var start_date_picker = null;
     var end_date_picker = null;
     function init() {
-        const options = {
+        const option_template = {
             display: {
                 calendarWeeks: true,
             },
@@ -24,7 +24,12 @@
                 format: 'yyyy/MM/dd hh:mm T',
             },
         };
+        let options = structuredClone(option_template);
+        options.defaultDate = new Date("{{ board['start'].astimezone(config.TIMEZONE).strftime('%Y/%m/%d %H:%M') }}");
         start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerStart'), options);
+
+        options = structuredClone(option_template);
+        options.defaultDate = new Date("{{ board['end'].astimezone(config.TIMEZONE).strftime('%Y/%m/%d %H:%M') }}");
         end_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerEnd'), options);
 
         let j_form = $("#form");
@@ -136,7 +141,7 @@
         <div class="mb-1">
             <label for="#datepickerStartInput" class="form-label">Start Time</label>
             <div id="datepickerStart" class="input-group">
-                <input id="datepickerStartInput" type="text" class="form-control" value="{{ board['start'].astimezone(config.TIMEZONE).strftime('%Y/%m/%d %H:%M') }}">
+                <input id="datepickerStartInput" type="text" class="form-control">
                 <span class="input-group-text" data-td-target="#datepickerStart" data-td-toggle="datepickerStart">
                     <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg><!-- <span class="fa-solid fa-calendar"></span> Font Awesome fontawesome.com -->
                 </span>
@@ -144,7 +149,7 @@
 
             <label for="#datepickerEnd" class="form-label">End Time</label>
             <div id="datepickerEnd" class="input-group">
-                <input id="datepickerEndInput" type="text" class="form-control" value="{{ board['end'].astimezone(config.TIMEZONE).strftime('%Y/%m/%d %H:%M') }}">
+                <input id="datepickerEndInput" type="text" class="form-control">
                 <span class="input-group-text" data-td-target="#datepickerEnd" data-td-toggle="datepickerEnd">
                     <svg class="svg-inline--fa fa-calendar" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M96 32V64H48C21.5 64 0 85.5 0 112v48H448V112c0-26.5-21.5-48-48-48H352V32c0-17.7-14.3-32-32-32s-32 14.3-32 32V64H160V32c0-17.7-14.3-32-32-32S96 14.3 96 32zM448 192H0V464c0 26.5 21.5 48 48 48H400c26.5 0 48-21.5 48-48V192z"></path></svg><!-- <span class="fa-solid fa-calendar"></span> Font Awesome fontawesome.com -->
                 </span>

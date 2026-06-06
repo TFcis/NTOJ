@@ -23,7 +23,7 @@ class ManageProSubtaskHandler(RequestHandler):
             return self.error(err)
 
         await self.render(
-            "manage/pro/updatesubtask", page="pro", pro_id=pro_id, config=pro.config
+            "manage/pro/updatesubtask", "Update Problem Subtasks Config", page="pro", pro_id=pro_id, config=pro.config
         )
 
     @subtask_dispatcher.action("updaterate")

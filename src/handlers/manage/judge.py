@@ -44,7 +44,7 @@ class ManageJudgeHandler(RequestHandler):
     async def get(self):
         judge_status_list = JudgeServerClusterService.inst.get_servers_status()
         await self.render(
-            "manage/judge", page="judge", judge_status_list=judge_status_list
+            "manage/judge", "Manage Judge", page="judge", judge_status_list=judge_status_list
         )
 
     @reqenv

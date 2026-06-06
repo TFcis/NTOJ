@@ -10,7 +10,7 @@ class ManageProAddHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        await self.render("manage/pro/add", page="pro")
+        await self.render("manage/pro/add", "Add Problem", page="pro")
 
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)

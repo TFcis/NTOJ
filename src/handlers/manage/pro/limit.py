@@ -23,7 +23,7 @@ class ManageProLimitHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        await self.render("manage/pro/updatelimit", page="pro", pro=pro)
+        await self.render("manage/pro/updatelimit", "Update Problem Limit Config", page="pro", pro=pro)
 
     @limit_dispatcher.action("updatelimit")
     async def update_limit_action(self):

@@ -31,17 +31,17 @@ class BulletinHandler(RequestHandler):
             _, bulletin_list = await BulletinService.inst.list_bulletin()
             bulletin_list.sort(key=lambda b: (b['pinned'], b['timestamp']), reverse=True)
 
-            await self.render('info', bulletin_list=bulletin_list, judge_server_status=can_submit)
+            await self.render('info', 'Info', bulletin_list=bulletin_list, judge_server_status=can_submit)
             return
 
         try:
             bulletin_id = int(bulletin_id)
         except ValueError:
-            return self.error(('Eparam', 'Invalid bulletin id'))
+            return self.error(('Eparam', 'Invalid bulletin ID'))
 
         err, bulletin = await BulletinService.inst.get_bulletin(bulletin_id)
         if err:
             return self.error(err)
 
-        await self.render('bulletin', bulletin=bulletin)
+        await self.render('bulletin', f"{bulletin['title']}", bulletin=bulletin)
 

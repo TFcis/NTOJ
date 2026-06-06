@@ -71,6 +71,7 @@ class AcctHandler(RequestHandler):
 
         await self.render(
             "acct/profile",
+            f"{acct.name}",
             acct=acct,
             rate=rate_data,
             total_pro_cnt=len(prolist),
@@ -106,6 +107,7 @@ class AcctConfigHandler(RequestHandler):
 
         await self.render(
             "acct/acct-config",
+            f"{self.acct.name}'s Account Config",
             acct=acct,
             session_keys=session_keys,
             current_session_key=current_session_key,
@@ -213,10 +215,10 @@ class AcctProClassHandler(RequestHandler):
             proclass_list = filter(
                 lambda proclass: proclass["acct_id"] == self.acct.acct_id, proclass_list
             )
-            await self.render("acct/proclass-list", proclass_list=proclass_list)
+            await self.render("acct/proclass-list", f"{self.acct.name}'s ProClass List", proclass_list=proclass_list)
 
         elif page == "add":
-            await self.render("acct/proclass-add", user=self.acct)
+            await self.render("acct/proclass-add", "Add ProClass", user=self.acct)
 
         elif page == "update":
             try:
@@ -228,7 +230,7 @@ class AcctProClassHandler(RequestHandler):
                 return self.error(PERMISSION_DENIED_ERROR)
 
             await self.render(
-                "acct/proclass-update", proclass_id=proclass_id, proclass=proclass
+                "acct/proclass-update", f"Config {proclass['name']}", proclass_id=proclass_id, proclass=proclass
             )
 
     @reqenv
@@ -384,7 +386,7 @@ class SignHandler(RequestHandler):
         if not self.acct.is_guest():
             return self.write(GOTO_PREV_PAGE)
 
-        await self.render("sign")
+        await self.render("sign", "Sign In / Sign Up")
 
     @reqenv
     async def post(self):

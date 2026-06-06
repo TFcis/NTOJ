@@ -11,4 +11,4 @@ class ReportHandler(RequestHandler):
         except ValueError:
             return self.error(("Eparam", "Invalid challenge ID"))
 
-        await self.render('report-problem', chal_id=chal_id)
+        await self.render('report-problem', "Report Problem", chal_id=chal_id)

@@ -1,8 +1,8 @@
 {% extends 'manage.html' %}
-{% import config %}
-{% import json %}
 
 {% block content %}
+{% import config %}
+{% import json %}
 <div class="col-11">
     <h3>Log Details</h3>
 
@@ -55,7 +55,7 @@
 
             <div class="mb-3">
                 <label for="" class="form-label"><strong>Params</strong></label>
-                <pre style="white-space: pre-wrap; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">{{ json.loads(log['params']) }}</pre>
+                <pre style="white-space: pre-wrap; padding: 10px; border-radius: 4px;">{{ json.loads(log['params']) }}</pre>
             </div>
         </div>
     </div>

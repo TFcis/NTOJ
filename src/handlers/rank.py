@@ -29,7 +29,7 @@ class ProRankHandler(RequestHandler):
         if self.acct.is_kernel():
             allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
-        err, _ = await ProService.inst.get_pro(pro_id, allow_statuses)
+        err, pro = await ProService.inst.get_pro(pro_id, allow_statuses)
         if err:
             return self.error(err)
 
@@ -38,7 +38,7 @@ class ProRankHandler(RequestHandler):
             return self.error(err)
 
         await self.render(
-            'pro-rank', pro_id=pro_id, chal_list=chal_list, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt
+            'pro-rank', f'{pro.name} - Rank', pro_id=pro_id, chal_list=chal_list, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt
         )
 
 
@@ -63,4 +63,4 @@ class UserRankHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        await self.render('user-rank', acctlist=acctlist, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt)
+        await self.render('user-rank', 'User Rank', acctlist=acctlist, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt)

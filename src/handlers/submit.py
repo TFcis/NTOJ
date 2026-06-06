@@ -58,8 +58,10 @@ class SubmitHandler(RequestHandler):
                     self.contest.allow_compilers
                 )
 
+            # TODO:: WTH, Why duplicate code with prospec/batch/submit.py
             await self.render(
                 "prospec/batch/submit",
+                f"Submit - {pro.name}",
                 pro=pro,
                 allow_compilers=allow_compilers,
                 contest_id=self.contest.contest_id if self.contest else 0,

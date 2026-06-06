@@ -23,7 +23,7 @@ class ContestManageDashHandler(RequestHandler):
     @contest_require_permission("admin")
     async def get(self):
         await self.render(
-            "contests/manage/dash", page="dash", contest_id=self.contest.contest_id
+            "contests/manage/dash", f"{self.contest.name} - Manage", page="dash", contest_id=self.contest.contest_id
         )
 
 
@@ -33,6 +33,7 @@ class ContestManageGeneralHandler(RequestHandler):
     async def get(self):
         await self.render(
             "contests/manage/general",
+            f"{self.contest.name} - General Settings",
             page="general",
             contest_id=self.contest.contest_id,
             contest=self.contest,
@@ -185,6 +186,7 @@ class ContestManageDescEditHandler(RequestHandler):
     async def get(self):
         await self.render(
             "contests/manage/desc-edit",
+            f"{self.contest.name} - Edit Description",
             page="desc",
             contest_id=self.contest.contest_id,
             contest=self.contest,
@@ -228,7 +230,7 @@ class ContestManageAddHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        await self.render("contests/manage/add")
+        await self.render("contests/manage/add", "Add Contest", page="add")
 
     @contest_manage_add_dispatcher.action("add")
     async def add_action(self):

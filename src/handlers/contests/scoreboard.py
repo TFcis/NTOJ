@@ -106,7 +106,7 @@ class ContestScoreboardHandler(RequestHandler):
 
     @reqenv
     async def get(self):
-        await self.render('contests/scoreboard', contest=self.contest)
+        await self.render('contests/scoreboard', f"{self.contest.name} - Scoreboard", contest=self.contest)
 
     @reqenv
     async def post(self):
