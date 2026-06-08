@@ -21,6 +21,8 @@ class Compiler(enum.IntEnum):
     ASMCPP = 9
     ASMAARCH64 = 100
     ASMRISCV64 = 101
+    ICX = 102
+    ICPX = 103
 
 @dataclass(slots=True, frozen=True)
 class CompilerInfo:
@@ -42,6 +44,9 @@ COMPILER_INFOS[Compiler.ASMC] = CompilerInfo(Compiler.ASMC, "asm", "Gas x86_64 L
 COMPILER_INFOS[Compiler.ASMCPP] = CompilerInfo(Compiler.ASMCPP, "asm", "Gas x86_64 Linux 2.44 w/ libstdc++", "asmcpp", "s")
 COMPILER_INFOS[Compiler.ASMAARCH64] = CompilerInfo(Compiler.ASMAARCH64, "asm-aarch64", "Gas aarch64 Linux 2.42 w/ libc & QEMU", "asm-aarch64", "s")
 COMPILER_INFOS[Compiler.ASMRISCV64] = CompilerInfo(Compiler.ASMRISCV64, "asm-riscv64", "Gas riscv64 Linux 2.42 w/ libc & QEMU", "asm-riscv64", "s")
+COMPILER_INFOS[Compiler.ICX] = CompilerInfo(Compiler.ICX, "c", "Intel(R) oneAPI DPC++/C++ Compiler 2026.0.0 C11", "icx", "c")
+COMPILER_INFOS[Compiler.ICPX] = CompilerInfo(Compiler.ICPX, "cpp", "Intel(R) oneAPI DPC++/C++ Compiler 2026.0.0 C++17", "icpx", "cpp")
+
 
 class ChalConst:
     STATE_AC = 1
