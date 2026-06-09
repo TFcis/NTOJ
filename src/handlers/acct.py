@@ -47,10 +47,16 @@ class AcctHandler(RequestHandler):
 
         prolist2 = []
 
+        topcoder_map = await self.rs.hgetall("pro_topcoder")
+
         ac_pro_cnt = 0
         for pro in prolist:
             pro_id = pro.pro_id
-            tmp = {"pro_id": pro_id, "score": -1, "state": None}
+            try:
+                topcoder_id = unpackb(topcoder_map[str(pro_id)])
+            except KeyError:
+                _, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
+            tmp = {"pro_id": pro_id, "score": -1, "state": None, "is_topcoder": topcoder_id == acct_id}
             if pro_id in ratemap:
                 tmp["score"] = ratemap[pro_id]["rate"]
                 tmp["state"] = ratemap[pro_id]["state"]
