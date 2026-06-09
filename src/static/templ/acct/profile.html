@@ -133,9 +133,9 @@
                         {% if pro['state'] == ChalConst.STATE_NOTSTARTED or pro['state'] is None %}
                             <td class="_state"><a class="_state-4" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
                         {% elif pro['state'] == ChalConst.STATE_AC %}
-                            <td class="_state"><a class="_state-1" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
+                    <td class="_state"><a class="_state-1" {% if pro['is_topcoder'] %}style="font-weight: bolder;"{% end %} href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{% if %}{{pro['pro_id']}}</a></td>
                         {% elif pro['state'] in (ChalConst.STATE_PC, ChalConst.STATE_WA) and pro['score'] > 0 %}
-                            <td class="_state"><a class="_state-2" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
+                            <td class="_state"><a class="_state-2" {% if pro['is_topcoder'] %}style="font-weight: bolder;"{% end %} href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
                         {% else %}
                             <td class="_state"><a class="_state-3" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
                         {% end %}
