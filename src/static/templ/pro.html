@@ -64,6 +64,7 @@
         let j_cont = $('#cont');
 
         function _load_html() {
+            j_cont.css('height', 'auto');
             j_cont.load(html_url, function(res, status, xhr) {
                 if (status == 'error') {
                     $('#pdfbtn').show();
@@ -86,6 +87,7 @@
         }
 
         function _load_pdf_js() {
+            j_cont.css('height', 'auto');
             PDFJS.getDocument(pdf_url).promise.then(function(pdf) {
                 j_cont.empty();
                 for (let i = 1; i <= pdf.numPages; i++) {
@@ -134,6 +136,7 @@
 
         function _load_pdf_embed() {
             j_cont.empty();
+            j_cont.css('height', '88vh');
             var embed = $(`<embed width="100%" height="100%" src="${pdf_url}" type="application/pdf">`);
             j_cont.append(embed);
         }
@@ -265,8 +268,7 @@
         </div>
     </div>
 
-    <!-- TODO: Remove fixed height -->
-    <div id="cont" class="col-lg-10 col-12" style="height: 904px;">
+    <div id="cont" class="col-lg-10 col-12">
         <strong>Loading...</strong>
     </div>
 </div>
