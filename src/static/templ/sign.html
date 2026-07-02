@@ -9,10 +9,7 @@ h3{color:#fcfaf2}
 
 <script id="signjs" type="text/javascript">
     function init() {
-        $('body').addClass('dark');
-
         $('#warning button.confirm').on('click', function(e) {
-            $('body').addClass('dark');
             $('#intro').show();
             $('#signin').hide();
             $('#signup').show();
@@ -20,8 +17,8 @@ h3{color:#fcfaf2}
         });
 
         $('#warning button.cancel').on('click', function(e) {
-            $('body').addClass('dark');
             $('#intro').show();
+            $('#signin').show();
             $('#warning').hide();
         });
 
@@ -29,7 +26,6 @@ h3{color:#fcfaf2}
             $('#intro').hide();
             $('#signin').hide();
 
-            $('body').removeClass('dark');
             $('#warning').show();
         });
 
