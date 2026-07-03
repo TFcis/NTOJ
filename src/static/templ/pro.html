@@ -61,10 +61,16 @@
             }
         });
 
+        let resizeRaf = null;
+
         $(window).on('resize', function() {
-            if (viewer == 2) {
+            if (viewer != 2 || resizeRaf)
+                return;
+
+            resizeRaf = requestAnimationFrame(function() {
+                resizeRaf = null;
                 _resize_pdf_embed_viewer();
-            }
+            });
         });
 
         let j_cont = $('#cont');
