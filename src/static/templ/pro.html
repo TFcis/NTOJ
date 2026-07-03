@@ -61,7 +61,22 @@
             }
         });
 
+        $(window).on('resize', function() {
+            if (viewer == 2) {
+                _resize_pdf_embed_viewer();
+            }
+        });
+
         let j_cont = $('#cont');
+        let j_side = $('#side');
+
+        function _resize_pdf_embed_viewer() {
+            let top = j_cont[0].getBoundingClientRect().top;
+            let footerH = $('footer').outerHeight(true) || 0;
+            let height = Math.max(200, window.innerHeight - top - footerH - 16);
+            j_cont.css('height', `${ height }px`);
+            j_side.css('height', `${ height }px`);
+        }
 
         function _load_html() {
             j_cont.css('height', 'auto');
@@ -136,7 +151,7 @@
 
         function _load_pdf_embed() {
             j_cont.empty();
-            j_cont.css('height', '88vh');
+            _resize_pdf_embed_viewer();
             var embed = $(`<embed width="100%" height="100%" src="${pdf_url}" type="application/pdf">`);
             j_cont.append(embed);
         }
@@ -144,7 +159,7 @@
     }
 </script>
 <div class="row">
-    <div id="side" class="col-lg-2 col-12 mt-lg-2">
+    <div id="side" class="col-lg-2 col-12 mt-lg-2", style="overflow-y: scroll;">
         <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
         {% if can_submit and pro.allow_submit %}
             {% if contest and not contest.is_end() %}
