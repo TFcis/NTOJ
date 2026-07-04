@@ -12,6 +12,7 @@ from handlers.code import CodeHandler
 from handlers.contests.url import get_contests_url
 from handlers.index import (
     AbouotHandler,
+    ContributorsHandler,
     DevInfoHandler,
     IndexHandler,
 )
@@ -57,6 +58,7 @@ def get_url(db, rs, pool):
         (r'/be/ws', UnifiedWebSocketHandler, unified_ws_args),
         (r'/be/pack', PackHandler, args),
         (r'/be/about', AbouotHandler, args),
+        (r'/be/contributors', ContributorsHandler, args),
         (r'/be/question', QuestionHandler, args),
         (r'/be/set-tags', ProTagsHandler, args),
         (r'/be/log', LogHandler, args),

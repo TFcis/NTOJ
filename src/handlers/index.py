@@ -72,6 +72,12 @@ class AbouotHandler(RequestHandler):
         await self.render("about", "About")
 
 
+class ContributorsHandler(RequestHandler):
+    @reqenv
+    async def get(self):
+        await self.render("contributors", "Contributors")
+
+
 class DevInfoHandler(RequestHandler):
     @reqenv
     async def get(self):
