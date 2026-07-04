@@ -303,7 +303,11 @@
                 <label class="form-label">{{ cur_proclass['name'] }}</label>
                 <p>Progress: <a href="{{ url(f'/proset/?proclass_id={ cur_proclass['proclass_id'] }&show=onlyac') }}">{{ ac_pro_cnt }}</a> / {{ pro_total_cnt }}</p>
                 <div class="progress">
-                    <div class="progress-bar" role="progressbar" style="width: {{ ac_pro_cnt / pro_total_cnt * 100 }}%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                    {% if pro_total_cnt > 0 %}
+                        <div class="progress-bar" role="progressbar" style="width: {{ ac_pro_cnt / pro_total_cnt * 100 }}%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                    {% else %}
+                        <div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    {% end %}
                 </div>
                 <div style="display: none;" id="curProclassId" proclass="{{ cur_proclass['proclass_id'] }}"></div>
             {% else %}
@@ -332,9 +336,9 @@
                     <option value="chal" {% if flt['order'] == 'chal' %} selected {% end %}>Submission AC Ratio</option>
                     <option value="user" {% if flt['order'] == 'user' %} selected {% end %}>User AC Ratio</option>
                     <option value="chalcnt" {% if flt['order'] == 'chalcnt' %} selected {% end %}>Submission Count</option>
-                    <option value="chalaccnt" {% if flt['order'] == 'chalaccnt' %} selected {% end %}>Submission AC Count</option>
-                    <option value="usercnt" {% if flt['order'] == 'usercnt' %} selected {% end %}>User Submission Count</option>
-                    <option value="useraccnt" {% if flt['order'] == 'useraccnt' %} selected {% end %}>User Submission AC Count</option>
+                    <option value="chalaccnt" {% if flt['order'] == 'chalaccnt' %} selected {% end %}>AC Submission Count</option>
+                    <option value="usercnt" {% if flt['order'] == 'usercnt' %} selected {% end %}>Submitter Count</option>
+                    <option value="useraccnt" {% if flt['order'] == 'useraccnt' %} selected {% end %}>AC User Count</option>
                 </select>
 
                 <label for="reverse" class="form-check-label">Reverse Sort Order</label>
