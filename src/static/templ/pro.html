@@ -13,6 +13,8 @@
         html_url = `{{ url(f'/pro/{ pro.pro_id }/cont.html') }}`;
     {% end %}
 
+    var onResize = null;
+
     function init() {
         let PDFJS = pdfjsLib;
         PDFJS.GlobalWorkerOptions.workerSrc = `{{ url('/src/third/pdf.worker.min.mjs') }}`;
@@ -61,9 +63,32 @@
             }
         });
 
+        let resizeRaf = null;
+        onResize = function() {
+            if (viewer != 2 || resizeRaf)
+                return;
+
+            resizeRaf = requestAnimationFrame(function() {
+                resizeRaf = null;
+                _resize_pdf_embed_viewer();
+            });
+        };
+        $(window).on('resize', onResize);
+
         let j_cont = $('#cont');
+        let j_side = $('#side');
+
+        function _resize_pdf_embed_viewer() {
+            let top = j_cont[0].getBoundingClientRect().top;
+            let footerH = $('footer').outerHeight(true) || 0;
+            let height = Math.max(200, window.innerHeight - top - footerH - 16);
+            j_cont.css('height', `${ height }px`);
+            j_side.css('height', `${ height }px`);
+        }
 
         function _load_html() {
+            j_cont.css('height', 'auto');
+            j_side.css('height', `auto`);
             j_cont.load(html_url, function(res, status, xhr) {
                 if (status == 'error') {
                     $('#pdfbtn').show();
@@ -86,6 +111,8 @@
         }
 
         function _load_pdf_js() {
+            j_cont.css('height', 'auto');
+            j_side.css('height', `auto`);
             PDFJS.getDocument(pdf_url).promise.then(function(pdf) {
                 j_cont.empty();
                 for (let i = 1; i <= pdf.numPages; i++) {
@@ -134,14 +161,22 @@
 
         function _load_pdf_embed() {
             j_cont.empty();
+            _resize_pdf_embed_viewer();
             var embed = $(`<embed width="100%" height="100%" src="${pdf_url}" type="application/pdf">`);
             j_cont.append(embed);
         }
         _load_html();
     }
+
+    function destroy() {
+        if (onResize) {
+            $(window).off('resize', onResize);
+            onResize = null;
+        }
+    }
 </script>
 <div class="row">
-    <div id="side" class="col-lg-2 col-12 mt-lg-2">
+    <div id="side" class="col-lg-2 col-12 mt-lg-2" style="overflow-y: scroll;">
         <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
         {% if can_submit and pro.allow_submit %}
             {% if contest and not contest.is_end() %}
@@ -265,8 +300,7 @@
         </div>
     </div>
 
-    <!-- TODO: Remove fixed height -->
-    <div id="cont" class="col-lg-10 col-12" style="height: 904px;">
+    <div id="cont" class="col-lg-10 col-12">
         <strong>Loading...</strong>
     </div>
 </div>
