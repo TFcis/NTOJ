@@ -86,6 +86,7 @@
 
         function _load_html() {
             j_cont.css('height', 'auto');
+            j_side.css('height', `auto`);
             j_cont.load(html_url, function(res, status, xhr) {
                 if (status == 'error') {
                     $('#pdfbtn').show();
@@ -109,6 +110,7 @@
 
         function _load_pdf_js() {
             j_cont.css('height', 'auto');
+            j_side.css('height', `auto`);
             PDFJS.getDocument(pdf_url).promise.then(function(pdf) {
                 j_cont.empty();
                 for (let i = 1; i <= pdf.numPages; i++) {
