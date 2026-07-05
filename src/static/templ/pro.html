@@ -13,6 +13,8 @@
         html_url = `{{ url(f'/pro/{ pro.pro_id }/cont.html') }}`;
     {% end %}
 
+    var onResize = null;
+
     function init() {
         let PDFJS = pdfjsLib;
         PDFJS.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.mjs';
@@ -62,8 +64,7 @@
         });
 
         let resizeRaf = null;
-
-        $(window).on('resize', function() {
+        onResize = function() {
             if (viewer != 2 || resizeRaf)
                 return;
 
@@ -71,7 +72,8 @@
                 resizeRaf = null;
                 _resize_pdf_embed_viewer();
             });
-        });
+        };
+        $(window).on('resize', onResize);
 
         let j_cont = $('#cont');
         let j_side = $('#side');
@@ -164,6 +166,13 @@
             j_cont.append(embed);
         }
         _load_html();
+    }
+
+    function destroy() {
+        if (onResize) {
+            $(window).off('resize', onResize);
+            onResize = null;
+        }
     }
 </script>
 <div class="row">
