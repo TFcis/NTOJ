@@ -46,4 +46,9 @@ a {
   border-radius: 10px;
 }
 
+#cont img {
+  height: auto !important;
+  max-width: 100% !important;
+}
+
 /*# sourceMappingURL=pro.css.map */
