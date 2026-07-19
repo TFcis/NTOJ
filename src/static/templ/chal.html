@@ -44,7 +44,7 @@
         state_element.className = `state state-${state}`;
         total_table.querySelector('td.time').innerHTML = time;
         total_table.querySelector('td.memory').innerHTML = memory;
-        total_table.querySelector('td.score').innerHTML = rate;
+        total_table.querySelector('td.score').innerHTML = parseFloat(rate).toFixed({{ pro.config.rate_precision }});
 
         total_result_message.innerHTML = '';
         if (message_type !== {{ MessageType.NONE.value }}) {
@@ -71,7 +71,7 @@
         state_element.className = `state state-${state}`;
         tr.querySelector('td.time').innerHTML = time;
         tr.querySelector('td.memory').innerHTML = memory;
-        tr.querySelector('td.score').innerHTML = rate;
+        tr.querySelector('td.score').innerHTML = parseFloat(rate).toFixed({{ pro.config.rate_precision }});
     }
 
     var testdata_table = document.getElementById("testdatas");
