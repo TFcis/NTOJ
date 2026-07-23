@@ -140,11 +140,13 @@
                             <td class="_state"><a class="_state-3" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
                         {% end %}
                     {% end %}
-                    </tr>
-                    {% while cnt != 10 %}
-                        <td></td>
-                        {% set cnt = cnt + 1 %}
+                    {% if total_pro_cnt < 10 %}
+                        {% while cnt != 10 %}
+                            <td></td>
+                            {% set cnt = cnt + 1 %}
+                        {% end %}
                     {% end %}
+                </tr>
                 {% end %}
 	        </tbody>
        </table>
