@@ -121,31 +121,23 @@
               <td>Accepted</td>
               <td>
                 Your program is correct! <br>
-                It outputs the right answer in reasoneable time and within the limit memory usage. <br>
-                <!-- Congratulations!  -->
-                你的程式輸出完全正確! <br>
-              它在要求的時間和記憶體限制內輸出了正確答案。
-              <!-- 恭喜! -->
+                It output the correct answer within the time and memory limits.
               </td>
             </tr>
             <tr class="pink-row">
               <td>WA</td>
               <td>Wrong Answer</td>
               <td>
-                Your program didn't output the correct answer, but it terminated normally. <br>
-                If you truly think your code is correct, contact the administrator through Question page. <br>
-                你的程式輸出了錯誤的答案，但有正常結束。<br>
-                如果你認為你的程式碼真的正確，可以透過Question頁面聯絡管理員。
+                Your program did not output the correct answer, but it terminated normally with code 0. <br>
+                If you truly think your code is correct, contact the administrator through the Question page.
               </td>
             </tr>
             <tr class="purple-row">
               <td>TLE</td>
               <td>Time Limit Exceeded</td>
               <td>
-                Your program tried to run for too much time. <br>
-                If you are sure that the problem needs more time, please contact the administrator through Question page. <br>
-                你的程式嘗試運行的時間太久。 <br>
-                如果你認為題目需要更長的時間限制，可以透過Question頁面聯絡管理員。
+                Your program took too long to run. <br>
+                If you are sure that the problem needs a longer time limit, please contact the administrator through the Question page.
               </td>
             </tr>
             <tr class="red-row">
@@ -153,47 +145,32 @@
               <td>Memory Limit Exceeded</td>
               <td>
                 Your program tried to use more memory than the judge allows. <br>
-                If you are sure that the problem needs more memory, please contact the administrator through Question page. <br>
-                你的程式試圖使用的記憶體超出了題目的允許範圍。 <br>
-                如果你認為題目需要更大的記憶體範圍，可以透過Question頁面聯絡管理員。
+                If you are sure that the problem needs a higher memory limit, please contact the administrator through the Question page.
               </td>
             </tr>
             <tr class="light-blue-row">
               <td>RE</td>
               <td>Runtime Error</td>
               <td>
-                Your program doesn't return a 0 code. <br>
-                你的程式退出狀態不為 0。
+                Your program did not exit with code 0.
               </td>
             </tr>
             <tr class="blue-row">
               <td>RE</td>
-              <td>Runtime Error(killed by signal)</td>
+              <td>Runtime Error (killed by signal)</td>
               <td>
-                Your program failed during the execution. <br>
+                Your program failed during execution. <br>
                 There are some common reasons for this result: <br>
                 <ol>
                   <li>SIGSEGV - invalid memory access (segmentation fault)</li>
                   <li>SIGFPE - erroneous arithmetic operation such as divide by zero</li>
                   <li>SIGABRT - abnormal termination condition
                     <ol type="i">
-                      <li>double free uninitialized or wrong memory address</li>
+                      <li>double free</li>
                       <li>calling abort function</li>
                       <li>assert</li>
                     </ol>
                   </li>
-                </ol>
-                你的程式在執行過程中失敗了。 <br>
-                造成此結果有一些常見的原因: <br>
-                <ol>
-                  <li>SIGSEGV - 無效記憶體存取 (記憶體區段錯誤) </li>
-                  <li>SIGFPE - 錯誤的算術運算，例如: 除以0 </li>
-                  <li>SIGABRT - 異常終止條件</li>
-                  <ol type="i">
-                    <li>重複 free 未初始化或錯誤的記憶體位址</li>
-                    <li>呼叫 abort() 函數</li>
-                    <li>assert</li>
-                  </ol>
                 </ol>
               </td>
             </tr>
@@ -201,8 +178,7 @@
               <td>CE</td>
               <td>Compile Error</td>
               <td>
-                The compiler fails to compile your program. <br>
-                編譯器無法編譯你的程式。
+                The compiler failed to compile your program.
               </td>
             </tr>
             <tr class="white-row">
@@ -210,19 +186,15 @@
               <td>Internal Error</td>
               <td>
                 The judge is in a state of collapse. <br>
-                Please contact the administrator through Question page. <br>
-                評測系統處於崩潰狀態。 <br>
-                請透過Question頁面聯絡管理員。
+                Please contact the administrator through the Question page.
               </td>
             </tr>
             <tr class="white-row">
               <td>PE</td>
               <td>Presentation Error</td>
               <td>
-                Your output does not match with the test cases. <br>
-                There may be extra blank lines and spaces. <br>
-                你的輸出與測試案例不符。<br>
-                可能會有多餘的空白行和空格。
+                Your output does not match the test cases. <br>
+                There may be extra blank lines and spaces.
               </td>
             </tr>
           </tbody>
