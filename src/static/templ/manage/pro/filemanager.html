@@ -237,6 +237,8 @@
         });
 
         j_add_single_file.find("button.upload").on('click', function(e) {
+            add_single_file_modal.hide();
+
             let path = j_add_single_file.attr('path');
             let filename = j_add_single_file.find("input.filename").val();
             if (filename.length == 0) {
@@ -251,7 +253,6 @@
                 return;
             }
             let file = files[0];
-            add_single_file_modal.hide();
 
             uploadFile(file, 'File Uploading...', function(token) {
                 $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
