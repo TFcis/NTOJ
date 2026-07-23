@@ -96,40 +96,40 @@
             });
 
             if (allow_compilers.length == 0) {
-                index.show_notify_dialog("請選至少一種支援的語言", index.DIALOG_TYPE.warning);
+                index.show_notify_dialog("Please select at least one supported language", index.DIALOG_TYPE.warning);
                 return;
             }
 
             start_time = contest_start_date_picker.viewDate;
             if (start_time == '') {
-                index.show_notify_dialog("開始時間不可為空", index.DIALOG_TYPE.warning);
+                index.show_notify_dialog("Start time cannot be empty", index.DIALOG_TYPE.warning);
                 return;
             }
 
             end_time = contest_end_date_picker.viewDate;
             if (end_time == '') {
-                index.show_notify_dialog("結束時間不可為空", index.DIALOG_TYPE.warning);
+                index.show_notify_dialog("End time cannot be empty", index.DIALOG_TYPE.warning);
                 return;
             }
 
             if (start_time >= end_time) {
-                index.show_notify_dialog("結束時間必須大於開始時間", index.DIALOG_TYPE.warning);
+                index.show_notify_dialog("End time must be later than start time", index.DIALOG_TYPE.warning);
                 return;
             }
 
             reg_end_time = reg_end_date_picker.viewDate;
 
             if (isNaN(submit_cd_time) || submit_cd_time < 0) {
-                index.show_notify_dialog("Submission CD Time必須是正整數(包含0)", index.DIALOG_TYPE.warning);
+                index.show_notify_dialog("Submission CD time must be a non-negative integer", index.DIALOG_TYPE.warning);
                 return;
             } else if (isNaN(freeze_period) || freeze_period < 0) {
-                index.show_notify_dialog("Freeze Scoreboard Period必須是正整數(包含0)", index.DIALOG_TYPE.warning);
+                index.show_notify_dialog("Freeze scoreboard period must be a non-negative integer", index.DIALOG_TYPE.warning);
                 return;
             }
 
             let penalty_value = parseInt($("#penaltyValue").val());
             if (isNaN(penalty_value) || penalty_value < 0) {
-                index.show_notify_dialog("Penalty Value必須是正整數(包含0)", index.DIALOG_TYPE.warning);
+                index.show_notify_dialog("Penalty value must be a non-negative integer", index.DIALOG_TYPE.warning);
                 return;
             }
 
