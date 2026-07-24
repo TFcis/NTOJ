@@ -39,7 +39,7 @@
 
             $.post(`{{ url('/be/manage/bulletin/update') }}`, {
                 reqtype: 'update',
-				bulletin_id: "{{ bulletin_id }}",
+                bulletin_id: "{{ bulletin_id }}",
                 pinned: pinned,
                 title: title,
                 color: color,
@@ -55,14 +55,14 @@
             });
         });
 
-		j_form.find("#remove").on('click', (event) => {
+        j_form.find("#remove").on('click', (event) => {
             if (!confirm('Are you sure to remove this bulletin?')) {
                 return;
             }
-			$.post(`{{ url('/be/manage/bulletin/update') }}`, {
-				reqtype: 'remove',
-				bulletin_id: "{{ bulletin_id }}"
-			}, function(res) {
+            $.post(`{{ url('/be/manage/bulletin/update') }}`, {
+                reqtype: 'remove',
+                bulletin_id: "{{ bulletin_id }}"
+            }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Remove Successfully', index.DIALOG_TYPE.success);
@@ -70,8 +70,8 @@
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
-			});
-		});
+            });
+        });
 
         j_form.find("#cancel").on('click', (event) => index.go(`{{ url('/manage/bulletin/') }}`));
     }
@@ -94,33 +94,33 @@
 </div>
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
-	<form id="form">
-		<div class="mb-1">
+    <form id="form">
+        <div class="mb-1">
             <label for="pinned" class="form-label">Pinned</label>
-			<input class="form-check-input" id="pinned" type="checkbox" {% if bulletin['pinned'] %} checked {% end %}>
-		</div>
+            <input class="form-check-input" id="pinned" type="checkbox" {% if bulletin['pinned'] %} checked {% end %}>
+        </div>
 
-		<div class="mb-1">
+        <div class="mb-1">
             <label for="title" class="form-label">Title</label>
-			<input class="form-control" id="title" type="text" value="{{ bulletin['title'] }}">
-		</div>
+            <input class="form-control" id="title" type="text" value="{{ bulletin['title'] }}">
+        </div>
 
-		<div class="mb-1">
+        <div class="mb-1">
             <label for="color" class="form-label">Title Color (Use CSS)</label>
-			<input class="form-control" id="color" type="text" value="{{ bulletin['color'] }}">
-		</div>
+            <input class="form-control" id="color" type="text" value="{{ bulletin['color'] }}">
+        </div>
 
-		<div class="mb-1">
+        <div class="mb-1">
             <label for="content">Content</label>
-			<textarea class="form-control" name="content" id="content"></textarea>
-		</div>
+            <textarea class="form-control" name="content" id="content"></textarea>
+        </div>
 
-		<div class="mt-2">
-			<button type="button" class="btn btn-primary" id="update">Update</button>
-			<button type="button" class="btn btn-secondary" id="preview">Preview</button>
-			<button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
-			<button type="button" class="btn btn-danger" id="remove">Remove</button>
-		</div>
-	</form>
+        <div class="mt-2">
+            <button type="button" class="btn btn-primary" id="update">Update</button>
+            <button type="button" class="btn btn-secondary" id="preview">Preview</button>
+            <button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="remove">Remove</button>
+        </div>
+    </form>
 </div>
 {% end %}

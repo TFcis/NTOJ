@@ -4,10 +4,10 @@
 
 <script type="text/javascript" id="contjs">
     function init() {
-		var j_form = $('#form');
+        var j_form = $('#form');
         const ip_re = /^(((?!25?[6-9])[12]\d|[1-9])?\d\.?\b){4}$/;
 
-		j_form.find('button.submit').on('click', function(e) {
+        j_form.find('button.submit').on('click', function(e) {
             var type = j_form.find('#type').val();
             const ip = j_form.find('#ip').val().trim();
 
@@ -36,11 +36,11 @@
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
             });
-		});
+        });
 
-		j_form.find('button.cancel').on('click', function(e) {
-		    index.go(`{{ url('/manage/acct/') }}`);
-		});
+        j_form.find('button.cancel').on('click', function(e) {
+            index.go(`{{ url('/manage/acct/') }}`);
+        });
     }
 </script>
 {% end %}
@@ -49,21 +49,21 @@
     <form id="form" class="">
         <h3>{{ acct.acct_id }} / {{ acct.name }}</h3>
 
-		<div class="mb-3">
-			<label>Level</label>
-			<select class="form-select" id="type">
+        <div class="mb-3">
+            <label>Level</label>
+            <select class="form-select" id="type">
                 <option value="{{ UserConst.ACCTTYPE_KERNEL }}" {% if acct.is_kernel() %} selected {% end %}>Kernel</option>
-				<option value="{{ UserConst.ACCTTYPE_USER }}" {% if not acct.is_kernel() %} selected {% end %}>User</option>
-			</select>
-		</div>
+                <option value="{{ UserConst.ACCTTYPE_USER }}" {% if not acct.is_kernel() %} selected {% end %}>User</option>
+            </select>
+        </div>
 
-		<div class="mb-3">
-			<label>Specific IP</label>
+        <div class="mb-3">
+            <label>Specific IP</label>
             <input class="form-control" id="ip" type="text" value="{{ acct.specific_ip }}">
-		</div>
+        </div>
 
-		<button type="button" class="btn btn-primary submit">Update</button>
-		<button type="button" class="btn btn-secondary cancel">Cancel</button>
+        <button type="button" class="btn btn-primary submit">Update</button>
+        <button type="button" class="btn btn-secondary cancel">Cancel</button>
     </form>
 </div>
 {% end %}

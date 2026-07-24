@@ -2,10 +2,10 @@
 
 {% block head %}
 <script type="text/javascript" id="contjs">
-	function init() {
+    function init() {
         let contest_id = "{{ contest_id }}";
 
-		document.querySelectorAll('button.approve').forEach(el => {
+        document.querySelectorAll('button.approve').forEach(el => {
             el.addEventListener('click', function (e) {
                 let acct_id = $(this).attr('acct_id');
                 $.post(`{{ url(f'/be/contests/{ contest_id }/manage/reg') }}`, {
@@ -23,7 +23,7 @@
             });
         });
 
-		document.querySelectorAll('button.re-approve').forEach(el => {
+        document.querySelectorAll('button.re-approve').forEach(el => {
             el.addEventListener('click', function (e) {
                 if (!confirm('Are you sure to re-approve this account? Cannot reject this account after re-approve.')) {
                     return;
@@ -45,7 +45,7 @@
             });
         });
 
-		document.querySelectorAll('button.reject').forEach(el => {
+        document.querySelectorAll('button.reject').forEach(el => {
             el.addEventListener('click', function (e) {
                 let acct_id = $(this).attr('acct_id');
                 $.post(`{{ url(f'/be/contests/{ contest_id }/manage/reg') }}`, {

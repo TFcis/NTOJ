@@ -53,12 +53,12 @@
 
     function init() {
         var j_chalsub = $('#chalsub');
-	    j_filter.find('input, select').keypress(function(e) {
+        j_filter.find('input, select').keypress(function(e) {
             // NOTE:  KeyCode 13 means Enter
-	        if (e.keyCode == 13) {
+            if (e.keyCode == 13) {
                 index.go(get_goto_filtered_challist_url());
             }
-	    });
+        });
 
         j_filter.find('#yourIDFilter').on('click', function(e) {
             e.preventDefault();

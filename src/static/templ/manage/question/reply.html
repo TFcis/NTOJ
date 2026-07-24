@@ -3,86 +3,86 @@
 
 <script type="text/javascript">
     function reply(idx) {
-		var j_form = $('#form');
-		var rtext = j_form.find(`textarea#${idx}`).val();
+        var j_form = $('#form');
+        var rtext = j_form.find(`textarea#${idx}`).val();
 
-		$.post(`{{ url('/be/manage/question/reply') }}`, {
-		    'reqtype': 'rpl',
-		    'qacct_id': {{ qacct_id }},
-		    'index': idx,
-		    'rtext': rtext,
-		}, function(res) {
+        $.post(`{{ url('/be/manage/question/reply') }}`, {
+            'reqtype': 'rpl',
+            'qacct_id': {{ qacct_id }},
+            'index': idx,
+            'rtext': rtext,
+        }, function(res) {
             res = JSON.parse(res);
             if (res.status == 'S') {
                 index.show_notify_dialog('Reply Successfully', index.DIALOG_TYPE.success);
-				setTimeout(() => index.reload(), 1000);
+                setTimeout(() => index.reload(), 1000);
             } else {
                 index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
             }
-		});
+        });
     }
 
     function rreply(idx) {
-		var j_form = $('#form');
+        var j_form = $('#form');
         var rtext = j_form.find(`textarea#${idx}`).val();
 
-		$.post(`{{ url('/be/manage/question/reply') }}`, {
-		    'reqtype': 'rrpl',
-		    'qacct_id': {{ qacct_id }},
-		    'index': idx,
-		    'rtext': rtext,
-		}, function(res) {
+        $.post(`{{ url('/be/manage/question/reply') }}`, {
+            'reqtype': 'rrpl',
+            'qacct_id': {{ qacct_id }},
+            'index': idx,
+            'rtext': rtext,
+        }, function(res) {
             res = JSON.parse(res);
             if (res.status == 'S') {
                 index.show_notify_dialog('Re-reply Successfully', index.DIALOG_TYPE.success);
-				setTimeout(() => index.reload(), 1000);
+                setTimeout(() => index.reload(), 1000);
             } else {
                 index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
             }
-		});
+        });
     }
 </script>
 {% end %}
 {% block content%}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <div id="form">
-		<p>
-		    <a href="{{ url(f'/acct/{ str(qacct_id) }/') }}">
+        <p>
+            <a href="{{ url(f'/acct/{ str(qacct_id) }/') }}">
                 Account ID: {{ str(qacct_id) }}
             </a>
-		</p>
-		<table border=1 class="table">
-			<thead>
-				<tr>
-					<td>Q</td>
-					<td colspan=2>A</td>
-				</tr>
-			</thead>
+        </p>
+        <table border=1 class="table">
+            <thead>
+                <tr>
+                    <td>Q</td>
+                    <td colspan=2>A</td>
+                </tr>
+            </thead>
 
-			<tbody>
-			{% for count, ques in enumerate(ques_list) %}
-			<tr>
-			    <td style="width:46%;">{{ ques['Q'] }}</td>
+            <tbody>
+            {% for count, ques in enumerate(ques_list) %}
+            <tr>
+                <td style="width:46%;">{{ ques['Q'] }}</td>
 
-				{% if ques['A'] == None %}
-				    <td style="width:46%;">
+                {% if ques['A'] == None %}
+                    <td style="width:46%;">
                         <textarea class="form-control" cols="10" rows="10" id="{{ count }}" style="white-space: pre-line;"></textarea>
                     </td>
-				    <td style="width:8%;"><input class="btn btn-success" type="button" value="Reply" onclick="reply({{ count }});"></input></td>
+                    <td style="width:8%;"><input class="btn btn-success" type="button" value="Reply" onclick="reply({{ count }});"></input></td>
 
                 {% else %}
-				    <td style="width:46%;">
+                    <td style="width:46%;">
                         <textarea class="form-control" cols="10" rows="10" id="{{ count }}" style="white-space: pre-line;">
                             {{ ques['A'] }}
                         </textarea>
                     </td>
-				    <td style="width:8%;"><input class="btn btn-success" type="button" value="Re Reply" onclick="rreply({{ count }});"></input></td>
-				{% end %}
-			</tr>
-			{% set count = count + 1 %}
-			{% end %}
-			</tbody>
-		</table>
+                    <td style="width:8%;"><input class="btn btn-success" type="button" value="Re Reply" onclick="rreply({{ count }});"></input></td>
+                {% end %}
+            </tr>
+            {% set count = count + 1 %}
+            {% end %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% end %}
