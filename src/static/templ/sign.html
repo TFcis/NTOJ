@@ -41,7 +41,7 @@ h3{color:#fcfaf2}
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
-		            $('#signin div.print').print('Success, reloading...', true);
+                    $('#signin div.print').print('Success, reloading...', true);
 
                     if (index.prev_url == null) {
                         location.href = `{{ url('/info/') }}`;
@@ -73,16 +73,16 @@ h3{color:#fcfaf2}
         });
 
         $('#signup').find('button.submit').on('click', function(e) {
-	        let j_signup = $('#signup');
+            let j_signup = $('#signup');
             let name = j_signup.find('input.name').val();
             let mail = j_signup.find('input.mail').val();
             let pw = j_signup.find('input.pw').val();
             let repeat = j_signup.find('input.repeat').val();
 
-	        if(pw != repeat) {
+            if(pw != repeat) {
                 index.show_notify_dialog('Repeat password incorrect', index.DIALOG_TYPE.warning);
-		        return;
-	        }
+                return;
+            }
 
             $.post(`{{ url('/be/sign') }}`, {
                 'reqtype': 'signup',

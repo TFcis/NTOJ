@@ -35,7 +35,7 @@
 
         let j_form = $("#form");
         let re = /^(\d+(-\d+)?)(\s*,\s*\d+(-\d+)?)*$/;
-		let board_id = "{{ board_id }}";
+        let board_id = "{{ board_id }}";
 
         j_form.find("#update").on('click', (event) => {
             let start_time = null, end_time = null;
@@ -73,7 +73,7 @@
 
             $.post(`{{ url('/be/manage/board/update') }}`, {
                 reqtype: 'update',
-				board_id: board_id,
+                board_id: board_id,
                 name: name,
                 status: status,
                 start: start_time.toISOString(),
@@ -91,14 +91,14 @@
             });
         });
 
-		j_form.find("#remove").on('click', (event) => {
+        j_form.find("#remove").on('click', (event) => {
             if (!confirm('Are you sure to remove this board?')) {
                 return;
             }
-			$.post(`{{ url('/be/manage/board/update') }}`, {
-				reqtype: 'remove',
-				board_id: board_id,
-			}, function(res) {
+            $.post(`{{ url('/be/manage/board/update') }}`, {
+                reqtype: 'remove',
+                board_id: board_id,
+            }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Remove Successfully', index.DIALOG_TYPE.success);
@@ -106,8 +106,8 @@
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
-			});
-		});
+            });
+        });
 
         j_form.find("#cancel").on('click', (event) => {
             index.go(`{{ url('/manage/board/') }}`)
@@ -126,17 +126,17 @@
 {% from utils.numeric import merge_list_to_str %}
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
-	<form id="form">
-		<div class="mb-1">
+    <form id="form">
+        <div class="mb-1">
             <label for="name" class="form-label">Name</label>
-			<input class="form-control" id="name" type="text" value="{{ board['name'] }}">
-		</div>
+            <input class="form-control" id="name" type="text" value="{{ board['name'] }}">
+        </div>
         <div class="mb-1">
             <label for="#status" class="form-label">Status</label>
-			<select class="form-select" id="status">
+            <select class="form-select" id="status">
                 <option value="{{ BoardConst.STATUS_ONLINE }}" {% if board['status'] == BoardConst.STATUS_ONLINE %} selected {% end %} >Online</option>
-				<option value="{{ BoardConst.STATUS_HIDDEN }}" {% if board['status'] == BoardConst.STATUS_HIDDEN %} selected {% end %} >Hidden</option>
-			</select>
+                <option value="{{ BoardConst.STATUS_HIDDEN }}" {% if board['status'] == BoardConst.STATUS_HIDDEN %} selected {% end %} >Hidden</option>
+            </select>
         </div>
 
         <div class="mb-1">
@@ -167,11 +167,11 @@
             <input class="form-control" id="pro_list" value="{{ merge_list_to_str(board['pro_list']) }}" type="text">
         </div>
 
-		<div class="mt-2">
-			<button type="button" class="btn btn-primary" id="update">Update</button>
-			<button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
-			<button type="button" class="btn btn-danger" id="remove">Remove</button>
-		</div>
-	</form>
+        <div class="mt-2">
+            <button type="button" class="btn btn-primary" id="update">Update</button>
+            <button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="remove">Remove</button>
+        </div>
+    </form>
 </div>
 {% end %}

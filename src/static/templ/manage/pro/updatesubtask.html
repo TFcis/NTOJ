@@ -5,43 +5,43 @@
 <link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
 
 <script type="text/javascript" id="contjs">
-	function init() {
-		let pro_id = "{{ pro_id }}";
+    function init() {
+        let pro_id = "{{ pro_id }}";
         let re = /^(\d+(-\d+)?)(\s*,\s*\d+(-\d+)?)*$/;
 
         document.querySelectorAll('.edit-rate').forEach(el => {
-			el.addEventListener('click', function (e) {
-				let subtask = $(this).parents('.accordion-collapse').attr('subtask');
+            el.addEventListener('click', function (e) {
+                let subtask = $(this).parents('.accordion-collapse').attr('subtask');
                 let rate = $(this).siblings('#rate').val();
 
-				if (isNaN(rate)) {
-					alert('Rate must be a number');
-					return;
-				}
+                if (isNaN(rate)) {
+                    alert('Rate must be a number');
+                    return;
+                }
 
                 $.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
-					'reqtype': 'updaterate',
-					'pro_id': pro_id,
-					'subtask': subtask,
-					'rate': rate,
-				}, function (res) {
+                    'reqtype': 'updaterate',
+                    'pro_id': pro_id,
+                    'subtask': subtask,
+                    'rate': rate,
+                }, function (res) {
                     let msg = '';
-					let dialog_type = null;
+                    let dialog_type = null;
 
                     res = JSON.parse(res);
                     if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
+                        dialog_type = index.DIALOG_TYPE.success;
                         msg = `Update rate of subtask#${parseInt(subtask) + 1} successfully.`;
                     } else {
                         dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
-					index.show_notify_dialog(msg, dialog_type);
+                    index.show_notify_dialog(msg, dialog_type);
                     index.reload();
-				});
-			});
-		});
+                });
+            });
+        });
 
         $("button.add-subtask").on('click', function(e) {
             let rate = parseInt(prompt('New subtask rate: '));
@@ -73,26 +73,26 @@
                     return;
                 }
                 let subtask = $(this).parents('.accordion-collapse').attr('subtask');
-				$.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
-					'reqtype': 'deletesubtask',
-					'pro_id': pro_id,
+                $.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
+                    'reqtype': 'deletesubtask',
+                    'pro_id': pro_id,
                     'subtask': subtask
-				}, function (res) {
+                }, function (res) {
                     let msg = '';
-					let dialog_type = null;
+                    let dialog_type = null;
 
                     res = JSON.parse(res);
                     if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
+                        dialog_type = index.DIALOG_TYPE.success;
                         msg = `Delete subtask #${parseInt(subtask) + 1} successfully.`;
                     } else {
-						dialog_type = index.DIALOG_TYPE.error;
+                        dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
-					index.show_notify_dialog(msg, dialog_type);
+                    index.show_notify_dialog(msg, dialog_type);
                     index.reload();
-				});
+                });
             });
         });
 
@@ -105,27 +105,27 @@
                     return;
                 }
 
-				$.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
-					'reqtype': 'settestdata',
-					'pro_id': pro_id,
+                $.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
+                    'reqtype': 'settestdata',
+                    'pro_id': pro_id,
                     'subtask': subtask,
                     'testdatas': testdatas,
-				}, function (res) {
+                }, function (res) {
                     let msg = '';
-					let dialog_type = null;
+                    let dialog_type = null;
 
                     res = JSON.parse(res);
                     if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
+                        dialog_type = index.DIALOG_TYPE.success;
                         msg = `Subtask #${parseInt(subtask) + 1} set testdatas successfully.`;
                     } else {
-						dialog_type = index.DIALOG_TYPE.error;
+                        dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
-					index.show_notify_dialog(msg, dialog_type);
+                    index.show_notify_dialog(msg, dialog_type);
                     index.reload();
-				});
+                });
             });
         });
 
@@ -138,27 +138,27 @@
                     return;
                 }
 
-				$.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
-					'reqtype': 'setdepsubtasks',
-					'pro_id': pro_id,
+                $.post(`{{ url('/be/manage/pro/updatesubtask') }}`, {
+                    'reqtype': 'setdepsubtasks',
+                    'pro_id': pro_id,
                     'subtask': subtask,
                     'dep_subtasks': dep_subtasks,
-				}, function (res) {
+                }, function (res) {
                     let msg = '';
-					let dialog_type = null;
+                    let dialog_type = null;
 
                     res = JSON.parse(res);
                     if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
+                        dialog_type = index.DIALOG_TYPE.success;
                         msg = `Subtask #${parseInt(subtask) + 1} set dependency subtasks successfully.`;
                     } else {
-						dialog_type = index.DIALOG_TYPE.error;
+                        dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
-					index.show_notify_dialog(msg, dialog_type);
+                    index.show_notify_dialog(msg, dialog_type);
                     index.reload();
-				});
+                });
             });
         });
 
@@ -198,25 +198,25 @@
 {% from utils.numeric import merge_list_to_str %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <h2>Update subtask will make all challenge NotStart. Be careful.</h2>
-	<button class="btn btn-primary add-subtask">Add Subtask</button>
+    <button class="btn btn-primary add-subtask">Add Subtask</button>
 
-	<div class="accordion" id="subtasks">
+    <div class="accordion" id="subtasks">
     {% for subtask_id, subtask_config in config.subtask_configs.items() %}
-		<div class="accordion-item">
-			<h2 class="accordion-header">
-				    <button
-						class="accordion-button collapsed"
-						type="button"
-						data-bs-toggle="collapse"
-						data-bs-target="#collapse{{ subtask_id }}"
-						aria-expanded="true"
-						aria-controls="collapseOne"
-					>
-						Subtask {{ subtask_id + 1 }} Rate: {{ subtask_config.rate }}
-					</button>
-			</h2>
-			<div id="collapse{{ subtask_id }}" class="accordion-collapse collapse" data-bs-parent="#subtasks" subtask="{{ subtask_id }}">
-				<div class="accordion-body">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                    <button
+                        class="accordion-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapse{{ subtask_id }}"
+                        aria-expanded="true"
+                        aria-controls="collapseOne"
+                    >
+                        Subtask {{ subtask_id + 1 }} Rate: {{ subtask_config.rate }}
+                    </button>
+            </h2>
+            <div id="collapse{{ subtask_id }}" class="accordion-collapse collapse" data-bs-parent="#subtasks" subtask="{{ subtask_id }}">
+                <div class="accordion-body">
                     <button class="btn btn-danger delete-subtask">Delete Current Subtask</button>
 
                     <div class="input-group mb-3">
@@ -241,10 +241,10 @@
                         <input id="metadata-tags" class="form-control mb-1" type="text" value="{{ ','.join(subtask_config.metadata.get('tags', [])) }}" placeholder="e.g., system-test">
                         <button class="btn btn-primary set-metadata-tags">Update Tags</button>
                     </div>
-				</div>
-			</div>
-		</div>
-	{% end %}
-	</div>
+                </div>
+            </div>
+        </div>
+    {% end %}
+    </div>
 </div>
 {% end %}

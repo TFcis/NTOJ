@@ -2,11 +2,11 @@
 {% block head %}
 <script type="text/javascript" id="contjs">
     function init() {
-	    var j_form = $('#form');
+        var j_form = $('#form');
 
-	    j_form.find('#submit').on('click', function(e) {
-	        let name = j_form.find('#name').val();
-	        let status = j_form.find('#status').val();
+        j_form.find('#submit').on('click', function(e) {
+            let name = j_form.find('#name').val();
+            let status = j_form.find('#status').val();
             let mode = j_form.find("#mode").val();
             let files = null;
 
@@ -53,11 +53,11 @@
                 _update(null);
             }
 
-	    });
+        });
 
-	    j_form.find('#cancel').on('click', function(e) {
-	        index.go(`{{ url('/manage/pro/') }}`);
-	    });
+        j_form.find('#cancel').on('click', function(e) {
+            index.go(`{{ url('/manage/pro/') }}`);
+        });
 
         j_form.find("#mode").on('change', function(e) {
             if ($(this).val() == "upload") {

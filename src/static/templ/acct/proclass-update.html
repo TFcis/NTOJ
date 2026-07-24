@@ -58,11 +58,11 @@
             });
         });
 
-		j_form.find("#remove").on('click', (event) => {
+        j_form.find("#remove").on('click', (event) => {
             $.post(`{{ url(f'/be/acct/proclass/{ user.acct_id }') }}`, {
-				reqtype: 'remove',
-				proclass_id: "{{ proclass_id }}"
-			}, function(res) {
+                reqtype: 'remove',
+                proclass_id: "{{ proclass_id }}"
+            }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Remove Proclass#{{ proclass_id }} success', index.DIALOG_TYPE.success);
@@ -70,8 +70,8 @@
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
-			});
-		});
+            });
+        });
 
         j_form.find("#cancel").on('click', (event) => {
             index.go(`{{ url(f'/acct/proclass/{ user.acct_id }/') }}`);
@@ -95,19 +95,19 @@
 </div>
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
-	<form id="form">
-		<div class="mb-1">
+    <form id="form">
+        <div class="mb-1">
             <label for="name" class="form-label">Name</label>
-			<input class="form-control" id="name" type="text" value="{{ proclass['name'] }}">
-		</div>
+            <input class="form-control" id="name" type="text" value="{{ proclass['name'] }}">
+        </div>
 
-		<div class="mb-1">
+        <div class="mb-1">
             <label for="name" class="form-label">ProClass Type</label>
             <select class="form-select" id="type">
                 <option value="{{ ProClassConst.USER_PUBLIC }}" {% if proclass['type'] == ProClassConst.USER_PUBLIC %} selected {% end %}>Public</option>
                 <option value="{{ ProClassConst.USER_HIDDEN }}" {% if proclass['type'] == ProClassConst.USER_HIDDEN %} selected {% end %}>Hidden</option>
             </select>
-		</div>
+        </div>
 
         <div class="mb-1">
             <label>Problem List</label>
@@ -119,11 +119,11 @@
             <textarea class="form-control" id="desc"></textarea>
         </div>
 
-		<div class="mt-2">
-			<button type="button" class="btn btn-primary" id="update">Update</button>
-			<button type="button" class="btn btn-secondary" id="preview">Preview Description</button>
-			<button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
-			<button type="button" class="btn btn-danger" id="remove">Remove</button>
-		</div>
-	</form>
+        <div class="mt-2">
+            <button type="button" class="btn btn-primary" id="update">Update</button>
+            <button type="button" class="btn btn-secondary" id="preview">Preview Description</button>
+            <button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="remove">Remove</button>
+        </div>
+    </form>
 </div>

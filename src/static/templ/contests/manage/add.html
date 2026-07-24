@@ -1,5 +1,5 @@
 <script type="text/javascript" id="contjs">
-	function init() {
+    function init() {
         $("button.submit").on('click', function(e) {
             let name = $("#name").val();
             $.post(`{{ url('/be/contests/manage/add') }}`, {

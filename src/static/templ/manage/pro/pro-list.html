@@ -3,94 +3,94 @@
 <link rel="stylesheet" type="text/css" href="{{ url('/src/manage-pro.css') }}">
 
 <script type="text/javascript" id="contjs">
-	function init() {
-		let j_prolist = $('#prolist');
+    function init() {
+        let j_prolist = $('#prolist');
 
-		j_prolist.find('button.rechal').on('click', function (e) {
-		    let j_control = $(this).parents('td.control');
-			let pro_id = j_control.attr('proid');
+        j_prolist.find('button.rechal').on('click', function (e) {
+            let j_control = $(this).parents('td.control');
+            let pro_id = j_control.attr('proid');
 
-			$.post(`{{ url('/be/manage/pro') }}`, {
-				'reqtype': 'rechal',
-				'pro_id': pro_id
-			}, function (res) {
+            $.post(`{{ url('/be/manage/pro') }}`, {
+                'reqtype': 'rechal',
+                'pro_id': pro_id
+            }, function (res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Processing...', index.DIALOG_TYPE.success);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
-			});
-		});
+            });
+        });
 
-		j_prolist.find('button.rechalall').on('click', function (e) {
-			let j_control = $(this).parents('td.control');
-			let pro_id = j_control.attr('proid');
-			let pwd = prompt('server config password');
+        j_prolist.find('button.rechalall').on('click', function (e) {
+            let j_control = $(this).parents('td.control');
+            let pro_id = j_control.attr('proid');
+            let pwd = prompt('server config password');
 
-			$.post(`{{ url('/be/manage/pro') }}`, {
-				'reqtype': 'rechalall',
-				'pro_id': pro_id,
-				'pwd': pwd,
-			}, function (res) {
+            $.post(`{{ url('/be/manage/pro') }}`, {
+                'reqtype': 'rechalall',
+                'pro_id': pro_id,
+                'pwd': pwd,
+            }, function (res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog('Processing...', index.DIALOG_TYPE.success);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
-			});
-		});
-	}
+            });
+        });
+    }
 </script>
 {% end %}
 {% block content %}
 {% from services.pro import ProConst %}
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
-	<table id="prolist" class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-		<thead>
-			<tr>
-				<th scope="col">#</th>
-				<th scope="col">Problem Name</th>
-				<th scope="col">Status</th>
-				<th scope="col">
-					<a class="btn btn-primary" href="{{ url('/manage/pro/add/') }}">&#x271a</a>
-				</th>
-			</tr>
-		</thead>
-		<tbody>
-			{% for pro in prolist %}
-			<tr>
-				<th scope="row">{{ pro.pro_id }}</th>
-				<td><a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro.name }}</a></td>
+    <table id="prolist" class="table table-hover table-sm table-responsive-sm col mx-lg-3">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Problem Name</th>
+                <th scope="col">Status</th>
+                <th scope="col">
+                    <a class="btn btn-primary" href="{{ url('/manage/pro/add/') }}">&#x271a</a>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pro in prolist %}
+            <tr>
+                <th scope="row">{{ pro.pro_id }}</th>
+                <td><a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro.name }}</a></td>
 
-				{% if pro.status == ProConst.STATUS_ONLINE %}
+                {% if pro.status == ProConst.STATUS_ONLINE %}
                     <td class="status-online">Online</td>
-				{% elif pro.status == ProConst.STATUS_CONTEST %}
+                {% elif pro.status == ProConst.STATUS_CONTEST %}
                     <td class="status-online">Contest</td>
-				{% elif pro.status == ProConst.STATUS_HIDDEN %}
+                {% elif pro.status == ProConst.STATUS_HIDDEN %}
                     <td class="status-hidden">Hidden</td>
-				{% end %}
+                {% end %}
 
-				<td proid={{ pro.pro_id }} class="control">
-					<a class="btn btn-secondary" href="{{ url(f'/manage/pro/update/?proid={ pro.pro_id }') }}">&#x2699</a>
-					<div class="btn-group">
-						<button type="button" class="btn btn-warning btn-sm rechal">Rechallenge</button>
-						<button type="button" class="btn btn-danger dropdown-toggle dropdown-toggle-split"
-							data-bs-toggle="dropdown" aria-expanded="false">
-							<span class="visually-hidden">Toggle Dropdown</span>
-						</button>
-						<ul class="dropdown-menu">
-							<li><button type="button" class="dropdown-item btn btn-danger rechalall">All Challenges
-									(Danger)</button></li>
-						</ul>
-					</div>
-				</td>
-			</tr>
-			{% end %}
-		</tbody>
-	</table>
+                <td proid={{ pro.pro_id }} class="control">
+                    <a class="btn btn-secondary" href="{{ url(f'/manage/pro/update/?proid={ pro.pro_id }') }}">&#x2699</a>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-warning btn-sm rechal">Rechallenge</button>
+                        <button type="button" class="btn btn-danger dropdown-toggle dropdown-toggle-split"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><button type="button" class="dropdown-item btn btn-danger rechalall">All Challenges
+                                    (Danger)</button></li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+            {% end %}
+        </tbody>
+    </table>
 
     {% set postfix = '' %}
 

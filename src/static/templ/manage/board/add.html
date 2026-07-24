@@ -96,17 +96,17 @@
 {% block content %}
 {% from services.board import BoardConst %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
-	<form id="form">
-		<div class="mb-1">
+    <form id="form">
+        <div class="mb-1">
             <label for="name" class="form-label">Name</label>
-			<input class="form-control" id="name" type="text">
-		</div>
+            <input class="form-control" id="name" type="text">
+        </div>
         <div class="mb-1">
             <label for="#status" class="form-label">Status</label>
-			<select class="form-select" id="status">
+            <select class="form-select" id="status">
                 <option value="{{ BoardConst.STATUS_ONLINE }}">Online</option>
-				<option value="{{ BoardConst.STATUS_HIDDEN }}">Hidden</option>
-			</select>
+                <option value="{{ BoardConst.STATUS_HIDDEN }}">Hidden</option>
+            </select>
         </div>
 
         <div class="mb-1">
@@ -137,10 +137,10 @@
             <input class="form-control" id="pro_list" type="text">
         </div>
 
-		<div class="mt-2">
-			<button type="button" class="btn btn-primary" id="add">Add</button>
-			<button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
-		</div>
-	</form>
+        <div class="mt-2">
+            <button type="button" class="btn btn-primary" id="add">Add</button>
+            <button type="button" class="btn btn-secondary" id="cancel">Cancel</button>
+        </div>
+    </form>
 </div>
 {% end %}

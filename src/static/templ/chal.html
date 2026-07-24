@@ -218,9 +218,9 @@
         {% end %}
 
         let code_txt = '';
-	    $.post(`{{ url('/be/code') }}`, {
-	        'chal_id': chal_id,
-	    }, function(res) {
+        $.post(`{{ url('/be/code') }}`, {
+            'chal_id': chal_id,
+        }, function(res) {
             res = JSON.parse(res);
             if (res.status[0] == 'E') return;
 
@@ -229,7 +229,7 @@
             code.find("code").addClass(`language-${res.data.compiler_type}`);
             code.find("code").html(res.data.code);
             Prism.highlightAll();
-	    });
+        });
 
         {% if user.acct_id == chal.acct_id %}
         $('#report_pro_button').on('click', function(e) {
@@ -366,30 +366,30 @@
 
 {% if show_testdata_section %}
 <div class="row">
-	<div class="accordion" id="testdatas-accordion">
-		<div class="accordion-item">
-			<h2 class="accordion-header">
-				    <button
+    <div class="accordion" id="testdatas-accordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                    <button
                         class="accordion-button {% if not show_testdata_result %} collapsed {% end %}"
-						type="button"
-						data-bs-toggle="collapse"
-						data-bs-target="#collapse_testdatas"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapse_testdatas"
                         {% if show_testdata_result %}
                             aria-expanded="true"
                         {% else %}
                             aria-expanded="false"
                         {% end %}
-						aria-controls="collapseOne"
-					>
+                        aria-controls="collapseOne"
+                    >
                         Testdata Results
-					</button>
-			</h2>
-			<div
+                    </button>
+            </h2>
+            <div
                 id="collapse_testdatas"
                 class="accordion-collapse collapse {% if show_testdata_result %} show {% end %}"
                 data-bs-parent="#testdatas-accordion"
             >
-				<div class="accordion-body">
+                <div class="accordion-body">
                     <!-- State Count Display (for STATE_COUNT mode) -->
                     {% if challenge_style == ChallengeResultStyle.STATE_COUNT %}
                     <div id="testdata-state-count" class="mb-3">
@@ -497,10 +497,10 @@
                         </tbody>
                     </table>
                     {% end %}
-				</div>
-			</div>
-		</div>
-	</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% end %}
 
