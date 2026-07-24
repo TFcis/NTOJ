@@ -69,7 +69,7 @@
 
         document.querySelectorAll('button.delete-subtask').forEach(el => {
             el.addEventListener('click', function(e) {
-                if (!confirm('Are you sure to delete this subtask?')) {
+                if (!confirm('Are you sure you want to delete this subtask?')) {
                     return;
                 }
                 let subtask = $(this).parents('.accordion-collapse').attr('subtask');
