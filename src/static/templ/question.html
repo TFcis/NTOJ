@@ -53,9 +53,9 @@
 
       <h3>Reply:</h3>
       {% if ques['A'] == None %}
-        <p style="color:red;">Wait for Reply</p>
+        <p class="mb-2" style="color:red;">Wait for Reply</p>
       {% else %}
-        <h5>{{ ques['A'] }}</h5>
+        <h5 class="mb-3">{{ ques['A'] }}</h5>
       {% end %}
 
       <input type="button" id="buttom" value="Remove" onclick="rm_ques({{ count }});">
