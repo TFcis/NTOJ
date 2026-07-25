@@ -51,10 +51,10 @@
       <h3>Question: </h3>
       <h5>{{ ques['Q'] }}</h5>
 
+      <h3>Reply:</h3>
       {% if ques['A'] == None %}
         <p style="color:red;">Wait for Reply</p>
       {% else %}
-        <h3>Reply:</h3>
         <h5>{{ ques['A'] }}</h5>
       {% end %}
 
