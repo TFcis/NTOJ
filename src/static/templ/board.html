@@ -49,17 +49,26 @@
     width: 64px;
     text-align: center;
   }
+
   table th._acct, table td._acct {
     width: 150px;
     text-align: center;
   }
+
   table th._score, table td._score {
     width: 112px;
     text-align: center;
   }
+
   table th._pro, table td._pro {
     width: 96px;
     text-align: center;
+  }
+
+  table td._acct {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   table tr._summary td._rank{
@@ -224,7 +233,7 @@
         {% set acct_id = acct.acct_id %}
         <tr {% if acct_id == user.acct_id %} style="--bs-table-bg: #123456;" class="_self" {% end %}>
           <td class="_rank">{{ acct.rank }}</td>
-          <td class="_acct">&nbsp<a href="{{ url(f'/acct/{ acct_id }/') }}">{{ acct.name }}</a></td>
+          <td class="_acct"><a href="{{ url(f'/acct/{ acct_id }/') }}" title="{{ acct.name }}">{{ acct.name }}</a></td>
           <td class="_score"><a href="{{ url(f'/chal/?acctid={ acct_id }') }}">{{ acct.rate }} / {{ acct_submit[acct_id] }}</a></td>
           {% for pro in prolist %}
             {% set pro_id = pro.pro_id %}
@@ -237,7 +246,7 @@
 
               <td class="_pro _state-{{ sc }} _state"><a href="{{ url(f'/chal/?acctid={ acct_id }&proid={ pro_id }&state=0') }}">{{ rate['rate'] }} / {{ rate['count'] }}</a></td>
             {% else %}
-              <td class="_pro _state">&nbsp</td>
+              <td class="_pro _state">&nbsp;</td>
             {% end %}
           {% end %}
         </tr>
