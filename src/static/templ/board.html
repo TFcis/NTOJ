@@ -6,86 +6,75 @@
   /* freeze table head like excel */
   table {
     table-layout: fixed;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border-left: 1px solid #444;
+    border-top: 1px solid #444;
   }
-  td._rank, th._rank {
-    position: sticky;
-    left: 0;
-    z-index: 1;
+
+  table th, table td {
+    border-right: 1px solid #444 !important;
+    border-bottom: 1px solid #444 !important;
+    background-color: #212529;
+    box-sizing: border-box;
   }
   table thead tr th {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 3;
+    background-color: #2b3035;
   }
-  th._rank {
-    z-index: 4;
-  }
+
   @media only screen and (min-width: 992px) {
-    td._acct {
+    td._acct, tr th._acct {
       position: sticky;
       left: 64px;
-      z-index: 1;
-    }
-    tr th._acct {
-      position: sticky;
-      left: 64px;
-      z-index: 2;
+      z-index: 3;
     }
 
-    td._score {
+    td._score, tr th._score {
       position: sticky;
       left: 214px;
-      z-index: 1;
+      z-index: 3;
     }
-    tr th._score {
-      position: sticky;
-      left: 214px;
-      z-index: 2;
-    }
+  }
 
-    td._submit {
-      position: sticky;
-      left: 0;
-      z-index: 2;
-    }
+  table thead th._rank,
+  table thead th._acct,
+  table thead th._score {
+    z-index: 5;
   }
-  /* end */
 
-  table th._rank {
-    text-align: center;
-    width: 64px;
-  }
-  table th._acct {
-    text-align: center;
-    width: 150px;
-  }
-  table th._score {
-    text-align: center;
-    width: 112px;
-  }
-  table th._pro {
-    text-align: center;
-    width: 96px;
-  }
-  table td._rank {
+  table th._rank, table td._rank {
     width: 64px;
     text-align: center;
-    padding: 0 0;
   }
-  table td._acct {
+  table th._acct, table td._acct {
     width: 150px;
-    padding: 0 0;
-  }
-  table td._score {
     text-align: center;
+  }
+  table th._score, table td._score {
     width: 112px;
-    padding: 0 0;
-  }
-  table td._pro {
     text-align: center;
-    padding: 0 0;
-    width: 96px;
   }
+  table th._pro, table td._pro {
+    width: 96px;
+    text-align: center;
+  }
+
+  table tr._summary td._rank{
+    border-right: none !important;
+  }
+
+  table tr._summary td._acct{
+    border-left: none !important;
+    border-right: none !important;
+  }
+
+  table tr._summary td._score{
+    border-left: none !important;
+  }
+
   table td._state-0 a {
     color: #DC0000;
   }
@@ -129,16 +118,16 @@
 </style>
 
 <script type="text/javascript" id="contjs">
-  var board = document.getElementById('board1');
+  var board = document.getElementById('board');
   // board.style.scrollBehavior = 'smooth'
   board.addEventListener('scroll', () => {
     window.localStorage.setItem('board_scoll_left', board.scrollLeft)
   }, false)
 
   $("#topScrollBar").scroll(function() {
-    $("#board1").scrollLeft($(this).scrollLeft());
+    $("#board").scrollLeft($(this).scrollLeft());
   });
-  $("#board1").scroll(function() {
+  $("#board").scroll(function() {
     $("#topScrollBar").scrollLeft($(this).scrollLeft());
   });
 
@@ -154,7 +143,7 @@
   });
 
   setTimeout(() => {
-    var board = document.getElementById('board1');
+    var board = document.getElementById('board');
     if (window.localStorage.getItem('board_scoll_left')) {
       const board_old_scroll_left = parseInt(window.localStorage.getItem('board_scoll_left'))
       board.scrollLeft = board_old_scroll_left
@@ -216,10 +205,10 @@
     </div>
   </div>
   <div style="overflow-x: scroll; overflow-y: hidden;" id="topScrollBar">
-    <div style="height: 8px; width:{{9+64+150+112+len(prolist)*99}}px;"></div>
+    <div style="height: 8px; width:{{9+64+150+112+len(prolist)*96}}px;"></div>
   </div>
-  <div class="col-lg-12" id="board1" style="overflow-x: scroll; max-height: 100vh;">
-    <table class="table table-hover table-sm table-bordered table-responsive-sm col" style="width:{{9+64+150+112+len(prolist)*99}}px;">
+  <div class="col-lg-12" id="board" style="overflow-x: scroll; max-height: 100vh;">
+    <table class="table table-hover table-sm table-bordered table-responsive-sm col" style="width:{{9+64+150+112+len(prolist)*96}}px;">
       <thead>
         <tr>
           <th class="_rank">Rank</th>
@@ -253,8 +242,10 @@
           {% end %}
         </tr>
         {% end %}
-        <tr>
-            <td colspan="3" class="_submit" style="text-align: center; padding: 0 0;">score / submit</td>
+        <tr class="_summary">
+            <td class="_rank">&nbsp;</td>
+            <td class="_acct" style="text-align: right;">score / submit</td>
+            <td class="_score">&nbsp;</td>
             {% for pro in prolist %}
             {% set pro_id = pro.pro_id %}
                 <td class="_pro _state">{{pro_sc_sub[pro_id][0]}} / {{pro_sc_sub[pro_id][1]}}</td>
