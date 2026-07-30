@@ -197,9 +197,9 @@
 </script>
 
 <div class="col-lg-12">
-  <div class="row">
-    <div id="contest">
-      <strong>Standings&nbsp;&nbsp;</strong>
+  <div class="d-grid gap-2 mb-2">
+    <div id="contest" class="d-grid gap-2">
+      <strong>Standings</strong>
       <select class="form-select" id="cont">
         {% for board in board_list %}
           {% if not user.is_kernel() and board['status'] != BoardConst.STATUS_ONLINE %}
@@ -209,19 +209,17 @@
         {% end %}
       </select>
     </div>
-    <h3>
-      <div id="count"></div>
-    </h3>
-    <div class="form-check form-check-inline">
-      <label class="form-check-label" for="showSelf">Only Show Myself</label>
+    <h3 id="count"></h3>
+    <div>
       <input type="checkbox" id="showSelf" class="form-check-input">
+      <label class="form-check-label" for="showSelf">Only Show Myself</label>
     </div>
   </div>
   <div style="overflow-x: scroll; overflow-y: hidden;" id="topScrollBar">
     <div style="height: 8px; width:{{9+64+150+112+len(prolist)*99}}px;"></div>
   </div>
   <div class="col-lg-12" id="board1" style="overflow-x: scroll; max-height: 100vh;">
-    <table class="table table-hover table-sm table-bordered table-responsive-sm col mx-lg-3" style="width:{{9+64+150+112+len(prolist)*99}}px;">
+    <table class="table table-hover table-sm table-bordered table-responsive-sm col" style="width:{{9+64+150+112+len(prolist)*99}}px;">
       <thead>
         <tr>
           <th class="_rank">Rank</th>
@@ -256,7 +254,7 @@
         </tr>
         {% end %}
         <tr>
-            <td colspan="3" style="text-align:center; padding:0 0">score / submit</td>
+            <td colspan="3" class="_submit" style="text-align: center; padding: 0 0;">score / submit</td>
             {% for pro in prolist %}
             {% set pro_id = pro.pro_id %}
                 <td class="_pro _state">{{pro_sc_sub[pro_id][0]}} / {{pro_sc_sub[pro_id][1]}}</td>
