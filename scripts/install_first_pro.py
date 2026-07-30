@@ -9,6 +9,7 @@ from redis import asyncio as aioredis
 
 from services.pro import ProService
 from services.pack import PackService
+from services.rate import RateService
 import config
 
 async def main():
@@ -16,6 +17,7 @@ async def main():
     rs = aioredis.Redis(host=config.REDIS_HOST, port=6379, db=config.REDIS_DB)
     pro_service = ProService(db, rs)
     pack_service = PackService(db, rs)
+    _ = RateService(db, rs)
 
     _, pro_id = await pro_service.add_pro(name="HelloTOJ", status=2) # pro_name: "HelloTOJ", pro_statu: "Hidden"
     _, token = await pack_service.gen_token()
