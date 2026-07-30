@@ -41,27 +41,27 @@
 </script>
 <div class="g-lg-12">
   <div>
-  Account : {{ user.name }} {{ user.acct_id }}
+  Username : {{ user.name }}
+  <br />
+  ID : {{ user.acct_id }}
   </div>
   <div id="form">
     {% for count, ques in enumerate(ques_list) %}
-    <div id="abc" style="border:2px lavander solid;">
+    <div class="p-2 my-2" style="border: 1px solid grey;">
       <h3>Question: </h3>
       <h5>{{ ques['Q'] }}</h5>
 
+      <h3>Reply:</h3>
       {% if ques['A'] == None %}
-        <p style="color:red;">Wait for Reply</p>
+        <p class="mb-2" style="color:red;">Wait for Reply</p>
       {% else %}
-        <h3>Reply:</p>
-        <h5>{{ ques['A'] }}</p>
+        <h5 class="mb-3">{{ ques['A'] }}</h5>
       {% end %}
 
-      <input type="button" id="buttom" value="Remove" onclick="rm_ques({{ count }});">
+      <input type="button" value="Remove" onclick="rm_ques({{ count }});">
     </div>
     {% end %}
-    <br />
-    <textarea class="ques" style="width:100%; height:100px;"></textarea>
-    <br />
+    <textarea class="ques my-3 w-100" rows="20"></textarea>
     <button class="btn btn-success submit">Ask</button>
   </div>
 </div>
