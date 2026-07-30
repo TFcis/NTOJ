@@ -68,42 +68,44 @@
     {% if judge_server_status == False %}
     <h1 style="color: #F0F280;">目前NTOJ不能Judge，造成不便之處，敬請見諒</h1>
     {% end %}
-  <table border="2" class="table">
-    <thead>
-      <tr>
-        <td style="width:71%;">
-          <span class="material-symbols-outlined">push_pin</span>
-          Title
-        </td>
-        <td style="width:15%;">Time</td>
-        <td style="width:15%;">Author</td>
-      </tr>
-    </thead>
-    <tbody>
-    {% for bulletin in bulletin_list %}
-      <tr>
-        <td>
-          <a href="{{ url(f'/bulletin/{ bulletin['bulletin_id'] }/') }}" style="color: {{ bulletin['color'] }}">
-            <font size=5>
-              {% if bulletin['pinned'] %}
-                <span class="material-symbols-outlined">push_pin</span>
-              {% end %}
-              {{ bulletin['title'] }}
+  <div class="table-responsive">
+    <table border="2" class="table">
+      <thead>
+        <tr>
+          <td style="width:71%;">
+            <span class="material-symbols-outlined">push_pin</span>
+            Title
+          </td>
+          <td style="width:15%;">Time</td>
+          <td style="width:15%;">Author</td>
+        </tr>
+      </thead>
+      <tbody>
+      {% for bulletin in bulletin_list %}
+        <tr>
+          <td>
+            <a href="{{ url(f'/bulletin/{ bulletin['bulletin_id'] }/') }}" style="color: {{ bulletin['color'] }}">
+              <font size=5>
+                {% if bulletin['pinned'] %}
+                  <span class="material-symbols-outlined">push_pin</span>
+                {% end %}
+                {{ bulletin['title'] }}
+              </font>
+            </a>
+          </td>
+          <td>
+            <font size=4>{{ bulletin['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d') }}</font>
+          </td>
+          <td>
+            <font size=4>
+              <a href="{{ url(f'/acct/{ bulletin['acct_id'] }/') }}">{{ bulletin['name'] }}</a>
             </font>
-          </a>
-        </td>
-        <td>
-          <font size=4>{{ bulletin['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d') }}</font>
-        </td>
-        <td>
-          <font size=4>
-            <a href="{{ url(f'/acct/{ bulletin['acct_id'] }/') }}">{{ bulletin['name'] }}</a>
-          </font>
-        </td>
-      </tr>
-    {% end %}
-    </tbody>
-  </table>
+          </td>
+        </tr>
+      {% end %}
+      </tbody>
+    </table>
+  </div>
 
   <h1 style="font-weight: bolder;">NTOJ Guide</h1>
   <hr>
