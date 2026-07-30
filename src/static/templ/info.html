@@ -3,7 +3,7 @@
 
 <style>
 @media (max-width: 576px) {
-  .table {
+  .verdict-table {
     font-size: 100% !important;
   }
 }
@@ -72,12 +72,9 @@
     <table border="2" class="table">
       <thead>
         <tr>
-          <td style="width:71%;">
-            <span class="material-symbols-outlined">push_pin</span>
-            Title
-          </td>
-          <td style="width:15%;">Time</td>
-          <td style="width:15%;">Author</td>
+          <td style="width: 60%;">Title</td>
+          <td style="width: 20%;">Time</td>
+          <td style="width: 20%;">Author</td>
         </tr>
       </thead>
       <tbody>
@@ -85,22 +82,14 @@
         <tr>
           <td>
             <a href="{{ url(f'/bulletin/{ bulletin['bulletin_id'] }/') }}" style="color: {{ bulletin['color'] }}">
-              <font size=5>
-                {% if bulletin['pinned'] %}
-                  <span class="material-symbols-outlined">push_pin</span>
-                {% end %}
-                {{ bulletin['title'] }}
-              </font>
+              {% if bulletin['pinned'] %}
+                <span class="fs-5 material-symbols-outlined">push_pin</span>
+              {% end %}
+              <span class="fs-4">{{ bulletin['title'] }}</span>
             </a>
           </td>
-          <td>
-            <font size=4>{{ bulletin['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d') }}</font>
-          </td>
-          <td>
-            <font size=4>
-              <a href="{{ url(f'/acct/{ bulletin['acct_id'] }/') }}">{{ bulletin['name'] }}</a>
-            </font>
-          </td>
+          <td><span>{{ bulletin['timestamp'].astimezone(config.TIMEZONE).strftime('%Y-%m-%d') }}</span></td>
+          <td><span><a href="{{ url(f'/acct/{ bulletin['acct_id'] }/') }}">{{ bulletin['name'] }}</a></span></td>
         </tr>
       {% end %}
       </tbody>
@@ -117,7 +106,7 @@
   <div class="card border-0">
     <div class="card-body px-0" style="padding-top: 5px;">
       <div class="table-responsive">
-        <table class="table table-borderless" style="font-size: 125%;">
+        <table class="table table-borderless verdict-table" style="font-size: 125%;">
           <thead>
             <tr class="verdict-table-head">
               <th class="text-nowrap" style="width: 15%;">Verdict</th>
