@@ -175,12 +175,13 @@
                 <ol>
                   <li>SIGSEGV - invalid memory access (segmentation fault)</li>
                   <li>SIGFPE - erroneous arithmetic operation such as divide by zero</li>
-                  <li>SIGABRT - abnormal termination condition</li>
-                  <ol type="i">
-                    <li>double free uninitialized or wrong memory address</li>
-                    <li>calling abort function</li>
-                    <li>assert</li>
-                  </ol>
+                  <li>SIGABRT - abnormal termination condition
+                    <ol type="i">
+                      <li>double free uninitialized or wrong memory address</li>
+                      <li>calling abort function</li>
+                      <li>assert</li>
+                    </ol>
+                  </li>
                 </ol>
                 你的程式在執行過程中失敗了。 <br>
                 造成此結果有一些常見的原因: <br>
