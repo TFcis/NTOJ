@@ -6,86 +6,88 @@
   /* freeze table head like excel */
   table {
     table-layout: fixed;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border-left: 1px solid #444;
+    border-top: 1px solid #444;
   }
-  td._rank, th._rank {
-    position: sticky;
-    left: 0;
-    z-index: 1;
+
+  table th, table td {
+    border-right: 1px solid #444 !important;
+    border-bottom: 1px solid #444 !important;
+    box-sizing: border-box;
   }
   table thead tr th {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 3;
   }
-  th._rank {
-    z-index: 4;
-  }
+
   @media only screen and (min-width: 992px) {
-    td._acct {
-      position: sticky;
-      left: 64px;
-      z-index: 1;
-    }
-    tr th._acct {
-      position: sticky;
-      left: 64px;
-      z-index: 2;
-    }
-
-    td._score {
-      position: sticky;
-      left: 214px;
-      z-index: 1;
-    }
-    tr th._score {
-      position: sticky;
-      left: 214px;
-      z-index: 2;
-    }
-
-    td._submit {
+    td._rank, th._rank {
       position: sticky;
       left: 0;
-      z-index: 2;
+      z-index: 3;
+    }
+
+    td._acct, tr th._acct {
+      position: sticky;
+      left: 64px;
+      z-index: 3;
+    }
+
+    td._score, tr th._score {
+      position: sticky;
+      left: 214px;
+      z-index: 3;
     }
   }
-  /* end */
 
-  table th._rank {
-    text-align: center;
-    width: 64px;
+  table thead th._rank,
+  table thead th._acct,
+  table thead th._score {
+    z-index: 5;
   }
-  table th._acct {
+
+  table th._rank, table td._rank {
+    width: 64px;
     text-align: center;
+  }
+
+  table th._acct, table td._acct {
     width: 150px;
-  }
-  table th._score {
     text-align: center;
+  }
+
+  table th._score, table td._score {
     width: 112px;
-  }
-  table th._pro {
     text-align: center;
+  }
+
+  table th._pro, table td._pro {
     width: 96px;
-  }
-  table td._rank {
-    width: 64px;
     text-align: center;
-    padding: 0 0;
   }
+
   table td._acct {
-    width: 150px;
-    padding: 0 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  table td._score {
-    text-align: center;
-    width: 112px;
-    padding: 0 0;
+
+  table tr._summary td._rank{
+    border-right: none !important;
   }
-  table td._pro {
-    text-align: center;
-    padding: 0 0;
-    width: 96px;
+
+  table tr._summary td._acct{
+    border-left: none !important;
+    border-right: none !important;
   }
+
+  table tr._summary td._score{
+    border-left: none !important;
+  }
+
   table td._state-0 a {
     color: #DC0000;
   }
@@ -129,16 +131,16 @@
 </style>
 
 <script type="text/javascript" id="contjs">
-  var board = document.getElementById('board1');
+  var board = document.getElementById('board');
   // board.style.scrollBehavior = 'smooth'
   board.addEventListener('scroll', () => {
     window.localStorage.setItem('board_scoll_left', board.scrollLeft)
   }, false)
 
   $("#topScrollBar").scroll(function() {
-    $("#board1").scrollLeft($(this).scrollLeft());
+    $("#board").scrollLeft($(this).scrollLeft());
   });
-  $("#board1").scroll(function() {
+  $("#board").scroll(function() {
     $("#topScrollBar").scrollLeft($(this).scrollLeft());
   });
 
@@ -154,7 +156,7 @@
   });
 
   setTimeout(() => {
-    var board = document.getElementById('board1');
+    var board = document.getElementById('board');
     if (window.localStorage.getItem('board_scoll_left')) {
       const board_old_scroll_left = parseInt(window.localStorage.getItem('board_scoll_left'))
       board.scrollLeft = board_old_scroll_left
@@ -197,9 +199,9 @@
 </script>
 
 <div class="col-lg-12">
-  <div class="row">
-    <div id="contest">
-      <strong>Standings&nbsp;&nbsp;</strong>
+  <div class="d-grid gap-2 mb-2">
+    <div id="contest" class="d-grid gap-2">
+      <strong>Standings</strong>
       <select class="form-select" id="cont">
         {% for board in board_list %}
           {% if not user.is_kernel() and board['status'] != BoardConst.STATUS_ONLINE %}
@@ -209,19 +211,17 @@
         {% end %}
       </select>
     </div>
-    <h3>
-      <div id="count"></div>
-    </h3>
-    <div class="form-check form-check-inline">
-      <label class="form-check-label" for="showSelf">Only Show Myself</label>
+    <h3 id="count"></h3>
+    <div>
       <input type="checkbox" id="showSelf" class="form-check-input">
+      <label class="form-check-label" for="showSelf">Only Show Myself</label>
     </div>
   </div>
   <div style="overflow-x: scroll; overflow-y: hidden;" id="topScrollBar">
-    <div style="height: 8px; width:{{9+64+150+112+len(prolist)*99}}px;"></div>
+    <div style="height: 8px; width:{{9+64+150+112+len(prolist)*96}}px;"></div>
   </div>
-  <div class="col-lg-12" id="board1" style="overflow-x: scroll; max-height: 100vh;">
-    <table class="table table-hover table-sm table-bordered table-responsive-sm col mx-lg-3" style="width:{{9+64+150+112+len(prolist)*99}}px;">
+  <div class="col-lg-12" id="board" style="overflow-x: scroll; max-height: 100vh;">
+    <table class="table table-hover table-sm table-bordered table-responsive-sm col" style="width:{{9+64+150+112+len(prolist)*96}}px;">
       <thead>
         <tr>
           <th class="_rank">Rank</th>
@@ -237,7 +237,7 @@
         {% set acct_id = acct.acct_id %}
         <tr {% if acct_id == user.acct_id %} style="--bs-table-bg: #123456;" class="_self" {% end %}>
           <td class="_rank">{{ acct.rank }}</td>
-          <td class="_acct">&nbsp<a href="{{ url(f'/acct/{ acct_id }/') }}">{{ acct.name }}</a></td>
+          <td class="_acct"><a href="{{ url(f'/acct/{ acct_id }/') }}">{{ acct.name }}</a></td>
           <td class="_score"><a href="{{ url(f'/chal/?acct_id={ acct_id }') }}">{{ acct.rate }} / {{ acct_submit[acct_id] }}</a></td>
           {% for pro in prolist %}
             {% set pro_id = pro.pro_id %}
@@ -250,13 +250,15 @@
 
               <td class="_pro _state-{{ sc }} _state"><a href="{{ url(f'/chal/?acct_id={ acct_id }&pro_id={ pro_id }&state=0') }}">{{ rate['rate'] }} / {{ rate['count'] }}</a></td>
             {% else %}
-              <td class="_pro _state">&nbsp</td>
+              <td class="_pro _state">&nbsp;</td>
             {% end %}
           {% end %}
         </tr>
         {% end %}
-        <tr>
-            <td colspan="3" style="text-align:center; padding:0 0">score / submit</td>
+        <tr class="_summary">
+            <td class="_rank">&nbsp;</td>
+            <td class="_acct" style="text-align: right;">score / submit</td>
+            <td class="_score">&nbsp;</td>
             {% for pro in prolist %}
             {% set pro_id = pro.pro_id %}
                 <td class="_pro _state">{{pro_sc_sub[pro_id][0]}} / {{pro_sc_sub[pro_id][1]}}</td>
