@@ -39,18 +39,18 @@
 
             start_time = start_date_picker.viewDate;
             if (start_time == '') {
-                index.show_notify_dialog("開始時間不可為空", index.DIALOG_TYPE.warning);
+                index.show_notify_dialog("Start time cannot be empty", index.DIALOG_TYPE.warning);
                 return;
             }
 
             end_time = end_date_picker.viewDate;
             if (end_time == '') {
-                index.show_notify_dialog("結束時間不可為空", index.DIALOG_TYPE.warning);
+                index.show_notify_dialog("End time cannot be empty", index.DIALOG_TYPE.warning);
                 return;
             }
 
             if (start_time >= end_time) {
-                index.show_notify_dialog("結束時間必須大於開始時間", index.DIALOG_TYPE.warning);
+                index.show_notify_dialog("End time must be later than start time", index.DIALOG_TYPE.warning);
                 return;
             }
 
