@@ -20,7 +20,7 @@
             if (topcoder_filter === "specific") {
                 let topcoder_id = j_filter.find("#topcoder_id").val();
                 if (topcoder_id === "") {
-                    index.show_notify_dialog('請輸入 TopCoder 帳號', index.DIALOG_TYPE.warning);
+                    index.show_notify_dialog('Please enter a TopCoder account ID', index.DIALOG_TYPE.warning);
                     return null;
                 }
                 topcoder_filter = topcoder_id;
@@ -70,7 +70,7 @@
             let pro_id = select_prob.val();
             // NOTE: When the input type is set to number, Bootstrap returns an emtpy string if the input value is not a valid number.
             if (pro_id === "") {
-                index.show_notify_dialog('請輸入數字', index.DIALOG_TYPE.warning);
+                index.show_notify_dialog('Please enter a number', index.DIALOG_TYPE.warning);
                 select_prob.val('');
                 return;
             }
@@ -327,7 +327,7 @@
         </form>
 
         <form id="filter">
-            <label class="form-label">過濾器</label>
+            <label class="form-label">Filter</label>
 
             <div class="mb-3">
                 <label for="order" class="form-label">Sort By</label>

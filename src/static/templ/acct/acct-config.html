@@ -157,13 +157,13 @@
                 </select>
             </div>
 
-            <button type="button" class="btn btn-primary submit">更新</button>
+            <button type="button" class="btn btn-primary submit">Update</button>
         </form>
         {% end %}
 
         {% if acct.acct_id == user.acct_id or user.is_kernel() %}
         <form id="reset">
-            <h3>更改密碼</h3>
+            <h3>Update Password</h3>
 
             <div class="mb-1">
                 <label class="form-label">Current Password</label>
@@ -180,7 +180,7 @@
                 <input class="repeat form-control" type="password">
             </div>
 
-            <button type="button" class="btn btn-warning submit">確認</button>
+            <button type="button" class="btn btn-warning submit">Update</button>
         </form>
         {% end %}
 
