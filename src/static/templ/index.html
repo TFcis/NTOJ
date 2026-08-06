@@ -52,7 +52,7 @@
       // Register bulletin update callback
       index.register_ws_callback('bulletinsub', function(data) {
         inform_count += 1;
-        j_index.find('a.message').text('公告 *' + inform_count);
+        j_index.find('a.message').text('NEW Bulletin *' + inform_count);
         j_index.find('a.message').show();
         on = true;
         setInterval(function () {if (on == true) {j_index.find('a.message').fadeOut(500).fadeIn(500);} }, 1000);

@@ -22,13 +22,13 @@
 
         if (pro_id.length && !re.test(pro_id)) {
             j_filter.find("#pro_id").val('');
-            index.show_notify_dialog("請輸入數字、逗號、減號與空白做查詢，範例：1, 2, 3, 5-7", index.DIALOG_TYPE.warning);
+            index.show_notify_dialog("Use numbers, commas, hyphens, and spaces. Example: 1, 2, 3, 5-7", index.DIALOG_TYPE.warning);
             return;
         }
 
         if (acct_id.length && !re.test(acct_id)) {
             j_filter.find('#acct_id').val('');
-            index.show_notify_dialog("請輸入數字、逗號、減號與空白做查詢，範例：1, 2, 3, 5-7", index.DIALOG_TYPE.warning);
+            index.show_notify_dialog("Use numbers, commas, hyphens, and spaces. Example: 1, 2, 3, 5-7", index.DIALOG_TYPE.warning);
             return;
         }
 
@@ -193,7 +193,7 @@
 <div class="row">
     <div class="col-lg-2 col-12">
         <form id="filter">
-            <label class="form-label">過濾器</label>
+            <label class="form-label">Filter</label>
 
             {% set your_id_query_params = f'?acct_id={ user.acct_id }' %}
             {% if flt.pro != None %}
