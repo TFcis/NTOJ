@@ -61,6 +61,8 @@ class ManageJudgeHandler(RequestHandler):
             return self.error(("Eparam", "Invalid index"))
 
         err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
+        if err:
+            return self.error(err)
         if (server_name := server_inform["name"]) == "":
             server_name = f"server-{index}"
 
@@ -87,6 +89,8 @@ class ManageJudgeHandler(RequestHandler):
         pwd = self.get_argument("pwd")
 
         err, server_inform = JudgeServerClusterService.inst.get_server_status(index)
+        if err:
+            return self.error(err)
         if (server_name := server_inform["name"]) == "":
             server_name = f"server-{index}"
 

@@ -9,7 +9,6 @@ from typing import Dict, List, Literal, Union
 
 from tornado.websocket import websocket_connect
 
-import config
 from services.rate import RateService
 from services.log import LogService
 
@@ -295,7 +294,7 @@ class JudgeServerClusterService:
                 return ('Ejudge', 'Connect judge failed')
 
         await self.queue.put([0, idx])
-        return ('S', '')
+        return None
 
     async def disconnect_server(self, idx):
         if idx < 0 or idx >= len(self.servers):
@@ -304,7 +303,7 @@ class JudgeServerClusterService:
         if err := await self.servers[idx].disconnect_server():
             return err
 
-        return ('S', '')
+        return None
 
     async def disconnect_all_server(self) -> None:
         for server in self.servers:
@@ -313,7 +312,7 @@ class JudgeServerClusterService:
 
     def get_server_status(self, idx):
         if idx < 0 or idx >= len(self.servers):
-            return ('Eparam', 'Invalid judge index')
+            return ('Eparam', 'Invalid judge index'), None
 
         _, status = self.servers[idx].get_server_status()
         return None, status
