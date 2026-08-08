@@ -362,6 +362,10 @@ var index = new function() {
 
         // show modal
         let progressbar_modal = new bootstrap.Modal(progressbar);
+        progressbar.dataset.modalShown = 'false';
+        progressbar.addEventListener('shown.bs.modal', () => {
+            progressbar.dataset.modalShown = 'true';
+        }, { once: true });
         progressbar_modal.show();
 
         // add a cleanup callback function when modal closed
@@ -406,8 +410,14 @@ var index = new function() {
         }
 
         let progressbar_modal = bootstrap.Modal.getInstance(progressbar);
-        progressbar_modal.dispose();
-        progressbar.remove();
+        let hide_progress_bar = function () {
+            progressbar_modal.hide();
+        };
+        if (progressbar.dataset.modalShown == 'true') {
+            hide_progress_bar();
+        } else {
+            progressbar.addEventListener('shown.bs.modal', hide_progress_bar, { once: true });
+        }
     };
 
     that.DIALOG_TYPE = newEnum({
@@ -418,6 +428,14 @@ var index = new function() {
     });
 
     that.show_notify_dialog = function(msg, dialog_type, custom_title=null) {
+        let progressbar = document.getElementById('indexProgressBarDialog');
+        if (progressbar != null) {
+            progressbar.addEventListener('hidden.bs.modal', () => {
+                that.show_notify_dialog(msg, dialog_type, custom_title);
+            }, { once: true });
+            return;
+        }
+
         let title = '';
         switch (dialog_type) {
             case this.DIALOG_TYPE.error:

@@ -200,7 +200,6 @@ class BatchProblemSpec(ProSpec):
                                 )
 
                         run_subtasks = {subtask['id'] for subtask in subtasks}
-                        invalid_subtasks = set()
                         while True:
                             newly_invalid = [
                                 subtask
@@ -217,7 +216,6 @@ class BatchProblemSpec(ProSpec):
                             for subtask in newly_invalid:
                                 subtask_id = subtask['id']
                                 run_subtasks.remove(subtask_id)
-                                invalid_subtasks.add(subtask_id)
                                 need_judge_testdatas.difference_update(subtask['testdatas'])
                                 await ChalService.inst.update_subtask_result(
                                     chal_id,
@@ -232,8 +230,9 @@ class BatchProblemSpec(ProSpec):
                         subtasks = [
                             subtask
                             for subtask in subtasks
-                            if subtask['id'] in invalid_subtasks
+                            if subtask['id'] in run_subtasks
                         ]
+
 
                     await con.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id = ANY($3);',
                                     ChalConst.STATE_JUDGE, chal_id, list(need_judge_testdatas))
