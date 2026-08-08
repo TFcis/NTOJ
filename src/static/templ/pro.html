@@ -1,5 +1,6 @@
 {% from services.chal import COMPILER_INFOS %}
 {% from utils.numeric import merge_list_to_str %}
+
 <link rel="stylesheet" type="text/css" href="{{ url('/src/pro.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf_viewer.min.css" integrity="sha512-8LkkqbXJPviYJENC5Z8qC2uKz27x0tNgrZbzsAzt7zkw0/2lXtSdrslVhfrkcR+6LRmxjZxlqniSyWXimoaH5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script type="text/javascript">
@@ -194,7 +195,44 @@
 </script>
 <div class="row">
     <div id="side" class="col-lg-2 col-12 pt-lg-2" style="overflow-y: scroll;">
-        <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
+        <div class="d-flex flex-row flex-lg-column justify-content-between align-items-baseline align-items-lg-stretch mb-1 gap-2">
+            <h3 class="mb-0 me-2 me-lg-0">{{ pro.pro_id }} / {{ pro.name }}</h3>
+
+            <div class="btn-group flex-shrink-0 my-lg-1" role="group">
+                {% if prev_pro_id is not None %}
+                    {% if contest %}
+                        <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center pt-1 pb-2 px-3 fs-5" href="{{ url(f'/contests/{ contest.contest_id }/pro/{ prev_pro_id }/') }}" style="line-height: 1;">
+                            <span style="transform: translateY(-1px);">&lsaquo;</span>
+                        </a>
+                    {% else %}
+                        <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center pt-1 pb-2 px-3 fs-5" href="{{ url(f'/pro/{ prev_pro_id }/') }}" style="line-height: 1;">
+                            <span style="transform: translateY(-1px);">&lsaquo;</span>
+                        </a>
+                    {% end %}
+                {% else %}
+                    <span class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center pt-1 pb-2 px-3 fs-5 disabled" style="line-height: 1;">
+                        <span style="transform: translateY(-1px);">&lsaquo;</span>
+                    </span>
+                {% end %}
+
+                {% if next_pro_id is not None %}
+                    {% if contest %}
+                        <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center pt-1 pb-2 px-3 fs-5" href="{{ url(f'/contests/{ contest.contest_id }/pro/{ next_pro_id }/') }}" style="line-height: 1;">
+                            <span style="transform: translateY(-1px);">&rsaquo;</span>
+                        </a>
+                    {% else %}
+                        <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center pt-1 pb-2 px-3 fs-5" href="{{ url(f'/pro/{ next_pro_id }/') }}" style="line-height: 1;">
+                            <span style="transform: translateY(-1px);">&rsaquo;</span>
+                        </a>
+                    {% end %}
+                {% else %}
+                    <span class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center pt-1 pb-2 px-3 fs-5 disabled" style="line-height: 1;">
+                        <span style="transform: translateY(-1px);">&rsaquo;</span>
+                    </span>
+                {% end %}
+            </div>
+        </div>
+
         {% if can_submit and pro.allow_submit %}
             {% if contest and not contest.is_end() %}
                 <a class="btn btn-primary btn-lg my-lg-1" href="{{ url(f'/contests/{ contest.contest_id }/submit/{ pro.pro_id }/') }}">Submit</a><br />

@@ -457,6 +457,20 @@ class ProHandler(RequestHandler):
         if err:
             return self.error(err)
 
+        prev_pro_id = None
+        next_pro_id = None
+
+        if self.contest:
+            pro_ids = list(self.contest.pro_list.keys())
+            if pro_id in pro_ids:
+                idx = pro_ids.index(pro_id)
+                if idx > 0:
+                    prev_pro_id = pro_ids[idx - 1]
+                if idx < len(pro_ids) - 1:
+                    next_pro_id = pro_ids[idx + 1]
+        else:
+            prev_pro_id, next_pro_id = await ProService.inst.get_pro_neighbours(pro_id, allow_statuses)
+
         # NOTE: Guest cannot see tags
         # NOTE: Admin can see tags
         # NOTE: User get ac can see tags
@@ -495,6 +509,8 @@ class ProHandler(RequestHandler):
             can_submit=can_submit,
             contest=self.contest,
             topcoder=topcoder,
+            prev_pro_id=prev_pro_id,
+            next_pro_id=next_pro_id,
         )
 
 

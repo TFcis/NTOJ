@@ -343,6 +343,44 @@ class ProService:
         # TODO: get_pro_config
         pass
 
+    async def get_pro_neighbours(self, pro_id: int, allowed_statuses: Sequence[int]) -> tuple[int | None, int | None]:
+        """
+        Get problem neighbours' IDs by its ID with allowed statuses.
+
+        Args:
+            pro_id (int): The ID of the problem to find neighbours for.
+            allowed_statuses (Sequence[int]): Allowed problem statuses for access.
+
+        Returns:
+            Tuple[Optional[int], Optional[int]]:
+                - Previous problem ID if exists, else None.
+                - Next problem ID if exists, else None.
+        """
+
+        pro_id = int(pro_id)
+        allowed_statuses_str = ",".join(map(str, allowed_statuses))
+
+        async with self.db.acquire() as con:
+            prev_pro = await con.fetchval(
+                f"""
+                SELECT "pro_id" FROM "problem"
+                WHERE "pro_id" < $1 AND "status" IN ({allowed_statuses_str})
+                ORDER BY "pro_id" DESC LIMIT 1;
+                """,
+                pro_id,
+            )
+
+            next_pro = await con.fetchval(
+                f"""
+                SELECT "pro_id" FROM "problem"
+                WHERE "pro_id" > $1 AND "status" IN ({allowed_statuses_str})
+                ORDER BY "pro_id" ASC LIMIT 1;
+                """,
+                pro_id,
+            )
+
+        return prev_pro, next_pro
+
     async def list_pro(self, allow_pro_statuses: Sequence[int]) -> tuple[None, list[Problem]] | ErrorType:
         """
         List problems with statuses in `allow_pro_statuses`, with Redis caching.
