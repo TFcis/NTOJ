@@ -169,11 +169,8 @@ class ManageInfoHandler(RequestHandler):
     @info_dispatcher.action("vacuum")
     async def vacuum_database(self):
         try:
-            con = self.db.acquire()
-            try:
+            async with self.db.acquire() as con:
                 await con.execute("VACUUM ANALYZE")
-            finally:
-                await con.release()
 
             await self.add_log(
                 f"{self.acct.name} performed a VACUUM ANALYZE on the database.",
