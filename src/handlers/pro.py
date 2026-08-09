@@ -462,12 +462,11 @@ class ProHandler(RequestHandler):
 
         if self.contest:
             pro_ids = list(self.contest.pro_list.keys())
-            if pro_id in pro_ids:
-                idx = pro_ids.index(pro_id)
-                if idx > 0:
-                    prev_pro_id = pro_ids[idx - 1]
-                if idx < len(pro_ids) - 1:
-                    next_pro_id = pro_ids[idx + 1]
+            idx = pro_ids.index(pro_id)
+            if idx > 0:
+                prev_pro_id = pro_ids[idx - 1]
+            if idx < len(pro_ids) - 1:
+                next_pro_id = pro_ids[idx + 1]
         else:
             prev_pro_id, next_pro_id = await ProService.inst.get_pro_neighbours(pro_id, allow_statuses)
 
