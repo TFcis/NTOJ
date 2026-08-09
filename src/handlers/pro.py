@@ -460,9 +460,6 @@ class ProHandler(RequestHandler):
         prev_pro_id = None
         next_pro_id = None
 
-        proclass_id = self.get_argument("proclass_id", default=None)
-        cur_proclass = None
-
         if self.contest:
             pro_ids = list(self.contest.pro_list.keys())
             idx = pro_ids.index(pro_id)
@@ -470,30 +467,6 @@ class ProHandler(RequestHandler):
                 prev_pro_id = pro_ids[idx - 1]
             if idx < len(pro_ids) - 1:
                 next_pro_id = pro_ids[idx + 1]
-        elif proclass_id:
-            try:
-                proclass_id = int(proclass_id)
-                err, cur_proclass = await ProClassService.inst.get_proclass(proclass_id)
-                if not err and cur_proclass:
-                    cur_proclass = dict(cur_proclass)
-                    p_list = cur_proclass.get("list", [])
-
-                    if pro_id in p_list:
-                        _, valid_pros = await ProService.inst.list_pro(allow_statuses)
-                        valid_pro_ids = {p.pro_id for p in valid_pros}
-
-                        ordered_ids = [pid for pid in p_list if pid in valid_pro_ids]
-
-                        if pro_id in ordered_ids:
-                            idx = ordered_ids.index(pro_id)
-                            if idx > 0:
-                                prev_pro_id = ordered_ids[idx - 1]
-                            if idx < len(ordered_ids) - 1:
-                                next_pro_id = ordered_ids[idx + 1]
-                    else:
-                        cur_proclass = None
-            except ValueError:
-                cur_proclass = None
         else:
             prev_pro_id, next_pro_id = await ProService.inst.get_pro_neighbours(pro_id, allow_statuses)
 
@@ -537,7 +510,6 @@ class ProHandler(RequestHandler):
             topcoder=topcoder,
             prev_pro_id=prev_pro_id,
             next_pro_id=next_pro_id,
-            cur_proclass=cur_proclass,
         )
 
 

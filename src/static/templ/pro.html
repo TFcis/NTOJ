@@ -1,8 +1,8 @@
 {% from services.chal import COMPILER_INFOS %}
 {% from utils.numeric import merge_list_to_str %}
 
-{% set prev_pro_url = (url(f'/contests/{ contest.contest_id }/pro/{ prev_pro_id }/') if contest else url(f'/pro/{ prev_pro_id }/{ (f"?proclass_id={ cur_proclass["proclass_id"] }" if cur_proclass else "") }')) if prev_pro_id is not None else None %}
-{% set next_pro_url = (url(f'/contests/{ contest.contest_id }/pro/{ next_pro_id }/') if contest else url(f'/pro/{ next_pro_id }/{ (f"?proclass_id={ cur_proclass["proclass_id"] }" if cur_proclass else "") }')) if next_pro_id is not None else None %}
+{% set prev_pro_url = (url(f'/contests/{ contest.contest_id }/pro/{ prev_pro_id }/') if contest else url(f'/pro/{ prev_pro_id }/')) if prev_pro_id is not None else None %}
+{% set next_pro_url = (url(f'/contests/{ contest.contest_id }/pro/{ next_pro_id }/') if contest else url(f'/pro/{ next_pro_id }/')) if next_pro_id is not None else None %}
 
 <link rel="stylesheet" type="text/css" href="{{ url('/src/pro.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf_viewer.min.css" integrity="sha512-8LkkqbXJPviYJENC5Z8qC2uKz27x0tNgrZbzsAzt7zkw0/2lXtSdrslVhfrkcR+6LRmxjZxlqniSyWXimoaH5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />

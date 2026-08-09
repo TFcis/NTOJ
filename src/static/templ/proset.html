@@ -432,7 +432,7 @@
                         <td><a href="{{ url(f'/chal/?proid={ pro_id }&acctid={ user.acct_id }') }}" class="state-{{ score_map[pro_id]['state'] }}">{{ChalConst.STATE_LONG_STR[score_map[pro_id]['state']]}}</a></td>
                     {% end %}
                     <td class="name">
-                        <a href="{{ url(f'/pro/{ pro_id }/' + (f'?proclass_id={ cur_proclass['proclass_id'] }' if cur_proclass else '')) }}">{{ pro.name }}</a>
+                        <a href="{{ url(f'/pro/{ pro_id }/') }}">{{ pro.name }}</a>
                     </td>
                     {% set topcoder = score_map[pro_id]['topcoder'] %}
                     {% if topcoder %}
