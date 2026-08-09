@@ -109,9 +109,9 @@
                                 {{ round(((rate['ac_cnt'] / rate['all_cnt']) * 100), 1) }}%
                             {% end %}
                             (
-                            <a style="color: #0F0;" href="{{ url(f'/chal/?acctid={ acct.acct_id }&state=1') }}">{{ rate['ac_cnt'] }}</a>
+                            <a style="color: #0F0;" href="{{ url(f'/chal/?acct_id={ acct.acct_id }&state=1') }}">{{ rate['ac_cnt'] }}</a>
                             /
-                            <a style="color: #0F0;" href="{{ url(f'/chal/?acctid={ acct.acct_id }') }}">{{ rate['all_cnt'] }}</a>
+                            <a style="color: #0F0;" href="{{ url(f'/chal/?acct_id={ acct.acct_id }') }}">{{ rate['all_cnt'] }}</a>
                             )
                         </td>
                     </tr>

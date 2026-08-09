@@ -71,9 +71,9 @@
                     {% end %}
 
                     (
-                    <a style="color: #0F0;" href="{{ url(f'/chal/?acctid={ acct.acct_id }&state=1') }}">{{ acct.rate_data['ac_cnt'] }}</a>
+                    <a style="color: #0F0;" href="{{ url(f'/chal/?acct_id={ acct.acct_id }&state=1') }}">{{ acct.rate_data['ac_cnt'] }}</a>
                     /
-                    <a style="color: #0F0" href="{{ url(f'/chal/?acctid={ acct.acct_id }') }}">{{ acct.rate_data['all_cnt'] }}</a>
+                    <a style="color: #0F0" href="{{ url(f'/chal/?acct_id={ acct.acct_id }') }}">{{ acct.rate_data['all_cnt'] }}</a>
                     )
                     </td>
                 </tr>

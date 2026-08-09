@@ -46,7 +46,7 @@ class ManageProClassHandler(RequestHandler):
 
         elif page == "update":
             try:
-                proclass_id = int(self.get_argument("proclassid"))
+                proclass_id = int(self.get_argument("proclass_id"))
             except ValueError:
                 return self.error(("Eparam", "Invalid proclass ID"))
             _, proclass = await ProClassService.inst.get_proclass(proclass_id)

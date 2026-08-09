@@ -156,7 +156,7 @@ class ContestManageAcctHandler(RequestHandler):
             self.acct, self.contest, userlist_updated=True
         )
 
-        success_list = [aid for aid in acct_list if aid in self.contest.user_list and aid != self.contest.contest_creator]
+        success_list = [acct_id for acct_id in acct_list if acct_id in self.contest.user_list and acct_id != self.contest.contest_creator]
 
         if list_type == "normal" or (
             list_type == "admin" and not self.contest.hide_admin

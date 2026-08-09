@@ -262,11 +262,11 @@
                     <td>Problem</td>
                     {% if chal.contest_id == 0 %}
                     <td>
-                        <a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="{{ url(f'/chal/?proid={ pro.pro_id }') }}">chals</a>)
+                        <a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="{{ url(f'/chal/?pro_id={ pro.pro_id }') }}">chals</a>)
                     </td>
                     {% else %}
                     <td>
-                        <a href="{{ url(f'/contests/{ chal.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="{{ url(f'/contests/{ chal.contest_id }/chal/?proid={ pro.pro_id }') }}">chals</a>)
+                        <a href="{{ url(f'/contests/{ chal.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="{{ url(f'/contests/{ chal.contest_id }/chal/?pro_id={ pro.pro_id }') }}">chals</a>)
                     </td>
                     {% end %}
                 </tr>
@@ -278,11 +278,11 @@
                     <td>Account</td>
                     {% if chal.contest_id == 0 %}
                     <td>
-                        <a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a> (<a href="{{ url(f'/chal/?acctid={ chal.acct_id }') }}">chals</a>)
+                        <a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a> (<a href="{{ url(f'/chal/?acct_id={ chal.acct_id }') }}">chals</a>)
                     </td>
                     {% else %}
                     <td>
-                        <a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a> (<a href="{{ url(f'/contests/{ chal.contest_id }/chal/?acctid={ chal.acct_id }') }}">chals</a>)
+                        <a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a> (<a href="{{ url(f'/contests/{ chal.contest_id }/chal/?acct_id={ chal.acct_id }') }}">chals</a>)
                     </td>
                     {% end %}
                 </tr>

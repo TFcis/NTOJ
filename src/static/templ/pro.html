@@ -207,11 +207,11 @@
 
         <div class="my-lg-1">
             {% if contest %}
-                <a class="btn btn-success" href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }&acctid={ user.acct_id }') }}">My Status</a>
-                <a class="btn btn-secondary" href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }') }}">Status</a>
+                <a class="btn btn-success" href="{{ url(f'/contests/{ contest.contest_id }/chal/?pro_id={ pro.pro_id }&acct_id={ user.acct_id }') }}">My Status</a>
+                <a class="btn btn-secondary" href="{{ url(f'/contests/{ contest.contest_id }/chal/?pro_id={ pro.pro_id }') }}">Status</a>
             {% else %}
                 <a class="btn btn-success" href="{{ url(f'/rank/{ pro.pro_id }/') }}">&nbsp;Rank&nbsp;</a>
-                <a class="btn btn-secondary" href="{{ url(f'/chal/?proid={ pro.pro_id }') }}">Status</a>
+                <a class="btn btn-secondary" href="{{ url(f'/chal/?pro_id={ pro.pro_id }') }}">Status</a>
             {% end %}
 
         </div>
@@ -313,7 +313,7 @@
             </table>
         </div>
         {% if user.is_kernel() %}
-            <a class="btn btn-warning" href="{{ url(f'/manage/pro/update/?proid={ pro.pro_id }') }}">Manage</a>
+            <a class="btn btn-warning" href="{{ url(f'/manage/pro/update/?pro_id={ pro.pro_id }') }}">Manage</a>
         {% end %}
     </div>
 

@@ -13,7 +13,7 @@
             let search_name = j_filter.find("#name").val();
             let search_tags = j_filter.find("#tags").val();
             if (proclass_id == -1)
-                proclass_id = $("#curProclassId").attr("proclass");
+                proclass_id = $("#cur_proclass_id").attr("proclass");
             let is_online = j_filter.find("#online").is(":checked");
             let is_reversed = j_filter.find("#reverse").is(":checked");
             let topcoder_filter = j_filter.find("#topcoder").val();
@@ -309,10 +309,10 @@
                         <div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                     {% end %}
                 </div>
-                <div style="display: none;" id="curProclassId" proclass="{{ cur_proclass['proclass_id'] }}"></div>
+                <div style="display: none;" id="cur_proclass_id" proclass="{{ cur_proclass['proclass_id'] }}"></div>
             {% else %}
                 <label class="form-label">NULL</label>
-                <div style="display: none;" id="curProclassId" proclass="None"></div>
+                <div style="display: none;" id="cur_proclass_id" proclass="None"></div>
             {% end %}
             <div clas="mt-2">
                 <button type="button" class="btn btn-primary" id="switchProClass">Switch</button>
@@ -429,7 +429,7 @@
                     {% if score_map[pro_id]['state'] is None %}
                         <td>Todo</td>
                     {% else %}
-                        <td><a href="{{ url(f'/chal/?proid={ pro_id }&acctid={ user.acct_id }') }}" class="state-{{ score_map[pro_id]['state'] }}">{{ChalConst.STATE_LONG_STR[score_map[pro_id]['state']]}}</a></td>
+                        <td><a href="{{ url(f'/chal/?pro_id={ pro_id }&acct_id={ user.acct_id }') }}" class="state-{{ score_map[pro_id]['state'] }}">{{ChalConst.STATE_LONG_STR[score_map[pro_id]['state']]}}</a></td>
                     {% end %}
                     <td class="name">
                         <a href="{{ url(f'/pro/{ pro_id }/') }}">{{ pro.name }}</a>
@@ -466,9 +466,9 @@
                         {% else %}
                             {{ '0.00%' }}
                         {% end %}
-                        (<a href="{{ url(f'/chal/?proid={ pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
+                        (<a href="{{ url(f'/chal/?pro_id={ pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
                         /
-                        <a href="{{ url(f'/chal/?proid={ pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
+                        <a href="{{ url(f'/chal/?pro_id={ pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
                     </td>
 
                     <td class="name">{{ pro.tags }}</td>

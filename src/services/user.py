@@ -28,7 +28,7 @@ class UserConst:
     ACCTTYPE_USER = 3
     ACCTTYPE_GUEST = 6
 
-    ACCTID_GUEST = 0
+    ACCT_ID_GUEST = 0
 
 @dataclass
 class Account:
@@ -68,7 +68,7 @@ class UserService:
     ACCTTYPE_USER = 3
     ACCTTYPE_GUEST = 6
 
-    ACCTID_GUEST = 0
+    ACCT_ID_GUEST = 0
 
     def __init__(self, db, rs):
         self.db = db

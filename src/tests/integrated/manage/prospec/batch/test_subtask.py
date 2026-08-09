@@ -35,7 +35,7 @@ class BatchSubtaskTest(AsyncTest):
     async def main(self):
         with AccountContext("admin@test", "testtest") as admin_session:
             # NOTE: preview
-            res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
+            res = admin_session.post('manage/pro/updatetestdata?pro_id=1', data={
                 'reqtype': 'preview',
                 'pro_id': 1,
                 'testdata_id': 0,
@@ -61,20 +61,20 @@ class BatchSubtaskTest(AsyncTest):
             )
 
             # NOTE: download file
-            res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=0&type=output')
+            res = admin_session.get('manage/pro/updatetestdata?pro_id=1&download=1&testdata_id=0&type=output')
             self.assertIsNotNone(res.headers.get("content-disposition"))
             self.assertEqual(re.findall(r'filename="?([^";]+)"?', res.headers.get("content-disposition"))[0], "1.out")
             with open('tests/static_file/toj3/res/testdata/1.out') as f:
                 self.assertEqual(res.content.decode('utf-8'), f.read())
 
-            res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=123&type=output')
+            res = admin_session.get('manage/pro/updatetestdata?pro_id=1&download=1&testdata_id=123&type=output')
             self.assertAPIReturnValue(res.text, ('Enoext', 'Testdata not found'))
 
-            res = admin_session.get('manage/pro/updatetestdata?proid=1&download=1&testdata_id=0&type=what')
+            res = admin_session.get('manage/pro/updatetestdata?pro_id=1&download=1&testdata_id=0&type=what')
             self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid testdata file type'))
 
             # NOTE: updaterate
-            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?pro_id=1', data={
                 'reqtype': 'updaterate',
                 'pro_id': 1,
                 'rate': 60,
@@ -86,7 +86,7 @@ class BatchSubtaskTest(AsyncTest):
             self.assertEqual(config.subtask_configs[0].rate, 60)
 
             # NOTE: addsubtask
-            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?pro_id=1', data={
                 'reqtype': 'addsubtask',
                 'pro_id': 1,
                 'rate': 20,
@@ -99,7 +99,7 @@ class BatchSubtaskTest(AsyncTest):
             # NOTE: addsinglefile
             inputfile_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
             outputfile_token = await self._upload_file('tests/static_file/toj3/3.out', admin_session)
-            res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
+            res = admin_session.post('manage/pro/updatetestdata?pro_id=1', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': 1,
                 'filename': '3',
@@ -138,7 +138,7 @@ class BatchSubtaskTest(AsyncTest):
             )
 
             # NOTE: settestdata (add testdata to range)
-            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?pro_id=1', data={
                 'reqtype': 'settestdata',
                 'pro_id': 1,
                 'testdatas': '1-3',
@@ -162,7 +162,7 @@ class BatchSubtaskTest(AsyncTest):
 
             # NOTE: updatesinglefile
             pack_token = await self._upload_file('tests/static_file/toj3/3.out.incorrect', admin_session)
-            res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
+            res = admin_session.post('manage/pro/updatetestdata?pro_id=1', data={
                 'reqtype': 'updatesinglefile',
                 'pro_id': 1,
                 'testdata_id': 2,
@@ -203,7 +203,7 @@ class BatchSubtaskTest(AsyncTest):
             self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC, ChalConst.STATE_AC, ChalConst.STATE_WA])
 
             # NOTE: setdepsubtasks
-            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?pro_id=1', data={
                 'reqtype': 'setdepsubtasks',
                 'pro_id': 1,
                 'dep_subtasks': '2', # NOTE: user input subtask id start from 1
@@ -213,7 +213,7 @@ class BatchSubtaskTest(AsyncTest):
             config = await self.get_proconfig(1)
             self.assertIn(1, config.subtask_configs[2].dependency_subtasks)
 
-            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?pro_id=1', data={
                 'reqtype': 'setdepsubtasks',
                 'pro_id': 1,
                 'dep_subtasks': '3', # NOTE: user input subtask id start from 1
@@ -225,7 +225,7 @@ class BatchSubtaskTest(AsyncTest):
             # NOTE: settestdata (remove testdata from range)
             inputfile_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
             outputfile_token = await self._upload_file('tests/static_file/toj3/3.out', admin_session)
-            res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
+            res = admin_session.post('manage/pro/updatetestdata?pro_id=1', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': 1,
                 'filename': '4',
@@ -238,7 +238,7 @@ class BatchSubtaskTest(AsyncTest):
             self.assertEqual(config.testdatas[3].inputfile, '4.in')
             self.assertEqual(config.testdatas[3].outputfile, '4.out')
 
-            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?pro_id=1', data={
                 'reqtype': 'settestdata',
                 'pro_id': 1,
                 'testdatas': '1-2, 4',
@@ -261,7 +261,7 @@ class BatchSubtaskTest(AsyncTest):
             self.assertEqual([v.state for v in chal.subtask_results.values()], [ChalConst.STATE_AC] * len(chal.subtask_results))
 
             # NOTE: deletesinglefile
-            res = admin_session.post('manage/pro/updatetestdata?proid=1', data={
+            res = admin_session.post('manage/pro/updatetestdata?pro_id=1', data={
                 'reqtype': 'deletesinglefile',
                 'pro_id': 1,
                 'testdata_id': 3,
@@ -290,7 +290,7 @@ class BatchSubtaskTest(AsyncTest):
             )
 
             # NOTE: deletesubtask
-            res = admin_session.post('manage/pro/updatesubtask?proid=1', data={
+            res = admin_session.post('manage/pro/updatesubtask?pro_id=1', data={
                 'reqtype': 'deletesubtask',
                 'pro_id': 1,
                 'subtask': 2,

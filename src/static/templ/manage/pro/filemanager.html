@@ -114,7 +114,7 @@
             let path = $("#preview-title").attr("path");
 
             let url = "{{ url('/be/manage/pro/filemanager') }}";
-            window.open(`${url}?proid=${pro_id}&download=1&filename=${filename}&path=${path}`);
+            window.open(`${url}?pro_id=${pro_id}&download=1&filename=${filename}&path=${path}`);
         });
 
         $("#previewModal").find("button.save").on('click', function(e) {

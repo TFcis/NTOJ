@@ -8,7 +8,7 @@ class ManageProTestdataHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
         try:
-            pro_id = int(self.get_argument("proid"))
+            pro_id = int(self.get_argument("pro_id"))
         except ValueError:
             return self.error(("Eparam", "Invalid problem ID"))
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
@@ -41,7 +41,7 @@ class ManageProTestdataHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self):
         try:
-            pro_id = int(self.get_argument("proid"))
+            pro_id = int(self.get_argument("pro_id"))
         except ValueError:
             return self.error(("Eparam", "Invalid problem ID"))
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)

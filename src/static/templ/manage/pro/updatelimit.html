@@ -179,13 +179,13 @@
     </form>
 
     <div class="mt-4">
-        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/update/?proid={ pro.pro_id }') }}">
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/update/?pro_id={ pro.pro_id }') }}">
             <i class="bi bi-arrow-left"></i> Back to General Settings
         </a>
-        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatesubtask/?proid={ pro.pro_id }') }}">
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatesubtask/?pro_id={ pro.pro_id }') }}">
             <i class="bi bi-list-check"></i> Configure Subtasks
         </a>
-        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatetestdata/?proid={ pro.pro_id }') }}">
+        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatetestdata/?pro_id={ pro.pro_id }') }}">
             <i class="bi bi-file-earmark-binary"></i> Manage Testdata
         </a>
     </div>
