@@ -430,14 +430,3 @@ class UserService:
                 logger.error(f"Error pickling account list for field {field}: {e}", exc_info=True)
 
         return None, acctlist
-
-    async def get_acct_or_guest(self, acct_id: int | None):
-        """
-        """
-        if acct_id is None or acct_id <= GUEST_ACCOUNT.acct_id:
-            return GUEST_ACCOUNT
-
-        err, acct = await self.info_acct(acct_id)
-        if err or acct is None:
-            return GUEST_ACCOUNT
-        return acct

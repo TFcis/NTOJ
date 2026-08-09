@@ -458,16 +458,16 @@ class ProService:
         """
 
         from services.rate import RateService
-        from services.user import UserService
+        from services.user import UserService, GUEST_ACCOUNT
         from services.chal import ChalConst
 
         err, prolist = await self.list_pro(allowed_statuses)
         if err:
             return err, None
 
-        acct = await UserService.inst.get_acct_or_guest(acct_id)
-        if acct is None:
-            return ("Enoext", "User not found"), None
+        err, acct = await UserService.inst.info_acct(acct_id)
+        if err or acct is None:
+            acct = GUEST_ACCOUNT
 
         proclass_id = flt.get("proclass_id")
         if proclass_id:
