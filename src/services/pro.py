@@ -5,7 +5,7 @@ import re
 import logging
 import asyncio
 from dataclasses import asdict, dataclass
-from typing import Sequence
+from typing import Any, Sequence
 
 from msgpack import packb, unpackb
 
@@ -441,6 +441,154 @@ class ProService:
 
 
         return None, prolist
+
+    async def list_filtered_pro(self, acct_id: int, flt: dict[str, Any], allowed_statuses: Sequence[int]) -> tuple[None, list[Problem]] | ErrorType:
+        """
+        List problems with the filter and allowed statuses.
+
+        Args:
+            acct_id (int): The account ID of the user requesting the list.
+            flt (dict[str, Any]): Filter parameters including proclass_id, order, problem_show, online, reverse, name, tags, topcoder_filter.
+            allowed_statuses (Sequence[int]): Allowed problem statuses for access.
+
+        Returns:
+            Tuple[Optional[Tuple[str, str]], Optional[list[Problem]]]:
+                - Error code and message if any error occurs.
+                - List of problems matching the filter and allowed statuses.
+        """
+
+        from services.rate import RateService
+        from services.user import UserService
+        from services.chal import ChalConst
+
+        err, prolist = await self.list_pro(allowed_statuses)
+        if err:
+            return err, None
+
+        acct = await UserService.inst.get_acct_or_guest(acct_id)
+        if acct is None:
+            return ("Enoext", "User not found"), None
+
+        proclass_id = flt.get("proclass_id")
+        if proclass_id:
+            err, proclass = await ProClassService.inst.get_proclass(proclass_id)
+            if err:
+                return err, None
+            proclass = dict(proclass)
+
+            if (
+                proclass["type"] == ProClassConst.OFFICIAL_HIDDEN
+                and not acct.is_kernel()
+            ) or (
+                proclass["type"] == ProClassConst.USER_HIDDEN
+                and proclass["acct_id"] != acct.acct_id
+            ):
+                return ("Eacces", "Permission denied"), None
+
+            p_list = proclass["list"]
+            prolist = list(filter(lambda pro: pro.pro_id in p_list, prolist))
+
+        order = flt.get("order")
+        problem_show = flt.get("problem_show", "all")
+        show_only_online_pro = flt.get("online")
+        order_reverse = flt.get("reverse")
+        search_name = flt.get("name")
+        search_tags = flt.get("tags")
+        topcoder_filter = flt.get("topcoder_filter", "ignore")
+
+        if search_name:
+            search_name = search_name.lower()
+        if search_tags:
+            search_tags = search_tags.lower()
+
+        _, acct_states = await RateService.inst.map_rate_acct(acct)
+        score_map: dict[int, dict] = {}
+        new_prolist: list[Problem] = []
+        pro_2_topcoder: dict[int, int] = {}
+
+        for pro in prolist:
+            pro_id = pro.pro_id
+            pro_state = acct_states.get(pro_id, {}).get("state")
+
+            if show_only_online_pro and pro.status != ProConst.STATUS_ONLINE:
+                continue
+
+            if problem_show == "onlyac" and pro_state != ChalConst.STATE_AC:
+                continue
+            elif problem_show == "notac" and pro_state == ChalConst.STATE_AC:
+                continue
+
+            if search_name and pro.name.lower().find(search_name) == -1:
+                continue
+
+            if acct.is_guest() or (
+                not acct.is_kernel() and pro_state != ChalConst.STATE_AC
+            ):
+                pro.tags = ""
+
+            if search_tags and pro.tags.lower().find(search_tags) == -1:
+                continue
+
+            if topcoder_filter != "ignore":
+                _, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
+                pro_2_topcoder[pro_id] = topcoder_id
+                if topcoder_filter == "myself":
+                    if topcoder_id != acct.acct_id:
+                        continue
+                elif topcoder_filter == "other":
+                    if topcoder_id == acct.acct_id:
+                        continue
+                elif topcoder_filter != topcoder_id:
+                    continue
+
+            rate = None
+            if order is not None:
+                _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
+            score_map[pro_id] = {"state": pro_state, "rate_data": rate}
+            new_prolist.append(pro)
+
+        prolist = new_prolist
+
+        def user_ac_cmp(pro: Problem):
+            pro_id = pro.pro_id
+            user_ac_chal_cnt = score_map[pro_id]["rate_data"]["user_ac_chal_cnt"]
+            user_all_chal_cnt = score_map[pro_id]["rate_data"]["user_all_chal_cnt"]
+
+            if user_ac_chal_cnt and user_all_chal_cnt:
+                return user_ac_chal_cnt / user_all_chal_cnt
+            else:
+                return -1
+
+        def chal_ac_cmp(pro: Problem):
+            pro_id = pro.pro_id
+            ac_chal_cnt = score_map[pro_id]["rate_data"]["ac_chal_cnt"]
+            all_chal_cnt = score_map[pro_id]["rate_data"]["all_chal_cnt"]
+
+            if ac_chal_cnt and all_chal_cnt:
+                return ac_chal_cnt / all_chal_cnt
+            else:
+                return -1
+
+        def cmp(pro: Problem, key: str):
+            return score_map[pro.pro_id]["rate_data"][key]
+
+        if order == "chal":
+            prolist = sorted(prolist, key=chal_ac_cmp)
+        elif order == "user":
+            prolist = sorted(prolist, key=user_ac_cmp)
+        elif order == "chalcnt":
+            prolist = sorted(prolist, key=lambda pro: cmp(pro, "all_chal_cnt"))
+        elif order == "chalaccnt":
+            prolist = sorted(prolist, key=lambda pro: cmp(pro, "ac_chal_cnt"))
+        elif order == "usercnt":
+            prolist = sorted(prolist, key=lambda pro: cmp(pro, "user_all_chal_cnt"))
+        elif order == "useraccnt":
+            prolist = sorted(prolist, key=lambda pro: cmp(pro, "user_ac_chal_cnt"))
+
+        if order_reverse:
+            prolist = list(reversed(prolist))
+
+        return None, list(prolist)
 
     async def add_pro(self, name: str, status: int):
         """

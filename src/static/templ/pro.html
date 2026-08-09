@@ -23,6 +23,10 @@
         let PDFJS = pdfjsLib;
         PDFJS.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.mjs';
 
+        {% if not contest %}
+            _init_pronav();
+        {% end %}
+
         $('#tags').keydown(function(event) {
             if (event.which == 13) // return
                 $('#tags').focusout();
@@ -189,6 +193,80 @@
         _load_html();
     }
 
+    function _init_pronav() {
+        const currentProId = {{ pro.pro_id }};
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryKey = _get_clean_query_key();
+        const storageKey = 'pro_list_' + queryKey;
+
+        let proList = null;
+
+        try {
+            const cached = sessionStorage.getItem(storageKey);
+            if (cached) {
+                proList = JSON.parse(cached);
+            } else {
+                {% if all_pro_ids %}
+                    {% import json %}
+                    proList = {{ json.dumps(all_pro_ids) }};
+                    sessionStorage.setItem(storageKey, JSON.stringify(proList));
+                {% end %}
+            }
+
+            if (proList && proList.length > 0) {
+                document.cookie = `cached_filter_query=${encodeURIComponent(queryKey)}; path=/`;
+            }
+        } catch (e) {
+            console.warn('sessionStorage readout/write failed:', e);
+        }
+
+        if (proList && proList.length > 0) {
+            const idx = proList.indexOf(currentProId);
+            if (idx !== -1) {
+                const prevProId = idx > 0 ? proList[idx - 1] : null;
+                const nextProId = idx < proList.length - 1 ? proList[idx + 1] : null;
+
+                _update_pronav_btn('#prev', prevProId, urlParams);
+                _update_pronav_btn('#next', nextProId, urlParams);
+            }
+        }
+    }
+
+    function _update_pronav_btn(selector, targetId, params) {
+        const $btn = $(selector);
+        if ($btn.length === 0) return;
+
+        if (targetId !== null) {
+            const queryString = params.toString();
+            const targetUrl = `/pro/${targetId}/${queryString ? '?' + queryString : ''}`;
+            $btn.attr('href', targetUrl)
+                .removeClass('disabled')
+                .removeAttr('aria-disabled')
+                .css('pointer-events', 'auto');
+        } else {
+            $btn.attr('href', '#')
+                .addClass('disabled')
+                .attr('aria-disabled', 'true')
+                .css('pointer-events', 'none');
+        }
+    }
+
+    function _get_clean_query_key() {
+        const params = new URLSearchParams(window.location.search);
+        const cleanParams = new URLSearchParams();
+
+        for (const [k, v] of params.entries()) {
+            if (!v || v === 'None' || v === 'null' || v === 'ignore' || (k === 'show' && v === 'all')) {
+                continue;
+            }
+            cleanParams.append(k, v);
+        }
+        cleanParams.sort();
+
+        const str = cleanParams.toString();
+        return str ? `${str}` : 'default';
+    }
+
     function destroy() {
         if (onResize) {
             $(window).off('resize', onResize);
@@ -196,18 +274,19 @@
         }
     }
 </script>
+
 <div class="row">
     <div id="side" class="col-lg-2 col-12 pt-lg-2" style="overflow-y: scroll;">
         <div class="d-flex flex-row flex-lg-column justify-content-between align-items-baseline align-items-lg-stretch mb-1 gap-2">
             <h3 class="mb-0 me-2 me-lg-0">{{ pro.pro_id }} / {{ pro.name }}</h3>
 
             <div class="btn-group flex-shrink-0 my-lg-1" role="group">
-                <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center pt-1 pb-2 px-3 fs-5 {{ 'disabled' if not prev_pro_url else '' }}"
+                <a id="prev" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center pt-1 pb-2 px-3 fs-5 {{ 'disabled' if not prev_pro_url else '' }}"
                 href="{{ prev_pro_url or '#' }}" style="line-height: 1;">
                     <span style="transform: translateY(-1px);">&lsaquo;</span>
                 </a>
 
-                <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center pt-1 pb-2 px-3 fs-5 {{ 'disabled' if not next_pro_url else '' }}"
+                <a id="next" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center pt-1 pb-2 px-3 fs-5 {{ 'disabled' if not next_pro_url else '' }}"
                 href="{{ next_pro_url or '#' }}" style="line-height: 1;">
                     <span style="transform: translateY(-1px);">&rsaquo;</span>
                 </a>

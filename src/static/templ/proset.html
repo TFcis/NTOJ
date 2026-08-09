@@ -25,41 +25,44 @@
                 }
                 topcoder_filter = topcoder_id;
             }
+
             let url = `{{ url('/proset/?') }}`;
+            let params = new URLSearchParams();
 
-            if (order != '') {
-                url += `&order=${order}`;
+            if (order && order !== 'None') {
+                params.append('order', order);
             }
 
-            if (show != '') {
-                url += `&show=${show}`;
+            if (show && show !== 'all') {
+                params.append('show', show);
             }
 
-            if (is_online != false) {
-                url += `&online=${is_online}`;
+            if (is_online) {
+                params.append('online', 'true');
             }
 
-            if (is_reversed != false) {
-                url += `&reverse=${is_reversed}`;
+            if (is_reversed) {
+                params.append('reverse', 'true');
             }
 
-            if (proclass_id != 'None') {
-                url += `&proclass_id=${proclass_id}`;
+            if (proclass_id && proclass_id !== 'None') {
+                params.append('proclass_id', proclass_id);
             }
 
-            if (search_name != '') {
-                url += `&name=${encodeURIComponent(search_name)}`;
+            if (search_name && search_name.trim() !== '') {
+                params.append('name', search_name.trim());
             }
 
-            if (search_tags != '') {
-                url += `&tags=${encodeURIComponent(search_tags)}`;
+            if (search_tags && search_tags.trim() !== '') {
+                params.append('tags', search_tags.trim());
             }
 
-            if (topcoder_filter != '') {
-                url += `&topcoder=${topcoder_filter}`;
+            if (topcoder_filter && topcoder_filter !== 'ignore') {
+                params.append('topcoder', topcoder_filter);
             }
 
-            return url;
+            const paramStr = params.toString();
+            return paramStr ? `{{ url('/proset/?') }}${ paramStr }` : `{{ url('/proset/') }}`;
         }
 
         j_filter.find("#filter_submit").on('click', function(e) {
@@ -220,6 +223,40 @@
                 render_proclass_list(proclass_type);
             });
         });
+
+        {% if all_pro_ids %}
+            _sync_proset_cache();
+        {% end %}
+    }
+
+    function _sync_proset_cache() {
+        try {
+            {% import json %}
+            const proList = {{ json.dumps(all_pro_ids) }};
+            const queryKey = _get_clean_query_key();
+
+            sessionStorage.setItem('pro_list_' + queryKey, JSON.stringify(proList));
+
+            document.cookie = `cached_filter_query=${encodeURIComponent(queryKey)}; path=/`;
+        } catch (e) {
+            console.warn('Failed to sync proset cache to sessionStorage', e);
+        }
+    }
+
+    function _get_clean_query_key() {
+        const params = new URLSearchParams(window.location.search);
+        const cleanParams = new URLSearchParams();
+
+        for (const [k, v] of params.entries()) {
+            if (!v || v === 'None' || v === 'null' || v === 'ignore' || (k === 'show' && v === 'all')) {
+                continue;
+            }
+            cleanParams.append(k, v);
+        }
+        cleanParams.sort();
+
+        const str = cleanParams.toString();
+        return str ? `${str}` : 'default';
     }
 </script>
 
@@ -408,6 +445,32 @@
     </div>
 
     <div class="col-lg-10 col-12">
+        {% set postfix = '' %}
+        {% if cur_proclass %}
+            {% set postfix = postfix + '&proclass_id=%s' % cur_proclass['proclass_id'] %}
+        {% end %}
+        {% if flt['problem_show'] != 'all' %}
+            {% set postfix = postfix + f"&show={flt['problem_show']}" %}
+        {% end %}
+        {% if flt['order'] %}
+            {% set postfix = postfix + f"&order={flt['order']}" %}
+        {% end %}
+        {% if user.is_kernel() and flt['online'] %}
+            {% set postfix = postfix + f"&online={flt['online']}" %}
+        {% end %}
+        {% if flt['reverse'] %}
+            {% set postfix = postfix + f"&reverse={flt['reverse']}" %}
+        {% end %}
+        {% if flt['name'] %}
+             set postfix = postfix + f"&name={flt['name']}" %}
+        {% end %}
+        {% if flt['tags'] %}
+            {% set postfix = postfix + f"&tags={flt['tags']}" %}
+        {% end %}
+        {% if flt['topcoder_filter'] and flt['topcoder_filter'] != 'ignore' %}
+            {% set postfix = postfix + f"&topcoder={flt['topcoder_filter']}" %}
+        {% end %}
+
         <div class="table-responsive">
         <table id="prolist" class="table table-striped table-hover table-responsive-sm col mx-lg-3">
             <thead>
@@ -432,7 +495,8 @@
                         <td><a href="{{ url(f'/chal/?proid={ pro_id }&acctid={ user.acct_id }') }}" class="state-{{ score_map[pro_id]['state'] }}">{{ChalConst.STATE_LONG_STR[score_map[pro_id]['state']]}}</a></td>
                     {% end %}
                     <td class="name">
-                        <a href="{{ url(f'/pro/{ pro_id }/') }}">{{ pro.name }}</a>
+                        {% set clean_postfix = postfix.lstrip("&") %}
+                        <a href="{{ url(f'/pro/{ pro_id }/' + ('?' + clean_postfix if clean_postfix else '')) }}">{{ pro.name }}</a>
                     </td>
                     {% set topcoder = score_map[pro_id]['topcoder'] %}
                     {% if topcoder %}
@@ -477,32 +541,6 @@
             </tbody>
         </table>
         </div>
-
-        {% set postfix = '' %}
-        {% if cur_proclass %}
-        {% set postfix = postfix + '&proclass_id=%s' % cur_proclass['proclass_id'] %}
-        {% end %}
-        {% if flt['problem_show'] != 'all' %}
-        {% set postfix = postfix + f"&show={flt['problem_show']}" %}
-        {% end %}
-        {% if flt['order'] %}
-        {% set postfix = postfix + f"&order={flt['order']}" %}
-        {% end %}
-        {% if user.is_kernel() and flt['online'] %}
-        {% set postfix = postfix + f"&online={flt['online']}" %}
-        {% end %}
-        {% if flt['reverse'] %}
-        {% set postfix = postfix + f"&reverse={flt['reverse']}" %}
-        {% end %}
-        {% if flt['name'] %}
-        {% set postfix = postfix + f"&name={flt['name']}" %}
-        {% end %}
-        {% if flt['tags'] %}
-        {% set postfix = postfix + f"&tags={flt['tags']}" %}
-        {% end %}
-        {% if flt['topcoder_filter'] %}
-        {% set postfix = postfix + f"&topcoder={flt['topcoder_filter']}" %}
-        {% end %}
 
         <div class="row">
             <div class="col-1"></div>

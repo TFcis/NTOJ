@@ -40,30 +40,40 @@ class ProsetHandler(RequestHandler):
             "tags": search_tags,
             "topcoder_filter": topcoder_filter,
         }
-        if search_name:
-            search_name = search_name.lower()
-        if search_tags:
-            search_tags = search_tags.lower()
 
         proclass_id = self.get_argument("proclass_id", default=None)
         try:
             proclass_id = int(proclass_id)
+            flt["proclass_id"] = proclass_id
         except ValueError:
             return self.error(("Eparam", "Invalid problem class ID"))
         except TypeError:
             pass
 
-        try:
-            topcoder_filter = int(topcoder_filter)
-            if topcoder_filter <= GUEST_ACCOUNT.acct_id:
-                return self.error(("Eparam", "Invalid topcoder filter"))
-        except ValueError:
-            pass
+        if topcoder_filter == "myself":
+            if self.acct.is_guest():
+                topcoder_filter = "ignore"
+            else:
+                topcoder_filter = str(self.acct.acct_id)
+        elif topcoder_filter != "ignore":
+            try:
+                tf_id = int(topcoder_filter)
+                if tf_id <= GUEST_ACCOUNT.acct_id:
+                    topcoder_filter = "ignore"
+            except (ValueError, TypeError):
+                topcoder_filter = "ignore"
+
+        flt["topcoder_filter"] = topcoder_filter
 
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.acct.is_kernel():
             allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
-        err, prolist = await ProService.inst.list_pro(allow_statuses)
+
+        err, prolist = await ProService.inst.list_filtered_pro(
+            self.acct.acct_id, flt, allow_statuses
+        )
+        if err:
+            return self.error(err)
 
         proclass = None
         if proclass_id:
@@ -71,128 +81,28 @@ class ProsetHandler(RequestHandler):
             if err:
                 return self.error(err)
             proclass = dict(proclass)
-
-            if (
-                proclass["type"] == ProClassConst.OFFICIAL_HIDDEN
-                and not self.acct.is_kernel()
-            ):
-                return self.error(PERMISSION_DENIED_ERROR)
-            elif (
-                proclass["type"] == ProClassConst.USER_HIDDEN
-                and proclass["acct_id"] != self.acct.acct_id
-            ):
-                return self.error(PERMISSION_DENIED_ERROR)
-
-            p_list = proclass["list"]
-            prolist = list(filter(lambda pro: pro.pro_id in p_list, prolist))
             if proclass["acct_id"]:
                 _, creator = await UserService.inst.info_acct(proclass["acct_id"])
                 proclass["creator_name"] = creator.name
 
         _, acct_states = await RateService.inst.map_rate_acct(self.acct)
-        score_map: dict[int, dict] = {}
-        ac_pro_cnt = 0
-        new_prolist: list[Problem] = []
-        pro_2_topcoder: dict[int, int] = {}
-        for pro in prolist:
-            pro_id = pro.pro_id
-            pro_state = acct_states.get(pro_id, {}).get("state")
-            ac_pro_cnt += pro_state == ChalConst.STATE_AC
+        ac_pro_cnt = sum(
+            1 for pro in prolist if acct_states.get(pro.pro_id, {}).get("state") == ChalConst.STATE_AC
+        )
 
-            if show_only_online_pro and pro.status != ProConst.STATUS_ONLINE:
-                continue
+        all_pro_ids = [pro.pro_id for pro in prolist]
+        pro_total_cnt = len(all_pro_ids)
 
-            if problem_show == "onlyac" and pro_state != ChalConst.STATE_AC:
-                continue
-
-            elif problem_show == "notac" and pro_state == ChalConst.STATE_AC:
-                continue
-
-            if search_name and pro.name.lower().find(search_name) == -1:
-                continue
-
-            if (self.acct.is_guest()) or (
-                not self.acct.is_kernel() and pro_state != ChalConst.STATE_AC
-            ):
-                pro.tags = ""
-
-            if search_tags and pro.tags.lower().find(search_tags) == -1:
-                continue
-
-            if topcoder_filter != "ignore":
-                _, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
-                pro_2_topcoder[pro_id] = topcoder_id
-                if topcoder_filter == "myself":
-                    if topcoder_id != self.acct.acct_id:
-                        continue
-
-                elif topcoder_filter == "other":
-                    if topcoder_id == self.acct.acct_id:
-                        continue
-
-                elif topcoder_filter != topcoder_id:
-                    continue
-
-            rate = None
-            if order is not None:
-                _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
-            score_map[pro_id] = {"state": pro_state, "rate_data": rate}
-            new_prolist.append(pro)
-
-        prolist = new_prolist
-
-        def user_ac_cmp(pro: Problem):
-            pro_id = pro.pro_id
-            user_ac_chal_cnt = score_map[pro_id]["rate_data"]["user_ac_chal_cnt"]
-            user_all_chal_cnt = score_map[pro_id]["rate_data"]["user_all_chal_cnt"]
-
-            if user_ac_chal_cnt and user_all_chal_cnt:
-                return user_ac_chal_cnt / user_all_chal_cnt
-            else:
-                return -1
-
-        def chal_ac_cmp(pro: Problem):
-            pro_id = pro.pro_id
-            ac_chal_cnt = score_map[pro_id]["rate_data"]["ac_chal_cnt"]
-            all_chal_cnt = score_map[pro_id]["rate_data"]["all_chal_cnt"]
-
-            if ac_chal_cnt and all_chal_cnt:
-                return ac_chal_cnt / all_chal_cnt
-            else:
-                return -1
-
-        def cmp(pro: Problem, key: str):
-            return score_map[pro.pro_id]["rate_data"][key]
-
-        if order == "chal":
-            prolist = sorted(prolist, key=chal_ac_cmp)
-        elif order == "user":
-            prolist = sorted(prolist, key=user_ac_cmp)
-        elif order == "chalcnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "all_chal_cnt"))
-        elif order == "chalaccnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "ac_chal_cnt"))
-        elif order == "usercnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "user_all_chal_cnt"))
-        elif order == "useraccnt":
-            prolist = sorted(prolist, key=lambda pro: cmp(pro, "user_ac_chal_cnt"))
-
-        if order_reverse:
-            prolist = reversed(prolist)
-
-        prolist = list(prolist)
-        pro_total_cnt = len(prolist)
         prolist = prolist[pageoff : pageoff + 40]
 
+        score_map: dict[int, dict] = {}
         acct_cache = {}
         for pro in prolist:
             pro_id = pro.pro_id
+            pro_state = acct_states.get(pro_id, {}).get("state")
 
             topcoder, topcoder_id = None, None
-            try:
-                topcoder_id = pro_2_topcoder[pro_id]
-            except KeyError:
-                err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
+            err, topcoder_id = await RateService.inst.get_pro_topcoder(pro_id)
 
             if topcoder_id is not None:
                 try:
@@ -202,10 +112,12 @@ class ProsetHandler(RequestHandler):
                     if err is None:
                         acct_cache[topcoder_id] = topcoder
 
-            score_map[pro_id]["topcoder"] = topcoder
-            if order is None:
-                _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
-                score_map[pro_id]["rate_data"] = rate
+            _, rate = await RateService.inst.get_pro_ac_rate(pro_id)
+            score_map[pro_id] = {
+                "state": pro_state,
+                "rate_data": rate,
+                "topcoder": topcoder,
+            }
 
         await self.render(
             "proset",
@@ -213,6 +125,7 @@ class ProsetHandler(RequestHandler):
             user=self.acct,
             pro_total_cnt=pro_total_cnt,
             ac_pro_cnt=ac_pro_cnt,
+            all_pro_ids=all_pro_ids,
             prolist=prolist,
             score_map=score_map,
             cur_proclass=proclass,
@@ -435,6 +348,7 @@ class ProHandler(RequestHandler):
             pro_id = int(pro_id)
         except (ValueError, TypeError):
             return self.error(("Eparam", "Invalid problem ID"))
+
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
 
         if self.contest:
@@ -448,7 +362,6 @@ class ProHandler(RequestHandler):
                 return self.error(PERMISSION_DENIED_ERROR)
 
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
-
         else:
             if self.acct.is_kernel():
                 allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
@@ -459,6 +372,7 @@ class ProHandler(RequestHandler):
 
         prev_pro_id = None
         next_pro_id = None
+        all_pro_ids = []
 
         if self.contest:
             pro_ids = list(self.contest.pro_list.keys())
@@ -468,18 +382,71 @@ class ProHandler(RequestHandler):
             if idx < len(pro_ids) - 1:
                 next_pro_id = pro_ids[idx + 1]
         else:
-            prev_pro_id, next_pro_id = await ProService.inst.get_pro_neighbours(pro_id, allow_statuses)
+            proclass_id = self.get_argument("proclass_id", default=None)
+            order = self.get_argument("order", default=None)
+            problem_show = self.get_argument("show", default="all")
+            show_only_online_pro = self.get_argument("online", default=None)
+            order_reverse = self.get_argument("reverse", default=None)
+            search_name = self.get_argument("name", default=None)
+            search_tags = self.get_argument("tags", default=None)
+            topcoder_filter = self.get_argument("topcoder", default="ignore")
 
-        # NOTE: Guest cannot see tags
-        # NOTE: Admin can see tags
-        # NOTE: User get ac can see tags
+            clean_flt = {}
+            if order and order != "None": clean_flt["order"] = str(order)
+            if problem_show and problem_show != "all": clean_flt["show"] = str(problem_show)
+            if show_only_online_pro: clean_flt["online"] = str(show_only_online_pro)
+            if order_reverse: clean_flt["reverse"] = str(order_reverse)
+            if search_name and search_name.strip(): clean_flt["name"] = str(search_name).strip()
+            if search_tags and search_tags.strip(): clean_flt["tags"] = str(search_tags).strip()
+            if topcoder_filter and str(topcoder_filter) != "ignore": clean_flt["topcoder"] = str(topcoder_filter)
+            if proclass_id and str(proclass_id) != "None": clean_flt["proclass_id"] = str(proclass_id)
+
+            current_query_key = "&".join(f"{k}={v}" for k, v in sorted(clean_flt.items()))
+            cached_query_key = self.get_cookie("cached_filter_query")
+
+            if not clean_flt:
+                prev_pro_id, next_pro_id = await ProService.inst.get_pro_neighbours(pro_id, allow_statuses)
+            elif cached_query_key is not None and cached_query_key == current_query_key:
+                pass
+            else:
+                flt = {
+                    "order": order,
+                    "problem_show": problem_show,
+                    "online": show_only_online_pro,
+                    "reverse": order_reverse,
+                    "name": search_name,
+                    "tags": search_tags,
+                    "topcoder_filter": topcoder_filter,
+                }
+                if proclass_id:
+                    try:
+                        flt["proclass_id"] = int(proclass_id)
+                    except ValueError:
+                        pass
+
+                try:
+                    if topcoder_filter != "ignore":
+                        topcoder_filter = int(topcoder_filter)
+                        if topcoder_filter <= GUEST_ACCOUNT.acct_id:
+                            return self.error(("Eparam", "Invalid topcoder filter"))
+                        flt["topcoder_filter"] = topcoder_filter
+                except ValueError:
+                    pass
+
+                err, filtered_prolist = await ProService.inst.list_filtered_pro(self.acct.acct_id, flt, allow_statuses)
+                if not err and filtered_prolist:
+                    all_pro_ids = [p.pro_id for p in filtered_prolist]
+                    if pro_id in all_pro_ids:
+                        idx = all_pro_ids.index(pro_id)
+                        if idx > 0:
+                            prev_pro_id = all_pro_ids[idx - 1]
+                        if idx < len(all_pro_ids) - 1:
+                            next_pro_id = all_pro_ids[idx + 1]
 
         if self.acct.is_guest():
             pro.tags = ""
-
         elif not self.acct.is_kernel():
             from services.chal import ChalService
-
             err, state = await ChalService.inst.check_acct_pro_state(
                 self.acct.acct_id, pro.pro_id
             )
@@ -510,6 +477,7 @@ class ProHandler(RequestHandler):
             topcoder=topcoder,
             prev_pro_id=prev_pro_id,
             next_pro_id=next_pro_id,
+            all_pro_ids=all_pro_ids,
         )
 
 
