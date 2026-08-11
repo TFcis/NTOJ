@@ -1,5 +1,3 @@
-from decimal import Decimal
-import hashlib
 import requests
 
 from services.chal import ChalConst

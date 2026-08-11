@@ -1,10 +1,7 @@
 import json
 import decimal
 import asyncio
-import smtplib
 import logging
-from email.header import Header
-from email.mime.text import MIMEText
 
 from tornado.websocket import websocket_connect
 
