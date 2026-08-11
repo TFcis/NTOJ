@@ -2,7 +2,6 @@ import datetime
 
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from services.board import BoardService
-from services.log import LogService
 from services.user import UserConst
 from utils.numeric import parse_str_to_list
 

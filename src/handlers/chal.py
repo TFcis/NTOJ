@@ -24,7 +24,6 @@ from services.pro import ProService, ProConst
 from services.user import UserService, UserConst
 from services.contests import UserStatus, ContestService, ChallengeResultStyle
 from services.rate import RateService
-from services.log import LogService
 from utils.numeric import parse_str_to_list
 
 chal_dispatcher = ActionDispatcher()

@@ -11,7 +11,6 @@ from handlers.base import (
     require_permission,
 )
 from services.judge import JudgeServerClusterService
-from services.log import LogService
 from services.user import UserConst
 
 

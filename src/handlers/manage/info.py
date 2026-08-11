@@ -10,7 +10,6 @@ import psutil
 import config
 from handlers.base import ActionDispatcher, RequestHandler, UnifiedWebSocketHandler, reqenv, require_permission
 from services.user import UserConst, UserService
-from services.log import LogService
 
 info_dispatcher = ActionDispatcher()
 server_start_time = time.time()

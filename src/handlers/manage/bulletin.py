@@ -1,6 +1,5 @@
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from services.bulletin import BulletinConst, BulletinService
-from services.log import LogService
 from services.user import UserConst
 
 

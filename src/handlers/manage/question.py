@@ -1,7 +1,6 @@
 from msgpack import unpackb
 
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
-from services.log import LogService
 from services.ques import QuestionConst, QuestionService
 from services.user import UserConst, UserService
 

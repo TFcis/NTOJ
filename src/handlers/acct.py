@@ -8,7 +8,6 @@ from msgpack import packb, unpackb
 
 import config
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission, UnifiedWebSocketHandler
-from services.log import LogService
 from services.pro import ProService, ProClassService, ProClassConst, ProConst
 from services.rate import RateService
 from services.user import UserConst, UserService
