@@ -1,3 +1,4 @@
+import asyncio
 import time
 import base64
 import pickle
@@ -27,7 +28,7 @@ class UserConst:
     ACCTTYPE_USER = 3
     ACCTTYPE_GUEST = 6
 
-    ACCTID_GUEST = 0
+    ACCT_ID_GUEST = 0
 
 @dataclass
 class Account:
@@ -67,7 +68,7 @@ class UserService:
     ACCTTYPE_USER = 3
     ACCTTYPE_GUEST = 6
 
-    ACCTID_GUEST = 0
+    ACCT_ID_GUEST = 0
 
     def __init__(self, db, rs):
         self.db = db
@@ -98,7 +99,7 @@ class UserService:
             return ('Esignip', 'Your ip is not allowed'), None
 
         hpw = base64.b64decode(hpw.encode('utf-8'))
-        if bcrypt.hashpw(pw.encode('utf-8'), hpw) == hpw:
+        if await asyncio.to_thread(bcrypt.hashpw, pw.encode('utf-8'), hpw) == hpw:
             return None, acct_id
 
         return ('Esign', 'Login failed'), None
@@ -121,7 +122,11 @@ class UserService:
             return ('Enamemax', 'Username too long'), None
         del tmp_len
 
-        hpw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
+        hpw = await asyncio.to_thread(
+            bcrypt.hashpw,
+            pw.encode('utf-8'),
+            bcrypt.gensalt(12),
+        )
 
         try:
             async with self.db.acquire() as con:
@@ -357,14 +362,26 @@ class UserService:
                     current_hashed_pw = base64.b64decode(result['password'].encode('utf-8'))
                     # Verify old password matches (unless admin is forcing password reset)
                     if not isadmin:
-                        if not old or bcrypt.hashpw(old.encode('utf-8'), current_hashed_pw) != current_hashed_pw:
+                        if not old or await asyncio.to_thread(
+                            bcrypt.hashpw,
+                            old.encode('utf-8'),
+                            current_hashed_pw,
+                        ) != current_hashed_pw:
                             return ('Epwold', 'Old password is incorrect'), None
 
                     # Check if new password is same as current password
-                    if bcrypt.hashpw(pw.encode('utf-8'), current_hashed_pw) == current_hashed_pw:
+                    if await asyncio.to_thread(
+                        bcrypt.hashpw,
+                        pw.encode('utf-8'),
+                        current_hashed_pw,
+                    ) == current_hashed_pw:
                         return ('Epwsame', 'New password cannot be the same as current password'), None
 
-                    new_hashed_pw = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt(12))
+                    new_hashed_pw = await asyncio.to_thread(
+                        bcrypt.hashpw,
+                        pw.encode('utf-8'),
+                        bcrypt.gensalt(12),
+                    )
                     await con.execute(
                         'UPDATE "account" SET "password" = $1 WHERE "acct_id" = $2',
                         base64.b64encode(new_hashed_pw).decode('utf-8'),

@@ -36,7 +36,7 @@ class ManageAcctHandler(RequestHandler):
 
         elif page == "update":
             try:
-                acct_id = int(self.get_argument("acctid"))
+                acct_id = int(self.get_argument("acct_id"))
             except ValueError:
                 return self.error(("Eparam", "Invalid account ID"))
 

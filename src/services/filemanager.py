@@ -31,7 +31,7 @@ class FileManager:
         Args:
             basepath: Absolute path to the directory where file operations are allowed
         """
-        self.basepath = os.path.abspath(basepath)
+        self.basepath = os.path.realpath(os.path.abspath(basepath))
 
     def _is_safe_path(self, filename: str) -> bool:
         """
@@ -43,17 +43,23 @@ class FileManager:
         Returns:
             True if the file is within basepath and is (or would be) a regular file
         """
-        filepath = os.path.abspath(os.path.join(self.basepath, filename))
-
-        # Check if the file is within basepath
-        if os.path.commonpath([self.basepath]) != os.path.commonpath([self.basepath, filepath]):
+        try:
+            filepath = os.path.abspath(os.path.join(self.basepath, filename))
+            resolved_filepath = os.path.realpath(filepath)
+            if os.path.commonpath([self.basepath, resolved_filepath]) != self.basepath:
+                return False
+        except (OSError, TypeError, ValueError):
             return False
 
-        # If file exists, verify it's a regular file and not a symlink
-        if os.path.exists(filepath):
-            return os.path.isfile(filepath) and not os.path.islink(filepath)
+        try:
+            # If the final path exists, verify it is a regular file and not a symlink.
+            if os.path.exists(filepath):
+                return os.path.isfile(filepath) and not os.path.islink(filepath)
+        except (OSError, ValueError):
+            return False
 
-        # If file doesn't exist yet, it's safe (for create operations)
+        # Non-existent paths are safe only after all existing symlink components
+        # have been resolved and checked above.
         return True
 
     def exists(self, filename: str) -> bool:

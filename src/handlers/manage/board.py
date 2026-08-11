@@ -39,7 +39,7 @@ class ManageBoardHandler(RequestHandler):
 
         elif page == "update":
             try:
-                board_id = int(self.get_argument("boardid"))
+                board_id = int(self.get_argument("board_id"))
             except ValueError:
                 return self.error(("Eparam", "Invalid board ID"))
 

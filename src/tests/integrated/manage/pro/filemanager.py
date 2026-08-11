@@ -22,7 +22,7 @@ class ManageProFileManagerTest(AsyncTest):
     async def main(self):
         with AccountContext("admin@test", "testtest") as admin_session:
             # NOTE: preview
-            res = admin_session.post('manage/pro/filemanager?proid=1', data={
+            res = admin_session.post('manage/pro/filemanager?pro_id=1', data={
                 'reqtype': 'preview',
                 'pro_id': 1,
                 'filename': 'cont.html',
@@ -51,21 +51,21 @@ class ManageProFileManagerTest(AsyncTest):
             )
 
             # NOTE: download
-            res = admin_session.get('manage/pro/filemanager?proid=1&download=1&filename=cont.html&path=http')
+            res = admin_session.get('manage/pro/filemanager?pro_id=1&download=1&filename=cont.html&path=http')
             self.assertIsNotNone(res.headers.get("content-disposition"))
             self.assertEqual(re.findall(r'filename="?([^";]+)"?', res.headers.get("content-disposition"))[0], "cont.html")
             with open('tests/static_file/toj3/http/cont.html') as f:
                 self.assertEqual(res.content.decode('utf-8'), f.read())
 
-            res = admin_session.get('manage/pro/filemanager?proid=1&download=1&filename=test.html&path=http')
+            res = admin_session.get('manage/pro/filemanager?pro_id=1&download=1&filename=test.html&path=http')
             self.assertAPIReturnValue(res.text, ('Enoext', 'File not found'))
 
-            res = admin_session.get('manage/pro/filemanager?proid=1&download=1&filename=passwd&path=/etc')
+            res = admin_session.get('manage/pro/filemanager?pro_id=1&download=1&filename=passwd&path=/etc')
             self.assertAPIReturnValue(res.text, ('Eparam', 'Invalid basepath'))
 
             # NOTE: addsinglefile
             pack_token = await self._upload_file('tests/static_file/toj3/3.in', admin_session)
-            res = admin_session.post('manage/pro/filemanager?proid=1', data={
+            res = admin_session.post('manage/pro/filemanager?pro_id=1', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': 1,
                 'filename': 'test',
@@ -111,7 +111,7 @@ class ManageProFileManagerTest(AsyncTest):
 
             # NOTE: updatesinglefile
             pack_token = await self._upload_file('tests/static_file/float_checker/pass_all_checker.cpp', admin_session)
-            res = admin_session.post('manage/pro/filemanager?proid=4', data={
+            res = admin_session.post('manage/pro/filemanager?pro_id=4', data={
                 'reqtype': 'updatesinglefile',
                 'pro_id': 4,
                 'filename': 'checker.cpp',
@@ -152,7 +152,7 @@ class ManageProFileManagerTest(AsyncTest):
             )
 
             # NOTE: renamesinglefile
-            res = admin_session.post('manage/pro/filemanager?proid=4', data={
+            res = admin_session.post('manage/pro/filemanager?pro_id=4', data={
                 'reqtype': 'renamesinglefile',
                 'pro_id': 4,
                 'old_filename': 'checker.cpp',
@@ -160,7 +160,7 @@ class ManageProFileManagerTest(AsyncTest):
                 'path': 'res/checker'
             })
             self.assertAPIReturnSuccess(res.text)
-            res = admin_session.post('manage/pro/filemanager?proid=2', data={
+            res = admin_session.post('manage/pro/filemanager?pro_id=2', data={
                 'reqtype': 'renamesinglefile',
                 'pro_id': 2,
                 'old_filename': 'stub.cpp',
@@ -213,7 +213,7 @@ class ManageProFileManagerTest(AsyncTest):
             )
 
             # NOTE: deletesinglefile
-            res = admin_session.post('manage/pro/filemanager?proid=4', data={
+            res = admin_session.post('manage/pro/filemanager?pro_id=4', data={
                 'reqtype': 'deletesinglefile',
                 'pro_id': 4,
                 'filename': 'checker.cpp.cpp',
@@ -221,7 +221,7 @@ class ManageProFileManagerTest(AsyncTest):
             })
             self.assertAPIReturnSuccess(res.text)
             self.assertFalse(os.path.exists('problem/4/res/checker/checker.cpp.cpp'))
-            res = admin_session.post('manage/pro/filemanager?proid=2', data={
+            res = admin_session.post('manage/pro/filemanager?pro_id=2', data={
                 'reqtype': 'deletesinglefile',
                 'pro_id': 2,
                 'filename': 'stub.cpp.old',
@@ -250,7 +250,7 @@ class ManageProFileManagerTest(AsyncTest):
             # TODO: 做一次完整的 manual add problem
 
             pack_token = await self._upload_file('tests/static_file/toj659/res/grader/cpp/stub.cpp', admin_session)
-            res = admin_session.post('manage/pro/filemanager?proid=2', data={
+            res = admin_session.post('manage/pro/filemanager?pro_id=2', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': 2,
                 'filename': 'stub.cpp',
@@ -260,7 +260,7 @@ class ManageProFileManagerTest(AsyncTest):
             self.assertAPIReturnSuccess(res.text)
 
             pack_token = await self._upload_file('tests/static_file/float_checker/res/checker/checker.cpp', admin_session)
-            res = admin_session.post('manage/pro/filemanager?proid=4', data={
+            res = admin_session.post('manage/pro/filemanager?pro_id=4', data={
                 'reqtype': 'addsinglefile',
                 'pro_id': 4,
                 'filename': 'checker.cpp',

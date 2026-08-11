@@ -47,7 +47,7 @@
             let type = $("#preview-title").attr("testdata_type");
 
             let url = "{{ url('/be/manage/pro/updatetestdata') }}";
-            window.open(`${url}?proid=${pro_id}&download=1&testdata_id=${testdata_id}&type=${type}`);
+            window.open(`${url}?pro_id=${pro_id}&download=1&testdata_id=${testdata_id}&type=${type}`);
         });
 
         document.querySelectorAll('button.delete-single-file').forEach(el => {

@@ -7,7 +7,10 @@ class ManageProFilemanagerHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
-        pro_id = int(self.get_argument("proid"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)
@@ -43,7 +46,10 @@ class ManageProFilemanagerHandler(RequestHandler):
     @reqenv
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def post(self):
-        pro_id = int(self.get_argument("pro_id"))
+        try:
+            pro_id = int(self.get_argument("pro_id"))
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem ID"))
         err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
         if err:
             return self.error(err)

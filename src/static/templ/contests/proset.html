@@ -131,9 +131,9 @@ font-weight: bolder;
                             {% else %}
                                 {{ '0.00%' }}
                             {% end %}
-                            (<a href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
+                            (<a href="{{ url(f'/contests/{ contest.contest_id }/chal/?pro_id={ pro.pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
                             /
-                            <a href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
+                            <a href="{{ url(f'/contests/{ contest.contest_id }/chal/?pro_id={ pro.pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
                         </td>
                     {% end %}
                 </tr>

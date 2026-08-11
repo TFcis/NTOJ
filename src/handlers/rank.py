@@ -33,9 +33,10 @@ class ProRankHandler(RequestHandler):
         if err:
             return self.error(err)
 
-        err, (chal_list, total_cnt) = await RankService.inst.get_pro_rank(pro_id, pageoff, pagenum)
+        err, res = await RankService.inst.get_pro_rank(pro_id, pageoff, pagenum)
         if err:
             return self.error(err)
+        chal_list, total_cnt = res
 
         await self.render(
             'pro-rank', f'{pro.name} - Rank', pro_id=pro_id, chal_list=chal_list, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt
@@ -59,8 +60,9 @@ class UserRankHandler(RequestHandler):
         except ValueError:
             return self.error(("Eparam", "Invalid pagenum"))
 
-        err, (acctlist, total_cnt) = await RankService.inst.get_user_rank(pageoff, pagenum)
+        err, res = await RankService.inst.get_user_rank(pageoff, pagenum)
         if err:
             return self.error(err)
+        acctlist, total_cnt = res
 
         await self.render('user-rank', 'User Rank', acctlist=acctlist, pageoff=pageoff, pagenum=pagenum, total_cnt=total_cnt)

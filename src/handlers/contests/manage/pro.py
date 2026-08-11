@@ -106,8 +106,8 @@ class ContestManageProHandler(RequestHandler):
 
     @contest_manage_pro_dispatcher.action("multi_add")
     async def multi_add_action(self):
-        proid_list = self.get_argument("pro_id")
-        proid_list = parse_str_to_list(proid_list)
+        pro_id_list = self.get_argument("pro_id")
+        pro_id_list = parse_str_to_list(pro_id_list)
         score_type = int(self.get_argument("score_type", default=ProblemScoreType.IOI2017))
 
         if score_type not in (ProblemScoreType.IOI2013, ProblemScoreType.IOI2017, ProblemScoreType.ICPC):
@@ -116,7 +116,7 @@ class ContestManageProHandler(RequestHandler):
         if self.contest.contest_mode == ContestMode.ACM:
             score_type = ProblemScoreType.ICPC
 
-        for pro_id in proid_list:
+        for pro_id in pro_id_list:
             self.contest.pro_list[pro_id] = {
                 "score_type": ProblemScoreType(score_type),
                 "challenge_style": ChallengeResultStyle.FULL
@@ -126,23 +126,23 @@ class ContestManageProHandler(RequestHandler):
             self.acct, self.contest, prolist_updated=True
         )
 
-        success_list = [pid for pid in proid_list if pid in self.contest.pro_list]
+        success_list = [pro_id for pro_id in pro_id_list if pro_id in self.contest.pro_list]
 
         # await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
         if error_group:
             await self.add_log(
-                f"{self.acct.name} batch added {len(proid_list)} problems to contest",
+                f"{self.acct.name} batch added {len(pro_id_list)} problems to contest",
                 "contest.manage.pro.multi_add",
-                {"pro_list": proid_list, "error": error_group}
+                {"pro_list": pro_id_list, "error": error_group}
             )
             error_msg = f"Successfully added: {success_list}. Errors: {', '.join([f'{code}: {msg}' for code, msg in error_group])}"
             return self.error(("S", error_msg))
         else:
             await self.add_log(
-                f"{self.acct.name} batch added {len(proid_list)} problems to contest",
+                f"{self.acct.name} batch added {len(pro_id_list)} problems to contest",
                 "contest.manage.pro.multi_add",
-                {"pro_list": proid_list}
+                {"pro_list": pro_id_list}
             )
             return self.error(
                 ("S", f"Problems {success_list} successfully added to problem list.")

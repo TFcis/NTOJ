@@ -262,13 +262,13 @@
                 <i class="bi bi-save"></i> Update Judge Configuration
             </button>
             <div>
-                <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatesubtask/?proid={ pro.pro_id }') }}">
+                <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatesubtask/?pro_id={ pro.pro_id }') }}">
                     <i class="bi bi-list-check"></i> Edit Subtasks
                 </a>
-                <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatetestdata/?proid={ pro.pro_id }') }}">
+                <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatetestdata/?pro_id={ pro.pro_id }') }}">
                     <i class="bi bi-file-earmark-binary"></i> Edit Testdata
                 </a>
-                <a class="btn btn-secondary" href="{{ url(f'/manage/pro/filemanager/?proid={ pro.pro_id }') }}">
+                <a class="btn btn-secondary" href="{{ url(f'/manage/pro/filemanager/?pro_id={ pro.pro_id }') }}">
                     <i class="bi bi-folder"></i> File Manager
                 </a>
             </div>

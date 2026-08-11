@@ -99,6 +99,33 @@ class TestUserService(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(err)
         self.assertEqual(acct_id, 1)
 
+    @patch("services.user.bcrypt.hashpw")
+    @patch("services.user.asyncio.to_thread", new_callable=AsyncMock)
+    async def test_sign_in_offloads_bcrypt(self, mock_to_thread, mock_hashpw):
+        self.fake_conn.fetch.return_value = [
+            {"acct_id": 1, "password": "aGVsbG8=", "specific_ip": ""}
+        ]
+        mock_to_thread.return_value = b"hello"
+
+        err, acct_id = await self.service.sign_in("test@mail.com", "pw123")
+
+        mock_to_thread.assert_awaited_once_with(mock_hashpw, b"pw123", b"hello")
+        mock_hashpw.assert_not_called()
+        self.assertIsNone(err)
+        self.assertEqual(acct_id, 1)
+
+    @patch("services.user.asyncio.to_thread", new_callable=AsyncMock)
+    async def test_sign_in_rejects_wrong_password_after_offload(self, mock_to_thread):
+        self.fake_conn.fetch.return_value = [
+            {"acct_id": 1, "password": "aGVsbG8=", "specific_ip": ""}
+        ]
+        mock_to_thread.return_value = b"wrong-password-hash"
+
+        err, acct_id = await self.service.sign_in("test@mail.com", "wrong")
+
+        self.assertEqual(err[0], "Esign")
+        self.assertIsNone(acct_id)
+
     async def test_sign_in_success_with_ip(self):
         self.fake_conn.fetch.return_value = [{"acct_id": 1, "password": "aGVsbG8=", "specific_ip": "192.168.11.10"}]
         with patch("base64.b64decode", return_value=b"hashedpw"):

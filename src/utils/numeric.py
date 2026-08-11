@@ -1,4 +1,6 @@
-def parse_str_to_list(s: str) -> list[int]:
+MAX_PARSED_LIST_ITEMS = 10_000
+
+def parse_str_to_list(s: str, *, max_items: int = MAX_PARSED_LIST_ITEMS) -> list[int]:
     """
     Parses a string of numbers and ranges into a list of integers.
 
@@ -12,17 +14,28 @@ def parse_str_to_list(s: str) -> list[int]:
 
     Args:
         s (str): A string containing numbers and/or numeric ranges.
+        max_items (int): Maximum number of integers to materialize.
 
     Returns:
         list[int]: A list of parsed integers.
+
+    Raises:
+        ValueError: If max_items is negative or the expanded result is too large.
     """
 
-    s = s.replace(" ", "").split(",")
+    if max_items < 0:
+        raise ValueError("max_items must not be negative")
 
-    result = []
-    for num in s:
+    parsed_segments: list[tuple[int, int]] = []
+    parsed_items = 0
+    for num in s.replace(" ", "").split(","):
         if num.isnumeric():
-            result.append(int(num))
+            try:
+                value = int(num)
+            except ValueError:
+                continue
+            left = value
+            right = value
         else:
             try:
                 l, r = num.split("-")
@@ -33,8 +46,18 @@ def parse_str_to_list(s: str) -> list[int]:
 
             if l > r:
                 l, r = r, l
+            left = l
+            right = r
 
-            result.extend(range(l, r + 1))
+        segment_items = right - left + 1
+        if parsed_items + segment_items > max_items:
+            raise ValueError(f"parsed list exceeds the {max_items} item limit")
+        parsed_segments.append((left, right))
+        parsed_items += segment_items
+
+    result = []
+    for left, right in parsed_segments:
+        result.extend(range(left, right + 1))
 
     return result
 

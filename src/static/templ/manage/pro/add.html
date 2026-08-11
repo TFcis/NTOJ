@@ -26,7 +26,7 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
                         index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
-                        index.go(`{{ url('/manage/pro/update/?proid=${res.data}') }}`);
+                        index.go(`{{ url('/manage/pro/update/?pro_id=${res.data}') }}`);
                     } else {
                         index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                     }

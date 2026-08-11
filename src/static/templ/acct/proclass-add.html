@@ -48,7 +48,7 @@
                 res = JSON.parse(res);
                 if (res.status == 'S') {
                     index.show_notify_dialog(`Add Proclass#${res.data} success`, index.DIALOG_TYPE.success);
-                    index.go(`{{ url(f'/acct/proclass/{ user.acct_id }?page=update&proclassid=' + '${res.data}') }}`);
+                    index.go(`{{ url(f'/acct/proclass/{ user.acct_id }?page=update&proclass_id=' + '${res.data}') }}`);
                 } else {
                     index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                 }
