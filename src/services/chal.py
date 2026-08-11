@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import datetime
 import enum
 import decimal
-from typing import Sequence
+from collections.abc import Sequence
 import logging
 
 from services.pro import ProService, ProConst, ProblemConfig

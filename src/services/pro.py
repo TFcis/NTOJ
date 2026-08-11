@@ -5,7 +5,7 @@ import re
 import logging
 import asyncio
 from dataclasses import asdict, dataclass
-from typing import Sequence
+from collections.abc import Sequence
 
 from msgpack import packb, unpackb
 
