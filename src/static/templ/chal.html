@@ -237,6 +237,12 @@
         });
 
         {% end %}
+
+        $('#jump_to_code_section').on('click', function(e) {
+            $('html, body').animate({
+                scrollTop: $("#code").offset().top;
+            }, 0);
+        });
     }
 
     function destroy() {
@@ -300,6 +306,7 @@
     {% if chal.acct_id == user.acct_id %}
         <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
     {% end %}
+    <button id="jump_to_code_section" class="btn btn-secondary">Jump To Code Section</button>
     </div>
 
     <div class="col-lg-8">
