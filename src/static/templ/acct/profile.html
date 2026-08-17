@@ -140,11 +140,8 @@
                                 <td class="_state"><a class="_state-3" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
                             {% end %}
                         {% end %}
-                        {% if total_pro_cnt < 10 %}
-                            {% while cnt != 10 %}
-                                <td></td>
-                                {% set cnt = cnt + 1 %}
-                            {% end %}
+                        {% for _ in range(10 - len(chunk)) %}
+                            <td></td>
                         {% end %}
                     </tr>
                 {% end %}
