@@ -212,10 +212,12 @@
       </select>
     </div>
     <h3 id="count"></h3>
-    <div>
-      <input type="checkbox" id="showSelf" class="form-check-input">
-      <label class="form-check-label" for="showSelf">Only Show Myself</label>
-    </div>
+    {% if not user.is_guest() %}
+      <div>
+        <input type="checkbox" id="showSelf" class="form-check-input">
+        <label class="form-check-label" for="showSelf">Only Show Myself</label>
+      </div>
+    {% end %}
   </div>
   <div style="overflow-x: scroll; overflow-y: hidden;" id="topScrollBar">
     <div style="height: 8px; width:{{9+64+150+112+len(prolist)*96}}px;"></div>
