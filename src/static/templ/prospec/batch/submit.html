@@ -1,5 +1,4 @@
 {% from services.chal import COMPILER_INFOS %}
-<link rel="stylesheet" type="text/css" href="{{ url('/src/submit.css') }}">
 
 <script type="text/javascript">
     function init() {
@@ -84,7 +83,7 @@
 
             <div class="mb-3">
                 <label for="codeArea" class="form-label">Source Code</label>
-                <textarea id="codeArea" class="code form-control" placeholder="Paste your code here..." rows="20"></textarea>
+                <textarea id="codeArea" class="code form-control font-monospace" placeholder="Paste your code here..." rows="20"></textarea>
                 <div class="form-text">Or use the file upload below to load code from a file</div>
             </div>
 
