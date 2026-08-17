@@ -78,12 +78,29 @@
         let j_cont = $('#cont');
         let j_side = $('#side');
 
+        let currentHeight = 0;
         function _resize_pdf_embed_viewer() {
-            let top = j_cont[0].getBoundingClientRect().top;
-            let footerH = $('footer').outerHeight(true) || 0;
-            let height = Math.max(200, window.innerHeight - top - footerH - 16);
-            j_cont.css('height', `${ height }px`);
-            j_side.css('height', `${ height }px`);
+            const isDesktop = window.matchMedia('(min-width: 992px)').matches;
+
+            if (isDesktop) {
+                let top = j_cont[0].getBoundingClientRect().top;
+                let footerH = $('footer').outerHeight(true) || 0;
+
+                let targetHeight = Math.max(600, window.innerHeight - top - footerH);
+
+                if (Math.abs(targetHeight - currentHeight) > 10) {
+                    currentHeight = targetHeight;
+                    j_cont.css('height', `${ currentHeight }px`);
+                    j_side.css('height', `${ currentHeight }px`);
+                }
+            } else {
+                let targetHeight = Math.max(500, window.innerHeight * 0.75);
+
+                j_cont.css('height', `${ targetHeight }px`);
+                j_side.css('height', `auto`);
+
+                currentHeight = 0;
+            }
         }
 
         function _load_html() {
@@ -176,7 +193,7 @@
     }
 </script>
 <div class="row">
-    <div id="side" class="col-lg-2 col-12 mt-lg-2" style="overflow-y: scroll;">
+    <div id="side" class="col-lg-2 col-12 pt-lg-2" style="overflow-y: scroll;">
         <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
         {% if can_submit and pro.allow_submit %}
             {% if contest and not contest.is_end() %}
@@ -190,11 +207,11 @@
 
         <div class="my-lg-1">
             {% if contest %}
-                <a class="btn btn-success" href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }&acctid={ user.acct_id }') }}">My Status</a>
-                <a class="btn btn-secondary" href="{{ url(f'/contests/{ contest.contest_id }/chal/?proid={ pro.pro_id }') }}">Status</a>
+                <a class="btn btn-success" href="{{ url(f'/contests/{ contest.contest_id }/chal/?pro_id={ pro.pro_id }&acct_id={ user.acct_id }') }}">My Status</a>
+                <a class="btn btn-secondary" href="{{ url(f'/contests/{ contest.contest_id }/chal/?pro_id={ pro.pro_id }') }}">Status</a>
             {% else %}
                 <a class="btn btn-success" href="{{ url(f'/rank/{ pro.pro_id }/') }}">&nbsp;Rank&nbsp;</a>
-                <a class="btn btn-secondary" href="{{ url(f'/chal/?proid={ pro.pro_id }') }}">Status</a>
+                <a class="btn btn-secondary" href="{{ url(f'/chal/?pro_id={ pro.pro_id }') }}">Status</a>
             {% end %}
 
         </div>
@@ -294,10 +311,10 @@
                     {% end %}
                 </tbody>
             </table>
-            {% if user.is_kernel() %}
-                <a class="btn btn-warning" href="{{ url(f'/manage/pro/update/?proid={ pro.pro_id }') }}">Manage</a>
-            {% end %}
         </div>
+        {% if user.is_kernel() %}
+            <a class="btn btn-warning" href="{{ url(f'/manage/pro/update/?pro_id={ pro.pro_id }') }}">Manage</a>
+        {% end %}
     </div>
 
     <div id="cont" class="col-lg-10 col-12">

@@ -8,7 +8,6 @@ from msgpack import packb, unpackb
 
 import config
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission, UnifiedWebSocketHandler
-from services.log import LogService
 from services.pro import ProService, ProClassService, ProClassConst, ProConst
 from services.rate import RateService
 from services.user import UserConst, UserService
@@ -228,7 +227,7 @@ class AcctProClassHandler(RequestHandler):
 
         elif page == "update":
             try:
-                proclass_id = int(self.get_argument("proclassid"))
+                proclass_id = int(self.get_argument("proclass_id"))
             except (ValueError, TypeError):
                 return self.error(("Eparam", "Invalid proclass ID"))
             _, proclass = await ProClassService.inst.get_proclass(proclass_id)

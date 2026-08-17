@@ -214,7 +214,7 @@ class ChalListTest(AsyncTest):
             await ws2.write_message(json.dumps({
                 'type': 'challiststatesub_init',
                 'data': json.dumps({
-                    'chalids': [1, 2],
+                    'chal_ids': [1, 2],
                     'acct_id': 1,
                 })
             }))

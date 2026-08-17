@@ -200,25 +200,38 @@ class BatchProblemSpec(ProSpec):
                                 )
 
                         run_subtasks = {subtask['id'] for subtask in subtasks}
-                        for subtask in subtasks:
-                            for dep in subtask['dependency_subtasks']:
-                                if dep not in run_subtasks:
-                                    # Dependency subtask is skipped, so this subtask should also be skipped
-                                    await ChalService.inst.update_subtask_result(
-                                        chal_id,
-                                        SubtaskResult(subtask['id'], ChalConst.STATE_JE, 0, 0, decimal.Decimal())
-                                    )
-                                    # Mark all testdatas in this subtask as SKIPPED
-                                    for testdata_id in subtask['testdatas']:
-                                        await ChalService.inst.update_testdata_result(
-                                            chal_id,
-                                            TestdataResult(testdata_id, ChalConst.STATE_SKIPPED, 0, 0, "", MessageType.NONE)
-                                        )
+                        while True:
+                            newly_invalid = [
+                                subtask
+                                for subtask in subtasks
+                                if subtask['id'] in run_subtasks
+                                and any(
+                                    dep not in run_subtasks
+                                    for dep in subtask['dependency_subtasks']
+                                )
+                            ]
+                            if not newly_invalid:
+                                break
 
-                                    try:
-                                        run_subtasks.remove(subtask['id'])
-                                    except KeyError:
-                                        pass
+                            for subtask in newly_invalid:
+                                subtask_id = subtask['id']
+                                run_subtasks.remove(subtask_id)
+                                need_judge_testdatas.difference_update(subtask['testdatas'])
+                                await ChalService.inst.update_subtask_result(
+                                    chal_id,
+                                    SubtaskResult(subtask['id'], ChalConst.STATE_JE, 0, 0, decimal.Decimal())
+                                )
+                                for testdata_id in subtask['testdatas']:
+                                    await ChalService.inst.update_testdata_result(
+                                        chal_id,
+                                        TestdataResult(testdata_id, ChalConst.STATE_SKIPPED, 0, 0, "", MessageType.NONE)
+                                    )
+
+                        subtasks = [
+                            subtask
+                            for subtask in subtasks
+                            if subtask['id'] in run_subtasks
+                        ]
 
 
                     await con.execute('UPDATE testdata_result SET state = $1 WHERE chal_id = $2 AND id = ANY($3);',

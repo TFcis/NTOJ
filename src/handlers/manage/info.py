@@ -10,7 +10,6 @@ import psutil
 import config
 from handlers.base import ActionDispatcher, RequestHandler, UnifiedWebSocketHandler, reqenv, require_permission
 from services.user import UserConst, UserService
-from services.log import LogService
 
 info_dispatcher = ActionDispatcher()
 server_start_time = time.time()
@@ -169,11 +168,8 @@ class ManageInfoHandler(RequestHandler):
     @info_dispatcher.action("vacuum")
     async def vacuum_database(self):
         try:
-            con = self.db.acquire()
-            try:
+            async with self.db.acquire() as con:
                 await con.execute("VACUUM ANALYZE")
-            finally:
-                await con.release()
 
             await self.add_log(
                 f"{self.acct.name} performed a VACUUM ANALYZE on the database.",

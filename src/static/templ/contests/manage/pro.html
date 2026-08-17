@@ -132,8 +132,8 @@
             });
         });
 
-        $("#addPro").on('click', () => post_func('add', $("#proId").val(), is_ioi_mode ? parseInt($("#proScoreType").val(), 10) : null, () => $("#proId").val('')));
-        $("#removePro").on('click', () => post_func('remove', $("#proId").val(), null, () => $("#proId").val('')));
+        $("#addPro").on('click', () => post_func('add', $("#pro_id").val(), is_ioi_mode ? parseInt($("#proScoreType").val(), 10) : null, () => $("#pro_id").val('')));
+        $("#removePro").on('click', () => post_func('remove', $("#pro_id").val(), null, () => $("#pro_id").val('')));
         $("#addProList").on('click', () => post_func('multi_add', $("#proList").val(), is_ioi_mode ? parseInt($("#proListScoreType").val(), 10) : null, () => $("#proList").val('')));
         $("#removeProList").on('click', () => post_func('multi_remove', $("#proList").val(), null, () => $("#proList").val('')));
     }
@@ -159,7 +159,7 @@
                     <form id="form">
                         <label for="#name" class="form-label">Problem ID (Single)</label>
                         <div class="input-group mb-1">
-                            <input type="number" class="form-control" placeholder="pro id" id="proId">
+                            <input type="number" class="form-control" placeholder="pro id" id="pro_id">
                             {% if contest.contest_mode == ContestMode.IOI %}
                             <select class="form-select" id="proScoreType" style="max-width: 150px;">
                                 <option value="{{ ProblemScoreType.IOI2017 }}">IOI2017</option>

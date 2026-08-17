@@ -1,15 +1,10 @@
 import json
 import decimal
 import asyncio
-import smtplib
 import logging
-from email.header import Header
-from email.mime.text import MIMEText
-from typing import Dict, List, Literal, Union
 
 from tornado.websocket import websocket_connect
 
-import config
 from services.rate import RateService
 from services.log import LogService
 
@@ -251,11 +246,11 @@ class JudgeServerService:
 
 
 class JudgeServerClusterService:
-    def __init__(self, rs, server_urls: List[Dict]) -> None:
+    def __init__(self, rs, server_urls: list[dict]) -> None:
         JudgeServerClusterService.inst = self
         self.queue = asyncio.PriorityQueue()
         self.rs = rs
-        self.servers: List[JudgeServerService] = []
+        self.servers: list[JudgeServerService] = []
         self.idx = 0
 
         for judge_id, server in enumerate(server_urls):
@@ -295,7 +290,7 @@ class JudgeServerClusterService:
                 return ('Ejudge', 'Connect judge failed')
 
         await self.queue.put([0, idx])
-        return ('S', '')
+        return None
 
     async def disconnect_server(self, idx):
         if idx < 0 or idx >= len(self.servers):
@@ -304,7 +299,7 @@ class JudgeServerClusterService:
         if err := await self.servers[idx].disconnect_server():
             return err
 
-        return ('S', '')
+        return None
 
     async def disconnect_all_server(self) -> None:
         for server in self.servers:
@@ -313,13 +308,13 @@ class JudgeServerClusterService:
 
     def get_server_status(self, idx):
         if idx < 0 or idx >= len(self.servers):
-            return ('Eparam', 'Invalid judge index')
+            return ('Eparam', 'Invalid judge index'), None
 
         _, status = self.servers[idx].get_server_status()
         return None, status
 
-    def get_servers_status(self) -> List[Dict]:
-        status_list: List[Dict] = []
+    def get_servers_status(self) -> list[dict]:
+        status_list: list[dict] = []
         for server in self.servers:
             _, status = server.get_server_status()
             status_list.append(status)

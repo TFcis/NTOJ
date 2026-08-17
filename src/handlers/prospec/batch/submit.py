@@ -203,7 +203,11 @@ class BatchSubmitHandler(RequestHandler):
                 allow_statuses = ProConst.PRO_STATUS_KERNEL_USER
 
             err, _ = await ChalService.inst.reset_chal(chal_id)
+            if err:
+                return self.error(err)
             err, chal = await ChalService.inst.get_chal(chal_id)
+            if err:
+                return self.error(err)
 
             pro_id = chal.pro_id
             compiler_type = chal.compiler_type

@@ -1,5 +1,5 @@
 from tests.integrated.util import AsyncTest, AccountContext
-from services.pro import ProConst, CheckerType
+from services.pro import ProConst
 
 
 class UserRankTest(AsyncTest):

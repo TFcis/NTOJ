@@ -2,11 +2,11 @@
 {% block head %}
 <script type="text/javascript" id="contjs">
     function init() {
-	    var j_form = $('#form');
+        var j_form = $('#form');
 
-	    j_form.find('#submit').on('click', function(e) {
-	        let name = j_form.find('#name').val();
-	        let status = j_form.find('#status').val();
+        j_form.find('#submit').on('click', function(e) {
+            let name = j_form.find('#name').val();
+            let status = j_form.find('#status').val();
             let mode = j_form.find("#mode").val();
             let files = null;
 
@@ -26,7 +26,7 @@
                     res = JSON.parse(res);
                     if (res.status == 'S') {
                         index.show_notify_dialog('Update Successfully', index.DIALOG_TYPE.success);
-                        index.go(`{{ url('/manage/pro/update/?proid=${res.data}') }}`);
+                        index.go(`{{ url('/manage/pro/update/?pro_id=${res.data}') }}`);
                     } else {
                         index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
                     }
@@ -53,11 +53,11 @@
                 _update(null);
             }
 
-	    });
+        });
 
-	    j_form.find('#cancel').on('click', function(e) {
-	        index.go(`{{ url('/manage/pro/') }}`);
-	    });
+        j_form.find('#cancel').on('click', function(e) {
+            index.go(`{{ url('/manage/pro/') }}`);
+        });
 
         j_form.find("#mode").on('change', function(e) {
             if ($(this).val() == "upload") {

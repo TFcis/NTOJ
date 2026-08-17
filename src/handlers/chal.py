@@ -24,7 +24,6 @@ from services.pro import ProService, ProConst
 from services.user import UserService, UserConst
 from services.contests import UserStatus, ContestService, ChallengeResultStyle
 from services.rate import RateService
-from services.log import LogService
 from utils.numeric import parse_str_to_list
 
 chal_dispatcher = ActionDispatcher()
@@ -61,7 +60,7 @@ class _Encoder(json.JSONEncoder):
 class ChalListStateCallback:
     """Callback for challenge list state updates
 
-    Manages per-connection state for filtering challenge updates by chalids
+    Manages per-connection state for filtering challenge updates by chal_ids
     and user permissions.
     """
 
@@ -153,8 +152,8 @@ class ChalListStateCallback:
         """Called when a connection unsubscribes from challiststatesub"""
         self.conn_state.pop(conn, None)
 
-    async def init(self, conn, chalids: list[int]):
-        """Initialize connection state with chalids and user permissions
+    async def init(self, conn, chal_ids: list[int]):
+        """Initialize connection state with chal_ids and user permissions
 
         This should be called from the challiststatesub_init message handler.
         """
@@ -164,7 +163,7 @@ class ChalListStateCallback:
             }
 
         state = self.conn_state[conn]
-        for chal_id in chalids:
+        for chal_id in chal_ids:
             err, chal = await ChalService.inst.get_chal(chal_id, with_result=False)
             if err:
                 state['chals'][chal_id] = None
@@ -187,9 +186,9 @@ class ChalListStateCallback:
         if msg_type == "challiststatesub_init":
             try:
                 init_data = json.loads(msg_data)
-                chalids = init_data.get("chalids", [])
+                chal_ids = init_data.get("chal_ids", [])
 
-                await self.init(conn, chalids)
+                await self.init(conn, chal_ids)
                 return True  # Handled
             except Exception as e:
                 return True  # Handled (but failed)
@@ -593,8 +592,8 @@ class ChalListHandler(RequestHandler):
         except ValueError:
             return self.error(("Eparam", "Invalid compiler type"))
 
-        ppro_id = self.get_argument("proid", default="")
-        pacct_id = self.get_argument("acctid", default="")
+        ppro_id = self.get_argument("pro_id", default="")
+        pacct_id = self.get_argument("acct_id", default="")
 
 
         query_pros = self._parse_problem_filter(ppro_id)

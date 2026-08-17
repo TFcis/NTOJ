@@ -5,80 +5,80 @@
 <link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
 
 <script type="text/javascript" id="contjs">
-	function init() {
-		let pro_id = "{{ pro_id }}";
-		let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    function init() {
+        let pro_id = "{{ pro_id }}";
+        let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
         let add_single_file_modal = new bootstrap.Modal(document.getElementById('addSingleFileModal'));
 
-		document.querySelectorAll('a.preview-file').forEach(el => {
-			el.addEventListener('click', function (e) {
-				let tr = $(this).parents('tr');
+        document.querySelectorAll('a.preview-file').forEach(el => {
+            el.addEventListener('click', function (e) {
+                let tr = $(this).parents('tr');
                 let testdata_id = tr.attr('testdata_id');
                 let name = $(this).text();
                 let type = '';
-				if ($(this).hasClass('input')) {
-					type = 'input';
-				} else {
-					type = 'output';
-				}
+                if ($(this).hasClass('input')) {
+                    type = 'input';
+                } else {
+                    type = 'output';
+                }
 
-				let file_content = '';
-				$.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
-					'reqtype': 'preview',
-					'pro_id': pro_id,
+                let file_content = '';
+                $.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
+                    'reqtype': 'preview',
+                    'pro_id': pro_id,
                     'testdata_id': testdata_id,
-					'type': type,
-				}, function (res) {
+                    'type': type,
+                }, function (res) {
                     res = JSON.parse(res);
                     file_content = res.data;
 
-					$("#code").find("code").html(file_content);
+                    $("#code").find("code").html(file_content);
                     $("#preview-title").text(`${name}`);
                     $("#preview-title").attr("testdata_id", testdata_id);
                     $("#preview-title").attr("testdata_type", type);
                     Prism.highlightAll();
-					preview_modal.show();
-				});
-			});
-		});
+                    preview_modal.show();
+                });
+            });
+        });
 
         $("#previewModal").find("button.download").on('click', function(e) {
             let testdata_id = $("#preview-title").attr("testdata_id");
             let type = $("#preview-title").attr("testdata_type");
 
             let url = "{{ url('/be/manage/pro/updatetestdata') }}";
-            window.open(`${url}?proid=${pro_id}&download=1&testdata_id=${testdata_id}&type=${type}`);
+            window.open(`${url}?pro_id=${pro_id}&download=1&testdata_id=${testdata_id}&type=${type}`);
         });
 
-		document.querySelectorAll('button.delete-single-file').forEach(el => {
-			el.addEventListener('click', function (e) {
+        document.querySelectorAll('button.delete-single-file').forEach(el => {
+            el.addEventListener('click', function (e) {
                 if (!confirm('Are you sure to delete this testdata?')) {
                     return;
                 }
-				let testdata_id = $(this).parents('tr').attr('testdata_id');
+                let testdata_id = $(this).parents('tr').attr('testdata_id');
 
-				$.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
-					'reqtype': 'deletesinglefile',
-					'pro_id': pro_id,
+                $.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
+                    'reqtype': 'deletesinglefile',
+                    'pro_id': pro_id,
                     'testdata_id': testdata_id,
-				}, function (res) {
-					let msg = '';
-					let dialog_type = null;
+                }, function (res) {
+                    let msg = '';
+                    let dialog_type = null;
 
                     res = JSON.parse(res);
                     if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
+                        dialog_type = index.DIALOG_TYPE.success;
                         msg = `Delete Testdata ${parseInt(testdata_id) + 1} successfully.`;
                     } else {
                         dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
-					index.show_notify_dialog(msg, dialog_type);
+                    index.show_notify_dialog(msg, dialog_type);
                     index.reload();
-				});
-			});
-		});
+                });
+            });
+        });
 
         let j_add_single_file = $("#addSingleFileModal");
         $("button.add-single-file").on('click', function(e) {
@@ -93,31 +93,31 @@
         });
 
         j_add_single_file.find("button.upload").on('click', function(e) {
-			function _update(input_pack_token, output_pack_token, filename) {
-				$.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
-					'reqtype': 'addsinglefile',
-					'input_pack_token': input_pack_token,
-					'output_pack_token': output_pack_token,
-					'pro_id': pro_id,
+            function _update(input_pack_token, output_pack_token, filename) {
+                $.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
+                    'reqtype': 'addsinglefile',
+                    'input_pack_token': input_pack_token,
+                    'output_pack_token': output_pack_token,
+                    'pro_id': pro_id,
                     'filename': filename,
-				}, function (res) {
+                }, function (res) {
                     index.remove_progress_bar();
                     let msg = '';
-					let dialog_type = null;
+                    let dialog_type = null;
 
                     res = JSON.parse(res);
                     if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
+                        dialog_type = index.DIALOG_TYPE.success;
                         msg = `Upload single file successfully`;
                     } else {
                         dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
-					index.show_notify_dialog(msg, dialog_type);
+                    index.show_notify_dialog(msg, dialog_type);
                     index.reload();
-				});
-			}
+                });
+            }
             add_single_file_modal.hide();
 
             let filename = j_add_single_file.find("input.filename").val();
@@ -163,68 +163,68 @@
             });
         });
 
-		document.querySelectorAll('button.update-single-file').forEach(el => {
-			let type = null;
-			let j_input = $(el).siblings('input');
+        document.querySelectorAll('button.update-single-file').forEach(el => {
+            let type = null;
+            let j_input = $(el).siblings('input');
 
             function _update(pack_token, testdata_id, group_idx) {
-				$.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
+                $.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
                     'reqtype': 'updatesinglefile',
-					'pack_token': pack_token,
-					'pro_id': pro_id,
+                    'pack_token': pack_token,
+                    'pro_id': pro_id,
                     'testdata_id': testdata_id,
-					'type': type,
-				}, function (res) {
+                    'type': type,
+                }, function (res) {
                     index.remove_progress_bar();
                     let msg = '';
-					let dialog_type = null;
+                    let dialog_type = null;
 
                     res = JSON.parse(res);
                     if (res.status == 'S') {
-						dialog_type = index.DIALOG_TYPE.success;
+                        dialog_type = index.DIALOG_TYPE.success;
                         msg = `Update Testdata ${parseInt(testdata_id) + 1} with ${type} successfully.`;
                     } else {
                         dialog_type = index.DIALOG_TYPE.error;
                         msg = res.data;
                     }
 
-					index.show_notify_dialog(msg, dialog_type);
+                    index.show_notify_dialog(msg, dialog_type);
                     index.reload();
-				});
-			}
+                });
+            }
 
-			el.addEventListener('click', function (e) {
-				j_input.click();
-				if ($(this).hasClass('input')) {
-					type = 'input';
-				} else {
-					type = 'output';
-				}
-				e.preventDefault();
-				e.stopPropagation();
-			});
+            el.addEventListener('click', function (e) {
+                j_input.click();
+                if ($(this).hasClass('input')) {
+                    type = 'input';
+                } else {
+                    type = 'output';
+                }
+                e.preventDefault();
+                e.stopPropagation();
+            });
 
-			j_input.on('change', function (e) {
-				if (e.target.files.length == 0) {
-					return;
-				}
+            j_input.on('change', function (e) {
+                if (e.target.files.length == 0) {
+                    return;
+                }
 
                 let testdata_id = $(this).parents('tr').attr('testdata_id');
-				let group = $(this).parents('.accordion-collapse').attr('group');
-				let file = e.target.files[0];
-				pack.get_token().done(function(token) {
-					index.create_progress_bar('Uploading...');
+                let group = $(this).parents('.accordion-collapse').attr('group');
+                let file = e.target.files[0];
+                pack.get_token().done(function(token) {
+                    index.create_progress_bar('Uploading...');
 
-					pack.send(token, file).done(function () {
-						index.update_progress_bar_progress(100);
-						_update(token, testdata_id, group);
-						j_input.val(''); // for the same file upload
+                    pack.send(token, file).done(function () {
+                        index.update_progress_bar_progress(100);
+                        _update(token, testdata_id, group);
+                        j_input.val(''); // for the same file upload
 
-					}).progress(function(prog) {
-						index.update_progress_bar_progress(prog * 100);
-					});
-				});
-			});
+                    }).progress(function(prog) {
+                        index.update_progress_bar_progress(prog * 100);
+                    });
+                });
+            });
         });
 
         document.querySelectorAll('button.update-metadata-tags').forEach(el => {
@@ -261,37 +261,37 @@
 
 {% block content %}
 <div class="modal fade" id="previewModal" aria-hidden="true">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-content">
-			<div class="modal-header">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title" id="preview-title">Preview Testdata File</h5>
-			</div>
+            </div>
 
-			<div class="modal-body">
-				<pre id="code"
-					data-language="markup"
-					data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"
-				>
-					<code class="language-markup"></code>
-				</pre>
-			</div>
+            <div class="modal-body">
+                <pre id="code"
+                    data-language="markup"
+                    data-prismjs-copy="Copy" data-prismjs-copy-error="Copy Failed!!!" data-prismjs-copy-success="Copy Success!!!"
+                >
+                    <code class="language-markup"></code>
+                </pre>
+            </div>
 
-			<div class="modal-footer">
-				<button class="btn btn-primary download">Download</button>
-			</div>
-		</div>
+            <div class="modal-footer">
+                <button class="btn btn-primary download">Download</button>
+            </div>
+        </div>
 
-	</div>
+    </div>
 </div>
 
 <div class="modal fade" id="addSingleFileModal" aria-hidden="true">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="preview-title">Add Single File</h5>
-			</div>
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="preview-title">Add Single File</h5>
+            </div>
 
-			<div class="modal-body">
+            <div class="modal-body">
                 <form>
                     <label for="" class="form-label">Filename</label>
                     <input class="form-control filename" type="text">
@@ -300,15 +300,15 @@
                     <label for="" class="form-label">Output File</label>
                     <input type="file" class="form-control outputfile">
                 </form>
-			</div>
+            </div>
 
-			<div class="modal-footer">
-				<button class="btn btn-primary upload">Upload</button>
-				<button class="btn btn-secondary cancel">Cancel</button>
-			</div>
-		</div>
+            <div class="modal-footer">
+                <button class="btn btn-primary upload">Upload</button>
+                <button class="btn btn-secondary cancel">Cancel</button>
+            </div>
+        </div>
 
-	</div>
+    </div>
 </div>
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">

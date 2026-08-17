@@ -14,7 +14,7 @@ class ManageProSubtaskHandler(RequestHandler):
     @require_permission(UserConst.ACCTTYPE_KERNEL)
     async def get(self):
         try:
-            pro_id = int(self.get_argument("proid"))
+            pro_id = int(self.get_argument("pro_id"))
         except ValueError:
             return self.error(("Eparam", "Invalid problem ID"))
 
@@ -206,7 +206,7 @@ class ManageProSubtaskHandler(RequestHandler):
         except ValueError:
             return self.error(("Eparam", "Invalid problem ID"))
         try:
-            testdata_id = int(self.get_argument("testdata_id"))
+            subtask_id = int(self.get_argument("subtask"))
         except ValueError:
             return self.error(("Eparam", "Invalid testdata ID"))
         tags_str = self.get_argument("tags", default="").strip()

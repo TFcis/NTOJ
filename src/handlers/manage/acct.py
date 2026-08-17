@@ -1,5 +1,4 @@
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
-from services.log import LogService
 from services.user import UserConst, UserService
 
 from ipaddress import IPv4Address, AddressValueError
@@ -36,7 +35,7 @@ class ManageAcctHandler(RequestHandler):
 
         elif page == "update":
             try:
-                acct_id = int(self.get_argument("acctid"))
+                acct_id = int(self.get_argument("acct_id"))
             except ValueError:
                 return self.error(("Eparam", "Invalid account ID"))
 

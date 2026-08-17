@@ -9,23 +9,23 @@
 {% from services.pro import ProClassConst %}
 
 <div class="col-10 ms-lg-2 mt-lg-2">
-	<table class="table">
-		<thead>
-			<tr>
-				<td scope="col">#</td>
-				<td scope="">Name</td>
+    <table class="table">
+        <thead>
+            <tr>
+                <td scope="col">#</td>
+                <td scope="">Name</td>
                 <td>Type</td>
-				<td>
+                <td>
                     <a class="btn btn-primary" href="{{ url('/manage/proclass/add/') }}">&#x271a</a>
-				</td>
-			</tr>
-		</thead>
+                </td>
+            </tr>
+        </thead>
 
-		<tbody>
+        <tbody>
         {% for proclass in proclass_list %}
             <tr>
                 <th scope="row">{{ proclass['proclass_id'] }}</th>
-				<td>{{ proclass['name'] }}</td>
+                <td>{{ proclass['name'] }}</td>
                 {% set t = "" %}
                 {% if proclass['type'] == ProClassConst.OFFICIAL_PUBLIC %}
                     {% set t = "Public" %}
@@ -34,12 +34,12 @@
                 {% end %}
                 <td>{{ t }}</td>
                 <td>
-                    <a class="btn btn-secondary" href="{{ url(f'/manage/proclass/update/?proclassid={ proclass['proclass_id'] }') }}">&#x2699</a>
+                    <a class="btn btn-secondary" href="{{ url(f'/manage/proclass/update/?proclass_id={ proclass['proclass_id'] }') }}">&#x2699</a>
                 </td>
             </tr>
-		{% end %}
-		</tbody>
-	</table>
+        {% end %}
+        </tbody>
+    </table>
 
     {% set postfix = '' %}
 

@@ -41,7 +41,7 @@ h3{color:#fcfaf2}
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
-		            $('#signin div.print').print('Success, reloading...', true);
+                    $('#signin div.print').print('Success, reloading...', true);
 
                     if (index.prev_url == null) {
                         location.href = `{{ url('/info/') }}`;
@@ -73,16 +73,16 @@ h3{color:#fcfaf2}
         });
 
         $('#signup').find('button.submit').on('click', function(e) {
-	        let j_signup = $('#signup');
+            let j_signup = $('#signup');
             let name = j_signup.find('input.name').val();
             let mail = j_signup.find('input.mail').val();
             let pw = j_signup.find('input.pw').val();
             let repeat = j_signup.find('input.repeat').val();
 
-	        if(pw != repeat) {
+            if(pw != repeat) {
                 index.show_notify_dialog('Repeat password incorrect', index.DIALOG_TYPE.warning);
-		        return;
-	        }
+                return;
+            }
 
             $.post(`{{ url('/be/sign') }}`, {
                 'reqtype': 'signup',
@@ -115,7 +115,7 @@ h3{color:#fcfaf2}
     <div id="intro" class="col-lg-5"></div>
     <div id="sign" class="col-lg-3">
         <form id="signin">
-            <label class="form-label">登入</label>
+            <label class="form-label">Login</label>
             <div class="mb-1">
                 <input class="mail form-control" type="text" tabindex=1 placeholder="mail" autocomplete="email" />
             </div>
@@ -130,26 +130,26 @@ h3{color:#fcfaf2}
                 </div>
             </div>
 
-            <button class="btn btn-success submit" tabindex=3 type="button">登入</button>
+            <button class="btn btn-success submit" tabindex=3 type="button">Login</button>
 
             <div class="print"></div>
             <div style="margin-top:64px;">
-                <label class="form-label">註冊</label>
+                <label class="form-label">Register</label>
                 <br>
-                <button class="btn btn-primary signup" tabindex=8 type="button">註冊</button>
+                <button class="btn btn-primary signup" tabindex=8 type="button">Register</button>
             </div>
         </form>
 
         <form id="signup" style="display:none;">
-            <h3>註冊</h3>
+            <h3>Register</h3>
             <input class="name form-control" type="text" tabindex=4 placeholder="name">
             <input class="mail form-control" type="text" tabindex=5 placeholder="mail">
             <input class="pw form-control" type="password" tabindex=6 placeholder="password">
             <input class="repeat form-control" type="password" tabindex=7 placeholder="repeat">
 
             <div class="mb-1">
-                <button class="btn btn-primary submit" tabindex=8 type="button">註冊</button>
-                <button class="btn btn-secondary cancel" type="button">取消</button>
+                <button class="btn btn-primary submit" tabindex=8 type="button">Register</button>
+                <button class="btn btn-secondary cancel" type="button">Cancel</button>
             </div>
         </form>
     </div>

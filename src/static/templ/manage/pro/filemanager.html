@@ -20,9 +20,9 @@
 <script src="{{ url('/src/third/ace/ace.js') }}"></script>
 
 <script type="text/javascript" id="contjs">
-	function init() {
-		let pro_id = "{{ pro_id }}";
-		let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    function init() {
+        let pro_id = "{{ pro_id }}";
+        let preview_modal = new bootstrap.Modal(document.getElementById('previewModal'));
         let add_single_file_modal = new bootstrap.Modal(document.getElementById('addSingleFileModal'));
         let aceEditor = null;
         let isEditorModified = false;
@@ -54,19 +54,19 @@
             });
         };
 
-		document.querySelectorAll('a.preview-file').forEach(el => {
-			el.addEventListener('click', function (e) {
-				let tr = $(this).parents('tr');
+        document.querySelectorAll('a.preview-file').forEach(el => {
+            el.addEventListener('click', function (e) {
+                let tr = $(this).parents('tr');
                 let path = $(this).parents('.accordion-collapse').attr('path');
-				let filename = tr.attr('filename');
+                let filename = tr.attr('filename');
 
-				let file_content = '';
-				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
-					'reqtype': 'preview',
-					'pro_id': pro_id,
+                let file_content = '';
+                $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
+                    'reqtype': 'preview',
+                    'pro_id': pro_id,
                     'filename': filename,
                     'path': path,
-				}, function (res) {
+                }, function (res) {
                     res = JSON.parse(res);
                     file_content = res.data;
 
@@ -96,7 +96,7 @@
                     $("#preview-title").attr("filename", filename);
                     $("#preview-title").attr("path", path);
                     Prism.highlightAll();
-					preview_modal.show();
+                    preview_modal.show();
                     if (!aceEditor) {
                         aceEditor = ace.edit("editor");
                         aceEditor.setTheme("ace/theme/twilight");
@@ -105,16 +105,16 @@
                     aceEditor.session.setMode("ace/mode/" + lang);
                     aceEditor.setValue(file_content, -1);
                     isEditorModified = false;
-				});
-			});
-		});
+                });
+            });
+        });
 
         $("#previewModal").find("button.download").on('click', function(e) {
             let filename = $("#preview-title").attr("filename");
             let path = $("#preview-title").attr("path");
 
-			let url = "{{ url('/be/manage/pro/filemanager') }}";
-            window.open(`${url}?proid=${pro_id}&download=1&filename=${filename}&path=${path}`);
+            let url = "{{ url('/be/manage/pro/filemanager') }}";
+            window.open(`${url}?pro_id=${pro_id}&download=1&filename=${filename}&path=${path}`);
         });
 
         $("#previewModal").find("button.save").on('click', function(e) {
@@ -143,7 +143,7 @@
                     index.reload();
                 });
             });
-		});
+        });
 
         $('#keybindingSelect').on('change', function(e) {
             const kb = $(this).val();
@@ -181,48 +181,48 @@
             }
         });
 
-		document.querySelectorAll('button.rename-single-file').forEach(el => {
-			el.addEventListener('click', function (e) {
+        document.querySelectorAll('button.rename-single-file').forEach(el => {
+            el.addEventListener('click', function (e) {
                 let path = $(this).parents('.accordion-collapse').attr('path');
-				let old_filename = $(this).parents('tr').attr('filename');
+                let old_filename = $(this).parents('tr').attr('filename');
                 let new_filename = prompt('New filename', old_filename);
 
-				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
-					'reqtype': 'renamesinglefile',
-					'pro_id': pro_id,
+                $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
+                    'reqtype': 'renamesinglefile',
+                    'pro_id': pro_id,
                     'old_filename': old_filename,
                     'new_filename': new_filename,
                     'path': path,
-				}, function (res) {
+                }, function (res) {
                     handleApiResponse(res,
                         (r) => `Rename ${old_filename} to ${new_filename} successfully.`
                     );
                     index.reload();
-				});
-			});
+                });
+            });
         });
 
-		document.querySelectorAll('button.delete-single-file').forEach(el => {
-			el.addEventListener('click', function (e) {
+        document.querySelectorAll('button.delete-single-file').forEach(el => {
+            el.addEventListener('click', function (e) {
                 if (!confirm('Are you sure to delete this file?')) {
                     return;
                 }
                 let path = $(this).parents('.accordion-collapse').attr('path');
-				let filename = $(this).parents('tr').attr('filename');
+                let filename = $(this).parents('tr').attr('filename');
 
-				$.post(`{{ url('/be/manage/pro/filemanager') }}`, {
-					'reqtype': 'deletesinglefile',
-					'pro_id': pro_id,
+                $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
+                    'reqtype': 'deletesinglefile',
+                    'pro_id': pro_id,
                     'filename': filename,
                     'path': path,
-				}, function (res) {
+                }, function (res) {
                     handleApiResponse(res,
                         (r) => `Delete ${filename} successfully.`
                     );
                     index.reload();
-				});
-			});
-		});
+                });
+            });
+        });
 
         let j_add_single_file = $("#addSingleFileModal");
         $("button.add-single-file").on('click', function(e) {
@@ -237,6 +237,8 @@
         });
 
         j_add_single_file.find("button.upload").on('click', function(e) {
+            add_single_file_modal.hide();
+
             let path = j_add_single_file.attr('path');
             let filename = j_add_single_file.find("input.filename").val();
             if (filename.length == 0) {
@@ -251,7 +253,6 @@
                 return;
             }
             let file = files[0];
-            add_single_file_modal.hide();
 
             uploadFile(file, 'File Uploading...', function(token) {
                 $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
@@ -271,24 +272,24 @@
             });
         });
 
-		document.querySelectorAll('button.update-single-file').forEach(el => {
-			let j_input = $(el).siblings('input');
+        document.querySelectorAll('button.update-single-file').forEach(el => {
+            let j_input = $(el).siblings('input');
             let path = $(el).parents('.accordion-collapse').attr('path');
 
-			el.addEventListener('click', function (e) {
-				j_input.click();
-				e.preventDefault();
-				e.stopPropagation();
-			});
+            el.addEventListener('click', function (e) {
+                j_input.click();
+                e.preventDefault();
+                e.stopPropagation();
+            });
 
-			j_input.on('change', function (e) {
-				if (e.target.files.length == 0) {
-					return;
-				}
+            j_input.on('change', function (e) {
+                if (e.target.files.length == 0) {
+                    return;
+                }
 
-				let filename = $(this).parents('tr').attr('filename');
-				let file = e.target.files[0];
-				uploadFile(file, 'Uploading...', function(token) {
+                let filename = $(this).parents('tr').attr('filename');
+                let file = e.target.files[0];
+                uploadFile(file, 'Uploading...', function(token) {
                     $.post(`{{ url('/be/manage/pro/filemanager') }}`, {
                         'reqtype': 'updatesinglefile',
                         'pack_token': token,
@@ -303,22 +304,22 @@
                         j_input.val(''); // for the same file upload
                         index.reload();
                     });
-				});
-			});
-		});
-	}
+                });
+            });
+        });
+    }
 </script>
 {% end %}
 
 {% block content %}
 <div class="modal fade" id="previewModal" aria-hidden="true">
-	<div class="modal-dialog modal-lg modal-dialog-scrollable">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="preview-title">Preview File</h5>
-			</div>
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="preview-title">Preview File</h5>
+            </div>
 
-			<div class="modal-body">
+            <div class="modal-body">
                 <div style="position: relative;">
                     <select id="keybindingSelect">
                         <option value="ace">Default</option>
@@ -344,74 +345,74 @@
                     <option value="sh">Shell Script</option>
                     <option value="text">Plain Text</option>
                 </select>
-			</div>
+            </div>
 
-			<div class="modal-footer">
-				<button class="btn btn-primary download">Download</button>
+            <div class="modal-footer">
+                <button class="btn btn-primary download">Download</button>
                 <button class="btn btn-primary save">Save</button>
-			</div>
-		</div>
-	</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="addSingleFileModal" aria-hidden="true">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="preview-title">Add Single File</h5>
-			</div>
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="preview-title">Add Single File</h5>
+            </div>
 
-			<div class="modal-body">
+            <div class="modal-body">
                 <form>
                     <label for="" class="form-label">Filename</label>
                     <input class="form-control filename" type="text">
                     <label for="" class="form-label">File</label>
                     <input type="file" class="form-control file">
                 </form>
-			</div>
+            </div>
 
-			<div class="modal-footer">
-				<button class="btn btn-primary upload">Upload</button>
-				<button class="btn btn-secondary cancel">Cancel</button>
-			</div>
-		</div>
+            <div class="modal-footer">
+                <button class="btn btn-primary upload">Upload</button>
+                <button class="btn btn-secondary cancel">Cancel</button>
+            </div>
+        </div>
 
-	</div>
+    </div>
 </div>
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
-	<div class="accordion" id="dirs">
-	{% for dir_idx, dir in enumerate(dirs) %}
-		<div class="accordion-item">
-			<h2 class="accordion-header">
-					<button
-						class="accordion-button collapsed"
-						type="button"
-						data-bs-toggle="collapse"
-						data-bs-target="#collapse{{ dir_idx }}"
-						aria-expanded="true"
-						aria-controls="collapseOne"
-					>
+    <div class="accordion" id="dirs">
+    {% for dir_idx, dir in enumerate(dirs) %}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                    <button
+                        class="accordion-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapse{{ dir_idx }}"
+                        aria-expanded="true"
+                        aria-controls="collapseOne"
+                    >
                         {{ f"problem/{pro_id}/{dir['path']}" }}
-					</button>
-			</h2>
+                    </button>
+            </h2>
             <div id="collapse{{ dir_idx }}" class="accordion-collapse collapse" data-bs-parent="#tests" path="{{ dir['path'] }}">
-				<div class="accordion-body">
+                <div class="accordion-body">
                     <button class="btn btn-primary add-single-file" path="{{ dir['path'] }}">Add Single File</button>
 
-					<table class="table table-hover table-sm table-responsive-sm my-3">
-						<thead>
-							<tr>
-								<th scope="col">#</th>
+                    <table class="table table-hover table-sm table-responsive-sm my-3">
+                        <thead>
+                            <tr>
+                                <th scope="col">#</th>
                                 <th scope="col">Filename</th>
-								<th scope="col">Operation</th>
-							</tr>
-						</thead>
+                                <th scope="col">Operation</th>
+                            </tr>
+                        </thead>
 
-						<tbody>
-							{% for file_idx, filename in enumerate(dir['files']) %}
+                        <tbody>
+                            {% for file_idx, filename in enumerate(dir['files']) %}
                                 <tr idx="{{ file_idx }}" filename="{{ filename }}">
-									<th scope="row">{{ file_idx + 1 }}</th>
+                                    <th scope="row">{{ file_idx + 1 }}</th>
                                     <td><a class="preview-file">{{ filename }}</a></td>
                                     <td>
                                         <div class="btn-toolbar">
@@ -421,14 +422,14 @@
                                             <button class="btn btn-secondary me-2 rename-single-file">Rename</button>
                                         </div>
                                     </td>
-								</tr>
-							{% end %}
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</div>
-	{% end %}
-	</div>
+                                </tr>
+                            {% end %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% end %}
+    </div>
 </div>
 {% end %}

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import datetime
 import enum
 import decimal
-from typing import Sequence
+from collections.abc import Sequence
 import logging
 
 from services.pro import ProService, ProConst, ProblemConfig
@@ -425,7 +425,7 @@ class ChalService:
 
         return ('Eunk', 'Unsupported problem type'), None
 
-    async def reset_chal(self, chal_id: int) -> tuple[None | str, None | str]:
+    async def reset_chal(self, chal_id: int) -> tuple[None, None] | ErrorType:
         # TODO: docstring
         """
 
@@ -466,7 +466,7 @@ class ChalService:
                     )
         except Exception as e:
             logger.error(f"Error resetting challenge {chal_id}: {e}", exc_info=True)
-            return ('Eunk', 'Unknown error')
+            return ('Eunk', 'Unknown error'), None
 
         return None, None
 

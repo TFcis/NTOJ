@@ -1,5 +1,4 @@
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
-from services.log import LogService
 from services.pro import ProClassService, ProClassConst
 from services.user import UserConst
 from utils.numeric import parse_str_to_list
@@ -46,7 +45,7 @@ class ManageProClassHandler(RequestHandler):
 
         elif page == "update":
             try:
-                proclass_id = int(self.get_argument("proclassid"))
+                proclass_id = int(self.get_argument("proclass_id"))
             except ValueError:
                 return self.error(("Eparam", "Invalid proclass ID"))
             _, proclass = await ProClassService.inst.get_proclass(proclass_id)
