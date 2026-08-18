@@ -20,6 +20,11 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
         self.spec = BatchProblemSpec()
         self.pro_id = 1
 
+    async def _unpack(self, *args):
+        backup = next(name for name in os.listdir('problem') if name.startswith('.backup-'))
+        shutil.copytree(f'problem/{backup}/original', f'problem/{self.pro_id}')
+        return None, None
+
     def tearDown(self):
         """Clean up test directory."""
         if os.path.exists(self.test_dir):
@@ -58,12 +63,12 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
 
         # Mock PackService
         mock_pack_service.inst = MagicMock()
-        mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))
+        mock_pack_service.inst.unpack = AsyncMock(side_effect=self._unpack)
         mock_pack_service.inst.clear = AsyncMock()
 
         # Mock ProService
         mock_pro_service.inst = MagicMock()
-        mock_pro_service.inst.update_pro_config = AsyncMock()
+        mock_pro_service.inst.update_pro_config = AsyncMock(return_value=(None, None))
 
         # Mock database and redis
         mock_db = MagicMock()
@@ -95,7 +100,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
             f.write('{ invalid json')
 
         mock_pack_service.inst = MagicMock()
-        mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))
+        mock_pack_service.inst.unpack = AsyncMock(side_effect=self._unpack)
         mock_pack_service.inst.clear = AsyncMock()
 
         mock_db = MagicMock()
@@ -131,7 +136,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
         self._create_test_package(self.pro_id, config_data)
 
         mock_pack_service.inst = MagicMock()
-        mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))
+        mock_pack_service.inst.unpack = AsyncMock(side_effect=self._unpack)
         mock_pack_service.inst.clear = AsyncMock()
 
         mock_db = MagicMock()
@@ -144,7 +149,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
         try:
             with patch('services.pro.ProService') as mock_pro_service:
                 mock_pro_service.inst = MagicMock()
-                mock_pro_service.inst.update_pro_config = AsyncMock()
+                mock_pro_service.inst.update_pro_config = AsyncMock(return_value=(None, None))
 
                 err, _ = await self.spec.unpack_pro(mock_db, mock_rs, self.pro_id, 'test_token')
 
@@ -189,7 +194,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
         self._create_test_package(self.pro_id, config_data)
 
         mock_pack_service.inst = MagicMock()
-        mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))
+        mock_pack_service.inst.unpack = AsyncMock(side_effect=self._unpack)
         mock_pack_service.inst.clear = AsyncMock()
 
         mock_db = MagicMock()
@@ -202,7 +207,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
         try:
             with patch('services.pro.ProService') as mock_pro_service:
                 mock_pro_service.inst = MagicMock()
-                mock_pro_service.inst.update_pro_config = AsyncMock()
+                mock_pro_service.inst.update_pro_config = AsyncMock(return_value=(None, None))
 
                 err, _ = await self.spec.unpack_pro(mock_db, mock_rs, self.pro_id, 'test_token')
 
@@ -241,7 +246,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
         self._create_test_package(self.pro_id, config_data)
 
         mock_pack_service.inst = MagicMock()
-        mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))
+        mock_pack_service.inst.unpack = AsyncMock(side_effect=self._unpack)
         mock_pack_service.inst.clear = AsyncMock()
 
         mock_db = MagicMock()
@@ -260,8 +265,8 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
             os.chdir(original_cwd)
 
     @patch('services.pack.PackService')
-    async def test_unpack_cleans_up_on_failure(self, mock_pack_service):
-        """Test that problem directory is cleaned up on failure."""
+    async def test_unpack_restores_existing_problem_on_failure(self, mock_pack_service):
+        """A rejected replacement must not delete the existing problem."""
         config_data = {
             'metadata': '',
             'check': 'diff',
@@ -272,7 +277,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
         pro_dir = self._create_test_package(self.pro_id, config_data)
 
         mock_pack_service.inst = MagicMock()
-        mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))
+        mock_pack_service.inst.unpack = AsyncMock(side_effect=self._unpack)
         mock_pack_service.inst.clear = AsyncMock()
 
         mock_db = MagicMock()
@@ -290,8 +295,9 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
             # Should clean up pack token
             mock_pack_service.inst.clear.assert_called_once_with('test_token')
 
-            # Problem directory should be removed on failure
-            self.assertFalse(os.path.exists(pro_dir))
+            # Restore an existing problem when its replacement fails.
+            self.assertTrue(os.path.exists(pro_dir))
+            self.assertEqual(os.listdir('problem'), [str(self.pro_id)])
         finally:
             os.chdir(original_cwd)
 
@@ -312,7 +318,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
         self._create_test_package(self.pro_id, config_data)
 
         mock_pack_service.inst = MagicMock()
-        mock_pack_service.inst.unpack = AsyncMock(return_value=(None, None))
+        mock_pack_service.inst.unpack = AsyncMock(side_effect=self._unpack)
         mock_pack_service.inst.clear = AsyncMock()
 
         mock_db = MagicMock()
@@ -325,7 +331,7 @@ class TestBatchUnpackPro(unittest.IsolatedAsyncioTestCase):
         try:
             with patch('services.pro.ProService') as mock_pro_service:
                 mock_pro_service.inst = MagicMock()
-                mock_pro_service.inst.update_pro_config = AsyncMock()
+                mock_pro_service.inst.update_pro_config = AsyncMock(return_value=(None, None))
 
                 err, _ = await self.spec.unpack_pro(mock_db, mock_rs, self.pro_id, 'test_token')
 

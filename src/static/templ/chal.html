@@ -224,10 +224,19 @@
             res = JSON.parse(res);
             if (res.status[0] == 'E') return;
 
-            let code = $("#code");
-            code.attr("data-language", res.data.compiler_type);
-            code.find("code").addClass(`language-${res.data.compiler_type}`);
-            code.find("code").html(res.data.code);
+            if (res.data.files) {
+                res.data.files.forEach(function(source, index) {
+                    let code = $(`[data-source-index="${index}"]`);
+                    code.attr("data-language", res.data.compiler_type);
+                    code.find("code").addClass(`language-${res.data.compiler_type}`);
+                    code.find("code").html(source.code);
+                });
+            } else {
+                let code = $("#code");
+                code.attr("data-language", res.data.compiler_type);
+                code.find("code").addClass(`language-${res.data.compiler_type}`);
+                code.find("code").html(res.data.code);
+            }
             Prism.highlightAll();
         });
 
@@ -551,10 +560,9 @@
 {# Include problem type-specific code display template #}
 {% from services.pro import ProType %}
 {% if pro.problem_type == ProType.BATCH %}
-    {% include 'prospec/batch/code.html' %}
+    {% include 'prospec/common/code.html' %}
 {% elif pro.problem_type == ProType.COMMUNICATION %}
-    {# Future: Communication code display #}
-    <div class="alert alert-warning">Communication problem code display not yet implemented</div>
+    {% include 'prospec/communication/code.html' %}
 {% elif pro.problem_type == ProType.TWOSTEP %}
     {# Future: TwoStep code display (two code sections) #}
     <div class="alert alert-warning">TwoStep problem code display not yet implemented</div>

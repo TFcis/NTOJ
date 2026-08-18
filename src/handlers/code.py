@@ -40,8 +40,11 @@ class CodeHandler(RequestHandler):
             handler._transforms = []
             return await handler.post()
         elif pro.problem_type == ProType.COMMUNICATION:
-            # Future: Communication code display
-            return self.error(('Enotsupport', 'Communication problem type not yet supported'))
+            from handlers.prospec.communication.code import CommunicationCodeHandler
+            handler = CommunicationCodeHandler(self.application, self.request, db=self.db, rs=self.rs)
+            handler.acct = self.acct
+            handler._transforms = []
+            return await handler.post()
         elif pro.problem_type == ProType.TWOSTEP:
             # Future: TwoStep code display (might show two code sections)
             return self.error(('Enotsupport', 'TwoStep problem type not yet supported'))

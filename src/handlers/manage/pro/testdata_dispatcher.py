@@ -25,9 +25,14 @@ class ManageProTestdataHandler(RequestHandler):
             handler._transforms = []
             return await handler.get()
         elif pro.problem_type == ProType.COMMUNICATION:
-            return self.error(
-                ("Enotsupport", "Communication problem type not yet supported")
+            from handlers.prospec.communication.testdata import CommunicationTestdataHandler
+
+            handler = CommunicationTestdataHandler(
+                self.application, self.request, db=self.db, rs=self.rs
             )
+            handler.acct = self.acct
+            handler._transforms = []
+            return await handler.get()
         elif pro.problem_type == ProType.TWOSTEP:
             return self.error(("Enotsupport", "TwoStep problem type not yet supported"))
         elif pro.problem_type == ProType.OUTPUTONLY:
@@ -58,9 +63,14 @@ class ManageProTestdataHandler(RequestHandler):
             handler._transforms = []
             return await handler.post()
         elif pro.problem_type == ProType.COMMUNICATION:
-            return self.error(
-                ("Enotsupport", "Communication problem type not yet supported")
+            from handlers.prospec.communication.testdata import CommunicationTestdataHandler
+
+            handler = CommunicationTestdataHandler(
+                self.application, self.request, db=self.db, rs=self.rs
             )
+            handler.acct = self.acct
+            handler._transforms = []
+            return await handler.post()
         elif pro.problem_type == ProType.TWOSTEP:
             return self.error(("Enotsupport", "TwoStep problem type not yet supported"))
         elif pro.problem_type == ProType.OUTPUTONLY:
