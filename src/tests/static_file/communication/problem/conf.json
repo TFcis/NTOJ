@@ -1,0 +1,17 @@
+{
+    "problem_type": "communication",
+    "timelimit": 200,
+    "memlimit": 262144,
+    "rate_precision": 2,
+    "check": "diff",
+    "communication_io_type": "fifo",
+    "num_processes": 1,
+    "manager_compiler": "g++",
+    "submission_format": ["main.%l"],
+    "test": [
+        {
+            "data": [1],
+            "weight": 100
+        }
+    ]
+}
