@@ -1,9 +1,11 @@
 import asyncio
+import json
 import os
 import uuid
 import shutil
 import logging
 import tempfile
+import tarfile
 
 logger = logging.getLogger("tornado.application")
 
@@ -57,6 +59,31 @@ class PackService:
         returncode = await process.wait()
 
         return returncode
+
+    async def read_json_from_archive(self, pack_token, filename):
+        """Read a root-level JSON file without consuming or extracting the archive."""
+        pack_token = str(uuid.UUID(pack_token))
+        if (await self.rs.exists(f'PACK_TOKEN@{pack_token}')) != 1:
+            return ('Enoext', 'Pack token not found'), None
+
+        try:
+            with tarfile.open(f'tmp/{pack_token}', mode='r:xz') as archive:
+                member = next(
+                    (
+                        item
+                        for item in archive.getmembers()
+                        if item.isfile() and item.name.removeprefix('./') == filename
+                    ),
+                    None,
+                )
+                if member is None:
+                    return ('Econf', f'Problem package missing {filename}'), None
+                fileobj = archive.extractfile(member)
+                if fileobj is None:
+                    return ('Econf', f'Unable to read {filename}'), None
+                return None, json.load(fileobj)
+        except (OSError, tarfile.TarError, json.JSONDecodeError, UnicodeDecodeError):
+            return ('Econf', f'Invalid {filename} in problem package'), None
 
     async def unpack(self, pack_token, dst, clean=False):
         pack_token = str(uuid.UUID(pack_token))

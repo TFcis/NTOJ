@@ -20,7 +20,7 @@ from services.chal import (
     MessageType,
     Challenge,
 )
-from services.pro import ProService, ProConst
+from services.pro import ProService, ProConst, ProType
 from services.user import UserService, UserConst
 from services.contests import UserStatus, ContestService, ChallengeResultStyle
 from services.rate import RateService
@@ -739,6 +739,21 @@ class ChalHandler(RequestHandler):
         if err:
             return self.error(err)
 
+        source_filenames = []
+        if pro.problem_type == ProType.COMMUNICATION:
+            from services.prospec.communication import (
+                CommunicationConfig,
+                communication_spec,
+            )
+            from services.prospec.program import get_submission_filenames
+
+            spec_config = pro.config.spec_config
+            assert isinstance(spec_config, CommunicationConfig)
+            source_ext = COMPILER_INFOS[chal.compiler_type].source_ext
+            source_filenames = get_submission_filenames(
+                communication_spec, spec_config, source_ext
+            )
+
         chal.compiler_type = COMPILER_INFOS[chal.compiler_type].version_name
 
         rechal = self.acct.is_kernel()
@@ -750,7 +765,16 @@ class ChalHandler(RequestHandler):
             for testdata in subtask_config.testdatas:
                 testdata_to_subtasks[testdata.testdata_id].append(subtask_config.subtask_id)
 
-        await self.render("chal", f"Challenge - {chal.chal_id}", pro=pro, chal=chal, contest=self.contest, rechal=rechal, testdata_to_subtasks=testdata_to_subtasks)
+        await self.render(
+            "chal",
+            f"Challenge - {chal.chal_id}",
+            pro=pro,
+            chal=chal,
+            contest=self.contest,
+            rechal=rechal,
+            testdata_to_subtasks=testdata_to_subtasks,
+            source_filenames=source_filenames,
+        )
         return
 
     @reqenv

@@ -2,9 +2,8 @@ from dataclasses import asdict
 import json
 
 from handlers.base import RequestHandler, reqenv, require_permission, ActionDispatcher
-from services.chal import Compiler
-from services.log import LogService
-from services.pro import ProService, ProConst, Limit
+from services.pro import ProService, ProConst
+from services.prospec.program import ProgramConfig, build_program_limits
 from services.user import UserConst
 
 limit_dispatcher = ActionDispatcher()
@@ -39,33 +38,13 @@ class ManageProLimitHandler(RequestHandler):
             return self.error(err)
         assert pro
 
-        # TODO: Support different problem types
-        from services.prospec.batch import BatchConfig
-
-        assert isinstance(pro.config.spec_config, BatchConfig)
-        ALLOW_COMPILERS = pro.config.spec_config.allow_compilers.copy()
-        ALLOW_COMPILERS.add("default")
-
-        new_limits: dict[str, Limit] = {}
-        for compiler_type, limit in limits.items():
-            if compiler_type != "default":
-                try:
-                    compiler_type = Compiler(int(compiler_type))
-                except ValueError:
-                    continue
-            if compiler_type not in ALLOW_COMPILERS:
-                continue
-            new_limits[compiler_type] = Limit(0, 0, 0)
-            try:
-                new_limits[compiler_type].time = max(int(limit["time"]), 0)
-                new_limits[compiler_type].memory = max(int(limit["memory"]), 0)
-                new_limits[compiler_type].output = max(int(limit["output"]), 0)
-            except (ValueError, KeyError):
-                new_limits.pop(compiler_type)
-                continue
-
-        if "default" not in new_limits:
-            return self.error(("Eparam", "Missing default limit config"))
+        spec_config = pro.config.spec_config
+        if not isinstance(spec_config, ProgramConfig):
+            return self.error(("Enotsupport", "Problem type does not support compiler limits"))
+        try:
+            new_limits = build_program_limits(limits, spec_config.allow_compilers)
+        except ValueError as exc:
+            return self.error(("Eparam", str(exc)))
 
         pro.config.limits = new_limits
         await ProService.inst.update_pro_config(pro_id, pro.problem_type, pro.config)

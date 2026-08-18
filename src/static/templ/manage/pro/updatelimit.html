@@ -115,10 +115,10 @@
                                 </td>
                             </tr>
 
-                            {% from services.prospec.batch import BatchConfig %}
-                            {% set batch_config = pro.config.spec_config %}
-                            {% if isinstance(batch_config, BatchConfig) %}
-                                {% for compiler in batch_config.allow_compilers %}
+                            {% from services.prospec.program import ProgramConfig %}
+                            {% set program_config = pro.config.spec_config %}
+                            {% if isinstance(program_config, ProgramConfig) %}
+                                {% for compiler in program_config.allow_compilers %}
                                     {% set compiler_str = str(compiler) %}
                                     {% if compiler_str in limits %}
                                     <tr compiler="{{ compiler }}">

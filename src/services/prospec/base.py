@@ -7,6 +7,12 @@ from services.pro import BaseTestdata
 class ProSpec(ABC):
     """Abstract base class for problem type specifications."""
 
+    requires_checker = False
+
+    def get_initial_directories(self) -> tuple[str, ...]:
+        """Return problem-relative directories needed for manual setup."""
+        return ()
+
     @abstractmethod
     def get_default_config(self) -> Any:
         """
@@ -86,7 +92,7 @@ class ProSpec(ABC):
         acct_id: int,
         contest_id: int,
         compiler_type: int,
-        code: str,
+        code: str | dict[str, str],
         config,  # ProblemConfig with spec_config field
     ) -> tuple[None, int] | tuple[tuple[str, str], None]:
         """
@@ -99,7 +105,7 @@ class ProSpec(ABC):
             acct_id: Account ID submitting the challenge
             contest_id: Contest ID (0 if not in contest)
             compiler_type: Compiler type
-            code: Source code
+            code: One source string or a filename-to-source mapping
             config: ProblemConfig object containing common fields and spec_config
 
         Returns:

@@ -1,0 +1,21 @@
+<div class="accordion mt-3" id="code">
+    {% for index, filename in enumerate(source_filenames) %}
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="codeHeading{{ index }}">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#codeCollapse{{ index }}" aria-expanded="true"
+                    aria-controls="codeCollapse{{ index }}">
+                {{ filename }}
+            </button>
+        </h2>
+        <div id="codeCollapse{{ index }}" class="accordion-collapse collapse show"
+             aria-labelledby="codeHeading{{ index }}">
+            <div class="accordion-body p-0">
+                <pre class="line-numbers mb-0" data-source-index="{{ index }}" data-language=""
+                     data-prismjs-copy="複製" data-prismjs-copy-error="Copy Failed!!!"
+                     data-prismjs-copy-success="Copy Success!!!"><code></code></pre>
+            </div>
+        </div>
+    </div>
+    {% end %}
+</div>

@@ -1,4 +1,6 @@
+import os
 import sys
+import tempfile
 import types
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
@@ -9,7 +11,6 @@ sys.modules["config"] = mock_config
 
 from services.code import CodeService
 from services.chal import Compiler
-
 
 class DummyAccount:
     def __init__(self, acct_id, name, kernel=False):
@@ -69,6 +70,103 @@ class TestCodeService(unittest.IsolatedAsyncioTestCase):
         self.assertIn("print('hello')", code)
         self.assertEqual(compiler_type, Compiler.GPP.value)
         mock_file.assert_called_once()
+
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="source".encode("utf-8"),
+    )
+    async def test_get_multiple_named_source_files(self, mock_file):
+        self.fake_conn.fetch.return_value = [
+            {
+                "acct_id": 1,
+                "pro_id": 2,
+                "contest_id": 0,
+                "compiler_type": Compiler.GPP,
+            }
+        ]
+        acct = DummyAccount(1, "user1")
+        self.fake_rs.get.return_value = None
+
+        err, codes, compiler_type = await self.service.get_code(
+            123,
+            acct,
+            "192.168.11.10",
+            ["alice.cpp", "bob.cpp"],
+        )
+
+        self.assertIsNone(err)
+        self.assertEqual(
+            codes, {"alice.cpp": "source", "bob.cpp": "source"}
+        )
+        self.assertEqual(compiler_type, Compiler.GPP)
+        self.assertEqual(mock_file.call_count, 2)
+
+    async def test_get_code_rejects_path_traversal(self):
+        self.fake_conn.fetch.return_value = [
+            {
+                "acct_id": 1,
+                "pro_id": 2,
+                "contest_id": 0,
+                "compiler_type": Compiler.GPP,
+            }
+        ]
+        acct = DummyAccount(1, "user1")
+        self.fake_rs.get.return_value = None
+
+        for filename in (
+            "../secret.cpp",
+            "/etc/passwd",
+            "..\\secret.cpp",
+            "nested/main.cpp",
+            "main.cpp\x00ignored",
+        ):
+            with self.subTest(filename=filename):
+                err, code, compiler_type = await self.service.get_code(
+                    123,
+                    acct,
+                    "192.168.11.10",
+                    [filename],
+                )
+                self.assertEqual(err, ("Eparam", "Invalid source filename"))
+                self.assertIsNone(code)
+                self.assertIsNone(compiler_type)
+
+    async def test_get_code_rejects_symlink_outside_challenge_directory(self):
+        self.fake_conn.fetch.return_value = [
+            {
+                "acct_id": 1,
+                "pro_id": 2,
+                "contest_id": 0,
+                "compiler_type": Compiler.GPP,
+            }
+        ]
+        acct = DummyAccount(1, "user1")
+        self.fake_rs.get.return_value = None
+        original_cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as tempdir:
+            try:
+                os.chdir(tempdir)
+                os.makedirs("code/123")
+                with open("secret.cpp", "w", encoding="utf-8") as secret:
+                    secret.write("secret")
+                os.symlink(
+                    os.path.join(tempdir, "secret.cpp"),
+                    "code/123/main.cpp",
+                )
+
+                err, code, compiler_type = await self.service.get_code(
+                    123,
+                    acct,
+                    "192.168.11.10",
+                    ["main.cpp"],
+                )
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertEqual(err, ("Eparam", "Invalid source filename"))
+        self.assertIsNone(code)
+        self.assertIsNone(compiler_type)
 
     @patch("builtins.open", side_effect=FileNotFoundError)
     async def test_get_code_file_not_found(self, mock_file):
