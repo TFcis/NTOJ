@@ -2,6 +2,7 @@ import time
 import json
 
 from services.contests import ContestService
+from services.contest_access import ContestPermission
 
 from handlers.base import RequestHandler, UnifiedWebSocketHandler, reqenv, ActionDispatcher
 from handlers.contests.base import contest_require_permission
@@ -100,10 +101,10 @@ contest_qa_dispatcher = ActionDispatcher()
 class ContestQAHandler(RequestHandler):
     @reqenv
     async def get(self):
-        if self.contest.is_admin(self.acct):
+        if not self.contest_access.has(ContestPermission.VIEW_QA):
             return self.error(("Eacces", "Permission denied"))
 
-        if self.contest.is_start():
+        if self.contest_session.is_started():
             err, announces = await ContestService.inst.get_all_announce(
                 self.contest.contest_id
             )
@@ -177,7 +178,7 @@ class ContestQAHandler(RequestHandler):
         return self.error(("S", ""))
 
     @reqenv
-    @contest_require_permission("normal")
+    @contest_require_permission(ContestPermission.ASK_QUESTION)
     async def post(self):
         reqtype = self.get_argument("reqtype")
         return await contest_qa_dispatcher.dispatch(self, reqtype)

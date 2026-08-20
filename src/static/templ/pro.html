@@ -246,7 +246,7 @@ a {
     <div id="side" class="col-lg-2 col-12 pt-lg-2" style="overflow-y: scroll;">
         <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
         {% if can_submit and pro.allow_submit %}
-            {% if contest and not contest.is_end() %}
+            {% if contest and not contest_session.is_ended() %}
                 <a class="btn btn-primary btn-lg my-lg-1" href="{{ url(f'/contests/{ contest.contest_id }/submit/{ pro.pro_id }/') }}">Submit</a><br />
             {% else %}
                 <a class="btn btn-primary btn-lg my-lg-1" href="{{ url(f'/submit/{ pro.pro_id }/') }}">Submit</a><br />

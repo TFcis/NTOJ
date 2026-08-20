@@ -3,6 +3,7 @@ import asyncio
 from handlers.base import reqenv, RequestHandler, ActionDispatcher
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalConst, ChalService
+from services.contest_access import ContestPermission
 from services.contests import ContestService, ProblemScoreType, ContestMode, ChallengeResultStyle
 from services.judge import JudgeServerClusterService
 from services.pro import ProService, ProConst
@@ -13,7 +14,7 @@ contest_manage_pro_dispatcher = ActionDispatcher()
 
 class ContestManageProHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         pro_list = []
         for pro_id in self.contest.pro_list.keys():
@@ -257,7 +258,7 @@ class ContestManageProHandler(RequestHandler):
                 self._rejudge_challenges(pro_id, admin_chals, include_system_test=True)
             )
             await asyncio.create_task(
-                self._rejudge_challenges(pro_id, normal_chals, include_system_test=self.contest.is_end())
+                self._rejudge_challenges(pro_id, normal_chals, include_system_test=self.contest_session.is_ended())
             )
 
         return self.error(("S", f"Problem(#{pro_id}) is rechallenging."))
@@ -312,7 +313,7 @@ class ContestManageProHandler(RequestHandler):
         if not self.contest.is_pro(pro_id):
             return self.error(("Enoext", f"Problem(#{pro_id}) not in contest"))
 
-        if not self.contest.is_end():
+        if not self.contest_session.is_ended():
             return self.error(("Etime", "Contest is not over yet"))
 
         err, pro = await ProService.inst.get_pro(
@@ -349,7 +350,7 @@ class ContestManageProHandler(RequestHandler):
         if not self.contest.enable_system_test:
             return self.error(("Econf", "System test is not enabled for this contest"))
 
-        if not self.contest.is_end():
+        if not self.contest_session.is_ended():
             return self.error(("Etime", "Contest must be over to start system test"))
 
         if not JudgeServerClusterService.inst.is_server_online():
@@ -385,7 +386,7 @@ class ContestManageProHandler(RequestHandler):
         return self.error(("S", f"System test started for {len(result)} AC challenges on Problem(#{pro_id})."))
 
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def post(self):
         # TODO: update problem score type
         # TODO: frontend: drag problem to change order

@@ -5,6 +5,7 @@ from services.contests import ContestService
 from services.user import UserService
 from handlers.base import RequestHandler, UnifiedWebSocketHandler, reqenv, ActionDispatcher
 from handlers.contests.base import contest_require_permission
+from services.contest_access import ContestPermission
 
 SUBJECT_MIN = 1
 SUBJECT_MAX = 50
@@ -85,7 +86,7 @@ contest_manage_question_dispatcher = ActionDispatcher()
 
 class ContestManageQuestionHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         err, questions = await ContestService.inst.get_all_question(
             self.contest.contest_id
@@ -174,7 +175,7 @@ class ContestManageQuestionHandler(RequestHandler):
         return self.error(("S", ""))
 
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def post(self):
         reqtype = self.get_argument("reqtype")
         return await contest_manage_question_dispatcher.dispatch(self, reqtype)
@@ -185,7 +186,7 @@ contest_manage_announce_dispatcher = ActionDispatcher()
 
 class ContestManageAnnounceHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         err, announces = await ContestService.inst.get_all_announce(
             self.contest.contest_id
@@ -214,7 +215,7 @@ class ContestManageAnnounceHandler(RequestHandler):
         await ContestService.inst.add_announce(
             self.contest.contest_id, self.acct.acct_id, subject, content
         )
-        if self.contest.is_start():
+        if self.contest_session.is_started():
             await self.rs.publish(
                 "contestnewqasub",
                 json.dumps(
@@ -246,7 +247,7 @@ class ContestManageAnnounceHandler(RequestHandler):
         await ContestService.inst.edit_announce(
             self.contest.contest_id, announce_id, subject, content
         )
-        if self.contest.is_start():
+        if self.contest_session.is_started():
             await self.rs.publish(
                 "contestnewqasub",
                 json.dumps(
@@ -298,7 +299,7 @@ class ContestManageAnnounceHandler(RequestHandler):
         return self.error(("S", ""))
 
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def post(self):
         reqtype = self.get_argument("reqtype")
         return await contest_manage_announce_dispatcher.dispatch(self, reqtype)

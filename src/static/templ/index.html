@@ -65,9 +65,9 @@
       });
 
     {% if is_in_contest %}
-        {% if not contest.is_end() %}
-            var contest_start = new Date("{{ contest.contest_start }}");
-            var contest_end = new Date("{{ contest.contest_end }}");
+        {% if not contest_session.is_ended() %}
+            var contest_start = new Date("{{ contest_session.start_time }}");
+            var contest_end = new Date("{{ contest_session.end_time }}");
             var started = false, ended = false;
             function timer1() {
                 let cur_time = new Date();
@@ -95,7 +95,7 @@
             }
         {% end %}
 
-        {% if contest.is_admin(user) %}
+        {% if contest_access.is_admin %}
           // Subscribe to admin-only new-question notifications using unified WS API
           let contest_ask_cnt = parseInt("{{ contest_ask_cnt }}");
           index.register_ws_callback('contestnewquessub', function(data) {
@@ -106,7 +106,7 @@
           });
           // Initialize channel with contest id
           index.ws_send('contestnewquessub_init', "{{ contest.contest_id }}");
-        {% elif contest.is_start() %}
+        {% elif contest_session.is_started() %}
             let contest_notification_cnt = parseInt("{{ contest_notification_cnt }}");
             index.register_ws_callback('contestnewqasub', function(data) {
               // server publishes JSON string for contestnewqasub; parse it
@@ -218,7 +218,7 @@
         <ul class="navbar-nav me-auto">
           <li class="nav-item info"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/info/') }}">Info</a></li>
 
-          {% if contest_manage or contest.is_start() %}
+          {% if contest_manage or contest_session.is_started() %}
             <li class="nav-item proset"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/proset/') }}">ProblemSet</a></li>
             <li class="nav-item chal"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/chal/') }}">Challenges</a></li>
             <li class="nav-item scoreboard"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/scoreboard/') }}">Scoreboard</a></li>

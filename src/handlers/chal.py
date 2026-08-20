@@ -11,6 +11,8 @@ from handlers.base import (
     require_permission,
 )
 from handlers.contests.base import contest_require_permission
+from services.contest_access import ContestAccess, ContestPermission
+from services.contest_session import ContestSession
 from services.chal import (
     ChalService,
     ChalSearchingParamBuilder,
@@ -22,7 +24,7 @@ from services.chal import (
 )
 from services.pro import ProService, ProConst
 from services.user import UserService, UserConst
-from services.contests import UserStatus, ContestService, ChallengeResultStyle
+from services.contests import ContestService, ChallengeResultStyle
 from services.rate import RateService
 from utils.numeric import parse_str_to_list
 
@@ -128,21 +130,10 @@ class ChalListStateCallback:
             err, contest = await ContestService.inst.get_contest(chal.contest_id)
             if err:
                 return None
+            contest_access = ContestAccess.resolve(contest, viewer)
 
-            if contest.is_admin(acct_id=viewer.acct_id):
+            if contest_access.can_view_challenge_update(chal.acct_id):
                 return await gen()
-
-            if contest.is_running():
-                if viewer.acct_id == chal.acct_id:
-                    return await gen()
-
-            elif contest.is_end():
-                if viewer.acct_id == chal.acct_id:
-                    return await gen()
-                if not contest.is_admin(acct_id=chal.acct_id) and contest.is_public_scoreboard:
-                    return await gen()
-                return None
-
             return None
 
         return await gen()
@@ -330,7 +321,7 @@ class ChalStateCallback:
                         err, contest = await ContestService.inst.get_contest(chal.contest_id)
                         if err:
                             return None
-                        if contest.enable_system_test and contest.is_running():
+                        if contest.enable_system_test and ContestSession.fixed(contest).is_running():
                             # Need to filter out system-test subtasks
                             err, pro = await ProService.inst.get_pro(chal.pro_id, ProConst.PRO_STATUS_FULL)
                             if err:
@@ -359,7 +350,7 @@ class ChalStateCallback:
                         err, contest = await ContestService.inst.get_contest(chal.contest_id)
                         if err:
                             return None
-                        if contest.enable_system_test and contest.is_running():
+                        if contest.enable_system_test and ContestSession.fixed(contest).is_running():
                             # Need to filter out system-test testdata
                             err, pro = await ProService.inst.get_pro(chal.pro_id, ProConst.PRO_STATUS_FULL)
                             if err:
@@ -403,7 +394,7 @@ class ChalStateCallback:
                     err, contest = await ContestService.inst.get_contest(chal.contest_id)
                     if err:
                         return None
-                    if contest.enable_system_test and contest.is_running():
+                    if contest.enable_system_test and ContestSession.fixed(contest).is_running():
                         # Need to filter out system-test testdata and subtasks
                         err, pro = await ProService.inst.get_pro(chal.pro_id, ProConst.PRO_STATUS_FULL)
                         if err:
@@ -440,8 +431,10 @@ class ChalStateCallback:
             err, contest = await ContestService.inst.get_contest(chal.contest_id)
             if err:
                 return None
+            contest_access = ContestAccess.resolve(contest, viewer)
+            contest_session = contest_access.session
 
-            if contest.is_admin(acct_id=viewer.acct_id):
+            if contest_access.is_admin:
                 return data
 
             challenge_style = contest.pro_list.get(chal.pro_id, {}).get('challenge_style', ChallengeResultStyle.FULL)
@@ -456,7 +449,7 @@ class ChalStateCallback:
                 """
                 nonlocal msg_data
 
-                if not contest.enable_system_test or not contest.is_running():
+                if not contest.enable_system_test or not contest_session.is_running():
                     return True  # No filtering needed, continue
 
                 # Get problem config to check metadata
@@ -505,7 +498,7 @@ class ChalStateCallback:
 
                 return True  # Continue processing
 
-            if contest.is_running():
+            if contest_session.is_running():
                 if viewer.acct_id == chal.acct_id:
                     # Filter system-test first
                     if not await filter_system_test():
@@ -514,13 +507,10 @@ class ChalStateCallback:
                     return result if result is not None else None
                 return None
 
-            if contest.is_end():
-                if viewer.acct_id == chal.acct_id:
-                    result = await apply_challenge_style(challenge_style)
-                    return result if result is not None else None
-                if not contest.is_admin(acct_id=chal.acct_id) and contest.is_public_scoreboard:
-                    # NOTE: apply_challenge_style get msg_data by nonlocal
-                    msg_data = sanitize()
+            if contest_session.is_ended():
+                if contest_access.can_view_challenge_update(chal.acct_id):
+                    if viewer.acct_id != chal.acct_id:
+                        msg_data = sanitize()
                     result = await apply_challenge_style(challenge_style)
                     return result if result is not None else None
                 return None
@@ -603,7 +593,7 @@ class ChalListHandler(RequestHandler):
         flt_builder.state(state).compiler(compiler_type)
 
         isadmin = self._setup_permissions(flt_builder)
-        query_accts = self._apply_contest_filters(flt_builder, query_accts, isadmin)
+        query_accts = self._apply_contest_filters(flt_builder, query_accts)
 
         flt = flt_builder.pro(query_pros).acct(query_accts).build()
         _, chal_cnt = await ChalService.inst.get_chals_count(flt)
@@ -647,53 +637,19 @@ class ChalListHandler(RequestHandler):
         self,
         flt_builder: ChalSearchingParamBuilder,
         query_accts: list[int] | None,
-        isadmin: bool,
     ) -> list[int] | None:
         if not self.contest:
             return query_accts
 
-        isadmin = self.contest.is_admin(self.acct)
         flt_builder.contest(self.contest.contest_id)
         flt_builder.pro_statuses(ProConst.PRO_STATUS_CONTEST_USER)
 
-        if isadmin:
-            return query_accts
-
-        return self._get_non_admin_contest_accounts(query_accts)
-
-    def _get_non_admin_contest_accounts(
-        self, query_accts: list[int] | None
-    ) -> list[int]:
-        if not self.contest.is_start():
-            return []
-
-        if self.contest.is_running():
-            return [self.acct.acct_id]
-
-        return self._get_post_contest_accounts(query_accts)
-
-    def _get_post_contest_accounts(self, query_accts: list[int] | None) -> list[int]:
-        if not self.contest.is_public_scoreboard:
-            return [self.acct.acct_id]
-
-        if query_accts is None:
-            approved_accts = [
-                acct_id
-                for acct_id, v in self.contest.user_list.items()
-                if v["status"] == UserStatus.APPROVED
-            ]
-            return approved_accts if approved_accts else []
-        else:
-            return [
-                acct_id
-                for acct_id in query_accts
-                if not self.contest.is_admin(acct_id=acct_id)
-            ]
+        return self.contest_access.visible_challenge_accounts(query_accts)
 
 
 class ChalHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("all")
+    @contest_require_permission(ContestPermission.MEMBER)
     async def get(self, chal_id: int = None):
         try:
             chal_id = int(chal_id)
@@ -709,27 +665,8 @@ class ChalHandler(RequestHandler):
             return self.error(("Enoext", "Contest not found"))
 
         elif self.contest:
-            if not self.contest.is_start():
-                if self.contest.is_admin(
-                    acct_id=chal.acct_id
-                ) and not self.contest.is_admin(self.acct):
-                    return self.error(("Eacces", "Permission denied"))
-
-            elif self.contest.is_running():
-                if (
-                    self.contest.hide_admin
-                    and self.contest.is_admin(acct_id=chal.acct_id)
-                    and not self.contest.is_admin(self.acct)
-                ) or (
-                    not self.contest.hide_admin
-                    and not (self.acct.acct_id == chal.acct_id or self.contest.is_admin(self.acct))
-                ):
-                    return self.error(("Eacces", "Permission denied"))
-
-            # After contest: if scoreboard not public, only own or admin can view
-            if not self.contest.is_running() and not self.contest.is_public_scoreboard:
-                if not (self.acct and (self.acct.acct_id == chal.acct_id or self.contest.is_admin(self.acct))):
-                    return self.error(("Eacces", "Permission denied"))
+            if not self.contest_access.can_view_challenge(chal.acct_id):
+                return self.error(("Eacces", "Permission denied"))
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER
 
         elif self.acct.is_kernel():
@@ -743,7 +680,7 @@ class ChalHandler(RequestHandler):
 
         rechal = self.acct.is_kernel()
         if self.contest:
-            rechal = rechal and self.contest.is_admin(self.acct)
+            rechal = rechal and self.contest_access.is_admin
 
         testdata_to_subtasks = defaultdict(list)
         for subtask_config in pro.config.subtask_configs.values():
@@ -755,7 +692,7 @@ class ChalHandler(RequestHandler):
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def post(self, chal_id: int = None):
         try:
             chal_id = int(chal_id)
