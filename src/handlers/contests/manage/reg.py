@@ -1,5 +1,6 @@
 from handlers.base import reqenv, RequestHandler, ActionDispatcher
 from handlers.contests.base import contest_require_permission
+from services.contest_access import ContestPermission
 from services.contests import ContestService, UserStatus
 from services.user import UserService
 
@@ -8,7 +9,7 @@ contest_manage_reg_dispatcher = ActionDispatcher()
 
 class ContestManageRegHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         requested_list = []
         rejected_list = []
@@ -96,7 +97,7 @@ class ContestManageRegHandler(RequestHandler):
         return self.error(("S", f"Reject account(#{acct_id}) successfully."))
 
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def post(self):
         reqtype = self.get_argument("reqtype")
         try:

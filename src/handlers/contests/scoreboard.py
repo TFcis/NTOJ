@@ -7,6 +7,7 @@ from msgpack import packb, unpackb
 
 import config
 from handlers.base import RequestHandler, UnifiedWebSocketHandler, reqenv
+from services.contest_access import ContestPermission
 from services.contests import ContestMode, ContestService, ProblemScoreType, UserStatus
 from services.user import UserService
 
@@ -110,31 +111,29 @@ class ContestScoreboardHandler(RequestHandler):
 
     @reqenv
     async def post(self):
-        if not self.contest.is_start() and not self.contest.is_admin(self.acct):
-            return self.error(('Eacces', 'Permission denied'))
-        elif not self.contest.is_public_scoreboard and not self.contest.is_member(self.acct):
+        if not self.contest_access.has(ContestPermission.VIEW_SCOREBOARD):
             return self.error(('Eacces', 'Permission denied'))
 
         has_end_time = True
-        start_time = self.contest.contest_start
+        start_time = self.contest_session.start_time
         try:
             end_time = datetime.datetime.fromisoformat(self.get_argument('display_time'))
         except (tornado.web.MissingArgumentError, ValueError):
             has_end_time = False
-            end_time = self.contest.contest_end
+            end_time = self.contest_session.end_time
 
-        if self.contest.freeze_scoreboard_period != 0 and self.contest.is_running() and not self.contest.is_admin(self.acct):
+        if self.contest.freeze_scoreboard_period != 0 and self.contest_session.is_running() and not self.contest_access.is_admin:
             if not has_end_time:
                 end_time = datetime.datetime.now(datetime.UTC)
 
-            total_seconds = int((end_time - self.contest.contest_start).total_seconds())
+            total_seconds = int((end_time - self.contest_session.start_time).total_seconds())
             minutes = total_seconds // 60
 
             if minutes >= self.contest.freeze_scoreboard_period:
-                end_time = self.contest.contest_start + datetime.timedelta(
+                end_time = self.contest_session.start_time + datetime.timedelta(
                     minutes=self.contest.freeze_scoreboard_period)
 
-        is_ended = self.contest.is_end()
+        is_ended = self.contest_session.is_ended()
 
         contest_id = self.contest.contest_id
 
@@ -144,7 +143,7 @@ class ContestScoreboardHandler(RequestHandler):
             if not self.contest.hide_admin:
                 acct_list.extend(acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.ADMIN)
         else:
-            if not self.contest.is_admin(self.acct):
+            if not self.contest_access.is_admin:
                 acct_list = [self.acct.acct_id]
             else:
                 acct_list = [acct_id for acct_id, v in self.contest.user_list.items() if v['status'] == UserStatus.APPROVED]
@@ -157,7 +156,9 @@ class ContestScoreboardHandler(RequestHandler):
             if has_end_time or (scores := (await self.rs.hget(cache_name, str(pro_id)))) is None:
                 score_type = pro_options["score_type"]
                 if score_type == ProblemScoreType.ICPC:
-                    s[pro_id] = await ContestService.inst.get_icpc_scores(contest_id, pro_id, end_time)
+                    s[pro_id] = await ContestService.inst.get_icpc_scores(
+                        contest_id, pro_id, end_time, self.contest_session
+                    )
                     assert self.contest.contest_mode == ContestMode.ACM
                 elif score_type == ProblemScoreType.IOI2017:
                     s[pro_id] = await ContestService.inst.get_ioi2017_scores(contest_id, pro_id, end_time)

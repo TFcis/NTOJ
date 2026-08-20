@@ -1,5 +1,4 @@
 from handlers.base import RequestHandler, reqenv
-from services.contests import ContestService, UserStatus
 from services.ques import QuestionService
 
 
@@ -28,8 +27,8 @@ class IndexHandler(RequestHandler):
                 is_in_contest = False
 
             if contest_id != 0:
-                _, contest = await ContestService.inst.get_contest(contest_id)
-                if contest.is_admin(self.acct):
+                contest = self.contest
+                if self.contest_access.is_admin:
                     (
                         _,
                         contest_ask_cnt,
@@ -38,7 +37,7 @@ class IndexHandler(RequestHandler):
                     )
                     contest_manage = True
 
-                elif contest.is_member(self.acct, UserStatus.APPROVED):
+                elif self.contest_access.is_member:
                     (
                         _,
                         contest_notification_cnt,

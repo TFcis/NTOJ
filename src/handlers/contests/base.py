@@ -1,25 +1,18 @@
 import json
-from services.contests import UserStatus
+from services.contest_access import ContestPermission
 
 
-def contest_require_permission(acct_type: str):
+def contest_require_permission(permission: ContestPermission):
     def decorator(func):
         async def wrap(self, *args, **kwargs):
-            if self.contest is not None:
-                if acct_type == 'admin':
-                    if not self.contest.is_admin(acct=self.acct):
-                        await self.finish(json.dumps({'status': 'Eacces', 'data': 'Permission denied'}))
-                        return
-
-                elif acct_type == 'normal':
-                    if not self.contest.member_is_status(self.acct, UserStatus.APPROVED):
-                        await self.finish(json.dumps({'status': 'Eacces', 'data': 'Permission denied'}))
-                        return
-
-                elif acct_type == 'all':
-                    if not self.contest.is_member(acct=self.acct):
-                        await self.finish(json.dumps({'status': 'Eacces', 'data': 'Permission denied'}))
-                        return
+            if self.contest is not None and (
+                self.contest_access is None
+                or not self.contest_access.has(permission)
+            ):
+                await self.finish(
+                    json.dumps({"status": "Eacces", "data": "Permission denied"})
+                )
+                return
 
             ret = await func(self, *args, **kwargs)
             return ret
