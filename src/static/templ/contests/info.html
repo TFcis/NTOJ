@@ -2,11 +2,11 @@
 {% from services.contests import ContestMode, RegMode, UserStatus %}
 <script>
     function init() {
-        {% if not contest.is_start() %}
+        {% if not contest_session.is_started() %}
             let desc_tex = `{{ markdown_escape(contest.desc_before_contest) }}`;
-        {% elif contest.is_running() %}
+        {% elif contest_session.is_running() %}
             let desc_tex = `{{ markdown_escape(contest.desc_during_contest) }}`;
-        {% elif contest.is_end() %}
+        {% elif contest_session.is_ended() %}
             let desc_tex = `{{ markdown_escape(contest.desc_after_contest) }}`;
         {% end %}
 
@@ -27,8 +27,8 @@
             <div class="card mb-1">
                 <div class="card-header">Start / End</div>
                 <div class="card-body">
-                    <h5>{{ contest.contest_start.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
-                    <h5>{{ contest.contest_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+                    <h5>{{ contest_session.start_time.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+                    <h5>{{ contest_session.end_time.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
                 </div>
             </div>
 
@@ -65,7 +65,7 @@
                 <div class="card-header">Registration Status</div>
 
                 <div class="card-body">
-                    {% if contest.is_admin(user) %}
+                    {% if contest_access.is_admin %}
                         <h5>Admin, no registration needed</h5>
                     {% else %}
                         {% set now = datetime.datetime.now(datetime.UTC) %}

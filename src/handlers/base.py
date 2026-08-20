@@ -11,6 +11,8 @@ import tornado.websocket
 from redis import asyncio as aioredis
 
 import config
+from services.contest_access import ContestAccess
+from services.contest_session import ContestSession
 from services.contests import ContestService, Contest
 from services.user import UserService, Account
 import utils.htmlgen
@@ -85,6 +87,8 @@ class RequestHandler(tornado.web.RequestHandler):
 
         self.acct: Account = None
         self.contest: Contest = None
+        self.contest_session: ContestSession | None = None
+        self.contest_access: ContestAccess | None = None
         self.base_url = base_url
 
         super().__init__(*args, **kwargs)
@@ -104,6 +108,8 @@ class RequestHandler(tornado.web.RequestHandler):
 
         kwargs["user"] = self.acct
         kwargs["base_url"] = self.base_url
+        kwargs["contest_session"] = self.contest_session
+        kwargs["contest_access"] = self.contest_access
 
         if title is not None:
             title_header = utils.htmlgen.gen_page_title(title, config.SITE_TITLE)
@@ -111,6 +117,16 @@ class RequestHandler(tornado.web.RequestHandler):
 
         data = self.tpldr.load(templ + ".html").generate(**kwargs)
         self.finish(data)
+
+    def refresh_contest_context(self) -> None:
+        """Rebuild request-scoped contest timing and access after a mutation."""
+        if self.contest is None or self.acct is None:
+            self.contest_session = None
+            self.contest_access = None
+            return
+
+        self.contest_access = ContestAccess.resolve(self.contest, self.acct)
+        self.contest_session = self.contest_access.session
 
     def len_check(
         self, obj, min_len: int, max_len: int, field_name: str
@@ -584,6 +600,7 @@ def reqenv(func):
 
         _, acct_id, _ = await UserService.inst.info_sign(self)
         _, self.acct = await UserService.inst.info_acct(acct_id)
+        self.refresh_contest_context()
 
         ret = await func(self, *args, **kwargs)
         return ret
