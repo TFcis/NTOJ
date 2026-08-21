@@ -1,7 +1,7 @@
 {% extends 'manage.html' %}
 
 {% block head %}
-{% from services.contests import ContestMode, RegMode %}
+{% from services.contests import ContestMode, ContestTimeMode, RegMode %}
 {% import config %}
 <script src="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/js/tempus-dominus.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.4/dist/css/tempus-dominus.min.css" crossorigin="anonymous">
@@ -68,6 +68,16 @@
         $("#contestMode").on('change', updateContestModeUI);
         updateContestModeUI(); // Initialize on page load
 
+        const updateContestTimeModeUI = () => {
+            const flexible = parseInt($("#contestTimeMode").val()) === {{ ContestTimeMode.FLEXIBLE }};
+            $("#contestDurationContainer").toggle(flexible);
+            $("#freezeScoreboardContainer").toggle(!flexible);
+            $("#contestStartLabel").text(flexible ? "Flexible Availability Start" : "Contest Start Time");
+            $("#contestEndLabel").text(flexible ? "Flexible Hard End" : "Contest End Time");
+        };
+        $("#contestTimeMode").on('change', updateContestTimeModeUI);
+        updateContestTimeModeUI();
+
         $("#regMode").on('change', function(e) {
             if ($(this).val() === "{{ RegMode.INVITED }}") {
                 $("#datepickerRegEndInput").val(contest_end_date_picker.viewDate);
@@ -81,6 +91,8 @@
             let start_time = null, end_time = null, reg_end_time = null;
             let contest_name = $("#contestName").val();
             let contest_mode = $("#contestMode").val();
+            let contest_time_mode = parseInt($("#contestTimeMode").val());
+            let contest_duration = Math.round(parseFloat($("#contestDuration").val()) * 60);
             let reg_mode = $("#regMode").val();
             let submit_cd_time = parseInt($("#submitCdTime").val());
             let freeze_period = parseInt($("#freezeScoreboardPeriod").val());
@@ -118,6 +130,12 @@
                 return;
             }
 
+            if (contest_time_mode === {{ ContestTimeMode.FLEXIBLE }} &&
+                (!Number.isInteger(contest_duration) || contest_duration <= 0)) {
+                index.show_notify_dialog("Contest duration must be greater than zero", index.DIALOG_TYPE.warning);
+                return;
+            }
+
             reg_end_time = reg_end_date_picker.viewDate;
 
             if (isNaN(submit_cd_time) || submit_cd_time < 0) {
@@ -139,6 +157,8 @@
                 name: contest_name,
 
                 contest_mode: contest_mode,
+                contest_time_mode: contest_time_mode,
+                contest_duration: contest_duration,
                 contest_start: start_time.toISOString(),
                 contest_end: end_time.toISOString(),
 
@@ -177,7 +197,7 @@
 {% block content %}
 
 {% import config %}
-{% from services.contests import ContestMode %}
+{% from services.contests import ContestMode, ContestTimeMode %}
 {% from services.contests import RegMode %}
 {% from services.chal import Compiler, COMPILER_INFOS %}
 
@@ -201,7 +221,27 @@
         </div>
 
         <div class="mb-1">
-            <label for="datepickerContestStart" class="form-label">Contest Start Time</label>
+            <label for="contestTimeMode" class="form-label">Contest Time Mode</label>
+            <select id="contestTimeMode" class="form-select"{% if contest.configured_session().is_started() %} disabled{% end %}>
+                <option value="{{ ContestTimeMode.FIXED }}"{% if contest.contest_time_mode == ContestTimeMode.FIXED %} selected{% end %}>Fixed</option>
+                <option value="{{ ContestTimeMode.FLEXIBLE }}"{% if contest.contest_time_mode == ContestTimeMode.FLEXIBLE %} selected{% end %}>Flexible</option>
+            </select>
+            {% if contest.configured_session().is_started() %}
+                <div class="form-text">The time mode cannot be changed after the contest starts.</div>
+            {% end %}
+        </div>
+
+        <div class="mb-1" id="contestDurationContainer">
+            <label for="contestDuration" class="form-label">Individual Contest Duration</label>
+            <div class="input-group">
+                <input type="number" min="1" step="1" id="contestDuration" class="form-control" value="{{ max(1, contest.contest_duration // 60) }}">
+                <span class="input-group-text">Minutes</span>
+            </div>
+            <div class="form-text">A late start ends at the contest hard end, even when less time remains.</div>
+        </div>
+
+        <div class="mb-1">
+            <label for="datepickerContestStart" id="contestStartLabel" class="form-label">Contest Start Time</label>
             <div class="input-group" id="datepickerContestStart">
                 <input id="datepickerContestStartInput" class="form-control">
                 <span class="input-group-text" data-td-target="#datepickerContestStart" data-td-toggle="datepickerContestStart">
@@ -211,7 +251,7 @@
         </div>
 
         <div class="mb-1">
-            <label for="datepickerContestEnd" class="form-label">Contest End Time</label>
+            <label for="datepickerContestEnd" id="contestEndLabel" class="form-label">Contest End Time</label>
             <div class="input-group" id="datepickerContestEnd">
                 <input id="datepickerContestEndInput" class="form-control">
                 <span class="input-group-text" data-td-target="#datepickerContestEnd" data-td-toggle="datepickerContestEnd">
@@ -222,7 +262,7 @@
     </div>
 
     <div class="mb-2">
-        <div class="mb-1">
+        <div class="mb-1" id="freezeScoreboardContainer">
             <h4 for="" class="form-label">Registration</h4>
         </div>
 

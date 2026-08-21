@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import datetime
 import json
@@ -5,9 +6,16 @@ import json
 from tornado.websocket import websocket_connect
 from tornado.httpclient import HTTPRequest
 
-from services.contests import ContestService, ContestMode, RegMode, UserStatus
+from services.contests import (
+    ContestService,
+    ContestMode,
+    ContestTimeMode,
+    ProblemScoreType,
+    RegMode,
+    UserStatus,
+)
 from services.pro import ProService, ProConst
-from services.chal import Compiler
+from services.chal import ChalConst, Compiler
 from .util import AsyncTest, AccountContext
 
 def to_utc(d: datetime.datetime) -> datetime.datetime:
@@ -989,3 +997,678 @@ class ContestProblemPermissionTest(AsyncTest):
                         'compiler_type': Compiler.GPP,
                     })
                     self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+
+class FlexibleContestTimeTest(AsyncTest):
+    async def main(self):
+        await self._test_configuration_and_start_boundaries()
+        await self._test_access_and_session_lifecycle()
+        await self._test_ioi_scoreboard_and_cache()
+        await self._test_icpc_scoreboard()
+
+    def _config(
+        self,
+        name,
+        contest_start,
+        contest_end,
+        duration,
+        contest_mode=ContestMode.IOI,
+    ):
+        return {
+            'reqtype': 'update',
+            'name': name,
+            'contest_mode': contest_mode,
+            'contest_time_mode': ContestTimeMode.FLEXIBLE,
+            'contest_duration': duration,
+            'contest_start': self.get_isoformat(contest_start),
+            'contest_end': self.get_isoformat(contest_end),
+            'reg_mode': RegMode.INVITED,
+            'reg_end': self.get_isoformat(contest_end),
+            'allow_compilers[]': [Compiler.GPP],
+            'is_public_scoreboard': 'true',
+            'allow_view_other_page': 'false',
+            'hide_admin': 'true',
+            'submission_cd_time': 0,
+            'freeze_scoreboard_period': 30,
+            'penalty_value': 20,
+        }
+
+    async def _create_contest(
+        self,
+        admin_session,
+        config,
+        acct_ids=(),
+        pro_ids=(),
+    ):
+        res = admin_session.post('contests/manage/add', data={
+            'reqtype': 'add',
+            'name': config['name'],
+        })
+        self.assertAPIReturnSuccess(res.text)
+        contest_id = json.loads(res.text)['data']
+
+        res = admin_session.post(
+            f'contests/{contest_id}/manage/general', data=config
+        )
+        self.assertAPIReturnSuccess(res.text)
+        for acct_id in acct_ids:
+            res = admin_session.post(f'contests/{contest_id}/manage/acct', data={
+                'reqtype': 'add',
+                'acct_id': acct_id,
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+        for pro_id in pro_ids:
+            res = admin_session.post(f'contests/{contest_id}/manage/pro', data={
+                'reqtype': 'add',
+                'pro_id': pro_id,
+            })
+            self.assertAPIReturnSuccess(res.text)
+        return contest_id
+
+    async def _set_sessions(self, contest_id, sessions):
+        for acct_id, start_time, end_time in sessions:
+            await ContestService.inst.db.execute(
+                """
+                UPDATE contest_sessions
+                SET start_time = $3, end_time = $4
+                WHERE contest_id = $1 AND acct_id = $2
+                """,
+                contest_id,
+                acct_id,
+                start_time,
+                end_time,
+            )
+        await ContestService.inst.rs.hdel('contest', str(contest_id))
+        await ContestService.inst.invalidate_scoreboard_cache(contest_id)
+
+    async def _insert_challenge(
+        self,
+        contest_id,
+        pro_id,
+        acct_id,
+        timestamp,
+        state,
+        rate=0,
+    ):
+        row = await ContestService.inst.db.fetchrow(
+            """
+            INSERT INTO challenge (
+                pro_id, acct_id, timestamp, compiler_type, contest_id
+            ) VALUES ($1, $2, $3, $4, $5)
+            RETURNING chal_id
+            """,
+            pro_id,
+            acct_id,
+            timestamp,
+            int(Compiler.GPP),
+            contest_id,
+        )
+        chal_id = row['chal_id']
+        await ContestService.inst.db.execute(
+            """
+            INSERT INTO total_result (chal_id, state, time, memory, rate)
+            VALUES ($1, $2, 0, 0, $3)
+            """,
+            chal_id,
+            state,
+            rate,
+        )
+        return chal_id
+
+    def _scoreboard(self, session, contest_id, display_time=None):
+        data = {}
+        if display_time is not None:
+            data['display_time'] = display_time.isoformat()
+        res = session.post(f'contests/{contest_id}/scoreboard', data=data)
+        self.assertAPIReturnSuccess(res.text)
+        return {
+            row['acct_id']: row
+            for row in json.loads(res.text)['data']
+        }
+
+    async def _start(self, session, contest_id):
+        res = session.post(f'contests/{contest_id}/info', data={
+            'reqtype': 'start',
+        })
+        self.assertAPIReturnSuccess(res.text)
+
+    async def _test_configuration_and_start_boundaries(self):
+        now = datetime.datetime.now()
+        upcoming_config = self._config(
+            'flexible start boundaries',
+            now + datetime.timedelta(hours=1),
+            now + datetime.timedelta(hours=2),
+            1800,
+        )
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            res = admin_session.post('contests/manage/add', data={
+                'reqtype': 'add',
+                'name': upcoming_config['name'],
+            })
+            self.assertAPIReturnSuccess(res.text)
+            contest_id = json.loads(res.text)['data']
+
+            invalid_config = copy.deepcopy(upcoming_config)
+            invalid_config['contest_duration'] = 0
+            res = admin_session.post(
+                f'contests/{contest_id}/manage/general', data=invalid_config
+            )
+            self.assertAPIReturnValue(
+                res.text,
+                ('Eparam', 'Contest duration must be a positive integer'),
+            )
+
+            invalid_config['contest_duration'] = 'not-an-integer'
+            res = admin_session.post(
+                f'contests/{contest_id}/manage/general', data=invalid_config
+            )
+            self.assertAPIReturnValue(
+                res.text,
+                ('Eparam', 'Contest duration must be a positive integer'),
+            )
+
+            res = admin_session.post(
+                f'contests/{contest_id}/manage/general', data=upcoming_config
+            )
+            self.assertAPIReturnSuccess(res.text)
+            res = admin_session.post(f'contests/{contest_id}/manage/acct', data={
+                'reqtype': 'add',
+                'acct_id': 7,
+                'type': 'normal',
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+            fixed_config = copy.deepcopy(upcoming_config)
+            fixed_config['contest_time_mode'] = ContestTimeMode.FIXED
+            res = admin_session.post(
+                f'contests/{contest_id}/manage/general', data=fixed_config
+            )
+            self.assertAPIReturnSuccess(res.text)
+            res = admin_session.post(
+                f'contests/{contest_id}/manage/general', data=upcoming_config
+            )
+            self.assertAPIReturnSuccess(res.text)
+
+            res = admin_session.post(f'contests/{contest_id}/info', data={
+                'reqtype': 'start',
+            })
+            self.assertAPIReturnValue(
+                res.text,
+                ('Eacces', 'Contest cannot be started at this time'),
+            )
+
+        with AccountContext('contest4@test', 'test') as user_session:
+            res = user_session.get(f'contests/{contest_id}/info')
+            self.assertNotIn('Start Contest', res.text)
+            res = user_session.post(f'contests/{contest_id}/info', data={
+                'reqtype': 'start',
+            })
+            self.assertAPIReturnValue(
+                res.text,
+                ('Eacces', 'Contest cannot be started at this time'),
+            )
+
+        with AccountContext('contest5@test', 'test') as outsider_session:
+            res = outsider_session.post(f'contests/{contest_id}/info', data={
+                'reqtype': 'start',
+            })
+            self.assertAPIReturnValue(
+                res.text,
+                ('Eacces', 'Contest cannot be started at this time'),
+            )
+
+        ended_config = copy.deepcopy(upcoming_config)
+        ended_config['contest_start'] = self.get_isoformat(
+            now - datetime.timedelta(hours=2)
+        )
+        ended_config['contest_end'] = self.get_isoformat(
+            now - datetime.timedelta(hours=1)
+        )
+        ended_config['reg_end'] = ended_config['contest_end']
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            res = admin_session.post(
+                f'contests/{contest_id}/manage/general', data=ended_config
+            )
+            self.assertAPIReturnSuccess(res.text)
+
+        with AccountContext('contest4@test', 'test') as user_session:
+            res = user_session.post(f'contests/{contest_id}/info', data={
+                'reqtype': 'start',
+            })
+            self.assertAPIReturnValue(
+                res.text,
+                ('Eacces', 'Contest cannot be started at this time'),
+            )
+            self._scoreboard(user_session, contest_id)
+
+    async def _test_access_and_session_lifecycle(self):
+        now = datetime.datetime.now()
+        hard_end = now + datetime.timedelta(minutes=5)
+        config = self._config(
+            'flexible access lifecycle',
+            now - datetime.timedelta(minutes=1),
+            hard_end,
+            3600,
+        )
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            contest_id = await self._create_contest(
+                admin_session,
+                config,
+                acct_ids=(5, 6),
+                pro_ids=(8,),
+            )
+
+        with AccountContext('contest2@test', 'test') as user_session:
+            res = user_session.get(f'contests/{contest_id}/info')
+            self.assertIn('Start Contest', res.text)
+            for path in (
+                f'contests/{contest_id}/proset',
+                f'contests/{contest_id}/pro/8',
+                f'contests/{contest_id}/submit/8',
+            ):
+                res = user_session.get(path)
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+            await self._start(user_session, contest_id)
+
+            res = user_session.post(f'contests/{contest_id}/info', data={
+                'reqtype': 'start',
+            })
+            self.assertAPIReturnValue(
+                res.text,
+                ('Eacces', 'Contest cannot be started at this time'),
+            )
+            session_count = await ContestService.inst.db.fetchval(
+                """
+                SELECT COUNT(*) FROM contest_sessions
+                WHERE contest_id = $1 AND acct_id = $2
+                """,
+                contest_id,
+                5,
+            )
+            self.assertEqual(session_count, 1)
+
+            err, contest = await ContestService.inst.get_contest(contest_id)
+            self.assertIsNone(err)
+            options = contest.user_list[5]
+            self.assertIsNotNone(options['session_id'])
+            self.assertEqual(options['session_end'], contest.contest_end)
+            self.assertEqual(contest.freeze_scoreboard_period, 0)
+
+            for path in (
+                f'contests/{contest_id}/proset',
+                f'contests/{contest_id}/pro/8',
+                f'contests/{contest_id}/submit/8',
+            ):
+                res = user_session.get(path)
+                self.assertNotIn('Eacces', res.text)
+
+            res = user_session.post(f'contests/{contest_id}/scoreboard', data={})
+            self.assertAPIReturnSuccess(res.text)
+
+        challenge_id = await self._insert_challenge(
+            contest_id,
+            8,
+            5,
+            datetime.datetime.now(datetime.UTC),
+            ChalConst.STATE_AC,
+            100,
+        )
+        with AccountContext('contest3@test', 'test') as pending_session:
+            for path in (
+                f'contests/{contest_id}/proset',
+                f'contests/{contest_id}/pro/8',
+                f'contests/{contest_id}/submit/8',
+                f'contests/{contest_id}/chal/{challenge_id}',
+            ):
+                res = pending_session.get(path)
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+            res = pending_session.post(
+                f'contests/{contest_id}/scoreboard', data={}
+            )
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            fixed_config = copy.deepcopy(config)
+            fixed_config['contest_time_mode'] = ContestTimeMode.FIXED
+            res = admin_session.post(
+                f'contests/{contest_id}/manage/general', data=fixed_config
+            )
+            self.assertAPIReturnValue(
+                res.text,
+                ('Etime', 'Contest time mode cannot be changed after the contest starts'),
+            )
+
+        expired_end = datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=1)
+        await self._set_sessions(
+            contest_id,
+            ((5, expired_end - datetime.timedelta(seconds=1), expired_end),),
+        )
+
+        with AccountContext('contest2@test', 'test') as user_session:
+            for path in (
+                f'contests/{contest_id}/proset',
+                f'contests/{contest_id}/pro/8',
+                f'contests/{contest_id}/submit/8',
+            ):
+                res = user_session.get(path)
+                self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+        full_duration_config = self._config(
+            'flexible full duration',
+            now - datetime.timedelta(minutes=1),
+            now + datetime.timedelta(hours=2),
+            1800,
+        )
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            full_duration_id = await self._create_contest(
+                admin_session,
+                full_duration_config,
+                acct_ids=(7,),
+            )
+        with AccountContext('contest4@test', 'test') as user_session:
+            await self._start(user_session, full_duration_id)
+
+        row = await ContestService.inst.db.fetchrow(
+            """
+            SELECT start_time, end_time FROM contest_sessions
+            WHERE contest_id = $1 AND acct_id = $2
+            """,
+            full_duration_id,
+            7,
+        )
+        self.assertEqual((row['end_time'] - row['start_time']).total_seconds(), 1800)
+
+    async def _test_ioi_scoreboard_and_cache(self):
+        now = datetime.datetime.now()
+        config = self._config(
+            'flexible IOI scoreboard',
+            now - datetime.timedelta(minutes=1),
+            now + datetime.timedelta(hours=2),
+            3600,
+        )
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            contest_id = await self._create_contest(
+                admin_session,
+                config,
+                acct_ids=(5, 6, 7, 9),
+                pro_ids=(9,),
+            )
+            res = admin_session.post(f'contests/{contest_id}/manage/pro', data={
+                'reqtype': 'update_score_type',
+                'pro_id': 9,
+                'score_type': ProblemScoreType.IOI2013,
+            })
+            self.assertAPIReturnSuccess(res.text)
+
+        with AccountContext('contest2@test', 'test') as user_session:
+            await self._start(user_session, contest_id)
+        with AccountContext('contest3@test', 'test') as user_session:
+            await self._start(user_session, contest_id)
+        with AccountContext('contest6@test', 'test') as user_session:
+            await self._start(user_session, contest_id)
+
+        base = datetime.datetime.now(datetime.UTC)
+        acct5_start = base - datetime.timedelta(minutes=30)
+        acct6_start = base - datetime.timedelta(minutes=10)
+        acct9_start = base - datetime.timedelta(minutes=4, seconds=52)
+        session_end = base + datetime.timedelta(minutes=30)
+        await self._set_sessions(
+            contest_id,
+            (
+                (5, acct5_start, session_end),
+                (6, acct6_start, session_end),
+                (9, acct9_start, session_end),
+            ),
+        )
+        await ContestService.inst.db.execute(
+            """
+            UPDATE contest SET freeze_scoreboard_period = 1
+            WHERE contest_id = $1
+            """,
+            contest_id,
+        )
+        await ContestService.inst.rs.hdel('contest', str(contest_id))
+
+        await self._insert_challenge(
+            contest_id, 9, 5, acct5_start - datetime.timedelta(seconds=1),
+            ChalConst.STATE_AC, 99,
+        )
+        await self._insert_challenge(
+            contest_id, 9, 5, acct5_start,
+            ChalConst.STATE_PC, 10,
+        )
+        await self._insert_challenge(
+            contest_id, 9, 5, acct5_start + datetime.timedelta(minutes=5),
+            ChalConst.STATE_PC, 50,
+        )
+        await self._insert_challenge(
+            contest_id, 9, 5, session_end,
+            ChalConst.STATE_AC, 100,
+        )
+        await self._insert_challenge(
+            contest_id, 9, 6, acct6_start - datetime.timedelta(seconds=1),
+            ChalConst.STATE_AC, 99,
+        )
+        await self._insert_challenge(
+            contest_id, 9, 6, acct6_start + datetime.timedelta(minutes=2),
+            ChalConst.STATE_PC, 70,
+        )
+        await self._insert_challenge(
+            contest_id, 9, 7, base - datetime.timedelta(minutes=5),
+            ChalConst.STATE_AC, 100,
+        )
+        await ContestService.inst.invalidate_scoreboard_cache(contest_id)
+
+        with AccountContext('contest6@test', 'test') as live_session:
+            scoreboard_page = live_session.get(f'contests/{contest_id}/scoreboard')
+            self.assertIn('flexible-session-time', scoreboard_page.text)
+            scores = self._scoreboard(live_session, contest_id)
+            self.assertEqual(scores[5]['total_score'], 10)
+            self.assertEqual(
+                scores[5]['flexible_start'], acct5_start.isoformat()
+            )
+            self.assertEqual(
+                scores[5]['flexible_end'], session_end.isoformat()
+            )
+            self.assertIsNone(scores[7]['flexible_start'])
+            self.assertIsNone(scores[7]['flexible_end'])
+
+            cookie_value = live_session.cookies.get('id')
+            ws = await websocket_connect(HTTPRequest(
+                'ws://localhost:5501/be/ws',
+                headers={"Cookie": f"id={cookie_value}"},
+            ))
+            await ws.write_message(json.dumps({
+                'type': 'register',
+                'data': 'contestnewchalsub',
+            }))
+            await ws.write_message(json.dumps({
+                'type': 'contestnewchalsub_init',
+                'data': {
+                    'contest_id': contest_id,
+                    'purpose': 'scoreboard',
+                },
+            }))
+
+            message = json.loads(await asyncio.wait_for(
+                ws.read_message(),
+                timeout=15,
+            ))
+            self.assertEqual(message['type'], 'contestnewchalsub')
+            self.assertEqual(int(message['data']), contest_id)
+            scores = self._scoreboard(live_session, contest_id)
+            self.assertEqual(scores[5]['total_score'], 50)
+            ws.close()
+
+        cache_name = f'contest_{contest_id}_scores'
+        history_time = acct5_start + datetime.timedelta(minutes=1)
+        with AccountContext('contest2@test', 'test') as user_session:
+            scores = self._scoreboard(user_session, contest_id, history_time)
+            self.assertEqual(scores[5]['total_score'], 10)
+            self.assertEqual(scores[5]['scores']['9']['timestamp'], '0:00')
+            self.assertEqual(scores[6]['total_score'], 0)
+            self.assertEqual(scores[7]['total_score'], 0)
+            self.assertIsNone(
+                await ContestService.inst.rs.hget(cache_name, '9')
+            )
+
+            scores = self._scoreboard(user_session, contest_id)
+            self.assertEqual(scores[5]['total_score'], 50)
+            self.assertEqual(scores[5]['scores']['9']['timestamp'], '5:00')
+            self.assertEqual(scores[6]['total_score'], 70)
+            self.assertEqual(scores[6]['scores']['9']['timestamp'], '2:00')
+            self.assertEqual(scores[7]['total_score'], 0)
+            self.assertIsNone(
+                await ContestService.inst.rs.hget(cache_name, '9')
+            )
+
+        with AccountContext('contest3@test', 'test') as user_session:
+            scores = self._scoreboard(user_session, contest_id, acct6_start)
+            self.assertEqual(scores[5]['total_score'], 10)
+            self.assertEqual(scores[5]['scores']['9']['timestamp'], '0:00')
+            self.assertEqual(scores[6]['total_score'], 0)
+
+            scores = self._scoreboard(
+                user_session,
+                contest_id,
+                acct6_start + datetime.timedelta(minutes=5),
+            )
+            self.assertEqual(scores[5]['total_score'], 50)
+            self.assertEqual(scores[5]['scores']['9']['timestamp'], '5:00')
+            self.assertEqual(scores[6]['total_score'], 70)
+
+        with AccountContext('contest4@test', 'test') as pending_session:
+            res = pending_session.post(
+                f'contests/{contest_id}/scoreboard', data={}
+            )
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+        with AccountContext('contest5@test', 'test') as outsider_session:
+            res = outsider_session.post(
+                f'contests/{contest_id}/scoreboard', data={}
+            )
+            self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
+
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            scores = self._scoreboard(admin_session, contest_id)
+            self.assertEqual(scores[5]['total_score'], 50)
+            self.assertEqual(scores[6]['total_score'], 70)
+            self.assertIsNotNone(
+                await ContestService.inst.rs.hget(cache_name, '9')
+            )
+
+            await self._insert_challenge(
+                contest_id,
+                9,
+                5,
+                acct5_start + datetime.timedelta(minutes=6),
+                ChalConst.STATE_PC,
+                80,
+            )
+            cached_scores = self._scoreboard(admin_session, contest_id)
+            self.assertEqual(cached_scores[5]['total_score'], 50)
+
+        with AccountContext('contest2@test', 'test') as user_session:
+            uncached_scores = self._scoreboard(user_session, contest_id)
+            self.assertEqual(uncached_scores[5]['total_score'], 80)
+
+        await ContestService.inst.invalidate_scoreboard_cache(contest_id)
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            refreshed_scores = self._scoreboard(admin_session, contest_id)
+            self.assertEqual(refreshed_scores[5]['total_score'], 80)
+            self.assertEqual(
+                refreshed_scores[5]['scores']['9']['timestamp'], '6:00'
+            )
+
+        await ContestService.inst.db.execute(
+            "UPDATE contest SET contest_end = $2 WHERE contest_id = $1",
+            contest_id,
+            base,
+        )
+        await ContestService.inst.rs.hdel('contest', str(contest_id))
+        await ContestService.inst.invalidate_scoreboard_cache(contest_id)
+
+        with AccountContext('contest5@test', 'test') as outsider_session:
+            scores = self._scoreboard(outsider_session, contest_id)
+            self.assertEqual(scores[5]['total_score'], 80)
+            self.assertEqual(scores[6]['total_score'], 70)
+
+    async def _test_icpc_scoreboard(self):
+        now = datetime.datetime.now()
+        config = self._config(
+            'flexible ICPC scoreboard',
+            now - datetime.timedelta(minutes=1),
+            now + datetime.timedelta(hours=2),
+            3600,
+            contest_mode=ContestMode.ACM,
+        )
+        with AccountContext('admin@test', 'testtest') as admin_session:
+            contest_id = await self._create_contest(
+                admin_session,
+                config,
+                acct_ids=(5, 6),
+                pro_ids=(10,),
+            )
+
+        with AccountContext('contest2@test', 'test') as user_session:
+            await self._start(user_session, contest_id)
+        with AccountContext('contest3@test', 'test') as user_session:
+            await self._start(user_session, contest_id)
+
+        base = datetime.datetime.now(datetime.UTC)
+        acct5_start = base - datetime.timedelta(minutes=30)
+        acct6_start = base - datetime.timedelta(minutes=10)
+        session_end = base + datetime.timedelta(minutes=30)
+        await self._set_sessions(
+            contest_id,
+            (
+                (5, acct5_start, session_end),
+                (6, acct6_start, session_end),
+            ),
+        )
+
+        await self._insert_challenge(
+            contest_id, 10, 5, acct5_start - datetime.timedelta(seconds=1),
+            ChalConst.STATE_AC,
+        )
+        await self._insert_challenge(
+            contest_id, 10, 5, acct5_start + datetime.timedelta(minutes=1),
+            ChalConst.STATE_WA,
+        )
+        acct5_ac = await self._insert_challenge(
+            contest_id, 10, 5, acct5_start + datetime.timedelta(minutes=3),
+            ChalConst.STATE_AC,
+        )
+        await self._insert_challenge(
+            contest_id, 10, 5, session_end,
+            ChalConst.STATE_AC,
+        )
+        acct6_ac = await self._insert_challenge(
+            contest_id, 10, 6, acct6_start + datetime.timedelta(minutes=2),
+            ChalConst.STATE_AC,
+        )
+        await ContestService.inst.invalidate_scoreboard_cache(contest_id)
+
+        with AccountContext('contest2@test', 'test') as user_session:
+            history = self._scoreboard(
+                user_session,
+                contest_id,
+                acct5_start + datetime.timedelta(minutes=2),
+            )
+            self.assertEqual(history[5]['total_score'], 0)
+            self.assertEqual(history[5]['scores']['10']['fail_cnt'], 1)
+            self.assertEqual(history[6]['total_score'], 0)
+
+            scores = self._scoreboard(user_session, contest_id)
+            self.assertEqual(scores[5]['total_score'], 23)
+            self.assertEqual(scores[5]['scores']['10']['chal_id'], acct5_ac)
+            self.assertEqual(scores[5]['scores']['10']['timestamp'], '3:00')
+            self.assertEqual(scores[5]['scores']['10']['fail_cnt'], 1)
+            self.assertEqual(scores[6]['total_score'], 2)
+            self.assertEqual(scores[6]['scores']['10']['chal_id'], acct6_ac)
+            self.assertEqual(scores[6]['scores']['10']['timestamp'], '2:00')
+            self.assertEqual(scores[6]['scores']['10']['fail_cnt'], 0)

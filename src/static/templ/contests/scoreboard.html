@@ -1,5 +1,5 @@
 {% import datetime %}
-{% from services.contests import ContestMode %}
+{% from services.contests import ContestMode, ContestTimeMode %}
 {% from utils.htmlgen import pro_idx_to_pro_alphabet %}
 
 <style>
@@ -48,6 +48,11 @@ color: #00dc00;
 font-weight: bolder;
 }
 
+.flexible-session-time {
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
 </style>
 
 <script>
@@ -63,6 +68,7 @@ font-weight: bolder;
     var ws;
     var timer_id = 0;
     var is_in_specific_timestamp = false;
+    var scoreboard_reference_time = null;
 
     /**
      * @argument secs { number }
@@ -100,7 +106,63 @@ font-weight: bolder;
             display_time_label.text("Ended");
             clearInterval(timer_id);
         }
+
+        {% if contest.contest_time_mode is ContestTimeMode.FLEXIBLE %}
+        update_flexible_session_times();
+        {% end %}
     }
+
+    {% if contest.contest_time_mode is ContestTimeMode.FLEXIBLE %}
+    function flexible_elapsed_text(start_time, end_time) {
+        if (!start_time || !end_time) return '--:--';
+
+        let start = new Date(start_time);
+        let end = new Date(end_time);
+        let reference = scoreboard_reference_time || new Date();
+        let elapsed_seconds = Math.floor(
+            (Math.min(reference.getTime(), end.getTime()) - start.getTime()) / 1000
+        );
+        return secsToText(Math.max(elapsed_seconds, 0));
+    }
+
+    function flexible_start_text(start_time) {
+        return new Date(start_time).toLocaleString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+        });
+    }
+
+    function flexible_session_html(scores) {
+        if (!scores.flexible_start || !scores.flexible_end) {
+            return '<span class="text-muted ms-1" title="Flexible session not started">--:--</span>';
+        }
+
+        return `
+            <button type="button"
+                    class="badge rounded-pill bg-secondary border-0 ms-1 flexible-session-time"
+                    data-session-start="${scores.flexible_start}"
+                    data-session-end="${scores.flexible_end}"
+                    data-view="elapsed"
+                    title="Show Flexible start time">
+                ${flexible_elapsed_text(scores.flexible_start, scores.flexible_end)}
+            </button>
+        `;
+    }
+
+    function update_flexible_session_times() {
+        $('#scoreboard .flexible-session-time[data-view="elapsed"]').each(function() {
+            $(this).text(flexible_elapsed_text(
+                $(this).attr('data-session-start'),
+                $(this).attr('data-session-end'),
+            ));
+        });
+    }
+    {% end %}
 
     /**
      * @argument p { String }
@@ -147,7 +209,26 @@ font-weight: bolder;
         });
 
         // Initialize with contest_id and setup connection indicator
-        index.ws_send('contestnewchalsub_init', contest_id);
+        index.ws_send('contestnewchalsub_init', {
+            contest_id: contest_id,
+            purpose: 'scoreboard',
+        });
+
+        {% if contest.contest_time_mode is ContestTimeMode.FLEXIBLE %}
+        $('#scoreboard').on('click', '.flexible-session-time', function() {
+            let element = $(this);
+            let start_time = element.attr('data-session-start');
+            if (element.attr('data-view') == 'elapsed') {
+                element.attr('data-view', 'start');
+                element.attr('title', 'Show Flexible elapsed time');
+                element.text(flexible_start_text(start_time));
+            } else {
+                element.attr('data-view', 'elapsed');
+                element.attr('title', 'Show Flexible start time');
+                update_flexible_session_times();
+            }
+        });
+        {% end %}
 
         // Update connection indicator when WebSocket opens
         if (index.ws && index.ws.readyState === WebSocket.OPEN) {
@@ -220,6 +301,7 @@ font-weight: bolder;
              * @type { Array<Object> }
              */
             let scores = res.data;
+            scoreboard_reference_time = timestamp == -1 ? null : new Date(timestamp);
             scores.sort((p, q) => {
                 if (Object.keys(p.scores).length == 0 && Object.keys(q.scores).length == 0) {
                     return 0;
@@ -303,7 +385,12 @@ font-weight: bolder;
             each_ranks_html += `
                 <tr>
                     <td>${cur_rank}</td>
-                    <td><a href="{{ url('/acct/${scores.acct_id}/') }}">${scores.name}</a></td>
+                    <td>
+                        <a href="{{ url('/acct/${scores.acct_id}/') }}">${scores.name}</a>
+                        {% if contest.contest_time_mode is ContestTimeMode.FLEXIBLE %}
+                        ${flexible_session_html(scores)}
+                        {% end %}
+                    </td>
                     ${each_problems_score_html}
                     <td>
                         <p class="">${scores.total_score}</p>
@@ -444,7 +531,12 @@ font-weight: bolder;
             icpc_each_ranks_html += `
                 <tr>
                     <td>${icpc_cur_rank}</td>
-                    <td><a href="{{ url('/acct/${scores.acct_id}/') }}">${scores.name}</a></td>
+                    <td>
+                        <a href="{{ url('/acct/${scores.acct_id}/') }}">${scores.name}</a>
+                        {% if contest.contest_time_mode is ContestTimeMode.FLEXIBLE %}
+                        ${flexible_session_html(scores)}
+                        {% end %}
+                    </td>
                     ${icpc_each_problems_score_html}
                     <td>
                         <p class="">${scores.ac_count}</p>

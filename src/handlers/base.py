@@ -567,12 +567,24 @@ class UnifiedWebSocketHandler(tornado.websocket.WebSocketHandler):
                 self.ping_callback.stop()
 
             async with self.__class__._subscriptions_lock:
-                if self in self.__class__.subscriptions:
-                    del self.__class__.subscriptions[self]
+                channels = self.__class__.subscriptions.pop(self, set())
             async with self.__class__._connections_lock:
                 self.__class__.active_connections.discard(self)
 
-        except Exception as e:
+            async with self.__class__._channel_callbacks_lock:
+                callbacks = [
+                    self.__class__._channel_callbacks.get(channel)
+                    for channel in channels
+                ]
+            for callback in callbacks:
+                if callback is None:
+                    continue
+                try:
+                    await callback.unregister(self)
+                except Exception:
+                    pass
+
+        except Exception:
             pass
 
     def on_close(self) -> None:

@@ -1,5 +1,5 @@
 {% import config %}
-{% from services.contests import ContestMode %}
+{% from services.contests import ContestMode, ContestTimeMode %}
 <script type="text/javascript" id="contjs">
     function init() {}
 </script>
@@ -22,6 +22,7 @@
                         <th scope="col">End Time</th>
                         <th scope="col">Length</th>
                         <th scope="col">Contest Type</th>
+                        <th scope="col">Time Mode</th>
                         <th scope="col">Scoreboard</th>
                     </tr>
                 </thead>
@@ -31,13 +32,14 @@
                             <th scope="row"><a href="{{ url(f'/contests/{ contest['contest_id'] }/info/') }}">{{ contest['name'] }}</a></th>
                             <td>{{ contest['contest_start'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
                             <td>{{ contest['contest_end'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
-                            <td>{{ contest['contest_end'] - contest['contest_start'] }}</td>
+                            <td>{% if contest['contest_time_mode'] is ContestTimeMode.FLEXIBLE %}{{ datetime.timedelta(seconds=contest['contest_duration']) }}{% else %}{{ contest['contest_end'] - contest['contest_start'] }}{% end %}</td>
                             <td>{{ ContestMode(int(contest['contest_mode'])).name }}</td>
+                            <td>{{ ContestTimeMode(int(contest['contest_time_mode'])).name.capitalize() }}</td>
                             <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
                         </tr>
                     {% end %}
                     {% if len(contest_list) == 0 %}
-                        <tr><td colspan="6" class="text-center text-muted">No {{ contest_name }} contests</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted">No {{ contest_name }} contests</td></tr>
                     {% end %}
                 </tbody>
             </table>

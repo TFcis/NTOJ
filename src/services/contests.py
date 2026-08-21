@@ -6,7 +6,11 @@ import pickle
 import asyncpg
 
 from services.chal import Compiler, ChalConst
-from services.contest_session import ContestSession
+from services.contest_session import (
+    ContestScoreboardContext,
+    ContestSession,
+    ContestSessionType,
+)
 from services.user import Account
 
 
@@ -19,6 +23,11 @@ class RegMode(enum.IntEnum):
 class ContestMode(enum.IntEnum):
     IOI = 0
     ACM = 1 # NOTE: ACM/ICPC
+
+
+class ContestTimeMode(enum.IntEnum):
+    FIXED = 0
+    FLEXIBLE = 1
 
 class ProblemScoreType(enum.IntEnum):
     IOI2013 = 0
@@ -41,6 +50,37 @@ class ContestConst:
     NAME_MIN = 1
     NAME_MAX = 50
 
+
+_SCORE_ACCOUNT_WINDOWS_CTE = """
+account_windows AS (
+    SELECT
+        cu.acct_id,
+        CASE
+            WHEN ($8::boolean OR c.contest_time_mode = $5) AND cu.status = $6
+                THEN cs.start_time
+            ELSE c.contest_start
+        END AS start_time,
+        CASE
+            WHEN ($8::boolean OR c.contest_time_mode = $5) AND cu.status = $6
+                THEN cs.end_time
+            ELSE c.contest_end
+        END AS end_time
+    FROM contest_users AS cu
+    INNER JOIN contest AS c ON c.contest_id = cu.contest_id
+    LEFT JOIN contest_sessions AS cs
+      ON cs.contest_id = cu.contest_id
+     AND cs.acct_id = cu.acct_id
+     AND cs.session_type = $4
+    WHERE cu.contest_id = $1
+      AND cu.status IN ($6, $7)
+      AND (
+          (NOT $8::boolean AND c.contest_time_mode != $5)
+          OR cu.status = $7
+          OR cs.session_id IS NOT NULL
+      )
+)
+"""
+
 @dataclass(slots=True, kw_only=True)
 class Contest:
     contest_id: int
@@ -54,6 +94,8 @@ class Contest:
     contest_mode: ContestMode
     contest_start: datetime.datetime
     contest_end: datetime.datetime
+    contest_time_mode: ContestTimeMode = ContestTimeMode.FIXED
+    contest_duration: int = 0
 
     user_list: dict[int, dict] = field(default_factory=dict)
     pro_list: dict[int, dict] = field(default_factory=dict)
@@ -71,13 +113,17 @@ class Contest:
     enable_system_test: bool = False  # Enable system test feature (pretest/final test)
 
     def is_start(self) -> bool:
-        return ContestSession.fixed(self).is_started()
+        return self.configured_session().is_started()
 
     def is_end(self) -> bool:
-        return ContestSession.fixed(self).is_ended()
+        return self.configured_session().is_ended()
 
     def is_running(self) -> bool:
-        return ContestSession.fixed(self).is_running()
+        return self.configured_session().is_running()
+
+    def configured_session(self) -> ContestSession:
+        """Return the global availability window, not an account session."""
+        return ContestSession.fixed(self)
 
     def is_pro(self, pro_id: int) -> bool:
         return pro_id in self.pro_list
@@ -123,11 +169,26 @@ class ContestService:
 
         ContestService.inst = self
 
+    async def invalidate_scoreboard_cache(
+        self, contest_id: int, pro_id: int | None = None
+    ) -> None:
+        """Invalidate every registered session type's scoreboard namespace."""
+        for session_type in ContestSessionType:
+            context = ContestScoreboardContext(
+                session_type=session_type,
+                use_stored_sessions=session_type is not ContestSessionType.OFFICIAL,
+            )
+            cache_name = context.cache_name(contest_id)
+            if pro_id is None:
+                await self.rs.delete(cache_name)
+            else:
+                await self.rs.hdel(cache_name, str(pro_id))
+
     async def get_contest(self, contest_id: int):
         if (b_contest := await self.rs.hget('contest', str(contest_id))) is not None:
             contest: Contest = pickle.loads(b_contest)
 
-            contest_session = ContestSession.fixed(contest)
+            contest_session = contest.configured_session()
             if contest_session.is_ended():
                 await self.rs.hdel('contest', str(contest_id))
 
@@ -143,6 +204,7 @@ class ContestService:
                         "desc_after_contest",
 
                         "contest_mode", "contest_start", "contest_end",
+                        "contest_time_mode", "contest_duration",
                         "reg_mode", "reg_end",
 
                         "allow_compilers",
@@ -166,6 +228,7 @@ class ContestService:
                 contest = Contest(**result)
                 contest.reg_mode = RegMode(contest.reg_mode)
                 contest.contest_mode = ContestMode(contest.contest_mode)
+                contest.contest_time_mode = ContestTimeMode(contest.contest_time_mode)
                 contest.contest_start = contest.contest_start
                 contest.contest_end = contest.contest_end
                 contest.reg_end = contest.reg_end
@@ -177,13 +240,26 @@ class ContestService:
                         "challenge_style": ChallengeResultStyle(int(challenge_style))
                     }
 
-                result = await con.fetch('SELECT acct_id, status FROM contest_users WHERE contest_id = $1 ORDER BY acct_id', contest_id)
-                for acct_id, status in result:
+                result = await con.fetch('''
+                    SELECT cu.acct_id, cu.status,
+                           cs.session_id, cs.start_time, cs.end_time
+                    FROM contest_users AS cu
+                    LEFT JOIN contest_sessions AS cs
+                      ON cs.contest_id = cu.contest_id
+                     AND cs.acct_id = cu.acct_id
+                     AND cs.session_type = $2
+                    WHERE cu.contest_id = $1
+                    ORDER BY cu.acct_id
+                ''', contest_id, int(ContestSessionType.OFFICIAL))
+                for acct_id, status, session_id, session_start, session_end in result:
                     contest.user_list[acct_id] = {
-                        "status": UserStatus(int(status))
+                        "status": UserStatus(int(status)),
+                        "session_id": session_id,
+                        "session_start": session_start,
+                        "session_end": session_end,
                     }
 
-            if ContestSession.fixed(contest).is_running():
+            if contest.configured_session().is_running():
                 b_contest = pickle.dumps(contest)
                 await self.rs.hset('contest', str(contest_id), b_contest)
 
@@ -196,6 +272,7 @@ class ContestService:
                     SELECT
                     "contest_id", "name",
                     "contest_mode", "contest_start", "contest_end",
+                    "contest_time_mode", "contest_duration",
                     "is_public_scoreboard"
                     FROM "contest" ORDER BY "contest_id" ASC;
                 ''',
@@ -208,8 +285,11 @@ class ContestService:
                     "contest_mode": contest_mode,
                     "contest_start": contest_start,
                     "contest_end": contest_end,
+                    "contest_time_mode": ContestTimeMode(contest_time_mode),
+                    "contest_duration": contest_duration,
                     "is_public_scoreboard": is_public_scoreboard
-                } for contest_id, name, contest_mode, contest_start, contest_end, is_public_scoreboard in result
+                } for contest_id, name, contest_mode, contest_start, contest_end,
+                      contest_time_mode, contest_duration, is_public_scoreboard in result
             ]
 
         return None, contest_list
@@ -243,6 +323,77 @@ class ContestService:
 
         return None, contest_id
 
+    async def start_official_session(self, contest: Contest, acct: Account):
+        """Atomically start a flexible contest session for an approved account."""
+        if contest.contest_time_mode is not ContestTimeMode.FLEXIBLE:
+            return ("Eparam", "This contest does not use flexible time"), None
+        if not contest.member_is_status(acct, UserStatus.APPROVED):
+            return ("Eacces", "Only approved contestants can start this contest"), None
+
+        row = await self.db.fetchrow(
+            """
+            WITH clock AS (
+                SELECT CURRENT_TIMESTAMP AS now
+            )
+            INSERT INTO contest_sessions (
+                contest_id, acct_id, session_type, start_time, end_time
+            )
+            SELECT
+                c.contest_id,
+                $2,
+                $3,
+                clock.now,
+                LEAST(
+                    clock.now + c.contest_duration * INTERVAL '1 second',
+                    c.contest_end
+                )
+            FROM contest AS c
+            CROSS JOIN clock
+            INNER JOIN contest_users AS cu
+                ON cu.contest_id = c.contest_id
+               AND cu.acct_id = $2
+               AND cu.status = $4
+            WHERE c.contest_id = $1
+              AND c.contest_time_mode = $5
+              AND c.contest_duration > 0
+              AND c.contest_start <= clock.now
+              AND clock.now < c.contest_end
+            ON CONFLICT (contest_id, acct_id, session_type) DO NOTHING
+            RETURNING session_id, start_time, end_time
+            """,
+            contest.contest_id,
+            acct.acct_id,
+            int(ContestSessionType.OFFICIAL),
+            int(UserStatus.APPROVED),
+            int(ContestTimeMode.FLEXIBLE),
+        )
+
+        if row is None:
+            row = await self.db.fetchrow(
+                """
+                SELECT session_id, start_time, end_time
+                FROM contest_sessions
+                WHERE contest_id = $1 AND acct_id = $2 AND session_type = $3
+                """,
+                contest.contest_id,
+                acct.acct_id,
+                int(ContestSessionType.OFFICIAL),
+            )
+            if row is None:
+                return ("Etime", "Contest cannot be started at this time"), None
+
+        session = ContestSession(
+            contest_id=contest.contest_id,
+            acct_id=acct.acct_id,
+            session_id=row["session_id"],
+            session_type=ContestSessionType.OFFICIAL,
+            start_time=row["start_time"],
+            end_time=row["end_time"],
+        )
+        await self.rs.hdel("contest", str(contest.contest_id))
+        await self.invalidate_scoreboard_cache(contest.contest_id)
+        return None, session
+
     async def update_contest(self, acct: Account, contest: Contest, prolist_updated=False, userlist_updated=False):
         from services.pro import ProConst
         error_group = []
@@ -258,16 +409,17 @@ class ContestService:
                     "desc_during_contest" = $3,
                     "desc_after_contest" = $4,
                     "contest_mode" = $5, "contest_start" = $6, "contest_end" = $7,
-                    "reg_mode" = $8, "reg_end" = $9,
-                    "allow_compilers" = $10,
-                    "is_public_scoreboard" = $11,
-                    "allow_view_other_page" = $12,
-                    "hide_admin" = $13,
-                    "submission_cd_time" = $14,
-                    "freeze_scoreboard_period" = $15,
-                    "penalty_value" = $16,
-                    "enable_system_test" = $17
-                    WHERE "contest_id" = $18;
+                    "contest_time_mode" = $8, "contest_duration" = $9,
+                    "reg_mode" = $10, "reg_end" = $11,
+                    "allow_compilers" = $12,
+                    "is_public_scoreboard" = $13,
+                    "allow_view_other_page" = $14,
+                    "hide_admin" = $15,
+                    "submission_cd_time" = $16,
+                    "freeze_scoreboard_period" = $17,
+                    "penalty_value" = $18,
+                    "enable_system_test" = $19
+                    WHERE "contest_id" = $20;
                 ''',
                 contest.name,
                 contest.desc_before_contest,
@@ -275,6 +427,7 @@ class ContestService:
                 contest.desc_after_contest,
 
                 contest.contest_mode, contest.contest_start, contest.contest_end,
+                contest.contest_time_mode, contest.contest_duration,
                 contest.reg_mode, contest.reg_end,
 
                 contest.allow_compilers,
@@ -508,23 +661,23 @@ class ContestService:
         contest_id: int,
         pro_id: int,
         before_time: datetime.datetime,
-        session: ContestSession | None = None,
+        score_context: ContestScoreboardContext | None = None,
     ) -> dict:
         """
         Calculate ICPC scores for a problem.
 
-        Score (Spend Time) = (first_ac_timestamp) + fail_cnt * penalty_value (Minute)
-        where fail_cnt is the number of submissions before first AC.
+        Score (Spend Time) = first AC time + fail count * penalty value (Minute)
+        where fail count is the number of challenges before first AC.
 
-        For users without AC: Score = 0, first_ac_timestamp = NULL, chal_id = latest submission chal_id,
-                             fail_cnt = total number of valid submissions
+        For users without AC: Score = 0, first_ac_timestamp = NULL, chal_id = latest challenge ID,
+                             fail_cnt = total number of valid challenges
 
         Filters out invalid/non-verdictable states: CE, CLE, ERR, JE, JUDGE, NOTSTARTED, REJECTED
         """
         _, contest = await self.get_contest(contest_id)
-        session = session or ContestSession.fixed(contest)
+        score_context = score_context or ContestScoreboardContext.official()
 
-        # States to filter out (invalid/non-verdictable submissions)
+        # States to filter out (invalid/non-verdictable challenges)
         invalid_states = [
             ChalConst.STATE_CE,
             ChalConst.STATE_CLE,
@@ -535,82 +688,96 @@ class ContestService:
             ChalConst.STATE_REJECTED
         ]
 
-        res = await self.db.fetch('''
-        WITH valid_challenges AS (
-            -- Get all challenges that are valid (not in invalid states) and before before_time
+        res = await self.db.fetch(f'''
+        WITH {_SCORE_ACCOUNT_WINDOWS_CTE},
+        valid_challenges AS (
             SELECT
                 challenge.chal_id,
-                acct_id,
-                pro_id,
-                timestamp,
-                state
+                challenge.acct_id,
+                challenge.pro_id,
+                challenge.timestamp,
+                total_result.state,
+                account_windows.start_time
             FROM challenge
+            INNER JOIN account_windows
+                ON account_windows.acct_id = challenge.acct_id
             INNER JOIN total_result
                 ON challenge.chal_id = total_result.chal_id
-            WHERE contest_id = $1
-                AND pro_id = $2
-                AND timestamp < $3::timestamptz
-                AND state NOT IN (SELECT unnest($4::int[]))
+            WHERE challenge.contest_id = $1
+                AND challenge.pro_id = $2
+                AND challenge.timestamp >= account_windows.start_time
+                AND challenge.timestamp < LEAST(account_windows.end_time, $3::timestamptz)
+                AND (
+                    $9::interval IS NULL
+                    OR challenge.timestamp <= account_windows.start_time + $9::interval
+                )
+                AND total_result.state NOT IN (SELECT unnest($10::int[]))
         ),
         acct_challenges AS (
-            -- Partition challenges by acct_id and pro_id, ordered by timestamp
             SELECT
                 acct_id,
                 chal_id,
                 pro_id,
                 timestamp,
                 state,
-                ROW_NUMBER() OVER (PARTITION BY acct_id, pro_id ORDER BY timestamp ASC) AS submission_order
+                start_time,
+                ROW_NUMBER() OVER (PARTITION BY acct_id, pro_id ORDER BY timestamp ASC) AS challenge_order
             FROM valid_challenges
         ),
         first_ac_challenges AS (
-            -- Find first AC for each acct (may be empty if no AC)
             SELECT
                 acct_id,
                 chal_id,
                 pro_id,
                 timestamp AS first_ac_timestamp,
-                submission_order - 1 AS fail_cnt  -- Number of submissions before first AC
+                start_time,
+                challenge_order - 1 AS fail_cnt
             FROM acct_challenges
-            WHERE state = $5  -- Only AC state
-                AND submission_order = (
-                    -- Get the first AC submission order for this acct
-                    SELECT MIN(submission_order)
+            WHERE state = $11
+                AND challenge_order = (
+                    SELECT MIN(challenge_order)
                     FROM acct_challenges ac2
                     WHERE ac2.acct_id = acct_challenges.acct_id
                         AND ac2.pro_id = acct_challenges.pro_id
-                        AND ac2.state = $5
+                        AND ac2.state = $11
                 )
         ),
-        acct_submission_counts AS (
-            -- Count total valid submissions for each acct (for those without AC)
+        acct_challenge_counts AS (
             SELECT
                 acct_id,
                 pro_id,
-                COUNT(*) AS total_submissions,
+                COUNT(*) AS total_challenges,
                 MAX(chal_id) AS latest_chal_id,
-                MAX(timestamp) AS latest_timestamp
+                MAX(timestamp) AS latest_timestamp,
+                MIN(start_time) AS start_time
             FROM acct_challenges
             GROUP BY acct_id, pro_id
         )
         SELECT
-            COALESCE(fac.acct_id, ascsub.acct_id) AS acct_id,
-            COALESCE(fac.chal_id, ascsub.latest_chal_id) AS chal_id,
-            COALESCE(fac.first_ac_timestamp, ascsub.latest_timestamp) AS timestamp,
-            COALESCE(fac.fail_cnt, ascsub.total_submissions) AS fail_cnt,
+            COALESCE(fac.acct_id, acc.acct_id) AS acct_id,
+            COALESCE(fac.chal_id, acc.latest_chal_id) AS chal_id,
+            COALESCE(fac.first_ac_timestamp, acc.latest_timestamp) AS timestamp,
+            COALESCE(fac.fail_cnt, acc.total_challenges) AS fail_cnt,
             CASE
-                WHEN fac.acct_id IS NOT NULL THEN (EXTRACT(EPOCH FROM (fac.first_ac_timestamp - $6::timestamptz))::integer / 60) + (fac.fail_cnt * $7)::integer
+                WHEN fac.acct_id IS NOT NULL THEN
+                    (EXTRACT(EPOCH FROM (fac.first_ac_timestamp - fac.start_time))::integer / 60)
+                    + (fac.fail_cnt * $12)::integer
                 ELSE 0
             END AS score
         FROM first_ac_challenges fac
-        FULL OUTER JOIN acct_submission_counts ascsub
-            ON fac.acct_id = ascsub.acct_id AND fac.pro_id = ascsub.pro_id
+        FULL OUTER JOIN acct_challenge_counts acc
+            ON fac.acct_id = acc.acct_id AND fac.pro_id = acc.pro_id
         ORDER BY acct_id;
         ''', contest_id, pro_id, before_time,
-            invalid_states,  # $4: array of invalid states to filter out
-            ChalConst.STATE_AC,  # $5: AC state
-            session.start_time,  # $6: effective session start time for score calculation
-            contest.penalty_value, # $7: penalty value
+            int(score_context.session_type),
+            int(ContestTimeMode.FLEXIBLE),
+            int(UserStatus.APPROVED),
+            int(UserStatus.ADMIN),
+            score_context.use_stored_sessions,
+            score_context.visible_elapsed,
+            invalid_states,
+            ChalConst.STATE_AC,
+            contest.penalty_value,
         )
 
         if len(res) == 0:
@@ -629,10 +796,18 @@ class ContestService:
 
         return scores
 
-    async def get_ioi2013_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
+    async def get_ioi2013_scores(
+        self,
+        contest_id: int,
+        pro_id: int,
+        before_time: datetime.datetime,
+        score_context: ContestScoreboardContext | None = None,
+    ) -> dict:
+        score_context = score_context or ContestScoreboardContext.official()
         res = await self.db.fetch(
             f'''
-        WITH ranked_challenges AS (
+        WITH {_SCORE_ACCOUNT_WINDOWS_CTE},
+        ranked_challenges AS (
             SELECT
                 "challenge"."chal_id",
                 "challenge"."pro_id",
@@ -651,13 +826,17 @@ class ContestService:
                     ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
                 ) AS challenge_count_before_first_max_rate_challenge
             FROM "challenge"
-            INNER JOIN "contest_users"
-                ON "contest_users"."contest_id" = $1 AND "contest_users"."acct_id" = "challenge"."acct_id"
-                AND "contest_users"."status" = {UserStatus.APPROVED} OR "contest_users"."status" = {UserStatus.ADMIN}
-
+            INNER JOIN account_windows
+                ON account_windows.acct_id = challenge.acct_id
             INNER JOIN "total_result"
                 ON "challenge"."contest_id" = $1 AND "challenge"."pro_id" = $2
-                AND "challenge"."timestamp" < $3 AND "challenge"."chal_id" = "total_result"."chal_id"
+                AND "challenge"."timestamp" >= account_windows.start_time
+                AND "challenge"."timestamp" < LEAST(account_windows.end_time, $3::timestamptz)
+                AND (
+                    $9::interval IS NULL
+                    OR "challenge"."timestamp" <= account_windows.start_time + $9::interval
+                )
+                AND "challenge"."chal_id" = "total_result"."chal_id"
             INNER JOIN "problem"
             ON "problem"."pro_id" = $2
         )
@@ -670,7 +849,11 @@ class ContestService:
         FROM ranked_challenges
         WHERE rank = 1
         ORDER BY acct_id;
-        ''', contest_id, pro_id, before_time
+        ''', contest_id, pro_id, before_time,
+            int(score_context.session_type), int(ContestTimeMode.FLEXIBLE),
+            int(UserStatus.APPROVED), int(UserStatus.ADMIN),
+            score_context.use_stored_sessions,
+            score_context.visible_elapsed,
         )
 
         if len(res) == 0:
@@ -689,12 +872,28 @@ class ContestService:
 
         return scores
 
-    async def get_ioi2017_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
-        res = await self.db.fetch('''
-        WITH contest_challenges AS (
-            SELECT chal_id, acct_id, pro_id, timestamp
+    async def get_ioi2017_scores(
+        self,
+        contest_id: int,
+        pro_id: int,
+        before_time: datetime.datetime,
+        score_context: ContestScoreboardContext | None = None,
+    ) -> dict:
+        score_context = score_context or ContestScoreboardContext.official()
+        res = await self.db.fetch(f'''
+        WITH {_SCORE_ACCOUNT_WINDOWS_CTE},
+        contest_challenges AS (
+            SELECT challenge.chal_id, challenge.acct_id, challenge.pro_id, challenge.timestamp
             FROM challenge
-            WHERE contest_id = $1 AND timestamp < $3
+            INNER JOIN account_windows
+                ON account_windows.acct_id = challenge.acct_id
+            WHERE challenge.contest_id = $1
+              AND challenge.timestamp >= account_windows.start_time
+              AND challenge.timestamp < LEAST(account_windows.end_time, $3::timestamptz)
+              AND (
+                  $9::interval IS NULL
+                  OR challenge.timestamp <= account_windows.start_time + $9::interval
+              )
         ),
         problem_tests AS (
             SELECT pro_id, subtask_id
@@ -766,7 +965,10 @@ class ContestService:
         JOIN account a ON ar.acct_id = a.acct_id
         INNER JOIN problem ON problem.pro_id = $2
         ORDER BY ar.acct_id, ar.pro_id;
-        ''', contest_id, pro_id, before_time)
+        ''', contest_id, pro_id, before_time,
+            int(score_context.session_type), int(ContestTimeMode.FLEXIBLE),
+            int(UserStatus.APPROVED), int(UserStatus.ADMIN),
+            score_context.use_stored_sessions, score_context.visible_elapsed)
 
         if len(res) == 0:
             return {}
