@@ -1,13 +1,44 @@
 import datetime
 
-from handlers.base import RequestHandler, reqenv
+from handlers.base import ActionDispatcher, RequestHandler, reqenv
 from services.contests import ContestService
+
+
+contest_info_dispatcher = ActionDispatcher()
 
 
 class ContestInfoHandler(RequestHandler):
     @reqenv
     async def get(self):
         await self.render("contests/info", self.contest.name, contest=self.contest)
+
+    @contest_info_dispatcher.action("start")
+    async def start_action(self):
+        if not self.contest_access.can_start:
+            return self.error(("Eacces", "Contest cannot be started at this time"))
+
+        err, session = await ContestService.inst.start_official_session(
+            self.contest, self.acct
+        )
+        if err:
+            return self.error(err)
+
+        options = self.contest.user_list[self.acct.acct_id]
+        options["session_id"] = session.session_id
+        options["session_start"] = session.start_time
+        options["session_end"] = session.end_time
+        self.refresh_contest_context()
+        await self.add_log(
+            f"{self.acct.name} started contest '{self.contest.name}'",
+            "contest.session.start",
+        )
+        return self.error(("S", ""))
+
+    @reqenv
+    async def post(self):
+        return await contest_info_dispatcher.dispatch(
+            self, self.get_argument("reqtype")
+        )
 
 
 class ContestListHandler(RequestHandler):

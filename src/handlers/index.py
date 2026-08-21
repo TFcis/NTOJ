@@ -1,5 +1,6 @@
 from handlers.base import RequestHandler, reqenv
 from services.ques import QuestionService
+from services.contests import ContestService
 
 
 class IndexHandler(RequestHandler):

@@ -309,8 +309,8 @@ class ChalListTest(AsyncTest):
                 self.assertAPIReturnValue(res.text, ('S', 4))
 
             await self.wait_for_judge_finish(callback3)
-            ws_admin.close()
             await asyncio.sleep(5) # HACK: workaround to ensure message is processed
+            ws_admin.close()
             self.assertTrue(got_message)
 
             flt = ChalSearchingParamBuilder().build()

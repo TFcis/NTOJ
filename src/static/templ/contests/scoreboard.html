@@ -147,7 +147,10 @@ font-weight: bolder;
         });
 
         // Initialize with contest_id and setup connection indicator
-        index.ws_send('contestnewchalsub_init', contest_id);
+        index.ws_send('contestnewchalsub_init', {
+            contest_id: contest_id,
+            purpose: 'scoreboard',
+        });
 
         // Update connection indicator when WebSocket opens
         if (index.ws && index.ws.readyState === WebSocket.OPEN) {
