@@ -91,7 +91,7 @@
                     <button class="btn btn-primary reg form-control">Register</button>
                 {% elif contest.member_is_status(user, UserStatus.REQUESTED) and now < contest.reg_end %}
                     <button class="btn btn-primary cancel-register form-control">Cancel register</button>
-                {% elif contest.member_is_status(user, UserStatus.APPROVED) and now < contest.contest_start %}
+                {% elif contest_access.is_participant and not contest_session.is_started() %}
                     <button class="btn btn-primary unreg form-control">Unregister</button>
                 {% end %}
             {% end %}
@@ -99,4 +99,3 @@
 
     </div>
 </div>
-

@@ -1,11 +1,12 @@
 from handlers.base import RequestHandler, reqenv
 from handlers.contests.base import contest_require_permission
+from services.contest_access import ContestPermission
 from services.log import LogService
 
 
 class ContestManageLogHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self, log_id=None):
         """Display logs for the current contest
 

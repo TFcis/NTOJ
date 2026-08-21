@@ -6,11 +6,11 @@
 {% set should_hide_system_test = False %}
 {% if chal.contest_id != 0 and contest is not None %}
     {% set challenge_style = contest.pro_list.get(chal.pro_id, {}).get('challenge_style', ChallengeResultStyle.FULL) %}
-    {% if contest.is_admin(acct_id=user.acct_id) %}
+    {% if contest_access.is_admin %}
         {% set challenge_style = ChallengeResultStyle.FULL %}
     {% else %}
         {# Regular users: hide system-test during contest if system test is enabled #}
-        {% if contest.enable_system_test and contest.is_running() %}
+        {% if contest.enable_system_test and contest_session.is_running() %}
             {% set should_hide_system_test = True %}
         {% end %}
     {% end %}
@@ -240,7 +240,7 @@
 
         $('#jump_to_code_section').on('click', function(e) {
             $('html, body').animate({
-                scrollTop: $("#code").offset().top;
+                scrollTop: $("#code").offset().top
             }, 0);
         });
     }
@@ -568,4 +568,3 @@
         <code class=""></code>
     </pre>
 {% end %}
-

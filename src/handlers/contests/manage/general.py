@@ -3,11 +3,13 @@ import datetime
 from handlers.base import RequestHandler, reqenv, require_permission, ActionDispatcher
 from handlers.contests.base import contest_require_permission
 from services.chal import Compiler
+from services.contest_access import ContestPermission
 from services.user import UserConst
 from services.contests import (
     ContestConst,
     ContestService,
     ContestMode,
+    ContestTimeMode,
     RegMode,
     UserStatus,
     ProblemScoreType,
@@ -20,7 +22,7 @@ contest_manage_add_dispatcher = ActionDispatcher()
 
 class ContestManageDashHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         await self.render(
             "contests/manage/dash", f"{self.contest.name} - Manage", page="dash", contest_id=self.contest.contest_id
@@ -29,7 +31,7 @@ class ContestManageDashHandler(RequestHandler):
 
 class ContestManageGeneralHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         await self.render(
             "contests/manage/general",
@@ -46,6 +48,15 @@ class ContestManageGeneralHandler(RequestHandler):
         contest_mode = ContestMode(int(self.get_argument("contest_mode")))
         contest_start = self.get_argument("contest_start")
         contest_end = self.get_argument("contest_end")
+        contest_time_mode = ContestTimeMode(
+            int(self.get_argument("contest_time_mode", default=self.contest.contest_time_mode))
+        )
+        try:
+            contest_duration = int(
+                self.get_argument("contest_duration", default=self.contest.contest_duration)
+            )
+        except ValueError:
+            return self.error(("Eparam", "Contest duration must be a positive integer"))
 
         reg_mode = RegMode(int(self.get_argument("reg_mode")))
         reg_end = self.get_argument("reg_end")
@@ -106,8 +117,24 @@ class ContestManageGeneralHandler(RequestHandler):
         self.contest.contest_mode = contest_mode
         if contest_end <= contest_start:
             return self.error(("Eparam", "Contest end time should be later than start time"))
+        if contest_time_mode is ContestTimeMode.FLEXIBLE and contest_duration <= 0:
+            return self.error(("Eparam", "Contest duration must be a positive integer"))
+        if (
+            contest_time_mode is not self.contest.contest_time_mode
+            and self.contest.contest_end > self.contest.contest_start
+            and self.contest.configured_session().is_started()
+        ):
+            return self.error(
+                ("Etime", "Contest time mode cannot be changed after the contest starts")
+            )
         self.contest.contest_start = contest_start
         self.contest.contest_end = contest_end
+        self.contest.contest_time_mode = contest_time_mode
+        self.contest.contest_duration = (
+            contest_duration
+            if contest_time_mode is ContestTimeMode.FLEXIBLE
+            else int((contest_end - contest_start).total_seconds())
+        )
 
         # NOTE: when registration mode change from approval to free, we should approval all account which waiting approval
         if (
@@ -141,16 +168,20 @@ class ContestManageGeneralHandler(RequestHandler):
         self.contest.submission_cd_time = submission_cd_time
         self.contest.penalty_value = penalty_value
         self.contest.enable_system_test = enable_system_test
+        if contest_time_mode is ContestTimeMode.FLEXIBLE:
+            freeze_scoreboard_period = 0
+        self.refresh_contest_context()
         if self.contest.freeze_scoreboard_period != freeze_scoreboard_period:
             self.contest.freeze_scoreboard_period = freeze_scoreboard_period
-            if self.contest.is_start():
-                await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
         new_score_type = ProblemScoreType.ICPC if contest_mode == ContestMode.ACM else ProblemScoreType.IOI2017
         for pro_id in self.contest.pro_list:
             self.contest.pro_list[pro_id]["score_type"] = new_score_type
 
         await ContestService.inst.update_contest(self.acct, self.contest)
+        await ContestService.inst.invalidate_scoreboard_cache(
+            self.contest.contest_id
+        )
 
         await self.add_log(
             f"{self.acct.name} updated general settings of contest '{self.contest.name}'",
@@ -160,6 +191,8 @@ class ContestManageGeneralHandler(RequestHandler):
                 "contest_mode": contest_mode.value,
                 "contest_start": contest_start,
                 "contest_end": contest_end,
+                "contest_time_mode": contest_time_mode.value,
+                "contest_duration": self.contest.contest_duration,
                 "reg_mode": reg_mode.value,
                 "reg_end": reg_end,
                 "allow_compilers": [c.value for c in allow_compilers],
@@ -174,7 +207,7 @@ class ContestManageGeneralHandler(RequestHandler):
         return self.error(("S", ""))
 
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def post(self):
         reqtype = self.get_argument("reqtype")
         return await contest_manage_general_dispatcher.dispatch(self, reqtype)
@@ -182,7 +215,7 @@ class ContestManageGeneralHandler(RequestHandler):
 
 class ContestManageDescEditHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         await self.render(
             "contests/manage/desc-edit",
@@ -220,7 +253,7 @@ class ContestManageDescEditHandler(RequestHandler):
         return self.error(("S", ""))
 
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def post(self):
         reqtype = self.get_argument("reqtype")
         return await contest_manage_desc_edit_dispatcher.dispatch(self, reqtype)

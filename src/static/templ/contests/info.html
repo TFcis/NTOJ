@@ -1,12 +1,12 @@
 {% import config %}
-{% from services.contests import ContestMode, RegMode, UserStatus %}
+{% from services.contests import ContestMode, ContestTimeMode, RegMode, UserStatus %}
 <script>
     function init() {
-        {% if not contest.is_start() %}
+        {% if not contest_session.is_started() %}
             let desc_tex = `{{ markdown_escape(contest.desc_before_contest) }}`;
-        {% elif contest.is_running() %}
+        {% elif contest_session.is_running() %}
             let desc_tex = `{{ markdown_escape(contest.desc_during_contest) }}`;
-        {% elif contest.is_end() %}
+        {% elif contest_session.is_ended() %}
             let desc_tex = `{{ markdown_escape(contest.desc_after_contest) }}`;
         {% end %}
 
@@ -17,6 +17,24 @@
         } catch (e) {
             console.warn('MathJax typeset error', e);
         }
+
+        $("#startFlexibleContest").on("click", function () {
+            if (!confirm("Start your contest now? This action cannot be undone.")) {
+                return;
+            }
+            $(this).prop("disabled", true);
+            $.post("{{ url(f'/be/contests/{ contest.contest_id }/info') }}", {
+                reqtype: "start",
+            }, res => {
+                res = JSON.parse(res);
+                if (res.status === "S") {
+                    location.href = location.href; // refresh navbar
+                } else {
+                    index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+                    $("#startFlexibleContest").prop("disabled", false);
+                }
+            });
+        });
     }
 </script>
 
@@ -27,8 +45,30 @@
             <div class="card mb-1">
                 <div class="card-header">Start / End</div>
                 <div class="card-body">
-                    <h5>{{ contest.contest_start.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
-                    <h5>{{ contest.contest_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+                    {% if contest.contest_time_mode is ContestTimeMode.FLEXIBLE %}
+                        <div class="text-muted">Available</div>
+                        <div>{{ contest.contest_start.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</div>
+                        <div>{{ contest.contest_end.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</div>
+                        <div class="mt-2 text-muted">Duration</div>
+                        <div>{{ datetime.timedelta(seconds=contest.contest_duration) }}</div>
+
+                        {% if contest_access.is_participant %}
+                            {% if contest_session.activated %}
+                                <div class="mt-2 text-muted">Your Start / End</div>
+                                <div>{{ contest_session.start_time.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</div>
+                                <div>{{ contest_session.end_time.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</div>
+                            {% elif contest_access.can_start %}
+                                <button id="startFlexibleContest" class="btn btn-primary mt-3 w-100">Start Contest</button>
+                            {% elif contest.configured_session().is_ended() %}
+                                <div class="mt-2 text-muted">You did not start before the contest ended.</div>
+                            {% else %}
+                                <div class="mt-2 text-muted">Your contest has not started.</div>
+                            {% end %}
+                        {% end %}
+                    {% else %}
+                        <h5>{{ contest_session.start_time.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+                        <h5>{{ contest_session.end_time.astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M:%S") }}</h5>
+                    {% end %}
                 </div>
             </div>
 
@@ -65,7 +105,7 @@
                 <div class="card-header">Registration Status</div>
 
                 <div class="card-body">
-                    {% if contest.is_admin(user) %}
+                    {% if contest_access.is_admin %}
                         <h5>Admin, no registration needed</h5>
                     {% else %}
                         {% set now = datetime.datetime.now(datetime.UTC) %}
