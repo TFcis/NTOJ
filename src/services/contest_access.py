@@ -3,7 +3,7 @@ import enum
 from dataclasses import dataclass
 
 from services.contest_session import ContestPhase, ContestSession
-from services.contests import Contest, UserStatus
+from services.contests import Contest, ContestTimeMode, UserStatus
 from services.user import Account
 
 
@@ -41,7 +41,7 @@ class ContestAccess:
         now: datetime.datetime | None = None,
     ) -> "ContestAccess":
         now = now or datetime.datetime.now(datetime.UTC)
-        session = ContestSession.fixed(contest, acct.acct_id)
+        session = ContestSession.for_account(contest, acct.acct_id)
         phase = session.phase(now)
 
         is_member = contest.is_member(acct=acct)
@@ -56,17 +56,35 @@ class ContestAccess:
         if is_admin:
             permissions |= ContestPermission.ADMIN
 
-        if (
+        can_view_ended_problem_set = (
             phase is ContestPhase.ENDED
+            and not (
+                contest.contest_time_mode is ContestTimeMode.FLEXIBLE
+                and is_participant
+            )
+        )
+        if (
+            can_view_ended_problem_set
             or (phase is ContestPhase.RUNNING and is_member)
-            or (phase is ContestPhase.BEFORE and is_admin)
+            or is_admin
         ):
             permissions |= ContestPermission.VIEW_PROBLEM_SET
 
         if is_member and (phase is ContestPhase.RUNNING or is_admin):
             permissions |= ContestPermission.VIEW_PROBLEM | ContestPermission.SUBMIT
 
-        if (phase is not ContestPhase.BEFORE or is_admin) and (
+        if (
+            contest.contest_time_mode is ContestTimeMode.FLEXIBLE
+            and not is_admin
+        ):
+            scoreboard_is_available = (
+                contest.configured_session().is_ended(now)
+                or (is_participant and session.activated)
+            )
+        else:
+            scoreboard_is_available = phase is not ContestPhase.BEFORE
+
+        if (scoreboard_is_available or is_admin) and (
             contest.is_public_scoreboard or is_member
         ):
             permissions |= ContestPermission.VIEW_SCOREBOARD
@@ -82,6 +100,16 @@ class ContestAccess:
             permissions=permissions,
             resolved_at=now,
         )
+
+    @property
+    def can_start(self) -> bool:
+        if (
+            self.contest.contest_time_mode is not ContestTimeMode.FLEXIBLE
+            or not self.is_participant
+            or self.session.activated
+        ):
+            return False
+        return self.contest.configured_session().is_running(self.resolved_at)
 
     def has(self, permissions: ContestPermission) -> bool:
         return self.permissions & permissions == permissions
@@ -106,6 +134,13 @@ class ContestAccess:
             return requested_acct_ids
 
         phase = self.session.phase(self.resolved_at)
+        if (
+            self.contest.contest_time_mode is ContestTimeMode.FLEXIBLE
+            and self.is_participant
+            and not self.session.activated
+            and self.contest.configured_session().is_ended(self.resolved_at)
+        ):
+            phase = ContestPhase.ENDED
         if phase is ContestPhase.BEFORE:
             return []
         if phase is ContestPhase.RUNNING or not self.contest.is_public_scoreboard:
@@ -127,6 +162,17 @@ class ContestAccess:
         """Check the existing detail-page rule for a contest challenge."""
         if not self.is_member:
             return False
+
+        if (
+            self.contest.contest_time_mode is ContestTimeMode.FLEXIBLE
+            and self.is_participant
+            and not self.session.activated
+        ):
+            return (
+                self.contest.configured_session().is_ended(self.resolved_at)
+                and self.contest.is_public_scoreboard
+                and not self.contest.is_admin(acct_id=owner_acct_id)
+            )
 
         is_owner = self.session.acct_id == owner_acct_id
         owner_is_admin = self.contest.is_admin(acct_id=owner_acct_id)

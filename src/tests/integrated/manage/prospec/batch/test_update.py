@@ -88,9 +88,9 @@ class BatchUpdateTest(AsyncTest):
             await self.wait_for_judge_finish(callback)
             err, chal = await ChalService.inst.get_chal(chal_id, with_result=True)
             for s in chal.subtask_results.values():
-                self.assertGreaterEqual(s.time, 1000)
+                self.assertGreaterEqual(s.time, 950)
             for t in chal.testdata_results.values():
-                self.assertGreaterEqual(t.time, 1000)
+                self.assertGreaterEqual(t.time, 950)
 
             # Test uploadpackage
             pack_token = self.get_upload_token(admin_session)

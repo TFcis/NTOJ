@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html>
+{% from services.contests import ContestTimeMode %}
+{% from services.contest_access import ContestPermission %}
 
 <head>
   <title>New TNFSH Online Judge</title>
@@ -65,7 +67,41 @@
       });
 
     {% if is_in_contest %}
-        {% if not contest_session.is_ended() %}
+        {% if contest.contest_time_mode is ContestTimeMode.FLEXIBLE %}
+          {% if contest_access.is_participant and contest_session.activated and not contest_session.is_ended() %}
+            var flexible_end = new Date("{{ contest_session.end_time }}");
+            var flexible_session_ended = false;
+            function flexibleSessionTimer() {
+              if (!flexible_session_ended && new Date() >= flexible_end) {
+                flexible_session_ended = true;
+                if (confirm("Your flexible contest time has ended. Do you want to reload the page?")) {
+                  index.reload();
+                }
+              }
+            }
+            setInterval(flexibleSessionTimer, 1000);
+          {% elif contest_access.is_participant and not contest_session.activated and not contest.configured_session().is_ended() %}
+            var flexible_available = new Date("{{ contest.contest_start }}");
+            var flexible_hard_end = new Date("{{ contest.contest_end }}");
+            var availability_announced = new Date() >= flexible_available;
+            var availability_ended = false;
+            function flexibleAvailabilityTimer() {
+              let now = new Date();
+              if (!availability_announced && now >= flexible_available) {
+                availability_announced = true;
+                if (confirm("The flexible contest is now available. Open Info when you are ready to start?")) {
+                  index.go("{{ url(f'/contests/{ contest.contest_id }/info/') }}");
+                }
+              } else if (!availability_ended && now >= flexible_hard_end) {
+                availability_ended = true;
+                if (confirm("The flexible contest is no longer available. Do you want to reload the page?")) {
+                  index.reload();
+                }
+              }
+            }
+            setInterval(flexibleAvailabilityTimer, 1000);
+          {% end %}
+        {% elif not contest_session.is_ended() %}
             var contest_start = new Date("{{ contest_session.start_time }}");
             var contest_end = new Date("{{ contest_session.end_time }}");
             var started = false, ended = false;
@@ -89,9 +125,9 @@
             }
             let cur_time = new Date();
             if (cur_time < contest_start) {
-                setInterval(timer1, 1);
+                setInterval(timer1, 1000);
             } else if (cur_time > contest_start && cur_time < contest_end) {
-                setInterval(timer2, 1);
+                setInterval(timer2, 1000);
             }
         {% end %}
 
@@ -218,9 +254,13 @@
         <ul class="navbar-nav me-auto">
           <li class="nav-item info"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/info/') }}">Info</a></li>
 
-          {% if contest_manage or contest_session.is_started() %}
+          {% if contest_manage or contest_access.has(ContestPermission.VIEW_PROBLEM_SET) %}
             <li class="nav-item proset"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/proset/') }}">ProblemSet</a></li>
+          {% end %}
+          {% if contest_manage or contest_session.is_started() %}
             <li class="nav-item chal"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/chal/') }}">Challenges</a></li>
+          {% end %}
+          {% if contest_manage or contest_access.has(ContestPermission.VIEW_SCOREBOARD) %}
             <li class="nav-item scoreboard"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/scoreboard/') }}">Scoreboard</a></li>
           {% end %}
 
