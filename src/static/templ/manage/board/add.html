@@ -21,7 +21,8 @@
 
             localization: {
                 locale: 'zh-tw',
-                format: 'yyyy/MM/dd hh:mm T',
+                format: 'yyyy/MM/dd HH:mm',
+                hourCycle: 'h23',
             },
         };
         start_date_picker = new tempusDominus.TempusDominus(document.getElementById('datepickerStart'), options);
