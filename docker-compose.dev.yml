@@ -71,14 +71,13 @@ services:
       - apparmor:unconfined
       - label:disable
     tmpfs:
-      - /dev/shm:rw,exec,size=755,size=4G
+      - /dev/shm:rw,exec,size=4G
     volumes:
       - /srv/ntoj-dev/problem:/problem:ro
       - /srv/ntoj-dev/code:/code:ro
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
     networks:
       - judge_net
-
     privileged: true
 
 networks:
