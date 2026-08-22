@@ -1,0 +1,20 @@
+services:
+  backend:
+    volumes:
+      - ./.data/static:/ntoj/static
+      - ./.data/problem:/ntoj/problem
+      - ./.data/code:/ntoj/code
+
+  db:
+    volumes:
+      - ./.data/db:/var/lib/postgresql/18/docker
+
+  cache:
+    volumes:
+      - ./.data/cache:/data
+
+  judge:
+    cgroup: private
+    volumes:
+      - ./.data/problem:/problem:ro
+      - ./.data/code:/code:ro
