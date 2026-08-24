@@ -115,7 +115,7 @@ font-weight: bolder;
         q_min = parseInt(q_min);
         q_sec = parseInt(q_sec);
         q_min = isNaN(q_min) ? 0 : q_min;
-        q_sec = isNaN(q_min) ? 0 : q_sec;
+        q_sec = isNaN(q_sec) ? 0 : q_sec;
 
         if (p_min == q_min) return p_sec > q_sec;
         return p_min > q_min;
@@ -176,7 +176,7 @@ font-weight: bolder;
                 refresh_scoreboard(-1);
 
                 clearInterval(timer_id); // make sure only one timer running
-                timer_id = setInterval(timer, 1);
+                timer_id = setInterval(timer, 1000);
 
             } else {
                 clearInterval(timer_id); // stop timer
@@ -193,7 +193,7 @@ font-weight: bolder;
         });
 
         update_scoreboard(-1);
-        timer_id = setInterval(timer, 1);
+        timer_id = setInterval(timer, 1000);
     }
 
     function destroy() {
