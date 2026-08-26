@@ -49,27 +49,13 @@ class SubmitHandler(RequestHandler):
         if pro.problem_type == ProType.BATCH:
             from services.prospec.batch import BatchConfig
 
-            assert isinstance(pro.config.spec_config, BatchConfig)
-            allow_compilers = pro.config.spec_config.allow_compilers
-            if self.contest:
-                allow_compilers = allow_compilers.intersection(
-                    self.contest.allow_compilers
-                )
-
-            # TODO:: WTH, Why duplicate code with prospec/batch/submit.py
-            await self.render(
-                "prospec/batch/submit",
-                f"Submit - {pro.name}",
-                pro=pro,
-                allow_compilers=allow_compilers,
-                contest_id=self.contest.contest_id if self.contest else 0,
-                user=self.acct,
-            )
+            config_type = BatchConfig
+            problem_name = "Batch"
         elif pro.problem_type == ProType.COMMUNICATION:
-            # Future: Communication submit page
-            return self.error(
-                ("Enotsupport", "Communication problem type not yet supported")
-            )
+            from services.prospec.communication import CommunicationConfig
+
+            config_type = CommunicationConfig
+            problem_name = "Communication"
         elif pro.problem_type == ProType.TWOSTEP:
             # Future: TwoStep submit page
             return self.error(("Enotsupport", "TwoStep problem type not yet supported"))
@@ -80,6 +66,21 @@ class SubmitHandler(RequestHandler):
             )
         else:
             return self.error(("Eparam", "Invalid problem type"))
+
+        assert isinstance(pro.config.spec_config, config_type)
+        allow_compilers = pro.config.spec_config.allow_compilers
+        if self.contest:
+            allow_compilers = allow_compilers.intersection(self.contest.allow_compilers)
+
+        await self.render(
+            "prospec/common/submit",
+            f"Submit - {pro.name}",
+            pro=pro,
+            allow_compilers=allow_compilers,
+            contest_id=self.contest.contest_id if self.contest else 0,
+            user=self.acct,
+            problem_name=problem_name,
+        )
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
@@ -119,9 +120,15 @@ class SubmitHandler(RequestHandler):
             handler._transforms = []
             return await handler.post()
         elif pro.problem_type == ProType.COMMUNICATION:
-            return self.error(
-                ("Enotsupport", "Communication problem type not yet supported")
+            from handlers.prospec.communication.submit import CommunicationSubmitHandler
+
+            handler = CommunicationSubmitHandler(
+                self.application, self.request, db=self.db, rs=self.rs
             )
+            handler.acct = self.acct
+            handler.contest = self.contest
+            handler._transforms = []
+            return await handler.post()
         elif pro.problem_type == ProType.TWOSTEP:
             return self.error(("Enotsupport", "TwoStep problem type not yet supported"))
         elif pro.problem_type == ProType.OUTPUTONLY:

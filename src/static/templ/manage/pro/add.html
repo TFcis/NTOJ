@@ -8,6 +8,7 @@
             let name = j_form.find('#name').val();
             let status = j_form.find('#status').val();
             let mode = j_form.find("#mode").val();
+            let problem_type = j_form.find("#problem-type").val();
             let files = null;
 
             if (mode == "upload") {
@@ -20,6 +21,7 @@
                     'name': name,
                     'status': status,
                     'mode': mode,
+                    'problem_type': problem_type,
                     'pack_token': pack_token,
                 }, function(res) {
                     index.remove_progress_bar();
@@ -62,15 +64,18 @@
         j_form.find("#mode").on('change', function(e) {
             if ($(this).val() == "upload") {
                 j_form.find("#file-block").show();
+                j_form.find("#problem-type-block").hide();
             } else {
                 j_form.find("#file-block").hide();
+                j_form.find("#problem-type-block").show();
             }
         });
+        j_form.find("#mode").trigger('change');
     }
 </script>
 {% end %}
 {% block content %}
-{% from services.pro import ProConst %}
+{% from services.pro import ProConst, ProType %}
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
     <form id="form">
@@ -90,6 +95,14 @@
             <select class="form-select" id="mode">
                 <option value="upload" selected>Upload problem package</option>
                 <option value="manual">Use web ui to setup problem</option>
+            </select>
+        </div>
+
+        <div class="mb-1" id="problem-type-block">
+            <label for="problem-type" class="form-label">Problem Type</label>
+            <select class="form-select" id="problem-type">
+                <option value="{{ ProType.BATCH }}" selected>Batch</option>
+                <option value="{{ ProType.COMMUNICATION }}">Communication</option>
             </select>
         </div>
 

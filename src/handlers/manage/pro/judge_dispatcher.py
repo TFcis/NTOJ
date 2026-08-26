@@ -17,10 +17,22 @@ class ManageProJudgeHandler(RequestHandler):
             return self.error(err)
 
         if pro.problem_type == ProType.BATCH:
-            await self.render("prospec/batch/manage/updatejudge", "Update Problem Judge Config", page="pro", pro=pro)
+            await self.render(
+                "prospec/common/manage/updatejudge",
+                "Update Problem Judge Config",
+                page="pro",
+                pro=pro,
+                problem_name="Batch",
+                is_communication=False,
+            )
         elif pro.problem_type == ProType.COMMUNICATION:
-            return self.error(
-                ("Enotsupport", "Communication problem type not yet supported")
+            await self.render(
+                "prospec/common/manage/updatejudge",
+                "Update Problem Judge Config",
+                page="pro",
+                pro=pro,
+                problem_name="Communication",
+                is_communication=True,
             )
         elif pro.problem_type == ProType.TWOSTEP:
             return self.error(("Enotsupport", "TwoStep problem type not yet supported"))
@@ -53,9 +65,14 @@ class ManageProJudgeHandler(RequestHandler):
             handler._transforms = []
             return await handler.post()
         elif pro.problem_type == ProType.COMMUNICATION:
-            return self.error(
-                ("Enotsupport", "Communication problem type not yet supported")
+            from handlers.prospec.communication.judge import CommunicationJudgeHandler
+
+            handler = CommunicationJudgeHandler(
+                self.application, self.request, db=self.db, rs=self.rs
             )
+            handler.acct = self.acct
+            handler._transforms = []
+            return await handler.post()
         elif pro.problem_type == ProType.TWOSTEP:
             return self.error(("Enotsupport", "TwoStep problem type not yet supported"))
         elif pro.problem_type == ProType.OUTPUTONLY:

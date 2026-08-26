@@ -1,0 +1,79 @@
+{% extends '../../../manage/manage.html' %}
+{% block head %}
+<script src="{{ url('/src/third/prism.js') }}"></script>
+<link rel="stylesheet" href="{{ url('/src/third/prism.css') }}">
+<script type="text/javascript" id="contjs">
+function init() {
+    const pro_id = "{{ pro_id }}";
+    const endpoint = "{{ url('/be/manage/pro/updatetestdata') }}";
+    const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+
+    document.querySelectorAll('.preview-file').forEach(el => el.addEventListener('click', function() {
+        const row = this.closest('tr');
+        $.post(endpoint, {reqtype: 'preview', pro_id: pro_id, testdata_id: row.dataset.id}, function(raw) {
+            const res = JSON.parse(raw);
+            if (res.status != 'S') return index.show_notify_dialog(res.data, index.DIALOG_TYPE.error);
+            $('#code code').html(res.data);
+            $('#preview-title').text(el.textContent).attr('data-id', row.dataset.id);
+            Prism.highlightAll();
+            previewModal.show();
+        });
+    }));
+    $('#previewModal .download').on('click', function() {
+        window.open(`${endpoint}?pro_id=${pro_id}&download=1&testdata_id=${$('#preview-title').attr('data-id')}`);
+    });
+    document.querySelectorAll('.replace-file').forEach(button => button.addEventListener('click', function() {
+        const input = this.nextElementSibling;
+        input.click();
+        input.onchange = function() {
+            if (!input.files.length) return;
+            const id = input.closest('tr').dataset.id;
+            pack.get_token().done(token => pack.send(token, input.files[0]).done(() => {
+                $.post(endpoint, {reqtype: 'updatesinglefile', pro_id: pro_id, testdata_id: id, pack_token: token}, () => index.reload());
+            }));
+        };
+    }));
+    document.querySelectorAll('.delete-file').forEach(button => button.addEventListener('click', function() {
+        if (!confirm('Are you sure to delete this testdata?')) return;
+        $.post(endpoint, {reqtype: 'deletesinglefile', pro_id: pro_id, testdata_id: this.closest('tr').dataset.id}, () => index.reload());
+    }));
+    document.querySelectorAll('.update-tags').forEach(button => button.addEventListener('click', function() {
+        const row = this.closest('tr');
+        $.post(endpoint, {reqtype: 'updatemetadata', pro_id: pro_id, testdata_id: row.dataset.id, tags: row.querySelector('.tags').value}, () => index.reload());
+    }));
+    $('#add-file').on('click', function() {
+        const name = $('#new-name').val();
+        const input = $('#new-input')[0];
+        if (!name || !input.files.length) return index.show_notify_dialog('Filename and input file are required', index.DIALOG_TYPE.error);
+        pack.get_token().done(token => pack.send(token, input.files[0]).done(() => {
+            $.post(endpoint, {reqtype: 'addsinglefile', pro_id: pro_id, filename: name, input_pack_token: token}, () => index.reload());
+        }));
+    });
+}
+</script>
+{% end %}
+{% block content %}
+<div class="modal fade" id="previewModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 id="preview-title" class="modal-title">Preview Input</h5></div>
+    <div class="modal-body"><pre id="code"><code class="language-markup"></code></pre></div>
+    <div class="modal-footer"><button class="btn btn-primary download">Download</button></div>
+</div></div></div>
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <h2>Communication Testdata (Input Only)</h2>
+    <div class="input-group my-3">
+        <input id="new-name" class="form-control" placeholder="Filename without .in">
+        <input id="new-input" type="file" class="form-control">
+        <button id="add-file" class="btn btn-primary">Add</button>
+    </div>
+    <table class="table table-hover"><thead><tr><th>ID</th><th>Input Filename</th><th>Tags</th><th>Operation</th></tr></thead><tbody>
+    {% for testdata_id, testdata in config.testdatas.items() %}
+        <tr data-id="{{ testdata_id }}">
+            <th>{{ testdata_id + 1 }}</th>
+            <td><a class="preview-file">{{ testdata.inputfile }}</a></td>
+            <td><div class="input-group input-group-sm"><input class="form-control tags" value="{{ ','.join(testdata.metadata.get('tags', [])) }}"><button class="btn btn-primary update-tags">Update</button></div></td>
+            <td><button class="btn btn-primary replace-file">Replace</button><input type="file" hidden><button class="btn btn-danger delete-file">Delete</button></td>
+        </tr>
+    {% end %}
+    </tbody></table>
+</div>
+{% end %}

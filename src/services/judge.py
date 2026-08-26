@@ -243,6 +243,14 @@ class JudgeServerService:
             )
 
             data['code_path'] = f"{self.codes_path}/{data['code_path']}"
+            if 'code_paths' in data:
+                data['code_paths'] = [
+                    {
+                        **source,
+                        'path': f"{self.codes_path}/{source['path']}",
+                    }
+                    for source in data['code_paths']
+                ]
             data['res_path'] = f"{self.problems_path}/{data['res_path']}"
 
             await self.ws.write_message(json.dumps(data))

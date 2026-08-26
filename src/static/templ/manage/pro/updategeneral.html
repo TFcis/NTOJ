@@ -1,6 +1,6 @@
 {% extends '../manage.html' %}
 {% block head %}
-{% from services.pro import ProConst %}
+{% from services.pro import ProConst, ProType %}
 
 <script type="text/javascript" id="contjs" async>
     function init() {
@@ -223,7 +223,7 @@
         <a class="btn btn-secondary" href="{{ url(f'/manage/pro/filemanager/?pro_id={ pro.pro_id }') }}">
             <i class="bi bi-folder"></i> File Manager
         </a>
-        {% if pro.problem_type == 1 %}
+        {% if pro.problem_type in (ProType.BATCH, ProType.COMMUNICATION) %}
         <a class="btn btn-secondary" href="{{ url(f'/manage/pro/updatejudge/?pro_id={ pro.pro_id }') }}">
             <i class="bi bi-gear"></i> Judge Configuration
         </a>

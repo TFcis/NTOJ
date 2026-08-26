@@ -230,7 +230,7 @@ class ProService:
         ProService.inst = self
 
     async def get_pro(self, pro_id: int, allow_statuses: Sequence[int]) -> tuple[None, Problem] | ErrorType:
-        from services.prospec.batch import batch_spec
+        from services.prospec.registry import get_problem_spec
         """
         Fetch problem configuration and metadata by ID, ensuring it's in the allowed status.
 
@@ -285,17 +285,17 @@ class ProService:
             )
             testdatas: dict[int, BaseTestdata] = {}
 
-            # TODO: Support different problem types, for now only Batch
-            if problem_type == ProType.BATCH:
-                try:
-                    spec = batch_spec
-                    for id, files_json, metadata_json in result:
-                        testdata = spec.parse_testdata_files(id, json.loads(files_json))
-                        testdata.metadata = json.loads(metadata_json) if metadata_json else {}
-                        testdatas[id] = testdata
-                except Exception as e:
-                    logger.error(f"Error parsing testdata for problem {pro_id}: {e}", exc_info=True)
-                    return ("Eunk", "Unknown error"), None
+            try:
+                spec = get_problem_spec(problem_type)
+                for id, files_json, metadata_json in result:
+                    testdata = spec.parse_testdata_files(id, json.loads(files_json))
+                    testdata.metadata = json.loads(metadata_json) if metadata_json else {}
+                    testdatas[id] = testdata
+            except (ValueError, NotImplementedError):
+                return ("Enotsupport", "Problem type not yet supported"), None
+            except Exception as e:
+                logger.error(f"Error parsing testdata for problem {pro_id}: {e}", exc_info=True)
+                return ("Eunk", "Unknown error"), None
 
             result = await con.fetch(
                 """
@@ -314,28 +314,22 @@ class ProService:
                     json.loads(metadata_json) if metadata_json else {},
                 )
 
-        # Parse config using ProSpec
-        # TODO: Support different problem types, for now only Batch
-        proconfig: ProblemConfig | None = None
-        if problem_type == ProType.BATCH:
-            spec = batch_spec
-            try:
-                spec_config = spec.from_json(config_json)
-            except Exception as e:
-                logger.error(f"Error parsing problem config for problem {pro_id}: {e}", exc_info=True)
-                return ("Eunk", "Unknown error"), None
+        try:
+            spec_config = spec.from_json(config_json)
+        except Exception as e:
+            logger.error(f"Error parsing problem config for problem {pro_id}: {e}", exc_info=True)
+            return ("Eunk", "Unknown error"), None
 
-            # Build common ProblemConfig
-            proconfig = ProblemConfig(
-                limits={
-                    compiler: Limit(**limit)
-                    for compiler, limit in limits.items()
-                },
-                subtask_configs=subtask_configs,
-                testdatas=testdatas,
-                rate_precision=rate_precision,
-                spec_config=spec_config,
-            )
+        proconfig = ProblemConfig(
+            limits={
+                compiler: Limit(**limit)
+                for compiler, limit in limits.items()
+            },
+            subtask_configs=subtask_configs,
+            testdatas=testdatas,
+            rate_precision=rate_precision,
+            spec_config=spec_config,
+        )
 
         return None, Problem(pro_id, name, status, tags, allow_submit, problem_type, proconfig)
 
@@ -404,13 +398,19 @@ class ProService:
 
         return None, prolist
 
-    async def add_pro(self, name: str, status: int):
+    async def add_pro(
+        self,
+        name: str,
+        status: int,
+        problem_type: ProType = ProType.BATCH,
+    ):
         """
         Add a new problem to the system with initial folders and symbolic links.
 
         Args:
             name (str): The name of the problem.
             status (int): Initial status (online/contest/hidden).
+            problem_type (ProType): Problem specification used for initial config.
 
         Returns:
             Tuple[Optional[Tuple[str, str]], Optional[int]]:
@@ -425,45 +425,59 @@ class ProService:
             return ("Enamemax", "Problem name too long"), None
         if status < ProConst.STATUS_ONLINE or status > ProConst.STATUS_HIDDEN:
             return ("Eparam", "Invalid problem status"), None
+        try:
+            problem_type = ProType(problem_type)
+            from services.prospec.registry import get_problem_spec
+
+            spec = get_problem_spec(problem_type)
+        except (ValueError, NotImplementedError):
+            return ("Eparam", "Invalid problem type"), None
+        config_json = json.dumps(spec.to_json(spec.get_default_config()))
 
         try:
             async with self.db.acquire() as con:
                 result = await con.fetch(
                     """
                         INSERT INTO "problem"
-                        ("name", "status")
-                        VALUES ($1, $2) RETURNING "pro_id";
+                        ("name", "status", "problem_type", "config")
+                        VALUES ($1, $2, $3, $4) RETURNING "pro_id";
                     """,
                     name,
                     status,
+                    int(problem_type),
+                    config_json,
                 )
                 if len(result) != 1:
                     return ("Eunk", "Unknown error"), None
 
                 pro_id = int(result[0]["pro_id"])
-                from services.prospec.batch import batch_spec
-
-                config_json = batch_spec.to_json(batch_spec.get_default_config())
-
-                await con.execute(
-                    '''
-                    UPDATE problem SET config = $1
-                    WHERE pro_id = $2;
-                    ''',
-                    json.dumps(config_json),
-                    pro_id,
-                )
-
                 try:
-                    for folder in (f"problem/{pro_id}", f"problem/{pro_id}/res", f"problem/{pro_id}/res/testdata", f"problem/{pro_id}/http"):
+                    relative_folders = (
+                        "",
+                        "res",
+                        "res/testdata",
+                        "http",
+                        *spec.get_initial_directories(),
+                    )
+                    for relative_folder in relative_folders:
+                        folder = (
+                            f"problem/{pro_id}/{relative_folder}"
+                            if relative_folder
+                            else f"problem/{pro_id}"
+                        )
                         os.mkdir(folder)
                     os.chmod(os.path.abspath(f"problem/{pro_id}"), 0o755)
                 except OSError as e:
                     # NOTE: rollback database entry if directory creation fails
-                    for folder in (f"problem/{pro_id}/res/testdata", f"problem/{pro_id}/res", f"problem/{pro_id}/http", f"problem/{pro_id}"):
+                    for relative_folder in reversed(relative_folders):
+                        folder = (
+                            f"problem/{pro_id}/{relative_folder}"
+                            if relative_folder
+                            else f"problem/{pro_id}"
+                        )
                         try:
                             os.rmdir(folder)
-                        except:
+                        except OSError:
                             pass
                     logger.error(f"Error creating directories for problem {pro_id}: {e}", exc_info=True)
                     raise
@@ -546,8 +560,14 @@ class ProService:
             the `NotStart` state, due to test configuration changes.
             - Related Redis cache (`rate`, `pro_rate`) will be invalidated.
         """
-        from services.prospec.batch import batch_spec
+        from services.prospec.registry import get_problem_spec
         from services.rate import RateService
+
+        try:
+            problem_type = ProType(problem_type)
+            spec = get_problem_spec(problem_type)
+        except (ValueError, NotImplementedError):
+            return ("Enotsupport", "Problem type not yet supported"), None
 
         insert_subtask_config_values = []
         insert_testdatas_values = []
@@ -563,15 +583,12 @@ class ProService:
                 )
             )
 
-        # TODO: Support different problem types, for now only Batch
-        if problem_type == ProType.BATCH:
-            spec = batch_spec
-            for testdata in config.testdatas.values():
-                files_json = spec.build_testdata_files(testdata)
-                metadata_json = json.dumps(testdata.metadata if testdata.metadata else {})
-                insert_testdatas_values.append(
-                    (pro_id, testdata.testdata_id, json.dumps(files_json), metadata_json)
-                )
+        for testdata in config.testdatas.values():
+            files_json = spec.build_testdata_files(testdata)
+            metadata_json = json.dumps(testdata.metadata if testdata.metadata else {})
+            insert_testdatas_values.append(
+                (pro_id, testdata.testdata_id, json.dumps(files_json), metadata_json)
+            )
 
         try:
             async with self.db.acquire() as con:
@@ -583,28 +600,21 @@ class ProService:
                         'DELETE FROM "testdata" WHERE "pro_id" = $1;', int(pro_id)
                     )
 
-                    # Update problem config using ProSpec
-                    # TODO: Support different problem types, for now only Batch
-                    if problem_type == ProType.BATCH:
-                        from services.prospec.batch import BatchConfig
-                        spec = batch_spec
-                        # Type assertion: we know spec_config is BatchConfig for BATCH type
-                        assert isinstance(config.spec_config, BatchConfig)
-                        config_json = spec.to_json(config.spec_config)
-
-                        await con.execute(
-                            '''
-                            UPDATE problem SET config = $1, limits = $2, rate_precision = $3
-                            WHERE pro_id = $4;
-                            ''',
-                            json.dumps(config_json),
-                            json.dumps({
-                                comp: asdict(limit)
-                                for comp, limit in config.limits.items()
-                            }),
-                            config.rate_precision,
-                            pro_id,
-                        )
+                    config_json = spec.to_json(config.spec_config)
+                    await con.execute(
+                        '''
+                        UPDATE problem SET problem_type = $1, config = $2, limits = $3, rate_precision = $4
+                        WHERE pro_id = $5;
+                        ''',
+                        int(problem_type),
+                        json.dumps(config_json),
+                        json.dumps({
+                            comp: asdict(limit)
+                            for comp, limit in config.limits.items()
+                        }),
+                        config.rate_precision,
+                        pro_id,
+                    )
 
                     await con.executemany(
                         """INSERT INTO "subtask_config"
@@ -657,30 +667,21 @@ class ProService:
 
         return None, None
 
-    async def unpack_pro(self, pro_id: int, pack_token: str, problem_type: ProType = ProType.BATCH):
+    async def unpack_pro(self, pro_id: int, pack_token: str):
         """
         Unpack and apply a packed problem archive by delegating to ProSpec.
 
         Args:
             pro_id (int): The ID of the problem to unpack into.
             pack_token (str): Token for identifying the uploaded archive.
-            problem_type (ProType): Type of the problem (default: BATCH).
-
         Returns:
             Tuple[Optional[Tuple[str, str]], None]:
                 - Error code and message if unpacking or config fails.
                 - None if successful.
         """
-        from services.prospec.batch import batch_spec
+        from services.prospec.package import unpack_problem_package
 
-        # TODO: Support different problem types
-        if problem_type == ProType.BATCH:
-            spec = batch_spec
-        else:
-            return ('Enotsupport', 'Problem type not yet supported'), None
-
-        # Delegate to ProSpec implementation
-        return await spec.unpack_pro(self.db, self.rs, pro_id, pack_token)
+        return await unpack_problem_package(self.db, self.rs, pro_id, pack_token)
 
 
 class ProClassConst:

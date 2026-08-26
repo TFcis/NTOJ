@@ -1,6 +1,6 @@
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from services.log import LogService
-from services.pro import ProService
+from services.pro import ProService, ProType
 from services.user import UserConst
 
 add_dispatcher = ActionDispatcher()
@@ -26,20 +26,32 @@ class ManageProAddHandler(RequestHandler):
         except ValueError:
             return self.error(("Eparam", "Invalid status"))
         mode = self.get_argument("mode")
+        try:
+            problem_type = ProType(
+                int(self.get_argument("problem_type", default=ProType.BATCH))
+            )
+        except ValueError:
+            return self.error(("Eparam", "Invalid problem type"))
+
+        if problem_type not in (ProType.BATCH, ProType.COMMUNICATION):
+            return self.error(("Enotsupport", "Problem type not yet supported"))
 
         pack_token = None
         if mode == "upload":
             pack_token = self.get_argument("pack_token")
 
-        err, pro_id = await ProService.inst.add_pro(name, status)
-        await self.add_log(
-            f"{self.acct.name} has sent a request to add the problem #{pro_id}",
-            "manage.pro.add.pro",
-            {"acct_id": self.acct.acct_id},
-        )
+        err, pro_id = await ProService.inst.add_pro(name, status, problem_type)
         if err:
             return self.error(err)
 
+        await self.add_log(
+            f"{self.acct.name} has sent a request to add the problem #{pro_id}",
+            "manage.pro.add.pro",
+            {
+                "acct_id": self.acct.acct_id,
+                "problem_type": int(problem_type),
+            },
+        )
         if mode == "upload" and pack_token:
             err, _ = await ProService.inst.unpack_pro(pro_id, pack_token)
             if err:

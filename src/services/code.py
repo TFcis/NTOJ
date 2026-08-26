@@ -1,4 +1,5 @@
 import logging
+import os
 
 import config
 from services.chal import Compiler, COMPILER_INFOS
@@ -8,13 +9,39 @@ from services.log import LogService
 
 logger = logging.getLogger("tornado.application")
 
+
+def resolve_challenge_code_path(chal_id: int, filename: str) -> str:
+    """Resolve one source filename without allowing it to escape code/<chal_id>."""
+    if (
+        not isinstance(filename, str)
+        or not filename
+        or "\\" in filename
+        or "\x00" in filename
+        or filename in (".", "..")
+        or filename != os.path.basename(filename)
+    ):
+        raise ValueError("Invalid source filename")
+
+    challenge_root = os.path.realpath(os.path.join("code", str(chal_id)))
+    source_path = os.path.realpath(os.path.join(challenge_root, filename))
+    if os.path.commonpath((challenge_root, source_path)) != challenge_root:
+        raise ValueError("Invalid source filename")
+    return source_path
+
+
 class CodeService:
     def __init__(self, db, rs):
         self.db = db
         self.rs = rs
         CodeService.inst = self
 
-    async def get_code(self, chal_id: int, query_acct: Account, query_acct_ip: str):
+    async def get_code(
+        self,
+        chal_id: int,
+        query_acct: Account,
+        query_acct_ip: str,
+        filenames: list[str] | None = None,
+    ):
         chal_id = int(chal_id)
 
         try:
@@ -32,7 +59,7 @@ class CodeService:
                     result['contest_id']), Compiler(result['compiler_type'])
         except Exception as e:
             logger.error(f"Error fetching code for challenge {chal_id}: {e}", exc_info=True)
-            return ('Eunk', 'Unknown error'), None
+            return ('Eunk', 'Unknown error'), None, None
 
         owner = await self.rs.get(f'{pro_id}_owner')
         can_see = False
@@ -68,17 +95,35 @@ class CodeService:
 
         if can_see:
             source_ext = COMPILER_INFOS[compiler_type].source_ext
-
+            return_file_mapping = filenames is not None
+            if filenames is None:
+                filenames = [f"main.{source_ext}"]
+            if not isinstance(filenames, (list, tuple)) or not filenames:
+                return ('Eparam', 'Invalid source filename'), None, None
             try:
-                with open(f'code/{chal_id}/main.{source_ext}', 'rb') as code_f:
-                    code = code_f.read().decode('utf-8')
+                if len(filenames) != len(set(filenames)):
+                    raise ValueError("Duplicate source filename")
+                source_paths = [
+                    (filename, resolve_challenge_code_path(chal_id, filename))
+                    for filename in filenames
+                ]
+            except (TypeError, ValueError):
+                return ('Eparam', 'Invalid source filename'), None, None
+            codes = {}
 
-            except FileNotFoundError:
-                code = 'ERROR: The code is lost on the server.'
+            for filename, source_path in source_paths:
+                try:
+                    with open(source_path, 'rb') as code_f:
+                        codes[filename] = code_f.read().decode('utf-8')
 
-            except OSError as e:
-                logger.error(f"Error reading code for challenge {chal_id}: {e}", exc_info=True)
-                code = 'ERROR: Failed to read the code from the server.'
+                except FileNotFoundError:
+                    codes[filename] = 'ERROR: The code is lost on the server.'
+
+                except OSError as e:
+                    logger.error(f"Error reading code for challenge {chal_id}: {e}", exc_info=True)
+                    codes[filename] = 'ERROR: Failed to read the code from the server.'
+
+            code = codes if return_file_mapping else next(iter(codes.values()))
 
         else:
             return ('Eacces', 'Permission denied'), None, None
