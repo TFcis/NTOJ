@@ -7,7 +7,6 @@ from decimal import Decimal
 import tornado.web
 from msgpack import packb, unpackb
 
-import config
 from handlers.base import RequestHandler, UnifiedWebSocketHandler, reqenv
 from services.contest_access import ContestPermission
 from services.contest_scoreboard import (
@@ -406,12 +405,19 @@ class ContestScoreboardHandler(RequestHandler):
                     }
                     total_score += p['score']
 
-                all_scores.append({
+                account_score = {
                     'acct_id': acct_id,
                     'name': acct.name,
                     'scores': scores,
                     'total_score': total_score
-                })
+                }
+                if self.contest.contest_time_mode is ContestTimeMode.FLEXIBLE:
+                    account_score.update({
+                        'flexible_start': account_options.get('session_start'),
+                        'flexible_end': account_options.get('session_end'),
+                    })
+                all_scores.append(account_score)
+
         else:
             for acct_id in acct_list:
                 _, acct = await UserService.inst.info_acct(acct_id)
@@ -437,6 +443,5 @@ class ContestScoreboardHandler(RequestHandler):
                     'scores': scores,
                     'total_score': total_score
                 })
-
 
         self.error(('S', all_scores), encoder=_JsonDatetimeEncoder)

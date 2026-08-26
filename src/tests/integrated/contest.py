@@ -998,7 +998,6 @@ class ContestProblemPermissionTest(AsyncTest):
                     })
                     self.assertAPIReturnValue(res.text, ('Eacces', 'Permission denied'))
 
-
 class FlexibleContestTimeTest(AsyncTest):
     async def main(self):
         await self._test_configuration_and_start_boundaries()
@@ -1464,8 +1463,18 @@ class FlexibleContestTimeTest(AsyncTest):
         await ContestService.inst.invalidate_scoreboard_cache(contest_id)
 
         with AccountContext('contest6@test', 'test') as live_session:
+            scoreboard_page = live_session.get(f'contests/{contest_id}/scoreboard')
+            self.assertIn('flexible-session-time', scoreboard_page.text)
             scores = self._scoreboard(live_session, contest_id)
             self.assertEqual(scores[5]['total_score'], 10)
+            self.assertEqual(
+                scores[5]['flexible_start'], acct5_start.isoformat()
+            )
+            self.assertEqual(
+                scores[5]['flexible_end'], session_end.isoformat()
+            )
+            self.assertIsNone(scores[7]['flexible_start'])
+            self.assertIsNone(scores[7]['flexible_end'])
 
             cookie_value = live_session.cookies.get('id')
             ws = await websocket_connect(HTTPRequest(
