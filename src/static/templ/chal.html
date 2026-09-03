@@ -488,7 +488,7 @@
                                 class="collapse"
                                 id="challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
                             >
-                                <td colspan="4">
+                                <td colspan="5">
                                     <div class="card card-body" {% if not show_message %} style="display: none;" {% end %}>
                                         {% if message != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
                                             {% if message_type == MessageType.TEXT %}
