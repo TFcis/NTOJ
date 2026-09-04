@@ -71,6 +71,8 @@ input {
     }
 
     function init() {
+        const title = document.title;
+
         var j_chalsub = $('#chalsub');
         j_filter.find('input, select').keypress(function(e) {
             // NOTE:  KeyCode 13 means Enter
@@ -103,6 +105,8 @@ input {
                     chalsub_count += 1;
                     j_chalsub.find('a').text(chalsub_count + ' new challenges');
                     j_chalsub.show();
+
+                    document.title = `(${ chalsub_count > 9 ? '9+' : chalsub_count }) ${ title }`;
                 });
                 // Send contest_id after registration (for backward compatibility with old handler)
                 if (index.ws && index.ws.readyState === WebSocket.OPEN) {
@@ -114,6 +118,8 @@ input {
                     chalsub_count += 1;
                     j_chalsub.find('a').text(chalsub_count + ' new challenges');
                     j_chalsub.show();
+
+                    document.title = `(${ chalsub_count > 9 ? '9+' : chalsub_count }) ${ title }`;
                 });
             {% end %}
         })();
