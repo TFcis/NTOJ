@@ -426,7 +426,7 @@
                                     <tr>
                                         {% for state, count in sorted(state_count.items()) %}
                                             {% if count > 0 %}
-                                                <td class="state state-{{ state }} state-text-{{ state }}"></td>
+                                                <th scope="col" class="state state-{{ state }} state-text-{{ state }}"></th>
                                             {% end %}
                                         {% end %}
                                     </tr>
