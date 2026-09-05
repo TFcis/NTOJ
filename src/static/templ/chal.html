@@ -64,7 +64,7 @@
 
     var subtask_table = document.getElementById("subtasks");
     function update_subtask_result(idx, time, memory, state, rate) {
-        let tr = subtask_table.querySelector(`tr#id${idx}`);
+        let tr = subtask_table.querySelector(`tr#subtask${idx}`);
 
         let state_element = tr.querySelector('td.state');
         state_element.innerHTML = state_map[state];
@@ -76,7 +76,7 @@
 
     var testdata_table = document.getElementById("testdatas");
     function update_testdata_result(idx, time, memory, state, message, message_type) {
-        let tr = testdata_table.querySelector(`tr#id${idx}`);
+        let tr = testdata_table.querySelector(`tr#testdata${idx}`);
         let message_tr = testdata_table.querySelector(`tr#challengeTestdataResultMessage${idx}`);
 
         let state_element = tr.querySelector('td.state');
@@ -358,7 +358,7 @@
                             {% continue %}
                         {% end %}
                     {% end %}
-                    <tr class="states" id="id{{ subtask.subtask_id }}">
+                    <tr class="states" id="subtask{{ subtask.subtask_id }}">
                         <td class="idx">{{ '%04d' % (subtask.subtask_id + 1) }}</td>
                         <td class="state state-{{ subtask.state }}">{{ ChalConst.STATE_LONG_STR[subtask.state] }}</td>
                         <td class="time">{{ subtask.time }}</td>
@@ -476,7 +476,7 @@
                                 {% set show_message = message_type != MessageType.NONE and message != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
                                 <tr
                                     class="states"
-                                    id="id{{ testdata_result.testdata_id }}"
+                                    id="testdata{{ testdata_result.testdata_id }}"
                                     {% if show_message %}
                                         role="button"
                                         data-bs-toggle="collapse"
