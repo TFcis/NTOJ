@@ -473,17 +473,19 @@
     
                                 {% set message = testdata_result.message %}
                                 {% set message_type = testdata_result.message_type %}
-                                {% set show_message = message_type != MessageType.NONE %}
+                                {% set show_message = message_type != MessageType.NONE and message != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
                                 <tr
                                     class="states"
                                     id="id{{ testdata_result.testdata_id }}"
-                                    data-bs-toggle="collapse"
-                                    role="button"
-                                    data-bs-target="#challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
+                                    {% if show_message %}
+                                        role="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
+                                    {% end %}
                                 >
-                                <td class="idx">{{ '%04d' % (testdata_result.testdata_id + 1) }}
+                                    <td class="idx">{{ '%04d' % (testdata_result.testdata_id + 1) }}
                                         <span {% if not show_message %} style="display: none;" {% end %}> (Expand)</span>
-                                </td>
+                                    </td>
                                     <td>
                                         {% for subtask_id in testdata_to_subtasks[testdata_result.testdata_id] %}
                                             <span class="badge rounded-pill bg-secondary">{{ subtask_id + 1 }}</span>
@@ -499,7 +501,7 @@
                                 >
                                     <td colspan="5">
                                         <div class="card card-body" {% if not show_message %} style="display: none;" {% end %}>
-                                            {% if message != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
+                                            {% if show_message %}
                                                 {% if message_type == MessageType.TEXT %}
                                                     <pre>{{message.strip()}}</pre>
                                                 {% elif message_type == MessageType.HTML %}
