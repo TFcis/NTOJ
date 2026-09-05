@@ -64,7 +64,7 @@
 
     var subtask_table = document.getElementById("subtasks");
     function update_subtask_result(idx, time, memory, state, rate) {
-        let tr = subtask_table.querySelector(`tr#id${idx}`);
+        let tr = subtask_table.querySelector(`tr#subtask${idx}`);
 
         let state_element = tr.querySelector('td.state');
         state_element.innerHTML = state_map[state];
@@ -76,7 +76,7 @@
 
     var testdata_table = document.getElementById("testdatas");
     function update_testdata_result(idx, time, memory, state, message, message_type) {
-        let tr = testdata_table.querySelector(`tr#id${idx}`);
+        let tr = testdata_table.querySelector(`tr#testdata${idx}`);
         let message_tr = testdata_table.querySelector(`tr#challengeTestdataResultMessage${idx}`);
 
         let state_element = tr.querySelector('td.state');
@@ -240,7 +240,7 @@
 
         $('#jump_to_code_section').on('click', function(e) {
             $('html, body').animate({
-                scrollTop: $("#code").offset().top;
+                scrollTop: $("#code").offset().top
             }, 0);
         });
     }
@@ -250,119 +250,127 @@
     }
 </script>
 
-<div class="row">
+<div class="row gy-3 mb-3">
     <div class="col-lg-4">
-        <table id="info" class="table">
-            <thead>
-                <tr>
-                    <th>Key</th>
-                    <th>Value</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Challenge</td>
-                    <td>{{ chal.chal_id }}</td>
-                </tr>
-                <tr>
-                    <td>Problem</td>
-                    {% if chal.contest_id == 0 %}
-                    <td>
-                        <a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="{{ url(f'/chal/?pro_id={ pro.pro_id }') }}">chals</a>)
-                    </td>
-                    {% else %}
-                    <td>
-                        <a href="{{ url(f'/contests/{ chal.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="{{ url(f'/contests/{ chal.contest_id }/chal/?pro_id={ pro.pro_id }') }}">chals</a>)
-                    </td>
-                    {% end %}
-                </tr>
-                <tr>
-                    <td>Compiler</td>
-                    <td>{{ chal.compiler_type }}</td>
-                </tr>
-                <tr>
-                    <td>Account</td>
-                    {% if chal.contest_id == 0 %}
-                    <td>
-                        <a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a> (<a href="{{ url(f'/chal/?acct_id={ chal.acct_id }') }}">chals</a>)
-                    </td>
-                    {% else %}
-                    <td>
-                        <a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a> (<a href="{{ url(f'/contests/{ chal.contest_id }/chal/?acct_id={ chal.acct_id }') }}">chals</a>)
-                    </td>
-                    {% end %}
-                </tr>
-                <tr>
-                    <td>Timestamp</td>
-                    <td class="time">{{ chal.timestamp.astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="info" class="table">
+                <thead>
+                    <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Challenge</td>
+                        <td>{{ chal.chal_id }}</td>
+                    </tr>
+                    <tr>
+                        <td>Problem</td>
+                        {% if chal.contest_id == 0 %}
+                        <td>
+                            <a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="{{ url(f'/chal/?pro_id={ pro.pro_id }') }}">chals</a>)
+                        </td>
+                        {% else %}
+                        <td>
+                            <a href="{{ url(f'/contests/{ chal.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }} / {{ pro.name }}</a> (<a href="{{ url(f'/contests/{ chal.contest_id }/chal/?pro_id={ pro.pro_id }') }}">chals</a>)
+                        </td>
+                        {% end %}
+                    </tr>
+                    <tr>
+                        <td>Compiler</td>
+                        <td>{{ chal.compiler_type }}</td>
+                    </tr>
+                    <tr>
+                        <td>Account</td>
+                        {% if chal.contest_id == 0 %}
+                        <td>
+                            <a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a> (<a href="{{ url(f'/chal/?acct_id={ chal.acct_id }') }}">chals</a>)
+                        </td>
+                        {% else %}
+                        <td>
+                            <a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a> (<a href="{{ url(f'/contests/{ chal.contest_id }/chal/?acct_id={ chal.acct_id }') }}">chals</a>)
+                        </td>
+                        {% end %}
+                    </tr>
+                    <tr>
+                        <td>Timestamp</td>
+                        <td class="time">{{ chal.timestamp.astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    {% if rechal == True %}
-        <button id="rechal" class="btn btn-warning">Rechallenge</button>
-        <button id="reject" class="btn btn-danger">Reject</button>
-    {% end %}
-    {% if chal.acct_id == user.acct_id %}
-        <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
-    {% end %}
-    <button id="jump_to_code_section" class="btn btn-secondary">Jump To Code Section</button>
+        <div class="d-flex flex-wrap gap-2">
+            {% if rechal == True %}
+                <button id="rechal" class="btn btn-warning">Rechallenge</button>
+                <button id="reject" class="btn btn-danger">Reject</button>
+            {% end %}
+            {% if chal.acct_id == user.acct_id %}
+                <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
+            {% end %}
+            <button id="jump_to_code_section" class="btn btn-secondary">Jump To Code Section</button>
+        </div>
     </div>
 
     <div class="col-lg-8">
         <!-- Always show Total Result -->
-        <table id="total" class="table mobile-table-sm">
-            <thead>
-                <tr>
-                    <th>Total</th>
-                    <th>State</th>
-                    <th>Time</th>
-                    <th>Memory</th>
-                    <th>Rate</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="states">
-                    {% set total_result = chal.total_result %}
-                    <td>Total</td>
-                    <td class="state state-{{ total_result.state }}">{{ ChalConst.STATE_LONG_STR[total_result.state] }}</td>
-                    <td class="time">{{ total_result.time }}</td>
-                    <td class="memory">{{ total_result.memory }}</td>
-                    <td class="score">{{ total_result.rate }}</td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="total" class="table mobile-table-sm">
+                <thead>
+                    <tr>
+                        <th>Total</th>
+                        <th>State</th>
+                        <th>Time</th>
+                        <th>Memory</th>
+                        <th>Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="states">
+                        {% set total_result = chal.total_result %}
+                        <td>Total</td>
+                        <td class="state state-{{ total_result.state }}">{{ ChalConst.STATE_LONG_STR[total_result.state] }}</td>
+                        <td class="time">{{ total_result.time }}</td>
+                        <td class="memory">{{ total_result.memory }}</td>
+                        <td class="score">{{ total_result.rate }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
         <!-- Show Subtask Table for FULL, STATE_COUNT, SUBTASK_ONLY -->
         {% if challenge_style != ChallengeResultStyle.TOTAL_ONLY %}
-        <table id="subtasks" class="table mobile-table-sm">
-            <thead>
-                <tr>
-                    <th>Subtask</th>
-                    <th>State</th>
-                    <th>Time</th>
-                    <th>Memory</th>
-                    <th>Rate</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for subtask in chal.subtask_results.values() %}
-                {% if should_hide_system_test %}
-                    {% set subtask_config = pro.config.subtask_configs.get(subtask.subtask_id) %}
-                    {% if subtask_config and subtask_config.is_system_test() %}
-                        {% continue %}
+        <div class="table-responsive">
+            <table id="subtasks" class="table mobile-table-sm">
+                <thead>
+                    <tr>
+                        <th>Subtask</th>
+                        <th>State</th>
+                        <th>Time</th>
+                        <th>Memory</th>
+                        <th>Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for subtask in chal.subtask_results.values() %}
+                    {% if should_hide_system_test %}
+                        {% set subtask_config = pro.config.subtask_configs.get(subtask.subtask_id) %}
+                        {% if subtask_config and subtask_config.is_system_test() %}
+                            {% continue %}
+                        {% end %}
                     {% end %}
+                    <tr class="states" id="subtask{{ subtask.subtask_id }}">
+                        <td class="idx">{{ '%04d' % (subtask.subtask_id + 1) }}</td>
+                        <td class="state state-{{ subtask.state }}">{{ ChalConst.STATE_LONG_STR[subtask.state] }}</td>
+                        <td class="time">{{ subtask.time }}</td>
+                        <td class="memory">{{ subtask.memory }}</td>
+                        <td class="score">{{ subtask.rate }}</td>
+                    </tr>
                 {% end %}
-                <tr class="states" id="id{{ subtask.subtask_id }}">
-                    <td class="idx">{{ '%04d' % (subtask.subtask_id + 1) }}</td>
-                    <td class="state state-{{ subtask.state }}">{{ ChalConst.STATE_LONG_STR[subtask.state] }}</td>
-                    <td class="time">{{ subtask.time }}</td>
-                    <td class="memory">{{ subtask.memory }}</td>
-                    <td class="score">{{ subtask.rate }}</td>
-                </tr>
-            {% end %}
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
         {% end %}
     </div>
 </div>
@@ -413,96 +421,102 @@
                             {% end %}
                             {% set _ = state_count.update({testdata.state: state_count[testdata.state] + 1}) %}
                         {% end %}
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    {% for state, count in sorted(state_count.items()) %}
-                                        {% if count > 0 %}
-                                            <td class="state-{{ state }}">{{ ChalConst.STATE_LONG_STR[state] }}</td>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        {% for state, count in sorted(state_count.items()) %}
+                                            {% if count > 0 %}
+                                                <th scope="col" class="state-{{ state }}">{{ ChalConst.STATE_LONG_STR[state] }}</th>
+                                            {% end %}
                                         {% end %}
-                                    {% end %}
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                <tr>
-                                    {% for state, count in sorted(state_count.items()) %}
-                                        {% if count > 0 %}
-                                            <td>{{ count }}</td>
+                                    </tr>
+                                </thead>
+    
+                                <tbody>
+                                    <tr>
+                                        {% for state, count in sorted(state_count.items()) %}
+                                            {% if count > 0 %}
+                                                <td>{{ count }}</td>
+                                            {% end %}
                                         {% end %}
-                                    {% end %}
-                                </tr>
-                            </tbody>
-                        </table>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     {% end %}
 
                     <!-- Full Testdata Table (for FULL mode only) -->
                     {% if challenge_style == ChallengeResultStyle.FULL %}
-                    <table id="testdatas" class="table mobile-table-sm">
-                        <thead>
-                            <tr>
-                                <th>Testdata</th>
-                                <th>Subtasks</th>
-                                <th>State</th>
-                                <th>Time</th>
-                                <th>Memory</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% set effective_testdata_ids = { t.testdata_id for t in pro.config.get_effective_testdatas() } %}
-                        {% for testdata_result in chal.testdata_results.values() %}
-                            {% if testdata_result.testdata_id not in effective_testdata_ids %}
-                                {% continue %}
-                            {% end %}
-                            {% if should_hide_system_test %}
-                                {% set td_config = pro.config.testdatas.get(testdata_result.testdata_id) %}
-                                {% if td_config and td_config.is_system_test() %}
+                    <div class="table-responsive">
+                        <table id="testdatas" class="table mobile-table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Testdata</th>
+                                    <th>Subtasks</th>
+                                    <th>State</th>
+                                    <th>Time</th>
+                                    <th>Memory</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% set effective_testdata_ids = { t.testdata_id for t in pro.config.get_effective_testdatas() } %}
+                            {% for testdata_result in chal.testdata_results.values() %}
+                                {% if testdata_result.testdata_id not in effective_testdata_ids %}
                                     {% continue %}
                                 {% end %}
-                            {% end %}
-
-                            {% set message = testdata_result.message %}
-                            {% set message_type = testdata_result.message_type %}
-                            {% set show_message = message_type != MessageType.NONE %}
-                            <tr
-                                class="states"
-                                id="id{{ testdata_result.testdata_id }}"
-                                data-bs-toggle="collapse"
-                                role="button"
-                                data-bs-target="#challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
-                            >
-                            <td class="idx">{{ '%04d' % (testdata_result.testdata_id + 1) }}
-                                    <span {% if not show_message %} style="display: none;" {% end %}> (Expand)<span>
-                            </td>
-                                <td>
-                                    {% for subtask_id in testdata_to_subtasks[testdata_result.testdata_id] %}
-                                        <span class="badge rounded-pill bg-secondary">{{ subtask_id + 1 }}</span>
+                                {% if should_hide_system_test %}
+                                    {% set td_config = pro.config.testdatas.get(testdata_result.testdata_id) %}
+                                    {% if td_config and td_config.is_system_test() %}
+                                        {% continue %}
                                     {% end %}
-                                </td>
-                                <td class="state state-{{ testdata_result.state }}">{{ ChalConst.STATE_LONG_STR[testdata_result.state] }}</td>
-                                <td class="time">{{ testdata_result.time }}</td>
-                                <td class="memory">{{ testdata_result.memory }}</td>
-                            </tr>
-                            <tr
-                                class="collapse"
-                                id="challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
-                            >
-                                <td colspan="4">
-                                    <div class="card card-body" {% if not show_message %} style="display: none;" {% end %}>
-                                        {% if message != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
-                                            {% if message_type == MessageType.TEXT %}
-                                                <pre>{{message.strip()}}</pre>
-                                            {% elif message_type == MessageType.HTML %}
-                                                <div>{% raw message %}</div>
-                                            {% end %}
+                                {% end %}
+    
+                                {% set message = testdata_result.message %}
+                                {% set message_type = testdata_result.message_type %}
+                                {% set show_message = message_type != MessageType.NONE and message != '' and (user.is_kernel() or chal.acct_id == user.acct_id) %}
+                                <tr
+                                    class="states"
+                                    id="testdata{{ testdata_result.testdata_id }}"
+                                    {% if show_message %}
+                                        role="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
+                                    {% end %}
+                                >
+                                    <td class="idx">{{ '%04d' % (testdata_result.testdata_id + 1) }}
+                                        <span {% if not show_message %} style="display: none;" {% end %}> (Expand)</span>
+                                    </td>
+                                    <td>
+                                        {% for subtask_id in testdata_to_subtasks[testdata_result.testdata_id] %}
+                                            <span class="badge rounded-pill bg-secondary">{{ subtask_id + 1 }}</span>
                                         {% end %}
-                                    </div>
-                                </td>
-                            </tr>
-                        {% end %}
-                        </tbody>
-                    </table>
+                                    </td>
+                                    <td class="state state-{{ testdata_result.state }}">{{ ChalConst.STATE_LONG_STR[testdata_result.state] }}</td>
+                                    <td class="time">{{ testdata_result.time }}</td>
+                                    <td class="memory">{{ testdata_result.memory }}</td>
+                                </tr>
+                                <tr
+                                    class="collapse"
+                                    id="challengeTestdataResultMessage{{ testdata_result.testdata_id }}"
+                                >
+                                    <td colspan="5">
+                                        <div class="card card-body" {% if not show_message %} style="display: none;" {% end %}>
+                                            {% if show_message %}
+                                                {% if message_type == MessageType.TEXT %}
+                                                    <pre>{{message.strip()}}</pre>
+                                                {% elif message_type == MessageType.HTML %}
+                                                    <div>{% raw message %}</div>
+                                                {% end %}
+                                            {% end %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% end %}
+                            </tbody>
+                        </table>
+                    </div>
                     {% end %}
                 </div>
             </div>
