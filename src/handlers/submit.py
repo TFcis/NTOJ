@@ -1,6 +1,7 @@
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from handlers.contests.base import contest_require_permission
 from services.chal import ChalService
+from services.contest_access import ContestPermission
 from services.judge import JudgeServerClusterService
 from services.pro import ProService, ProConst
 from services.user import UserConst
@@ -13,7 +14,7 @@ submit_dispatcher = ActionDispatcher()
 class SubmitHandler(RequestHandler):
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
-    @contest_require_permission("all")
+    @contest_require_permission(ContestPermission.SUBMIT)
     async def get(self, pro_id=None):
         try:
             pro_id = int(pro_id)
@@ -22,9 +23,6 @@ class SubmitHandler(RequestHandler):
 
         allow_statuses = ProConst.PRO_STATUS_NORMAL_USER
         if self.contest:
-            if not self.contest.is_running() and not self.contest.is_admin(self.acct):
-                return self.error(PERMISSION_DENIED_ERROR)
-
             if not self.contest.is_pro(pro_id):
                 return self.error(("Enoext", "Problem not in contest"))
 
@@ -85,7 +83,7 @@ class SubmitHandler(RequestHandler):
 
     @reqenv
     @require_permission([UserConst.ACCTTYPE_USER, UserConst.ACCTTYPE_KERNEL])
-    @contest_require_permission("all")
+    @contest_require_permission(ContestPermission.SUBMIT)
     async def post(self):
         """Handle problem submission - dispatch to type-specific handler."""
         can_submit = JudgeServerClusterService.inst.is_server_online()

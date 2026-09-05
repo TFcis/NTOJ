@@ -6,6 +6,7 @@ import pickle
 import asyncpg
 
 from services.chal import Compiler, ChalConst
+from services.contest_session import ContestSession
 from services.user import Account
 
 
@@ -70,13 +71,13 @@ class Contest:
     enable_system_test: bool = False  # Enable system test feature (pretest/final test)
 
     def is_start(self) -> bool:
-        return datetime.datetime.now(datetime.UTC) >= self.contest_start
+        return ContestSession.fixed(self).is_started()
 
     def is_end(self) -> bool:
-        return datetime.datetime.now(datetime.UTC) >= self.contest_end
+        return ContestSession.fixed(self).is_ended()
 
     def is_running(self) -> bool:
-        return self.contest_start <= datetime.datetime.now(datetime.UTC) < self.contest_end
+        return ContestSession.fixed(self).is_running()
 
     def is_pro(self, pro_id: int) -> bool:
         return pro_id in self.pro_list
@@ -126,7 +127,8 @@ class ContestService:
         if (b_contest := await self.rs.hget('contest', str(contest_id))) is not None:
             contest: Contest = pickle.loads(b_contest)
 
-            if contest.is_end():
+            contest_session = ContestSession.fixed(contest)
+            if contest_session.is_ended():
                 await self.rs.hdel('contest', str(contest_id))
 
         else:
@@ -181,7 +183,7 @@ class ContestService:
                         "status": UserStatus(int(status))
                     }
 
-            if contest.is_running():
+            if ContestSession.fixed(contest).is_running():
                 b_contest = pickle.dumps(contest)
                 await self.rs.hset('contest', str(contest_id), b_contest)
 
@@ -501,7 +503,13 @@ class ContestService:
 
         return None, None
 
-    async def get_icpc_scores(self, contest_id: int, pro_id: int, before_time: datetime.datetime) -> dict:
+    async def get_icpc_scores(
+        self,
+        contest_id: int,
+        pro_id: int,
+        before_time: datetime.datetime,
+        session: ContestSession | None = None,
+    ) -> dict:
         """
         Calculate ICPC scores for a problem.
 
@@ -514,6 +522,7 @@ class ContestService:
         Filters out invalid/non-verdictable states: CE, CLE, ERR, JE, JUDGE, NOTSTARTED, REJECTED
         """
         _, contest = await self.get_contest(contest_id)
+        session = session or ContestSession.fixed(contest)
 
         # States to filter out (invalid/non-verdictable submissions)
         invalid_states = [
@@ -600,7 +609,7 @@ class ContestService:
         ''', contest_id, pro_id, before_time,
             invalid_states,  # $4: array of invalid states to filter out
             ChalConst.STATE_AC,  # $5: AC state
-            contest.contest_start,  # $6: contest start time for score calculation
+            session.start_time,  # $6: effective session start time for score calculation
             contest.penalty_value, # $7: penalty value
         )
 

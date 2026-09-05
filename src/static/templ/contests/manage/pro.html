@@ -187,12 +187,12 @@
                     {% if contest.enable_system_test %}
                     <button
                         class="btn btn-info me-2 systemtestall"
-                        {% if not contest.is_end() %} disabled {% end %}
+                        {% if not contest_session.is_ended() %} disabled {% end %}
                     >System Test All</button>
                     {% end %}
                     <button
                         class="btn btn-danger me-2 publicall"
-                        {% if not contest.is_end() %} disabled {% end %}
+                        {% if not contest_session.is_ended() %} disabled {% end %}
                     >Public All Problem</button>
 
                     <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
@@ -236,15 +236,15 @@
                                     <button
                                         class="btn btn-info me-2 system-test"
                                         pro_id="{{ pro.pro_id }}"
-                                        {% if not contest.is_end() %} disabled {% end %}
-                                        title="{% if not contest.is_end() %}Contest 尚未結束{% else %}執行 System Test (重新評測所有 AC 提交){% end %}"
+                                        {% if not contest_session.is_ended() %} disabled {% end %}
+                                        title="{% if not contest_session.is_ended() %}Contest 尚未結束{% else %}執行 System Test (重新評測所有 AC 提交){% end %}"
                                     >System Test</button>
                                 {% end %}
 
                                 <button
                                     class="btn btn-danger me-2 public"
                                     pro_id="{{ pro.pro_id }}"
-                                    {% if not contest.is_end() or pro.status != ProConst.STATUS_CONTEST %} disabled {% end %}
+                                    {% if not contest_session.is_ended() or pro.status != ProConst.STATUS_CONTEST %} disabled {% end %}
                                 >Public Problem</button>
                             </td>
                         </tr>

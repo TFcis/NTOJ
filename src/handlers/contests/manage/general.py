@@ -3,6 +3,7 @@ import datetime
 from handlers.base import RequestHandler, reqenv, require_permission, ActionDispatcher
 from handlers.contests.base import contest_require_permission
 from services.chal import Compiler
+from services.contest_access import ContestPermission
 from services.user import UserConst
 from services.contests import (
     ContestConst,
@@ -20,7 +21,7 @@ contest_manage_add_dispatcher = ActionDispatcher()
 
 class ContestManageDashHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         await self.render(
             "contests/manage/dash", f"{self.contest.name} - Manage", page="dash", contest_id=self.contest.contest_id
@@ -29,7 +30,7 @@ class ContestManageDashHandler(RequestHandler):
 
 class ContestManageGeneralHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         await self.render(
             "contests/manage/general",
@@ -141,9 +142,10 @@ class ContestManageGeneralHandler(RequestHandler):
         self.contest.submission_cd_time = submission_cd_time
         self.contest.penalty_value = penalty_value
         self.contest.enable_system_test = enable_system_test
+        self.refresh_contest_context()
         if self.contest.freeze_scoreboard_period != freeze_scoreboard_period:
             self.contest.freeze_scoreboard_period = freeze_scoreboard_period
-            if self.contest.is_start():
+            if self.contest_session.is_started():
                 await self.rs.delete(f"contest_{self.contest.contest_id}_scores")
 
         new_score_type = ProblemScoreType.ICPC if contest_mode == ContestMode.ACM else ProblemScoreType.IOI2017
@@ -174,7 +176,7 @@ class ContestManageGeneralHandler(RequestHandler):
         return self.error(("S", ""))
 
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def post(self):
         reqtype = self.get_argument("reqtype")
         return await contest_manage_general_dispatcher.dispatch(self, reqtype)
@@ -182,7 +184,7 @@ class ContestManageGeneralHandler(RequestHandler):
 
 class ContestManageDescEditHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         await self.render(
             "contests/manage/desc-edit",
@@ -220,7 +222,7 @@ class ContestManageDescEditHandler(RequestHandler):
         return self.error(("S", ""))
 
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def post(self):
         reqtype = self.get_argument("reqtype")
         return await contest_manage_desc_edit_dispatcher.dispatch(self, reqtype)

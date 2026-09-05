@@ -53,8 +53,8 @@ font-weight: bolder;
 <script>
     var contest_id = '{{ contest.contest_id }}';
     var post_url = `{{ url('/be/contests/${contest_id}/scoreboard') }}`;
-    var contest_start = new Date("{{ contest.contest_start.replace(tzinfo=datetime.UTC) }}");
-    var contest_end = new Date("{{ contest.contest_end.replace(tzinfo=datetime.UTC) }}");
+    var contest_start = new Date("{{ contest_session.start_time.replace(tzinfo=datetime.UTC) }}");
+    var contest_end = new Date("{{ contest_session.end_time.replace(tzinfo=datetime.UTC) }}");
     var contest_length = parseInt((contest_end - contest_start) / 1000);
     var score_color_class_map
         = ["state-0", "state-1", "state-2", "state-3", "state-4", "state-5", "state-6", "state-7", "state-8", "state-9", "state-10"];
@@ -314,7 +314,7 @@ font-weight: bolder;
         }
 
         {% set prefix_url = f"/contests/{ contest.contest_id }" %}
-        {% if contest.is_end() or not contest.is_member(user) %}
+        {% if contest_session.is_ended() or not contest_access.is_member %}
             {% set prefix_url = "" %} <!-- Redirect to STD -->
         {% end %}
         let scoreboard_html = `
@@ -455,7 +455,7 @@ font-weight: bolder;
         }
 
         {% set prefix_url = f"/contests/{ contest.contest_id }" %}
-        {% if contest.is_end() or not contest.is_member(user) %}
+        {% if contest_session.is_ended() or not contest_access.is_member %}
             {% set prefix_url = "" %} <!-- Redirect to STD -->
         {% end %}
         let icpc_scoreboard_html = `
