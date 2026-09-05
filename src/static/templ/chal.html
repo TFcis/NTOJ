@@ -425,7 +425,7 @@
                                     <tr>
                                         {% for state, count in sorted(state_count.items()) %}
                                             {% if count > 0 %}
-                                                <td class="state-{{ state }}">{{ ChalConst.STATE_LONG_STR[state] }}</td>
+                                                <th scope="col" class="state-{{ state }}">{{ ChalConst.STATE_LONG_STR[state] }}</th>
                                             {% end %}
                                         {% end %}
                                     </tr>
