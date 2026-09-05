@@ -301,14 +301,16 @@
             </table>
         </div>
 
-        {% if rechal == True %}
-            <button id="rechal" class="btn btn-warning">Rechallenge</button>
-            <button id="reject" class="btn btn-danger">Reject</button>
-        {% end %}
-        {% if chal.acct_id == user.acct_id %}
-            <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
-        {% end %}
+        <div class="d-flex flex-wrap gap-2">
+            {% if rechal == True %}
+                <button id="rechal" class="btn btn-warning">Rechallenge</button>
+                <button id="reject" class="btn btn-danger">Reject</button>
+            {% end %}
+            {% if chal.acct_id == user.acct_id %}
+                <button id="report_pro_button" class="btn btn-warning">Report Problem</button>
+            {% end %}
             <button id="jump_to_code_section" class="btn btn-secondary">Jump To Code Section</button>
+        </div>
     </div>
 
     <div class="col-lg-8">
