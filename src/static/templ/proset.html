@@ -2,8 +2,15 @@
 {% from services.chal import ChalConst %}
 {% from services.pro import ProConst, ProClassConst %}
 
-{% set min_pro_id = min(pro.pro_id for pro in prolist) %}
-{% set max_pro_id = max(pro.pro_id for pro in prolist) %}
+{% if prolist %}
+    {% set min_pro_id = min(pro.pro_id for pro in prolist) %}
+    {% set max_pro_id = max(pro.pro_id for pro in prolist) %}
+    {% set has_pro = True %}
+{% else %}
+    {% set min_pro_id = -1 %}
+    {% set max_pro_id = -1 %}
+    {% set has_pro = False %}
+{% end %}
 
 <script type="text/javascript">
     function init() {
@@ -408,11 +415,23 @@
 
             <div class="mb-1">
                 <label for="select_prob" class="form-label">Go to Problem</label>
-                <input type="number" id="select_prob" class="form-control" placeholder="problem number" min="{{ min_pro_id }}" max="{{ max_pro_id }}">
+                <input
+                    type="number"
+                    id="select_prob"
+                    class="form-control"
+                    {% if has_pro %}
+                        placeholder="{{ min_pro_id }} ~ {{ max_pro_id }}"
+                        min="{{ min_pro_id }}"
+                        max="{{ max_pro_id }}"
+                    {% else %}
+                        placeholder="No problems available"
+                        disabled
+                    {% end %}
+                />
             </div>
 
             <div class="mb-1">
-                <button id="select_prob_button" class="btn btn-danger" type="button">Go~</button>
+                <button id="select_prob_button" class="btn btn-danger" type="button" {% if not has_pro %}disabled{% end %}>Go~</button>
             </div>
         </form>
     </div>
