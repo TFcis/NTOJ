@@ -2,6 +2,9 @@
 {% from services.chal import ChalConst %}
 {% from services.pro import ProConst, ProClassConst %}
 
+{% set min_pro_id = min(pro.pro_id for pro in prolist) %}
+{% set max_pro_id = max(pro.pro_id for pro in prolist) %}
+
 <script type="text/javascript">
     function init() {
         let j_proclass = $('#proclass');
@@ -74,6 +77,13 @@
                 select_prob.val('');
                 return;
             }
+
+            if ((pro_id < {{ min_pro_id }} || pro_id > {{ max_pro_id }})) {
+                index.show_notify_dialog(`Please enter a problem number between {{ min_pro_id }} and {{ max_pro_id }}`, index.DIALOG_TYPE.warning);
+                select_prob.val('');
+                return;
+            }
+
             index.go(`{{ url('/pro/${pro_id}/') }}`);
         };
 
@@ -398,7 +408,7 @@
 
             <div class="mb-1">
                 <label for="select_prob" class="form-label">Go to Problem</label>
-                <input type="number" id="select_prob" class="form-control" placeholder="problem number">
+                <input type="number" id="select_prob" class="form-control" placeholder="problem number" min="{{ min_pro_id }}" max="{{ max_pro_id }}">
             </div>
 
             <div class="mb-1">
