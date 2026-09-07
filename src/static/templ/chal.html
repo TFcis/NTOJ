@@ -78,6 +78,12 @@
         tr.querySelector('td.memory').innerHTML = memory;
 
         if (message_type !== {{ MessageType.NONE.value }}) {
+            $(tr).attr({
+                'role': 'button',
+                'data-bs-toggle': 'collapse',
+                'data-bs-target': `#challengeTestdataResultMessage${idx}`
+            });
+            
             let message_card = message_tr.querySelector('.card');
             message_card.innerHTML = '';
             if (message_type === {{ MessageType.TEXT.value }}) {
