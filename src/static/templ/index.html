@@ -201,11 +201,7 @@
   <!-- style="background-color: #314783;" -->
   <nav class="navbar navbar-expand-lg">
     <div id="index-navlist" class="container-fluid">
-      {% if is_in_contest %}
-        <a class="navbar-brand" href="{{ url(f'/contests/{ contest_id }/info/') }}">NTOJ</a>
-      {% else %}
-        <a class="navbar-brand" href="{{ url('/info/') }}">NTOJ</a>
-      {% end %}
+      <a class="navbar-brand" href="{{ url('/info/') }}">NTOJ</a>
 
       <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
         class="navbar-toggler" data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
@@ -237,9 +233,7 @@
                     </span>
                 </a>
             </li>
-          {% end %}
-
-          {% if contest_manage %}
+          {% else %}
             <li class="nav-item manage">
                 <a class="nav-link position-relative" href="{{ url(f'/contests/{ contest_id }/manage/') }}">
                     Manage
@@ -253,6 +247,8 @@
                 </a>
             </li>
           {% end %}
+
+          <li class="nav-item"><a class="nav-link" href="{{ url('/info/') }}">Quit</a></li>
         </ul>
         {% else %}
 
