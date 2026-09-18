@@ -4,8 +4,8 @@ site_author: LifeAdventurer <life0adventurer@gmail.com>
 site_url: https://tfcis.github.io/NTOJ
 
 # Repository
-repo_url: https://github.com/tfcis/NTOJ
-repo_name: tfcis/NTOJ
+repo_url: https://github.com/TFcis/NTOJ
+repo_name: TFcis/NTOJ
 
 # Configuration
 theme:
@@ -82,11 +82,17 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+      baselevel: 2
 
 # Page tree
 nav:
   - Home: index.md
-  - Getting started:
-    - Changelog: changelog.md
-  - Blog:
-    - blog/index.md
+  - Spec:
+    - System: system.md
+    - Standard: std.md
+    - Standard Manage: std-manage.md
+    - Contest: contest.md
+    - Contest Manage: contest-manage.md
+  - Development:
+    - Development Setup: dev-setup.md
+    - Code Style: code-style.md
