@@ -6,6 +6,14 @@
 {% set _p_postfix = _p_postfix %}
 {% set LI_ITEM_CNT = 19 %}
 
+{% set page_item_step = {
+    0: '',
+    1: 'd-none d-sm-inline-block',
+    2: 'd-none d-md-inline-block',
+    3: 'd-none d-lg-inline-block',
+    4: 'd-none d-xl-inline-block'
+} %}
+
 <nav aria-label="Page navigation">
   <ul class="pagination d-flex flex-wrap justify-content-center">
       {% set center_page = math.floor(_p_pageoff / _p_pagenum) %}
@@ -26,7 +34,7 @@
       <!-- Page with smaller index -->
       {% for i in range(l_num - 1, -1, -1) %}
           {% set off = (center_page - (1 << i)) * _p_pagenum %}
-          <li class="page-item">
+          <li class="page-item {{ page_item_step.get(i, 'd-none d-xl-inline-block') }}">
               <a class="page-link" href="?pageoff={{ str(off) + _p_postfix }}">{{center_page - (1 << i) + 1}}</a>
           </li>
       {% end %}
@@ -37,7 +45,7 @@
       <!-- Page with larger index -->
       {% for i in range(0, r_num) %}
           {% set off = (center_page + (1 << i)) * _p_pagenum %}
-          <li class="page-item">
+          <li class="page-item {{ page_item_step.get(i, 'd-none d-xl-inline-block') }}">
               <a class="page-link" href="?pageoff={{ str(off) + _p_postfix }}">{{center_page + (1 << i) + 1}}</a>
           </li>
       {% end %}
