@@ -84,7 +84,7 @@ font-weight: bolder;
                     {% if score_map[pro_id]['state'] is None %}
                         <td>Todo</td>
                     {% else %}
-                        <td class="state-{{ score_map[pro_id]['state'] }}">{{ ChalConst.STATE_LONG_STR[score_map[pro_id]['state']] }}</td>
+                        <td class="state-{{ score_map[pro_id]['state'] }} state-text-{{ score_map[pro_id]['state'] }}"></td>
                     {% end %}
 
                     {% set pro_name = pro.name %}

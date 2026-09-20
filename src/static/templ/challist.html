@@ -23,11 +23,6 @@ input {
 </style>
 
 <script type="text/javascript">
-    var state_map = {
-        {% for state, desc in ChalConst.STATE_LONG_STR.items() %}
-            {% raw f"{state}: '{desc}'," %}
-        {% end %}
-    };
     var chalsub_count;
     var re = /^(\d+(-\d+)?)(\s*,\s*\d+(-\d+)?)*$/;
     var j_filter = $('#filter');
@@ -131,9 +126,8 @@ input {
                 tr.querySelector('#memory').innerText = Math.round(memory);
                 tr.querySelector('#score').innerText = rate;
 
-                let state_el = tr.querySelector('#state');
-                state_el.className = `state-${state}`
-                state_el.innerText = state_map[state];
+                let state_el = tr.querySelector('td.state');
+                state_el.className = `state state-${state} state-text-${state}`;
             };
 
             // Register callback for challenge state updates
@@ -303,7 +297,7 @@ input {
                     {% end %}
 
                     <td><a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a></td>
-                    <td id="state" class="state-{{ chal.total_result.state }}">{{ ChalConst.STATE_LONG_STR[chal.total_result.state] }}</td>
+                    <td class="state state-{{ chal.total_result.state }} state-text-{{ chal.total_result.state }}"></td>
                     <td id="time">{{ chal.total_result.time }}</td>
                     <td id="memory">{{ chal.total_result.memory }}</td>
                     <td id="score">{{ chal.total_result.rate }}</td>

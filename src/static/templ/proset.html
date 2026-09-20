@@ -430,7 +430,7 @@
                     {% if score_map[pro_id]['state'] is None %}
                         <td>Todo</td>
                     {% else %}
-                        <td><a href="{{ url(f'/chal/?pro_id={ pro_id }&acct_id={ user.acct_id }') }}" class="state-{{ score_map[pro_id]['state'] }}">{{ChalConst.STATE_LONG_STR[score_map[pro_id]['state']]}}</a></td>
+                        <td><a href="{{ url(f'/chal/?pro_id={ pro_id }&acct_id={ user.acct_id }') }}" class="state-{{ score_map[pro_id]['state'] }} state-text-{{ score_map[pro_id]['state'] }}"></a></td>
                     {% end %}
                     <td class="name">
                         <a href="{{ url(f'/pro/{ pro_id }/') }}">{{ pro.name }}</a>
