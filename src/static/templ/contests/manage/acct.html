@@ -78,26 +78,28 @@
                         </div>
                     </form>
 
-                    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-                    <thead>
-                        <tr>
-                            <th scope="col">Account ID</th>
-                            <th scope="col">Account</th>
-                            <th scope="col">Operation</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for acct in acct_list %}
-                        <tr>
-                            <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
-                            <td>{{ acct.name }}</td>
-                            <td>
-                                <button class="btn btn-primary me-2 remove normal" acct_id="{{ acct.acct_id }}">Remove</button>
-                            </td>
-                        </tr>
-                    {% end %}
-                    </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Account ID</th>
+                                    <th scope="col">Account</th>
+                                    <th scope="col">Operation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for acct in acct_list %}
+                                <tr>
+                                    <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
+                                    <td>{{ acct.name }}</td>
+                                    <td>
+                                        <button class="btn btn-primary me-2 remove normal" acct_id="{{ acct.acct_id }}">Remove</button>
+                                    </td>
+                                </tr>
+                            {% end %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -129,26 +131,28 @@
                         </div>
                     </form>
 
-                    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-                    <thead>
-                        <tr>
-                            <th scope="col">Account ID</th>
-                            <th scope="col">Account</th>
-                            <th scope="col">Operation</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for acct in admin_list %}
-                        <tr>
-                            <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
-                            <td>{{ acct.name }}</td>
-                            <td>
-                                <button class="btn btn-primary me-2 remove admin" acct_id="{{ acct.acct_id }}">Remove</button>
-                            </td>
-                        </tr>
-                    {% end %}
-                    </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Account ID</th>
+                                    <th scope="col">Account</th>
+                                    <th scope="col">Operation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for acct in admin_list %}
+                                <tr>
+                                    <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
+                                    <td>{{ acct.name }}</td>
+                                    <td>
+                                        <button class="btn btn-primary me-2 remove admin" acct_id="{{ acct.acct_id }}">Remove</button>
+                                    </td>
+                                </tr>
+                            {% end %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

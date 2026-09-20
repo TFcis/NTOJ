@@ -54,61 +54,60 @@ table#prolist tbody td.status-offline{color:#bdc0ba}
 {% from services.pro import ProConst %}
 
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
-    <table id="prolist" class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-        <thead>
-            <tr>
-                <th scope="col">#</th>
-                <th scope="col">Problem Name</th>
-                <th scope="col">Status</th>
-                <th scope="col">
-                    <a class="btn btn-primary" href="{{ url('/manage/pro/add/') }}">&#x271a</a>
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for pro in prolist %}
-            <tr>
-                <th scope="row">{{ pro.pro_id }}</th>
-                <td><a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro.name }}</a></td>
-
-                {% if pro.status == ProConst.STATUS_ONLINE %}
-                    <td class="status-online">Online</td>
-                {% elif pro.status == ProConst.STATUS_CONTEST %}
-                    <td class="status-online">Contest</td>
-                {% elif pro.status == ProConst.STATUS_HIDDEN %}
-                    <td class="status-hidden">Hidden</td>
+    <div class="table-responsive">
+        <table id="prolist" class="table table-hover table-sm">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Problem Name</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">
+                        <a class="btn btn-primary" href="{{ url('/manage/pro/add/') }}">&#x271a</a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pro in prolist %}
+                <tr>
+                    <th scope="row">{{ pro.pro_id }}</th>
+                    <td><a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro.name }}</a></td>
+    
+                    {% if pro.status == ProConst.STATUS_ONLINE %}
+                        <td class="status-online">Online</td>
+                    {% elif pro.status == ProConst.STATUS_CONTEST %}
+                        <td class="status-online">Contest</td>
+                    {% elif pro.status == ProConst.STATUS_HIDDEN %}
+                        <td class="status-hidden">Hidden</td>
+                    {% end %}
+    
+                    <td pro_id={{ pro.pro_id }} class="control">
+                        <a class="btn btn-secondary" href="{{ url(f'/manage/pro/update/?pro_id={ pro.pro_id }') }}">&#x2699</a>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-warning btn-sm rechal">Rechallenge</button>
+                            <button type="button" class="btn btn-danger dropdown-toggle dropdown-toggle-split"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><button type="button" class="dropdown-item btn btn-danger rechalall">All Challenges
+                                        (Danger)</button></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
                 {% end %}
-
-                <td pro_id={{ pro.pro_id }} class="control">
-                    <a class="btn btn-secondary" href="{{ url(f'/manage/pro/update/?pro_id={ pro.pro_id }') }}">&#x2699</a>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-warning btn-sm rechal">Rechallenge</button>
-                        <button type="button" class="btn btn-danger dropdown-toggle dropdown-toggle-split"
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="visually-hidden">Toggle Dropdown</span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><button type="button" class="dropdown-item btn btn-danger rechalall">All Challenges
-                                    (Danger)</button></li>
-                        </ul>
-                    </div>
-                </td>
-            </tr>
-            {% end %}
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </div>
 
     {% set postfix = '' %}
 
-    <div class="row">
-        <div class="col-1"></div>
-        <div class="col pt-3">
-            {% set _p_pageoff = pageoff %}
-            {% set _p_pagenum = 40 %}
-            {% set _p_total_cnt = pro_total_cnt %}
-            {% set _p_postfix = postfix %}
-            {% include "../../pagination.html" %}
-        </div>
+    <div class="pt-3 d-flex justify-content-center">
+        {% set _p_pageoff = pageoff %}
+        {% set _p_pagenum = 40 %}
+        {% set _p_total_cnt = pro_total_cnt %}
+        {% set _p_postfix = postfix %}
+        {% include "../../pagination.html" %}
     </div>
 </div>
 {% end %}

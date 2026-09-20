@@ -83,52 +83,56 @@
 
     {% else %}
     <h1>Request User</h1>
-    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-        <thead>
-            <tr>
-                <th scope="col">Account ID</th>
-                <th scope="col">Account</th>
-                <th scope="col">Operation</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for acct in requested_list %}
-            <tr>
-                <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
-                <td>{{ acct.name }}</td>
-                <td>
-                    <div class="btn-toolbar">
-                        <button class="btn btn-primary me-2 approve" acct_id="{{ acct.acct_id }}">Approve</button>
-                        <button class="btn btn-warning me-2 reject" acct_id="{{ acct.acct_id }}">Reject</button>
-                    </div>
-                </td>
-            </tr>
-        {% end %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm">
+            <thead>
+                <tr>
+                    <th scope="col">Account ID</th>
+                    <th scope="col">Account</th>
+                    <th scope="col">Operation</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for acct in requested_list %}
+                <tr>
+                    <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
+                    <td>{{ acct.name }}</td>
+                    <td>
+                        <div class="btn-toolbar">
+                            <button class="btn btn-primary me-2 approve" acct_id="{{ acct.acct_id }}">Approve</button>
+                            <button class="btn btn-warning me-2 reject" acct_id="{{ acct.acct_id }}">Reject</button>
+                        </div>
+                    </td>
+                </tr>
+            {% end %}
+            </tbody>
+        </table>
+    </div>
     <h1>Rejected User</h1>
-    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-        <thead>
-            <tr>
-                <th scope="col">Account ID</th>
-                <th scope="col">Account</th>
-                <th scope="col">Operation</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for acct in rejected_list %}
-            <tr>
-                <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
-                <td>{{ acct.name }}</td>
-                <td>
-                    <div class="btn-toolbar">
-                        <button class="btn btn-primary me-2 re-approve" acct_id="{{ acct.acct_id }}">Re Approve</button>
-                    </div>
-                </td>
-            </tr>
-        {% end %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm">
+            <thead>
+                <tr>
+                    <th scope="col">Account ID</th>
+                    <th scope="col">Account</th>
+                    <th scope="col">Operation</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for acct in rejected_list %}
+                <tr>
+                    <th scope="row"><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.acct_id }}</a></th>
+                    <td>{{ acct.name }}</td>
+                    <td>
+                        <div class="btn-toolbar">
+                            <button class="btn btn-primary me-2 re-approve" acct_id="{{ acct.acct_id }}">Re Approve</button>
+                        </div>
+                    </td>
+                </tr>
+            {% end %}
+            </tbody>
+        </table>
+    </div>
     {% end %}
 </div>
 

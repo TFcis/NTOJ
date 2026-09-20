@@ -190,31 +190,33 @@
         {% if acct.acct_id == user.acct_id %}
         <form id="login-list">
             <h3>Login Devices <button type="button" class="btn btn-danger logout-all">Log out all devices</button></h3>
-            <table id="loginlist" class="table table-striped table-hover table-sm table-responsive-sm">
-                <thead>
-                    <tr>
-                        <th>IP</th>
-                        <th>Login Time</th>
-                        <th>User Agent</th>
-                        <th>Log out</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for hashed_session_key, v in session_keys.items() %}
+            <div class="table-responsive">
+                <table id="loginlist" class="table table-striped table-hover table-sm">
+                    <thead>
                         <tr>
-                            <td>
-                                {{ v['ip'] }}
-                                {% if current_session_key == hashed_session_key %}
-                                    <span>(Current device)</span>
-                                {% end %}
-                            </td>
-                            <td>{{ datetime.datetime.fromtimestamp(v['time']).strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                            <td>{{ v['user-agent'] }}</td>
-                            <td><button type="button" class="btn btn-warning logout" hashed_session_key="{{ hashed_session_key }}">Log out</button></td>
+                            <th>IP</th>
+                            <th>Login Time</th>
+                            <th>User Agent</th>
+                            <th>Log out</th>
                         </tr>
-                    {% end %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% for hashed_session_key, v in session_keys.items() %}
+                            <tr>
+                                <td>
+                                    {{ v['ip'] }}
+                                    {% if current_session_key == hashed_session_key %}
+                                        <span>(Current device)</span>
+                                    {% end %}
+                                </td>
+                                <td>{{ datetime.datetime.fromtimestamp(v['time']).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>{{ v['user-agent'] }}</td>
+                                <td><button type="button" class="btn btn-warning logout" hashed_session_key="{{ hashed_session_key }}">Log out</button></td>
+                            </tr>
+                        {% end %}
+                    </tbody>
+                </table>
+            </div>
         </form>
         {% end %}
     </div>
