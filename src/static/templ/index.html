@@ -2,6 +2,7 @@
 <html>
 {% from services.contests import ContestTimeMode %}
 {% from services.contest_access import ContestPermission %}
+{% from services.chal import ChalConst %}
 
 <head>
   <title>New TNFSH Online Judge</title>
@@ -224,6 +225,16 @@
 
   .state-102 { /* Skipped */
     color: rgba(220, 226, 230, 0.75) !important;
+  }
+
+  {% for state, desc in ChalConst.STATE_LONG_STR.items() %}
+    .state-text-{{ state }}::after { content: "{{ desc }}"; }
+  {% end %}
+
+  @media (max-width: 768px) {
+    {% for state, desc in ChalConst.STATE_STR.items() %}
+      .state-text-{{ state }}::after { content: "{{ desc }}"; }
+    {% end %}
   }
   </style>
 </head>
