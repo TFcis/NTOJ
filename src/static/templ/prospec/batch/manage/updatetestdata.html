@@ -318,55 +318,57 @@
     <!-- <button class="btn btn-primary">Add Multiple Files (WIP)</button>
     <button class="btn btn-danger">Delete All Files (WIP)</button>
     <button class="btn btn-primary">Download All Files (WIP)</button> -->
-    <table class="table table-hover table-sm table-responsive-sm my-3">
-        <thead>
-            <tr>
-                <th scope="col">ID</th>
-                <th scope="col">Input Filename</th>
-                <th scope="col">Output Filename</th>
-                <th scope="col">Tags</th>
-                <th scope="col">Operation</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for testdata_id, testdata in config.testdatas.items() %}
-                <tr testdata_id="{{ testdata_id }}">
-                    <th scope="row">{{ testdata_id + 1 }}</th>
-                    <td><a class="preview-file input">{{ testdata.inputfile }}</a></td>
-                    <td><a class="preview-file output">{{ testdata.outputfile }}</a></td>
-                    <td>
-                        <div class="input-group input-group-sm">
-                            <input id="metadata-tags" class="form-control" type="text" value="{{ ','.join(testdata.metadata.get('tags', [])) }}" placeholder="e.g., system-test">
-                            <button class="btn btn-primary btn-sm update-metadata-tags">Update</button>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="btn-toolbar">
-                            <div class="dropdown me-2">
-                                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Update
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <input type="file" style="display: none;">
-                                        <button class="btn btn-primary dropdown-item update-single-file input">Input</button>
-                                    </li>
-
-                                    <li>
-                                        <input type="file" style="display: none;">
-                                        <button class="btn btn-primary dropdown-item update-single-file output">Output</button>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <button class="btn btn-danger me-2 delete-single-file">Delete</button>
-                        </div>
-                    </td>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm my-3">
+            <thead>
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Input Filename</th>
+                    <th scope="col">Output Filename</th>
+                    <th scope="col">Tags</th>
+                    <th scope="col">Operation</th>
                 </tr>
-            {% end %}
-        </tbody>
-</table>
+            </thead>
+    
+            <tbody>
+                {% for testdata_id, testdata in config.testdatas.items() %}
+                    <tr testdata_id="{{ testdata_id }}">
+                        <th scope="row">{{ testdata_id + 1 }}</th>
+                        <td><a class="preview-file input">{{ testdata.inputfile }}</a></td>
+                        <td><a class="preview-file output">{{ testdata.outputfile }}</a></td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                <input id="metadata-tags" class="form-control" type="text" value="{{ ','.join(testdata.metadata.get('tags', [])) }}" placeholder="e.g., system-test">
+                                <button class="btn btn-primary btn-sm update-metadata-tags">Update</button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-toolbar">
+                                <div class="dropdown me-2">
+                                    <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Update
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <input type="file" style="display: none;">
+                                            <button class="btn btn-primary dropdown-item update-single-file input">Input</button>
+                                        </li>
+    
+                                        <li>
+                                            <input type="file" style="display: none;">
+                                            <button class="btn btn-primary dropdown-item update-single-file output">Output</button>
+                                        </li>
+                                    </ul>
+                                </div>
+    
+                                <button class="btn btn-danger me-2 delete-single-file">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                {% end %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 {% end %}

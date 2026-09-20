@@ -224,16 +224,6 @@
     }
 </script>
 
-<style>
-
-@media only screen and (min-width: 992px) {
-    .pagination {
-        justify-content: center;
-    }
-}
-
-</style>
-
 {% if cur_proclass %}
 <div class="modal fade" id="proclassInfoDialog" tabindex="-1" aria-hidden="true">
 <div class="modal-dialog modal-dialog-scrollable modal-lg">
@@ -410,73 +400,73 @@
 
     <div class="col-lg-10 col-12">
         <div class="table-responsive">
-        <table id="prolist" class="table table-striped table-hover table-responsive-sm col mx-lg-3">
-            <thead>
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">State</th>
-                    <th scope="col">Problem Name</th>
-                    <th class="text-center" scope="col">TopCoder</th>
-                    <th scope="col">AC Ratio (User)</th>
-                    <th scope="col">AC Ratio (Submission)</th>
-                    <th scope="col">Tags</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for pro in prolist %}
-                <tr>
-                    {% set pro_id = pro.pro_id %}
-                    <td class="id">{{ pro_id }}</td>
-                    {% if score_map[pro_id]['state'] is None %}
-                        <td>Todo</td>
-                    {% else %}
-                        <td><a href="{{ url(f'/chal/?pro_id={ pro_id }&acct_id={ user.acct_id }') }}" class="state-{{ score_map[pro_id]['state'] }} state-text-{{ score_map[pro_id]['state'] }}"></a></td>
-                    {% end %}
-                    <td class="name">
-                        <a href="{{ url(f'/pro/{ pro_id }/') }}">{{ pro.name }}</a>
-                    </td>
-                    {% set topcoder = score_map[pro_id]['topcoder'] %}
-                    {% if topcoder %}
-                        {% if topcoder.photo == "" %}
-                            {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
+            <table id="prolist" class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">State</th>
+                        <th scope="col">Problem Name</th>
+                        <th class="text-center" scope="col">TopCoder</th>
+                        <th scope="col">AC Ratio (User)</th>
+                        <th scope="col">AC Ratio (Submission)</th>
+                        <th scope="col">Tags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for pro in prolist %}
+                    <tr>
+                        {% set pro_id = pro.pro_id %}
+                        <td class="id">{{ pro_id }}</td>
+                        {% if score_map[pro_id]['state'] is None %}
+                            <td>Todo</td>
+                        {% else %}
+                            <td><a href="{{ url(f'/chal/?pro_id={ pro_id }&acct_id={ user.acct_id }') }}" class="state-{{ score_map[pro_id]['state'] }} state-text-{{ score_map[pro_id]['state'] }}"></a></td>
                         {% end %}
-                        <td class="text-center">
-                            <a href="{{ url(f'/acct/{ topcoder.acct_id }/') }}">
-                                <img width="30" height="30" src="{{ topcoder.photo }}" />
-                            </a>
+                        <td class="name">
+                            <a href="{{ url(f'/pro/{ pro_id }/') }}">{{ pro.name }}</a>
                         </td>
-                    {% else %}
-                        <td></td>
-                    {% end %}
-
-                    {% set rate = score_map[pro_id]['rate_data'] %}
-                    <td>
-                        {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
-                            {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}%
+                        {% set topcoder = score_map[pro_id]['topcoder'] %}
+                        {% if topcoder %}
+                            {% if topcoder.photo == "" %}
+                                {% set topcoder.photo = f"https://www.gravatar.com/avatar/{ topcoder.acct_id }?d=identicon&f=y&s=480;" %}
+                            {% end %}
+                            <td class="text-center">
+                                <a href="{{ url(f'/acct/{ topcoder.acct_id }/') }}">
+                                    <img width="30" height="30" src="{{ topcoder.photo }}" />
+                                </a>
+                            </td>
                         {% else %}
-                            {{ '0.00%' }}
+                            <td></td>
                         {% end %}
 
-                        (<a href="{{ url(f'/rank/{ pro_id }/') }}">{{ rate['user_ac_chal_cnt'] }}</a>
-                        / {{ rate['user_all_chal_cnt'] }})
-                    </td>
+                        {% set rate = score_map[pro_id]['rate_data'] %}
+                        <td>
+                            {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
+                                {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}%
+                            {% else %}
+                                {{ '0.00%' }}
+                            {% end %}
 
-                    <td>
-                        {% if rate['all_chal_cnt'] and rate['ac_chal_cnt'] %}
-                            {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}%
-                        {% else %}
-                            {{ '0.00%' }}
-                        {% end %}
-                        (<a href="{{ url(f'/chal/?pro_id={ pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
-                        /
-                        <a href="{{ url(f'/chal/?pro_id={ pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
-                    </td>
+                            (<a href="{{ url(f'/rank/{ pro_id }/') }}">{{ rate['user_ac_chal_cnt'] }}</a>
+                            / {{ rate['user_all_chal_cnt'] }})
+                        </td>
 
-                    <td class="name">{{ pro.tags }}</td>
-                </tr>
-            {% end %}
-            </tbody>
-        </table>
+                        <td>
+                            {% if rate['all_chal_cnt'] and rate['ac_chal_cnt'] %}
+                                {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}%
+                            {% else %}
+                                {{ '0.00%' }}
+                            {% end %}
+                            (<a href="{{ url(f'/chal/?pro_id={ pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
+                            /
+                            <a href="{{ url(f'/chal/?pro_id={ pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
+                        </td>
+
+                        <td class="name">{{ pro.tags }}</td>
+                    </tr>
+                {% end %}
+                </tbody>
+            </table>
         </div>
 
         {% set postfix = '' %}
@@ -505,16 +495,12 @@
         {% set postfix = postfix + f"&topcoder={flt['topcoder_filter']}" %}
         {% end %}
 
-        <div class="row">
-            <div class="col-1"></div>
-            <div class="col pt-3">
-                {% set _p_pageoff = pageoff %}
-                {% set _p_pagenum = 40 %}
-                {% set _p_total_cnt = pro_total_cnt %}
-                {% set _p_postfix = postfix %}
-                {% include "pagination.html" %}
-            </div>
+        <div class="pt-3 d-flex justify-content-center">
+            {% set _p_pageoff = pageoff %}
+            {% set _p_pagenum = 40 %}
+            {% set _p_total_cnt = pro_total_cnt %}
+            {% set _p_postfix = postfix %}
+            {% include "pagination.html" %}
         </div>
-
     </div>
 </div>

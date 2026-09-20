@@ -195,62 +195,64 @@
                         {% if not contest_session.is_ended() %} disabled {% end %}
                     >Public All Problem</button>
 
-                    <table class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-                    <thead>
-                        <tr>
-                            <th scope="col">Pro ID</th>
-                            <th scope="col">Problem Name</th>
-                            <th scope="col">Score Type</th>
-                            <th scope="col">Challenge Style</th>
-                            <th scope="col">Operation</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for pro in pro_list %}
-                        <tr>
-                            <th scope="row"><a href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }}</a></th>
-                            <td>{{ pro.name }}</td>
-                            {% if contest.contest_mode == ContestMode.IOI %}
-                                <td>
-                                <select class="form-select form-select-sm score-type-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id]['score_type'] }}" style="width: auto;">
-                                    <option value="1" {% if contest.pro_list[pro.pro_id]['score_type'] == 1 %}selected{% end %}>IOI2017</option>
-                                    <option value="0" {% if contest.pro_list[pro.pro_id]['score_type'] == 0 %}selected{% end %}>IOI2013</option>
-                                </select>
-                                </td>
-                            {% else %}
-                                <td>ICPC</td>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Pro ID</th>
+                                    <th scope="col">Problem Name</th>
+                                    <th scope="col">Score Type</th>
+                                    <th scope="col">Challenge Style</th>
+                                    <th scope="col">Operation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for pro in pro_list %}
+                                <tr>
+                                    <th scope="row"><a href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro.pro_id }}</a></th>
+                                    <td>{{ pro.name }}</td>
+                                    {% if contest.contest_mode == ContestMode.IOI %}
+                                        <td>
+                                        <select class="form-select form-select-sm score-type-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id]['score_type'] }}" style="width: auto;">
+                                            <option value="1" {% if contest.pro_list[pro.pro_id]['score_type'] == 1 %}selected{% end %}>IOI2017</option>
+                                            <option value="0" {% if contest.pro_list[pro.pro_id]['score_type'] == 0 %}selected{% end %}>IOI2013</option>
+                                        </select>
+                                        </td>
+                                    {% else %}
+                                        <td>ICPC</td>
+                                    {% end %}
+                                    <td>
+                                        <select class="form-select form-select-sm challenge-style-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id].get('challenge_style', 1) }}" style="width: auto;">
+                                            <option value="{{ ChallengeResultStyle.FULL }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.FULL %}selected{% end %}>Full</option>
+                                            <option value="{{ ChallengeResultStyle.STATE_COUNT }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.STATE_COUNT %}selected{% end %}>State Count</option>
+                                            <option value="{{ ChallengeResultStyle.SUBTASK_ONLY }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.SUBTASK_ONLY %}selected{% end %}>Subtask Only</option>
+                                            <option value="{{ ChallengeResultStyle.TOTAL_ONLY }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.TOTAL_ONLY %}selected{% end %}>Total Only</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-warning me-2 remove" pro_id="{{ pro.pro_id }}">Remove</button>
+                                        <button class="btn btn-danger me-2 rechal" pro_id="{{ pro.pro_id }}">Rechallenge</button>
+        
+                                        {% if contest.enable_system_test %}
+                                            <button
+                                                class="btn btn-info me-2 system-test"
+                                                pro_id="{{ pro.pro_id }}"
+                                                {% if not contest_session.is_ended() %} disabled {% end %}
+                                                title="{% if not contest_session.is_ended() %}Contest 尚未結束{% else %}執行 System Test (重新評測所有 AC 提交){% end %}"
+                                            >System Test</button>
+                                        {% end %}
+        
+                                        <button
+                                            class="btn btn-danger me-2 public"
+                                            pro_id="{{ pro.pro_id }}"
+                                            {% if not contest_session.is_ended() or pro.status != ProConst.STATUS_CONTEST %} disabled {% end %}
+                                        >Public Problem</button>
+                                    </td>
+                                </tr>
                             {% end %}
-                            <td>
-                                <select class="form-select form-select-sm challenge-style-select" pro_id="{{ pro.pro_id }}" data-old-value="{{ contest.pro_list[pro.pro_id].get('challenge_style', 1) }}" style="width: auto;">
-                                    <option value="{{ ChallengeResultStyle.FULL }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.FULL %}selected{% end %}>Full</option>
-                                    <option value="{{ ChallengeResultStyle.STATE_COUNT }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.STATE_COUNT %}selected{% end %}>State Count</option>
-                                    <option value="{{ ChallengeResultStyle.SUBTASK_ONLY }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.SUBTASK_ONLY %}selected{% end %}>Subtask Only</option>
-                                    <option value="{{ ChallengeResultStyle.TOTAL_ONLY }}" {% if contest.pro_list[pro.pro_id].get('challenge_style', 1) == ChallengeResultStyle.TOTAL_ONLY %}selected{% end %}>Total Only</option>
-                                </select>
-                            </td>
-                            <td>
-                                <button class="btn btn-warning me-2 remove" pro_id="{{ pro.pro_id }}">Remove</button>
-                                <button class="btn btn-danger me-2 rechal" pro_id="{{ pro.pro_id }}">Rechallenge</button>
-
-                                {% if contest.enable_system_test %}
-                                    <button
-                                        class="btn btn-info me-2 system-test"
-                                        pro_id="{{ pro.pro_id }}"
-                                        {% if not contest_session.is_ended() %} disabled {% end %}
-                                        title="{% if not contest_session.is_ended() %}Contest 尚未結束{% else %}執行 System Test (重新評測所有 AC 提交){% end %}"
-                                    >System Test</button>
-                                {% end %}
-
-                                <button
-                                    class="btn btn-danger me-2 public"
-                                    pro_id="{{ pro.pro_id }}"
-                                    {% if not contest_session.is_ended() or pro.status != ProConst.STATUS_CONTEST %} disabled {% end %}
-                                >Public Problem</button>
-                            </td>
-                        </tr>
-                    {% end %}
-                    </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

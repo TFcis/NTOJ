@@ -5,50 +5,50 @@
     function init() {}
 </script>
 
-<div class="col-lg-12 px-lg-2">
-    {% for contest_name, contest_list in contest_category.items() %}
-        <div class="d-flex align-items-center mt-3 mb-2">
-            <h4 class="mb-0 me-2">{{ contest_name.capitalize() }} Contests</h4>
-            {% if contest_name == "upcoming" and user.is_kernel() %}
-                <a class="btn btn-primary btn-sm" href="{{ url('/contests/manage/add/') }}">&#x271a;</a>
-            {% end %}
-        </div>
-
-        <div class="table-responsive">
-            <table class="table table-hover table-sm col">
-                <thead>
-                    <tr>
-                        <th scope="col">Title</th>
-                        <th scope="col">Start Time</th>
-                        <th scope="col">End Time</th>
-                        <th scope="col">Length</th>
-                        <th scope="col">Contest Type</th>
-                        <th scope="col">Time Mode</th>
-                        <th scope="col">Scoreboard</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for contest in contest_list %}
+<div class="row">
+    <div class="col-lg-12 px-lg-2">
+        {% for contest_name, contest_list in contest_category.items() %}
+            <div class="d-flex align-items-center mt-3 mb-2">
+                <h4 class="mb-0 me-2">{{ contest_name.capitalize() }} Contests</h4>
+                {% if contest_name == "upcoming" and user.is_kernel() %}
+                    <a class="btn btn-primary btn-sm" href="{{ url('/contests/manage/add/') }}">&#x271a;</a>
+                {% end %}
+            </div>
+    
+            <div class="table-responsive">
+                <table class="table table-hover table-sm col">
+                    <thead>
                         <tr>
-                            <th scope="row"><a href="{{ url(f'/contests/{ contest['contest_id'] }/info/') }}">{{ contest['name'] }}</a></th>
-                            <td>{{ contest['contest_start'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
-                            <td>{{ contest['contest_end'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
-                            <td>{% if contest['contest_time_mode'] is ContestTimeMode.FLEXIBLE %}{{ datetime.timedelta(seconds=contest['contest_duration']) }}{% else %}{{ contest['contest_end'] - contest['contest_start'] }}{% end %}</td>
-                            <td>{{ ContestMode(int(contest['contest_mode'])).name }}</td>
-                            <td>{{ ContestTimeMode(int(contest['contest_time_mode'])).name.capitalize() }}</td>
-                            <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
+                            <th scope="col">Title</th>
+                            <th scope="col">Start Time</th>
+                            <th scope="col">End Time</th>
+                            <th scope="col">Length</th>
+                            <th scope="col">Contest Type</th>
+                            <th scope="col">Time Mode</th>
+                            <th scope="col">Scoreboard</th>
                         </tr>
-                    {% end %}
-                    {% if len(contest_list) == 0 %}
-                        <tr><td colspan="7" class="text-center text-muted">No {{ contest_name }} contests</td></tr>
-                    {% end %}
-                </tbody>
-            </table>
-        </div>
-    {% end %}
-
-    <div class="row">
-        <div class="col pt-3">
+                    </thead>
+                    <tbody>
+                        {% for contest in contest_list %}
+                            <tr>
+                                <th scope="row"><a href="{{ url(f'/contests/{ contest['contest_id'] }/info/') }}">{{ contest['name'] }}</a></th>
+                                <td>{{ contest['contest_start'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
+                                <td>{{ contest['contest_end'].astimezone(config.TIMEZONE).strftime("%Y-%m-%d %H:%M") }}</td>
+                                <td>{% if contest['contest_time_mode'] is ContestTimeMode.FLEXIBLE %}{{ datetime.timedelta(seconds=contest['contest_duration']) }}{% else %}{{ contest['contest_end'] - contest['contest_start'] }}{% end %}</td>
+                                <td>{{ ContestMode(int(contest['contest_mode'])).name }}</td>
+                                <td>{{ ContestTimeMode(int(contest['contest_time_mode'])).name.capitalize() }}</td>
+                                <td>{{ "Yes" if contest['is_public_scoreboard'] else "No" }}</td>
+                            </tr>
+                        {% end %}
+                        {% if len(contest_list) == 0 %}
+                            <tr><td colspan="7" class="text-center text-muted">No {{ contest_name }} contests</td></tr>
+                        {% end %}
+                    </tbody>
+                </table>
+            </div>
+        {% end %}
+    
+        <div class="pt-3 d-flex justify-content-center">
             {% set _p_pageoff = pageoff %}
             {% set _p_pagenum = 20 %}
             {% set _p_total_cnt = recent_length %}
