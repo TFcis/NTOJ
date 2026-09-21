@@ -77,7 +77,7 @@
         tr.querySelector('td.time').innerHTML = time;
         tr.querySelector('td.memory').innerHTML = memory;
 
-        if (message_type !== {{ MessageType.NONE.value }}) {
+        if (message_type !== {{ MessageType.NONE.value }} && message !== '') {
             $(tr).attr({
                 'role': 'button',
                 'data-bs-toggle': 'collapse',
