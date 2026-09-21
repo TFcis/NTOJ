@@ -344,7 +344,7 @@
         {% for compiler in Compiler %}
             <div class="form-check form-check-inline">
                 <input class="form-check-input compilers" type="checkbox" id="inlineCheckbox{{ compiler }}" value="{{ compiler }}"{% if compiler in contest.allow_compilers %} checked {% end %}>
-                <label class="form-check-label" for="inlineCheckbox1">{{ COMPILER_INFOS[compiler].version_name }}</label>
+                <label class="form-check-label" for="inlineCheckbox{{ compiler }}">{{ COMPILER_INFOS[compiler].version_name }}</label>
             </div>
         {% end %}
     </div>
