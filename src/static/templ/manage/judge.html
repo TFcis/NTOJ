@@ -52,38 +52,40 @@
 <div class="col-lg-10 mt-lg-2">
     Server Status
     <div id="form">
-        <table border=2 class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-            <thead>
-            <tr>
-                <td>Server Name</td>
-                <td>Running Challenge Count</td>
-                <td>Status</td>
-                <td>Connect</td>
-                <td>Disconnect</td>
-            </tr>
-            </thead>
-            <tbody>
-                {% set count = 0 %}
-                {% for judge_status in judge_status_list %}
+        <div class="table-responsive">
+            <table border=2 class="table table-hover table-sm">
+                <thead>
                 <tr>
-                    {% if judge_status['name'] == '' %}
-                        <td>Server-{{ count }}</td>
-                    {% else %}
-                        <td>{{ judge_status['name'] }}</td>
-                    {% end %}
-                    <td id="{{ judge_status['judge_id'] }}">{{ judge_status['running_chal_cnt'] }}</td>
-                    {% if judge_status['status'] == True %}
-                        <td style="color: green !important;">Online</td>
-                    {% else %}
-                        <td style="color: red !important;">Offline</td>
-                    {% end %}
-                    <td><button class="btn btn-primary" type="button" onclick="connect_sever({{ count }});">Connect</button></td>
-                    <td><button class="btn btn-danger" type="button" onclick="disconnect_server({{ count }});">Disconnect</button></td>
+                    <td>Server Name</td>
+                    <td>Running Challenge Count</td>
+                    <td>Status</td>
+                    <td>Connect</td>
+                    <td>Disconnect</td>
                 </tr>
-                {% set count = count + 1 %}
-                {% end %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {% set count = 0 %}
+                    {% for judge_status in judge_status_list %}
+                    <tr>
+                        {% if judge_status['name'] == '' %}
+                            <td>Server-{{ count }}</td>
+                        {% else %}
+                            <td>{{ judge_status['name'] }}</td>
+                        {% end %}
+                        <td id="{{ judge_status['judge_id'] }}">{{ judge_status['running_chal_cnt'] }}</td>
+                        {% if judge_status['status'] == True %}
+                            <td style="color: green !important;">Online</td>
+                        {% else %}
+                            <td style="color: red !important;">Offline</td>
+                        {% end %}
+                        <td><button class="btn btn-primary" type="button" onclick="connect_sever({{ count }});">Connect</button></td>
+                        <td><button class="btn btn-danger" type="button" onclick="disconnect_server({{ count }});">Disconnect</button></td>
+                    </tr>
+                    {% set count = count + 1 %}
+                    {% end %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% end %}

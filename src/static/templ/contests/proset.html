@@ -10,13 +10,6 @@
 </script>
 
 <style>
-
-@media only screen and (min-width: 992px) {
-    .pagination {
-        justify-content: center;
-    }
-}
-
 /* FIXME: index.css also have state-0, we should separate them */
 td.score.state-0 {
 color: #DC0000 !important;
@@ -56,103 +49,101 @@ font-weight: bolder;
 </style>
 
 {% set score_color_class_map = ["state-0", "state-1", "state-2", "state-3", "state-4", "state-5", "state-6", "state-7", "state-8", "state-9", "state-10"] %}
-{% set is_end = contest.is_end() %}
+{% set is_end = contest_session.is_ended() %}
 {% set is_icpc = contest.contest_mode == ContestMode.ACM %}
 
 <div class="row">
-    <div class="col-lg-10 col-12">
-        <table id="prolist" class="table table-striped table-hover table-responsive col mx-lg-3">
-            <thead>
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Best State</th>
-                    <th scope="col">Problem Name</th>
-                    {% if not is_icpc %}
-                        <th scope="col">Best Score</th>
-                    {% end %}
-                    {% if show_ac_ratio %}
-                        <th scope="col">AC Ratio (User)</th>
-                        <th scope="col">AC Ratio (Submission)</th>
-                    {% end %}
-                </tr>
-            </thead>
-            <tbody>
-            {% for idx, pro in enumerate(prolist) %}
-                <tr>
-                    {% set pro_id = pro.pro_id %}
-                    <td class="id">{{ pro_id }}</td>
-                    {% if score_map[pro_id]['state'] is None %}
-                        <td>Todo</td>
-                    {% else %}
-                        <td class="state-{{ score_map[pro_id]['state'] }}">{{ ChalConst.STATE_LONG_STR[score_map[pro_id]['state']] }}</td>
-                    {% end %}
-
-                    {% set pro_name = pro.name %}
-                    {% if f"{pro_idx_to_pro_alphabet(idx)}." not in pro_name and pro_idx_to_pro_alphabet(idx) not in pro_name %}
-                        {% set pro_name = f"{pro_idx_to_pro_alphabet(idx)}. {pro_name}" %}
-                    {% end %}
-
-                    <!-- TODO: test this feature -->
-                    {% if is_end and pro.status == ProConst.STATUS_ONLINE %}
-                        <td class="name">
-                            <a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro_name }}</a>
-                        </td>
-                    {% else %}
-                        <td class="name">
-                            <a href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro_name }}</a>
-                        </td>
-                    {% end %}
-
-                    {% if not is_icpc %}
-                        {% set state_idx = int(score_map[pro_id]['score'] / 10) %}
-                        {% if score_map[pro_id]['state'] == ChalConst.STATE_AC or state_idx > 10 %}
-                            {% set state_idx = 10 %}
-                        {% elif state_idx < 0 %}
-                            {% set state_idx = 0 %}
+    <div class="col-12">
+        <div class="table-responsive">
+            <table id="prolist" class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Best State</th>
+                        <th scope="col">Problem Name</th>
+                        {% if not is_icpc %}
+                            <th scope="col">Best Score</th>
                         {% end %}
-                        <td class="{{ score_color_class_map[state_idx] }} score">
-                            {{ score_map[pro_id]['score'] }}
-                        </td>
-                    {% end %}
-
-                    {% if show_ac_ratio %}
-                        {% set rate = score_map[pro_id]['rate_data'] %}
-                        <td>
-                            {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
-                                {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}%
-                            {% else %}
-                                {{ '0.00%' }}
+                        {% if show_ac_ratio %}
+                            <th scope="col">AC Ratio (User)</th>
+                            <th scope="col">AC Ratio (Submission)</th>
+                        {% end %}
+                    </tr>
+                </thead>
+                <tbody>
+                {% for idx, pro in enumerate(prolist) %}
+                    <tr>
+                        {% set pro_id = pro.pro_id %}
+                        <td class="id">{{ pro_id }}</td>
+                        {% if score_map[pro_id]['state'] is None %}
+                            <td>Todo</td>
+                        {% else %}
+                            <td class="state-{{ score_map[pro_id]['state'] }} state-text-{{ score_map[pro_id]['state'] }}"></td>
+                        {% end %}
+    
+                        {% set pro_name = pro.name %}
+                        {% if f"{pro_idx_to_pro_alphabet(idx)}." not in pro_name and pro_idx_to_pro_alphabet(idx) not in pro_name %}
+                            {% set pro_name = f"{pro_idx_to_pro_alphabet(idx)}. {pro_name}" %}
+                        {% end %}
+    
+                        <!-- TODO: test this feature -->
+                        {% if is_end and pro.status == ProConst.STATUS_ONLINE %}
+                            <td class="name">
+                                <a href="{{ url(f'/pro/{ pro.pro_id }/') }}">{{ pro_name }}</a>
+                            </td>
+                        {% else %}
+                            <td class="name">
+                                <a href="{{ url(f'/contests/{ contest.contest_id }/pro/{ pro.pro_id }/') }}">{{ pro_name }}</a>
+                            </td>
+                        {% end %}
+    
+                        {% if not is_icpc %}
+                            {% set state_idx = int(score_map[pro_id]['score'] / 10) %}
+                            {% if score_map[pro_id]['state'] == ChalConst.STATE_AC or state_idx > 10 %}
+                                {% set state_idx = 10 %}
+                            {% elif state_idx < 0 %}
+                                {% set state_idx = 0 %}
                             {% end %}
-                        </td>
-
-                        <td>
-                            {% if rate['all_chal_cnt'] and rate['ac_chal_cnt'] %}
-                                {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}%
-                            {% else %}
-                                {{ '0.00%' }}
-                            {% end %}
-                            (<a href="{{ url(f'/contests/{ contest.contest_id }/chal/?pro_id={ pro.pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
-                            /
-                            <a href="{{ url(f'/contests/{ contest.contest_id }/chal/?pro_id={ pro.pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
-                        </td>
-                    {% end %}
-                </tr>
-            {% end %}
-            </tbody>
-        </table>
+                            <td class="{{ score_color_class_map[state_idx] }} score">
+                                {{ score_map[pro_id]['score'] }}
+                            </td>
+                        {% end %}
+    
+                        {% if show_ac_ratio %}
+                            {% set rate = score_map[pro_id]['rate_data'] %}
+                            <td>
+                                {% if rate['user_ac_chal_cnt'] and rate['user_all_chal_cnt'] %}
+                                    {{ '%.2f' % (rate['user_ac_chal_cnt'] / rate['user_all_chal_cnt'] * 100) }}%
+                                {% else %}
+                                    {{ '0.00%' }}
+                                {% end %}
+                            </td>
+    
+                            <td>
+                                {% if rate['all_chal_cnt'] and rate['ac_chal_cnt'] %}
+                                    {{ '%.2f' % (rate['ac_chal_cnt'] / rate['all_chal_cnt'] * 100) }}%
+                                {% else %}
+                                    {{ '0.00%' }}
+                                {% end %}
+                                (<a href="{{ url(f'/contests/{ contest.contest_id }/chal/?pro_id={ pro.pro_id }&state={ ChalConst.STATE_AC }') }}">{{ rate['ac_chal_cnt'] }}</a>
+                                /
+                                <a href="{{ url(f'/contests/{ contest.contest_id }/chal/?pro_id={ pro.pro_id }') }}">{{ rate['all_chal_cnt'] }}</a>)
+                            </td>
+                        {% end %}
+                    </tr>
+                {% end %}
+                </tbody>
+            </table>
+        </div>
 
         {% set postfix = '' %}
 
-        <div class="row">
-            <div class="col-1"></div>
-            <div class="col pt-3">
-                {% set _p_pageoff = pageoff %}
-                {% set _p_pagenum = 40 %}
-                {% set _p_total_cnt = pro_total_cnt %}
-                {% set _p_postfix = postfix %}
-                {% include "../pagination.html" %}
-            </div>
+        <div class="pt-3 d-flex justify-content-center">
+            {% set _p_pageoff = pageoff %}
+            {% set _p_pagenum = 40 %}
+            {% set _p_total_cnt = pro_total_cnt %}
+            {% set _p_postfix = postfix %}
+            {% include "../pagination.html" %}
         </div>
-
     </div>
 </div>

@@ -1,5 +1,6 @@
 from handlers.base import reqenv, RequestHandler, ActionDispatcher
 from handlers.contests.base import contest_require_permission
+from services.contest_access import ContestPermission
 from services.contests import ContestService, UserStatus
 from services.user import UserService
 from utils.numeric import parse_str_to_list
@@ -9,7 +10,7 @@ contest_manage_acct_dispatcher = ActionDispatcher()
 
 class ContestManageAcctHandler(RequestHandler):
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def get(self):
         admin_list = []
         acct_list = []
@@ -253,7 +254,7 @@ class ContestManageAcctHandler(RequestHandler):
             )
 
     @reqenv
-    @contest_require_permission("admin")
+    @contest_require_permission(ContestPermission.ADMIN)
     async def post(self):
         reqtype = self.get_argument("reqtype")
         return await contest_manage_acct_dispatcher.dispatch(self, reqtype)

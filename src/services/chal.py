@@ -389,7 +389,7 @@ class ChalService:
 
         ChalService.inst = self
 
-    async def add_chal(self, pro_id: int, acct_id: int, contest_id: int, compiler_type: Compiler, code: str, problem_type: int) -> tuple[None, int] | ErrorType:
+    async def add_chal(self, pro_id: int, acct_id: int, contest_id: int, compiler_type: Compiler, code: str | dict[str, str], problem_type: int) -> tuple[None, int] | ErrorType:
         """
         Add a new challenge entry and save the submitted source code.
 
@@ -398,7 +398,7 @@ class ChalService:
             acct_id (int): Account ID (user submitting the challenge).
             contest_id (int): Contest ID.
             compiler_type (Compiler): Compiler type.
-            code (str): Source code content as string.
+            code: One source string or a filename-to-source mapping.
             problem_type (int): Problem type (from ProType enum).
 
         Returns:
@@ -406,24 +406,23 @@ class ChalService:
                 On success, (None, chal_id).
                 On failure, (error_code, None).
         """
-        from services.pro import ProType
-        from services.prospec.batch import batch_spec
+        from services.prospec.registry import get_problem_spec
 
         pro_id = int(pro_id)
         acct_id = int(acct_id)
 
-        _, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
+        err, pro = await ProService.inst.get_pro(pro_id, ProConst.PRO_STATUS_FULL)
+        if err:
+            return err, None
 
-        # Dispatch to ProSpec
-        # TODO: Support different problem types, for now only Batch
-        if problem_type == ProType.BATCH:
-            spec = batch_spec
-            return await spec.add_chal(
-                self.db, self.rs, pro_id, acct_id, contest_id,
-                compiler_type, code, pro.config
-            )
-
-        return ('Eunk', 'Unsupported problem type'), None
+        try:
+            spec = get_problem_spec(problem_type)
+        except (ValueError, NotImplementedError):
+            return ('Enotsupport', 'Problem type not yet supported'), None
+        return await spec.add_chal(
+            self.db, self.rs, pro_id, acct_id, contest_id,
+            compiler_type, code, pro.config
+        )
 
     async def reset_chal(self, chal_id: int) -> tuple[None, None] | ErrorType:
         # TODO: docstring
@@ -611,8 +610,7 @@ class ChalService:
         Returns:
             tuple[None, None]: Always returns (None, None) on completion.
         """
-        from services.pro import ProType
-        from services.prospec.batch import batch_spec
+        from services.prospec.registry import get_problem_spec
 
         assert ChalConst.NORMAL_PRI <= priority <= ChalConst.NORMAL_REJUDGE_PRI
 
@@ -632,15 +630,14 @@ class ChalService:
 
         acct_id, pro_id, contest_id = int(result['acct_id']), int(result['pro_id']), int(result['contest_id'])
 
-        # TODO: Support different problem types, for now only Batch
-        if problem_type == ProType.BATCH:
-            spec = batch_spec
-            return await spec.emit_chal(
-                self.db, self.rs, chal_id, pro_id, acct_id, contest_id,
-                compiler_type, pro_config, priority, skip_nonac, include_system_test
-            )
-
-        return ('Eunk', 'Unsupported problem type'), None
+        try:
+            spec = get_problem_spec(problem_type)
+        except (ValueError, NotImplementedError):
+            return ('Enotsupport', 'Problem type not yet supported'), None
+        return await spec.emit_chal(
+            self.db, self.rs, chal_id, pro_id, acct_id, contest_id,
+            compiler_type, pro_config, priority, skip_nonac, include_system_test
+        )
 
     async def list_chal(self, off: int, num: int, flt: ChalSearchingParam) -> tuple[None | tuple[str, str], list[Challenge] | None]:
         """

@@ -8,50 +8,49 @@
 {% block content %}
 {% from services.pro import ProClassConst %}
 
-<div class="col-10 ms-lg-2 mt-lg-2">
-    <table class="table">
-        <thead>
-            <tr>
-                <td scope="col">#</td>
-                <td scope="">Name</td>
-                <td>Type</td>
-                <td>
-                    <a class="btn btn-primary" href="{{ url('/manage/proclass/add/') }}">&#x271a</a>
-                </td>
-            </tr>
-        </thead>
-
-        <tbody>
-        {% for proclass in proclass_list %}
-            <tr>
-                <th scope="row">{{ proclass['proclass_id'] }}</th>
-                <td>{{ proclass['name'] }}</td>
-                {% set t = "" %}
-                {% if proclass['type'] == ProClassConst.OFFICIAL_PUBLIC %}
-                    {% set t = "Public" %}
-                {% elif proclass['type'] == ProClassConst.OFFICIAL_HIDDEN %}
-                    {% set t = "Hidden" %}
-                {% end %}
-                <td>{{ t }}</td>
-                <td>
-                    <a class="btn btn-secondary" href="{{ url(f'/manage/proclass/update/?proclass_id={ proclass['proclass_id'] }') }}">&#x2699</a>
-                </td>
-            </tr>
-        {% end %}
-        </tbody>
-    </table>
+<div class="col-lg-10 ms-lg-2 mt-lg-2">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <td scope="col">#</td>
+                    <td scope="">Name</td>
+                    <td>Type</td>
+                    <td>
+                        <a class="btn btn-primary" href="{{ url('/manage/proclass/add/') }}">&#x271a</a>
+                    </td>
+                </tr>
+            </thead>
+    
+            <tbody>
+            {% for proclass in proclass_list %}
+                <tr>
+                    <th scope="row">{{ proclass['proclass_id'] }}</th>
+                    <td>{{ proclass['name'] }}</td>
+                    {% set t = "" %}
+                    {% if proclass['type'] == ProClassConst.OFFICIAL_PUBLIC %}
+                        {% set t = "Public" %}
+                    {% elif proclass['type'] == ProClassConst.OFFICIAL_HIDDEN %}
+                        {% set t = "Hidden" %}
+                    {% end %}
+                    <td>{{ t }}</td>
+                    <td>
+                        <a class="btn btn-secondary" href="{{ url(f'/manage/proclass/update/?proclass_id={ proclass['proclass_id'] }') }}">&#x2699</a>
+                    </td>
+                </tr>
+            {% end %}
+            </tbody>
+        </table>
+    </div>
 
     {% set postfix = '' %}
 
-    <div class="row">
-        <div class="col-1"></div>
-        <div class="col pt-3">
-            {% set _p_pageoff = pageoff %}
-            {% set _p_pagenum = 20 %}
-            {% set _p_total_cnt = proclass_total_cnt %}
-            {% set _p_postfix = postfix %}
-            {% include "../../pagination.html" %}
-        </div>
+    <div class="pt-3 d-flex justify-content-center">
+        {% set _p_pageoff = pageoff %}
+        {% set _p_pagenum = 20 %}
+        {% set _p_total_cnt = proclass_total_cnt %}
+        {% set _p_postfix = postfix %}
+        {% include "../../pagination.html" %}
     </div>
 </div>
 {% end %}

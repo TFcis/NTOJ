@@ -7,6 +7,7 @@ import asyncpg
 from services.contests import ContestService, Contest, ContestMode, RegMode, UserStatus, ProblemScoreType
 from services.user import Account, UserConst
 from services.chal import Compiler
+from services.contests import ContestTimeMode
 
 
 class TestContestService(unittest.IsolatedAsyncioTestCase):
@@ -55,6 +56,32 @@ class TestContestService(unittest.IsolatedAsyncioTestCase):
             user_list={},
             pro_list={},
         )
+
+    async def test_flexible_update_refreshes_sessions_and_invalidates_cache(self):
+        self.test_contest.contest_time_mode = ContestTimeMode.FLEXIBLE
+        self.test_contest.contest_duration = 7200
+        await self.service.update_contest(self.test_acct, self.test_contest)
+        query, *args = self.fake_conn.execute.await_args.args
+        self.assertIn("LEAST( start_time", " ".join(query.split()))
+        self.assertIn("session_type = $4", query)
+        self.assertEqual(args, [100, 7200, self.test_contest.contest_end, 0])
+        self.fake_rs.hdel.assert_awaited_once_with("contest", "100")
+        self.fake_rs.delete.assert_awaited_once_with("contest_100_scores")
+        self.fake_rs.hset.assert_not_awaited()
+        self.fake_conn.transaction.return_value.__aexit__.assert_awaited_once_with(
+            None, None, None
+        )
+
+    async def test_failed_session_update_rolls_back_without_touching_cache(self):
+        self.test_contest.contest_time_mode = ContestTimeMode.FLEXIBLE
+        self.fake_conn.execute.side_effect = RuntimeError("session update failed")
+        with self.assertRaises(RuntimeError):
+            await self.service.update_contest(self.test_acct, self.test_contest)
+        self.assertIs(
+            self.fake_conn.transaction.return_value.__aexit__.await_args.args[0],
+            RuntimeError,
+        )
+        self.assertEqual(self.fake_rs.mock_calls, [])
 
     async def test_update_contest_add_problem_success(self):
         """Test successfully adding a problem to contest"""

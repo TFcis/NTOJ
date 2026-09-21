@@ -3,6 +3,7 @@ import tornado.web
 
 from handlers.base import ActionDispatcher, RequestHandler, reqenv, require_permission
 from services.chal import ChalConst
+from services.contest_access import ContestPermission
 from services.judge import JudgeServerClusterService
 from services.pro import ProClassService, ProClassConst, ProConst, ProService, Problem
 from services.rate import RateService
@@ -365,12 +366,7 @@ class ProStaticHandler(RequestHandler, tornado.web.StaticFileHandler):
                 self.finish("Problem not in contest")
                 return
 
-            if not self.contest.is_member(self.acct):
-                self.set_status(403)
-                self.finish(PERMISSION_DENIED_ERROR[1])
-                return
-
-            if not self.contest.is_admin(self.acct) and not self.contest.is_running():
+            if not self.contest_access.has(ContestPermission.VIEW_PROBLEM):
                 self.set_status(403)
                 self.finish(PERMISSION_DENIED_ERROR[1])
                 return
@@ -441,10 +437,7 @@ class ProHandler(RequestHandler):
             if not self.contest.is_pro(pro_id):
                 return self.error(("Enoext", "Problem not in contest"))
 
-            if not self.contest.is_member(self.acct):
-                return self.error(PERMISSION_DENIED_ERROR)
-
-            if not self.contest.is_admin(self.acct) and not self.contest.is_running():
+            if not self.contest_access.has(ContestPermission.VIEW_PROBLEM):
                 return self.error(PERMISSION_DENIED_ERROR)
 
             allow_statuses = ProConst.PRO_STATUS_CONTEST_USER

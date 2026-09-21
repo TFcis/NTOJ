@@ -23,11 +23,6 @@ input {
 </style>
 
 <script type="text/javascript">
-    var state_map = {
-        {% for state, desc in ChalConst.STATE_LONG_STR.items() %}
-            {% raw f"{state}: '{desc}'," %}
-        {% end %}
-    };
     var chalsub_count;
     var re = /^(\d+(-\d+)?)(\s*,\s*\d+(-\d+)?)*$/;
     var j_filter = $('#filter');
@@ -71,6 +66,8 @@ input {
     }
 
     function init() {
+        const title = document.title;
+
         var j_chalsub = $('#chalsub');
         j_filter.find('input, select').keypress(function(e) {
             // NOTE:  KeyCode 13 means Enter
@@ -103,6 +100,8 @@ input {
                     chalsub_count += 1;
                     j_chalsub.find('a').text(chalsub_count + ' new challenges');
                     j_chalsub.show();
+
+                    document.title = `(${ chalsub_count > 9 ? '9+' : chalsub_count }) ${ title }`;
                 });
                 // Send contest_id after registration (for backward compatibility with old handler)
                 if (index.ws && index.ws.readyState === WebSocket.OPEN) {
@@ -114,6 +113,8 @@ input {
                     chalsub_count += 1;
                     j_chalsub.find('a').text(chalsub_count + ' new challenges');
                     j_chalsub.show();
+
+                    document.title = `(${ chalsub_count > 9 ? '9+' : chalsub_count }) ${ title }`;
                 });
             {% end %}
         })();
@@ -125,9 +126,8 @@ input {
                 tr.querySelector('#memory').innerText = Math.round(memory);
                 tr.querySelector('#score').innerText = rate;
 
-                let state_el = tr.querySelector('#state');
-                state_el.className = `state-${state}`
-                state_el.innerText = state_map[state];
+                let state_el = tr.querySelector('td.state');
+                state_el.className = `state state-${state} state-text-${state}`;
             };
 
             // Register callback for challenge state updates
@@ -204,16 +204,6 @@ input {
     }
 </script>
 
-<style>
-
-@media only screen and (min-width: 992px){
-    .pagination {
-        justify-content: center;
-    }
-}
-
-</style>
-
 <div class="row">
     <div class="col-lg-2 col-12">
         <form id="filter">
@@ -272,46 +262,46 @@ input {
 
     <div class="col-lg-10 col-12">
         <div class="table-responsive">
-        <table id="challist" class="table table-striped table-hover table-sm table-responsive-sm col mx-lg-3">
-            <thead>
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Problem</th>
-                    <th scope="col">Account</th>
-                    <th scope="col">State</th>
-                    <th scope="col">Time</th>
-                    <th scope="col">Memory</th>
-                    <th scope="col">Score</th>
-                    <th scope="col">Compiler</th>
-                    <th scope="col">Time</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr id="chalsub" style="cursor:pointer; display:none;">
-                    <td colspan=3></td>
-                    <td colspan=4><a href="" style="color:#58B2DC"></a></td>
-                </tr>
-            {% for chal in challist %}
-                <tr id="chal{{ chal.chal_id }}">
-                    {% if chal.contest_id == 0 %}
-                        <td><a href="{{ url(f'/chal/{ chal.chal_id }/') }}">{{ chal.chal_id }}</a></td>
-                        <td><a href="{{ url(f'/pro/{ chal.pro_id }/') }}">{{ chal.pro_id }}</a></td>
-                    {% else %}
-                        <td><a href="{{ url(f'/contests/{ chal.contest_id }/chal/{ chal.chal_id }/') }}">{{ chal.chal_id }}</a></td>
-                        <td><a href="{{ url(f'/contests/{ chal.contest_id }/pro/{ chal.pro_id }/') }}">{{ chal.pro_id }}</a></td>
-                    {% end %}
+            <table id="challist" class="table table-striped table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Problem</th>
+                        <th scope="col">Account</th>
+                        <th scope="col">State</th>
+                        <th scope="col">Time</th>
+                        <th scope="col">Memory</th>
+                        <th scope="col">Score</th>
+                        <th scope="col">Compiler</th>
+                        <th scope="col">Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="chalsub" style="cursor:pointer; display:none;">
+                        <td colspan=3></td>
+                        <td colspan=4><a href="" style="color:#58B2DC"></a></td>
+                    </tr>
+                {% for chal in challist %}
+                    <tr id="chal{{ chal.chal_id }}">
+                        {% if chal.contest_id == 0 %}
+                            <td><a href="{{ url(f'/chal/{ chal.chal_id }/') }}">{{ chal.chal_id }}</a></td>
+                            <td><a href="{{ url(f'/pro/{ chal.pro_id }/') }}">{{ chal.pro_id }}</a></td>
+                        {% else %}
+                            <td><a href="{{ url(f'/contests/{ chal.contest_id }/chal/{ chal.chal_id }/') }}">{{ chal.chal_id }}</a></td>
+                            <td><a href="{{ url(f'/contests/{ chal.contest_id }/pro/{ chal.pro_id }/') }}">{{ chal.pro_id }}</a></td>
+                        {% end %}
 
-                    <td><a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a></td>
-                    <td id="state" class="state-{{ chal.total_result.state }}">{{ ChalConst.STATE_LONG_STR[chal.total_result.state] }}</td>
-                    <td id="time">{{ chal.total_result.time }}</td>
-                    <td id="memory">{{ chal.total_result.memory }}</td>
-                    <td id="score">{{ chal.total_result.rate }}</td>
-                    <td>{{ chal.compiler_type }}</td>
-                    <td class="time">{{ chal.timestamp.astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                </tr>
-            {% end %}
-            </tbody>
-        </table>
+                        <td><a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a></td>
+                        <td class="state state-{{ chal.total_result.state }} state-text-{{ chal.total_result.state }}"></td>
+                        <td id="time">{{ chal.total_result.time }}</td>
+                        <td id="memory">{{ chal.total_result.memory }}</td>
+                        <td id="score">{{ chal.total_result.rate }}</td>
+                        <td>{{ chal.compiler_type }}</td>
+                        <td class="time">{{ chal.timestamp.astimezone(config.TIMEZONE).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    </tr>
+                {% end %}
+                </tbody>
+            </table>
         </div>
 
         {% set postfix = '' %}
@@ -328,15 +318,12 @@ input {
         {% set postfix = postfix + f"&compiler_type={flt.compiler}" %}
         {% end %}
 
-        <div class="row">
-            <!-- <div class="col-1"></div> -->
-            <div class="col pt-3">
-                {% set _p_pageoff = pageoff %}
-                {% set _p_pagenum = 20 %}
-                {% set _p_total_cnt = chal_cnt %}
-                {% set _p_postfix = postfix %}
-                {% include "pagination.html" %}
-            </div>
+        <div class="pt-3 d-flex justify-content-center">
+            {% set _p_pageoff = pageoff %}
+            {% set _p_pagenum = 20 %}
+            {% set _p_total_cnt = chal_cnt %}
+            {% set _p_postfix = postfix %}
+            {% include "pagination.html" %}
         </div>
     </div>
 </div>

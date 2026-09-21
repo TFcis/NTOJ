@@ -15,13 +15,14 @@ from .manage.pro.filemanager import ManageProFileManagerTest
 from .manage.prospec.batch.test_update import BatchUpdateTest
 from .manage.prospec.batch.test_judge import BatchJudgeTest
 from .manage.prospec.batch.test_subtask import BatchSubtaskTest
+from .manage.prospec.communication.test_communication import CommunicationTest
 from .manage.pack import ManagePackTest
 from .pro import ProTest
 from .acct import SignTest, AcctPageTest
 from .board import BoardTest
 from .bulletin import BulletinTest
 from .chal import ChalTest, ChalListTest
-from .contest import ContestTest, ContestProblemPermissionTest
+from .contest import ContestTest, ContestProblemPermissionTest, FlexibleContestTimeTest
 from .proclass import ProClassTest
 from .ques import QuesTest
 from .submit import SubmitTest
@@ -205,6 +206,8 @@ class IntegratedTest(AsyncTest):
             ManagePackTest().main,
             ContestTest().main,
             ContestProblemPermissionTest().main,
+            FlexibleContestTimeTest().main,
+            CommunicationTest().main,
         ]
         for f in s:
             r = await f()
@@ -213,4 +216,3 @@ class IntegratedTest(AsyncTest):
 
         # NOTE: all upload file should be cleaned
         self.assertEqual(os.listdir('tmp'), ['.gitkeep'])
-

@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <html>
+{% from services.contests import ContestTimeMode %}
+{% from services.contest_access import ContestPermission %}
+{% from services.chal import ChalConst %}
 
 <head>
   <title>New TNFSH Online Judge</title>
@@ -59,9 +62,43 @@
       });
 
     {% if is_in_contest %}
-        {% if not contest.is_end() %}
-            var contest_start = new Date("{{ contest.contest_start }}");
-            var contest_end = new Date("{{ contest.contest_end }}");
+        {% if contest.contest_time_mode is ContestTimeMode.FLEXIBLE %}
+          {% if contest_access.is_participant and contest_session.activated and not contest_session.is_ended() %}
+            var flexible_end = new Date("{{ contest_session.end_time }}");
+            var flexible_session_ended = false;
+            function flexibleSessionTimer() {
+              if (!flexible_session_ended && new Date() >= flexible_end) {
+                flexible_session_ended = true;
+                if (confirm("Your flexible contest time has ended. Do you want to reload the page?")) {
+                  index.reload();
+                }
+              }
+            }
+            setInterval(flexibleSessionTimer, 1000);
+          {% elif contest_access.is_participant and not contest_session.activated and not contest.configured_session().is_ended() %}
+            var flexible_available = new Date("{{ contest.contest_start }}");
+            var flexible_hard_end = new Date("{{ contest.contest_end }}");
+            var availability_announced = new Date() >= flexible_available;
+            var availability_ended = false;
+            function flexibleAvailabilityTimer() {
+              let now = new Date();
+              if (!availability_announced && now >= flexible_available) {
+                availability_announced = true;
+                if (confirm("The flexible contest is now available. Open Info when you are ready to start?")) {
+                  index.go("{{ url(f'/contests/{ contest.contest_id }/info/') }}");
+                }
+              } else if (!availability_ended && now >= flexible_hard_end) {
+                availability_ended = true;
+                if (confirm("The flexible contest is no longer available. Do you want to reload the page?")) {
+                  index.reload();
+                }
+              }
+            }
+            setInterval(flexibleAvailabilityTimer, 1000);
+          {% end %}
+        {% elif not contest_session.is_ended() %}
+            var contest_start = new Date("{{ contest_session.start_time }}");
+            var contest_end = new Date("{{ contest_session.end_time }}");
             var started = false, ended = false;
             function timer1() {
                 let cur_time = new Date();
@@ -83,13 +120,13 @@
             }
             let cur_time = new Date();
             if (cur_time < contest_start) {
-                setInterval(timer1, 1);
+                setInterval(timer1, 1000);
             } else if (cur_time > contest_start && cur_time < contest_end) {
-                setInterval(timer2, 1);
+                setInterval(timer2, 1000);
             }
         {% end %}
 
-        {% if contest.is_admin(user) %}
+        {% if contest_access.is_admin %}
           // Subscribe to admin-only new-question notifications using unified WS API
           let contest_ask_cnt = parseInt("{{ contest_ask_cnt }}");
           index.register_ws_callback('contestnewquessub', function(data) {
@@ -100,7 +137,7 @@
           });
           // Initialize channel with contest id
           index.ws_send('contestnewquessub_init', "{{ contest.contest_id }}");
-        {% elif contest.is_start() %}
+        {% elif contest_session.is_started() %}
             let contest_notification_cnt = parseInt("{{ contest_notification_cnt }}");
             index.register_ws_callback('contestnewqasub', function(data) {
               // server publishes JSON string for contestnewqasub; parse it
@@ -183,6 +220,16 @@
   .state-102 { /* Skipped */
     color: rgba(220, 226, 230, 0.75) !important;
   }
+
+  {% for state, desc in ChalConst.STATE_LONG_STR.items() %}
+    .state-text-{{ state }}::after { content: "{{ desc }}"; }
+  {% end %}
+
+  @media (max-width: 768px) {
+    {% for state, desc in ChalConst.STATE_STR.items() %}
+      .state-text-{{ state }}::after { content: "{{ desc }}"; }
+    {% end %}
+  }
   </style>
 </head>
 <!-- #eaf1ff #314783  -->
@@ -195,11 +242,7 @@
   <!-- style="background-color: #314783;" -->
   <nav class="navbar navbar-expand-lg">
     <div id="index-navlist" class="container-fluid">
-      {% if is_in_contest %}
-        <a class="navbar-brand" href="{{ url(f'/contests/{ contest_id }/info/') }}">NTOJ</a>
-      {% else %}
-        <a class="navbar-brand" href="{{ url('/info/') }}">NTOJ</a>
-      {% end %}
+      <a class="navbar-brand" href="{{ url('/info/') }}">NTOJ</a>
 
       <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
         class="navbar-toggler" data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
@@ -212,9 +255,13 @@
         <ul class="navbar-nav me-auto">
           <li class="nav-item info"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/info/') }}">Info</a></li>
 
-          {% if contest_manage or contest.is_start() %}
+          {% if contest_manage or contest_access.has(ContestPermission.VIEW_PROBLEM_SET) %}
             <li class="nav-item proset"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/proset/') }}">ProblemSet</a></li>
+          {% end %}
+          {% if contest_manage or contest_session.is_started() %}
             <li class="nav-item chal"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/chal/') }}">Challenges</a></li>
+          {% end %}
+          {% if contest_manage or contest_access.has(ContestPermission.VIEW_SCOREBOARD) %}
             <li class="nav-item scoreboard"><a class="nav-link" href="{{ url(f'/contests/{ contest_id }/scoreboard/') }}">Scoreboard</a></li>
           {% end %}
 
@@ -231,9 +278,7 @@
                     </span>
                 </a>
             </li>
-          {% end %}
-
-          {% if contest_manage %}
+          {% else %}
             <li class="nav-item manage">
                 <a class="nav-link position-relative" href="{{ url(f'/contests/{ contest_id }/manage/') }}">
                     Manage
@@ -247,6 +292,8 @@
                 </a>
             </li>
           {% end %}
+
+          <li class="nav-item"><a class="nav-link" href="{{ url('/info/') }}">Quit</a></li>
         </ul>
         {% else %}
 

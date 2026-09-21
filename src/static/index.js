@@ -456,6 +456,8 @@ var index = new function() {
             title = custom_title;
         }
 
+        let msg_html = DOMPurify.sanitize(marked.parse(msg));
+
         // inject html to <body>
         let dialog_html = `
         <div class="modal fade" id="indexNotifyDialog" tabindex="-1" aria-hidden="true">
@@ -466,7 +468,7 @@ var index = new function() {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-            ${msg}
+            ${msg_html}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -476,6 +478,11 @@ var index = new function() {
         </div>
         `;
         document.body.insertAdjacentHTML('afterbegin', DOMPurify.sanitize(dialog_html));
+        try {
+            MathJax.typeset();
+        } catch (e) {
+            console.warn('MathJax typeset error', e);
+        }
         let dialog = document.getElementById('indexNotifyDialog');
 
         // show modal

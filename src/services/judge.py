@@ -7,6 +7,7 @@ from tornado.websocket import websocket_connect
 
 from services.rate import RateService
 from services.log import LogService
+from services.contest_scoreboard import ContestScoreboardRevealService
 
 logger = logging.getLogger("tornado.application")
 
@@ -182,7 +183,12 @@ class JudgeServerService:
             pro_id = self.chal_map[chal_id]['pro_id']
             contest_id = self.chal_map[chal_id]['contest_id']
             if contest_id != 0:
-                await self.rs.publish('contestnewchalsub', contest_id)
+                scoreboard_update = await ContestScoreboardRevealService(
+                    ChalService.inst.db
+                ).build_update(contest_id, chal_id)
+                await self.rs.publish(
+                    'contestnewchalsub', scoreboard_update.dumps()
+                )
                 await self.rs.hdel(f'contest_{contest_id}_scores', str(pro_id))
 
             # NOTE: Recalculate problem rate
@@ -237,6 +243,14 @@ class JudgeServerService:
             )
 
             data['code_path'] = f"{self.codes_path}/{data['code_path']}"
+            if 'code_paths' in data:
+                data['code_paths'] = [
+                    {
+                        **source,
+                        'path': f"{self.codes_path}/{source['path']}",
+                    }
+                    for source in data['code_paths']
+                ]
             data['res_path'] = f"{self.problems_path}/{data['res_path']}"
 
             await self.ws.write_message(json.dumps(data))

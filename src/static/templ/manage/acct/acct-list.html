@@ -7,47 +7,48 @@
 </script>
 {% end %}
 {% block content %}
-<div class="col-lg-10 ms-lg-2 mt-lg-2">
-    <table id="acctlist" class="table table-hover table-sm table-responsive-sm col mx-lg-3">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Mail</th>
-                <th>Last IP</th>
-                <th>Specific IP</th>
-                <th>Level</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for acct in acctlist %}
-            <tr>
-                <td>{{ acct.acct_id }}</td>
-                <td><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.name }}</a></td>
-                <td>{{ acct.mail }}</td>
-                <td>{{ acct.lastip }}</td>
-                <td>{{ acct.specific_ip}}</td>
-                <td>
-                    {% if acct.is_kernel() %}
-                        Kernel
-                    {% else %}
-                        User
-                    {% end %}
-                </td>
-                <td>
-                    <a class="btn btn-secondary" href="{{ url(f'/manage/acct/update/?acct_id={ acct.acct_id }') }}">&#x2699</a>
-                </td>
-            </tr>
-        {% end %}
-        </tbody>
-    </table>
-
-    {% set postfix = '' %}
-
-    <div class="row">
-        <div class="col-1"></div>
-        <div class="col pt-3">
+<div class="row">
+    <div class="col-lg-10 ms-lg-2 mt-lg-2">
+        <div class="table-responsive">
+            <table id="acctlist" class="table table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Mail</th>
+                        <th>Last IP</th>
+                        <th>Specific IP</th>
+                        <th>Level</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for acct in acctlist %}
+                    <tr>
+                        <td>{{ acct.acct_id }}</td>
+                        <td><a href="{{ url(f'/acct/{ acct.acct_id }/') }}">{{ acct.name }}</a></td>
+                        <td>{{ acct.mail }}</td>
+                        <td>{{ acct.lastip }}</td>
+                        <td>{{ acct.specific_ip}}</td>
+                        <td>
+                            {% if acct.is_kernel() %}
+                                Kernel
+                            {% else %}
+                                User
+                            {% end %}
+                        </td>
+                        <td>
+                            <a class="btn btn-secondary" href="{{ url(f'/manage/acct/update/?acct_id={ acct.acct_id }') }}">&#x2699</a>
+                        </td>
+                    </tr>
+                {% end %}
+                </tbody>
+            </table>
+        </div>
+    
+        {% set postfix = '' %}
+    
+        <div class="pt-3 d-flex justify-content-center">
             {% set _p_pageoff = pageoff %}
             {% set _p_pagenum = 40 %}
             {% set _p_total_cnt = acct_total_cnt %}

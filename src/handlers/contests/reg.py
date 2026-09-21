@@ -14,13 +14,13 @@ class ContestRegHandler(RequestHandler):
         if not self.contest:
             return self.error(("Enoext", "Contest not found"))
 
-        if self.contest.is_admin(self.acct):
+        if self.contest_access.is_admin:
             return self.error(("Eacces", "Contest admin cannot register"))
 
         await self.render("contests/reg", f"{self.contest.name} - Registration", contest=self.contest)
 
     def check(self, action_name):
-        if self.contest.is_admin(self.acct):
+        if self.contest_access.is_admin:
             return ("Eacces", f"Contest admin cannot {action_name}")
 
         if self.contest.reg_mode is RegMode.INVITED:
@@ -113,7 +113,7 @@ class ContestRegHandler(RequestHandler):
         if error := self.check("unregister"):
             return self.error(error)
 
-        if datetime.datetime.now(datetime.UTC) >= self.contest.contest_start:
+        if self.contest_session.is_started():
             return self.error(
                 ("Etime", "Contest has started, you cannot unregister now")
             )

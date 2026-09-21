@@ -40,7 +40,7 @@
         <h1>Announcement</h1>
 
         <!-- TODO: add a button to close collapse when col-12 -->
-        {% if contest.is_start() %}
+        {% if contest_session.is_started() %}
             <div class="announce" style="overflow-y:scroll; max-height: 80vh;">
                 {% for announce in announces %}
                     <div class="card mt-2">
@@ -58,7 +58,7 @@
     </div>
 
     <div class="col-lg-7 col-12">
-        {% if contest.is_member(user, UserStatus.APPROVED) %}
+        {% if contest_access.is_participant %}
         <div class="row">
             <h1>Question</h1>
             <form>

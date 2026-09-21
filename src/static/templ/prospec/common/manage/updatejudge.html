@@ -2,12 +2,43 @@
 {% block head %}
 {% from services.pro import ProConst, CheckerType, SummaryType %}
 {% from services.chal import Compiler, COMPILER_INFOS %}
+{% from services.prospec.communication import CommunicationIOType %}
 {% import json %}
 
 <script type="text/javascript" id="contjs" async>
     function init() {
         let pro_id = "{{ pro.pro_id }}";
         let judge_form = $('#judge');
+
+        function addChallengeSourceFile(filename = '') {
+            const row = $('<tr>');
+            const input = $('<input>', {
+                type: 'text',
+                class: 'form-control font-monospace challenge-source-file',
+                placeholder: 'main.%l',
+                value: filename,
+            });
+            const remove = $('<button>', {
+                type: 'button',
+                class: 'btn btn-outline-danger remove-challenge-source-file',
+                title: 'Delete source file',
+            }).append($('<i>', {class: 'bi bi-trash'}));
+            row.append($('<td>').append(input));
+            row.append($('<td>', {class: 'text-end'}).append(remove));
+            judge_form.find('#challengeSourceFiles tbody').append(row);
+            input.trigger('focus');
+        }
+
+        judge_form.find('#addChallengeSourceFile').on('click', function() {
+            addChallengeSourceFile();
+        });
+        judge_form.find('#challengeSourceFiles').on(
+            'click',
+            '.remove-challenge-source-file',
+            function() {
+                $(this).closest('tr').remove();
+            }
+        );
 
         judge_form.find('select#checkerType').on('change', function(e) {
             let checker_type = $(this).val();
@@ -49,13 +80,36 @@
         judge_form.find('button.submit').on('click', function(e) {
             let userprog_compile_args = judge_form.find('#userprogCompileArgs').val();
             let rate_precision = judge_form.find('input#score-precision').val();
-            let checker_type = judge_form.find('select#checkerType').val();
+            let checker_type = judge_form.find('#checkerType').val();
             let checker_compiler = judge_form.find('#checkerCompiler').val();
             let checker_compile_args = judge_form.find('#checkerCompileArgs').val();
             let summary_type = judge_form.find('select#summaryType').val();
             let summary_compiler = judge_form.find('#summaryCompiler').val();
             let summary_compile_args = judge_form.find('#summaryCompileArgs').val();
             let has_grader = judge_form.find('input#has-grader').is(':checked');
+            let challenge_source_files = [];
+            {% if is_communication %}
+            judge_form.find('.challenge-source-file').each(function() {
+                challenge_source_files.push($(this).val().trim());
+            });
+            if (
+                challenge_source_files.length === 0
+                || challenge_source_files.some(filename => filename === '')
+            ) {
+                index.show_notify_dialog(
+                    'At least one challenge source filename is required',
+                    index.DIALOG_TYPE.error
+                );
+                return;
+            }
+            if (new Set(challenge_source_files).size !== challenge_source_files.length) {
+                index.show_notify_dialog(
+                    'Challenge source filenames cannot be duplicated',
+                    index.DIALOG_TYPE.error
+                );
+                return;
+            }
+            {% end %}
             let allow_compilers = [];
             judge_form[0].querySelectorAll('.compilers').forEach(el => {
                 if ($(el).is(":checked")) {
@@ -64,7 +118,7 @@
             });
             let chalmeta = '';
             if (checker_type == "{{ CheckerType.IOREDIR }}") {
-                chalmeta = judge_form.find('textarea#chalmeta').val();
+                chalmeta = judge_form.find('#chalmeta').val();
             }
 
             $.post(`{{ url('/be/manage/pro/updatejudge') }}`, {
@@ -80,6 +134,11 @@
                 has_grader: has_grader,
                 allow_compilers: allow_compilers,
                 chalmeta: chalmeta,
+                communication_io_type: judge_form.find('#communicationIOType').val(),
+                num_processes: judge_form.find('#numProcesses').val(),
+                manager_compiler: judge_form.find('#managerCompiler').val(),
+                manager_compile_args: judge_form.find('#managerCompileArgs').val(),
+                submission_format: challenge_source_files.join('\n'),
             }, function(res) {
                 res = JSON.parse(res);
                 if (res.status == 'S') {
@@ -105,11 +164,11 @@
 
 {% block content %}
 <div class="col-lg-10 ms-lg-2 mt-lg-2">
-    <h3><i class="bi bi-gear"></i> Batch Problem Judge Configuration - {{ pro.name }}</h3>
+    <h3><i class="bi bi-gear"></i> {{ problem_name }} Problem Judge Configuration - {{ pro.name }}</h3>
 
     <div class="alert alert-info" role="alert">
         <i class="bi bi-info-circle"></i>
-        Configure judge settings for this Batch-type problem. These settings affect how submissions are compiled and evaluated.
+        Configure judge settings for this {{ problem_name }}-type problem. These settings affect how challenges are compiled and evaluated.
     </div>
 
     <form id="judge">
@@ -155,6 +214,75 @@
             </div>
         </div>
 
+        {% if is_communication %}
+        <div class="card mb-3">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-diagram-3"></i> Communication Settings</h5></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold mb-0">Challenge Source Files</label>
+                        <button type="button" id="addChallengeSourceFile" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-plus-lg"></i> Add Source File
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="challengeSourceFiles" class="table table-sm table-bordered align-middle mb-2">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Filename</th>
+                                    <th class="text-end" style="width: 1%;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for filename in pro.config.spec_config.submission_format %}
+                                <tr>
+                                    <td>
+                                        <input type="text" class="form-control font-monospace challenge-source-file"
+                                               value="{{ filename }}" placeholder="main.%l">
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-outline-danger remove-challenge-source-file"
+                                                title="Delete source file">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% end %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="form-text">Every filename must end in .%l, for example alice.%l and bob.%l.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="communicationIOType" class="form-label fw-bold">Communication I/O</label>
+                    <select id="communicationIOType" class="form-select">
+                        {% for io_type in CommunicationIOType %}
+                        <option value="{{ io_type }}" {% if pro.config.spec_config.communication_io_type == io_type %} selected {% end %}>{{ io_type.name }}</option>
+                        {% end %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="numProcesses" class="form-label fw-bold">Number of User Processes</label>
+                    <input id="numProcesses" type="number" min="1" class="form-control" value="{{ pro.config.spec_config.num_processes }}">
+                </div>
+                <div class="mb-3">
+                    <label for="managerCompiler" class="form-label fw-bold">Manager Compiler</label>
+                    <select id="managerCompiler" class="form-select">
+                        {% for compiler in Compiler %}
+                        <option value="{{ compiler }}" {% if pro.config.spec_config.manager_compiler == compiler %} selected {% end %}>{{ COMPILER_INFOS[compiler].version_name }}</option>
+                        {% end %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="managerCompileArgs" class="form-label fw-bold">Manager Additional Compile Args</label>
+                    <input id="managerCompileArgs" type="text" class="form-control" value="{{ pro.config.spec_config.manager_compile_args }}">
+                    <div class="form-text">Manager source: res/grader/manager.&lt;extension&gt;</div>
+                </div>
+            </div>
+        </div>
+        {% end %}
+
+        {% if not is_communication %}
         <div class="card mb-3">
             <div class="card-header">
                 <h5 class="mb-0"><i class="bi bi-check-circle"></i> Checker Configuration</h5>
@@ -170,7 +298,7 @@
                             </option>
                         {% end %}
                     </select>
-                    <div class="form-text">Select how submissions are verified against expected output</div>
+                    <div class="form-text">Select how challenges are verified against expected output</div>
                 </div>
 
                 {% set need_build_checker = pro.config.spec_config.checker_type in CheckerType.need_build_checkers() %}
@@ -200,6 +328,12 @@
                 </div>
             </div>
         </div>
+        {% else %}
+        <input type="hidden" id="checkerType" value="{{ pro.config.spec_config.checker_type }}">
+        <input type="hidden" id="checkerCompiler" value="{{ pro.config.spec_config.checker_compiler or '' }}">
+        <input type="hidden" id="checkerCompileArgs" value="{{ pro.config.spec_config.checker_compile_args }}">
+        <input type="hidden" id="chalmeta" value="{{ pro.config.spec_config.chalmeta }}">
+        {% end %}
 
         <div class="card mb-3">
             <div class="card-header">
@@ -216,7 +350,7 @@
                             </option>
                         {% end %}
                     </select>
-                    <div class="form-text">Select the type of summary generation for submissions</div>
+                    <div class="form-text">Select the type of summary generation for challenges</div>
                 </div>
 
                 {% set need_build_summary = pro.config.spec_config.summary_type == SummaryType.CUSTOM %}
