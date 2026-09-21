@@ -41,7 +41,7 @@
         total_table.querySelector('td.score').innerHTML = parseFloat(rate).toFixed({{ pro.config.rate_precision }});
 
         total_result_message.innerHTML = '';
-        if (message_type !== {{ MessageType.NONE.value }}) {
+        if (message_type !== {{ MessageType.NONE.value }} && message !== '') {
             if (message_type === {{ MessageType.TEXT.value }}) {
                 let text = document.createTextNode(message);
                 let pre = document.createElement('pre');
