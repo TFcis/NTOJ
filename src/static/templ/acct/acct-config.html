@@ -54,7 +54,7 @@
         });
 
         j_reset.find('button.submit').on('click', function(e) {
-            if (!confirm('Are you sure to change password?')) {
+            if (!confirm('Are you sure you want to change password?')) {
                 return;
             }
             let old = j_reset.find('input.old').val();
@@ -83,7 +83,7 @@
         });
 
         j_login.find('button.logout-all').on('click', function(e) {
-            if (!confirm('Are you sure to log out all devices?')) {
+            if (!confirm('Are you sure you want to log out all devices?')) {
                 return;
             }
             $.post(`{{ url('/be/acctedit') }}`, {
