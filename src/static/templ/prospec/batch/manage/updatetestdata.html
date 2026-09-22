@@ -91,6 +91,28 @@
             add_single_file_modal.hide();
         });
 
+        j_add_single_file.find("input.inputfile").on('change', function(e) {
+            let input_filename = j_add_single_file.find("input.filename").val();
+            if (input_filename.length == 0) {
+                let files = e.target.files;
+                if (files.length > 0) {
+                    let file = files[0];
+                    j_add_single_file.find("input.filename").val(file.name.split('.')[0]);
+                }
+            }
+        });
+
+        j_add_single_file.find("input.outputfile").on('change', function(e) {
+            let input_filename = j_add_single_file.find("input.filename").val();
+            if (input_filename.length == 0) {
+                let files = e.target.files;
+                if (files.length > 0) {
+                    let file = files[0];
+                    j_add_single_file.find("input.filename").val(file.name.split('.')[0]);
+                }
+            }
+        });
+
         j_add_single_file.find("button.upload").on('click', function(e) {
             function _update(input_pack_token, output_pack_token, filename) {
                 $.post(`{{ url('/be/manage/pro/updatetestdata') }}`, {
@@ -329,7 +351,7 @@
                     <th scope="col">Operation</th>
                 </tr>
             </thead>
-    
+
             <tbody>
                 {% for testdata_id, testdata in config.testdatas.items() %}
                     <tr testdata_id="{{ testdata_id }}">
@@ -353,14 +375,14 @@
                                             <input type="file" style="display: none;">
                                             <button class="btn btn-primary dropdown-item update-single-file input">Input</button>
                                         </li>
-    
+
                                         <li>
                                             <input type="file" style="display: none;">
                                             <button class="btn btn-primary dropdown-item update-single-file output">Output</button>
                                         </li>
                                     </ul>
                                 </div>
-    
+
                                 <button class="btn btn-danger me-2 delete-single-file">Delete</button>
                             </div>
                         </td>

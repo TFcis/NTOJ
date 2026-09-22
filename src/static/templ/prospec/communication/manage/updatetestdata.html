@@ -41,6 +41,16 @@ function init() {
         const row = this.closest('tr');
         $.post(endpoint, {reqtype: 'updatemetadata', pro_id: pro_id, testdata_id: row.dataset.id, tags: row.querySelector('.tags').value}, () => index.reload());
     }));
+    $('#new-input').on('change', function(e) {
+        const input_filename = $('#new-name').val();
+        if (input_filename.length == 0) {
+            let files = e.target.files;
+            if (files.length > 0) {
+                let file = files[0];
+                $("#new-name").val(file.name.split('.')[0]);
+            }
+        }
+    });
     $('#add-file').on('click', function() {
         const name = $('#new-name').val();
         const input = $('#new-input')[0];
