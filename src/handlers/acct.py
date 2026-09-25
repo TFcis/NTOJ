@@ -63,10 +63,6 @@ class AcctHandler(RequestHandler):
 
             prolist2.append(tmp)
 
-        def chunk_list(la, size):
-            for i in range(0, len(la), size):
-                yield la[i : i + size]
-
         rate_data["rate"] = math.floor(rate_data["rate"])
         rate_data["ac_pro_cnt"] = ac_pro_cnt
 
@@ -80,7 +76,7 @@ class AcctHandler(RequestHandler):
             acct=acct,
             rate=rate_data,
             total_pro_cnt=len(prolist),
-            prolist=chunk_list(prolist2, 10),
+            prolist=prolist2
         )
 
 
