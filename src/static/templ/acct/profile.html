@@ -6,40 +6,56 @@
     }
 
     #summary {
-      height: 512px;
-      margin-top: -512px;
-      color: #FCFAF2;
-      background-color: rgba(32, 32, 32, 0.6);
-      position: relative;
-      z-index: 100;
-      overflow: hidden;
+        height: 512px;
+        margin-top: -512px;
+        color: #FCFAF2;
+        background-color: rgba(32, 32, 32, 0.6);
+        position: relative;
+        z-index: 100;
+        overflow: hidden;
     }
     #summary > img#photo {
-      width: 100%;
-      height: auto;
-      display: block;
-      border-radius: 10px;
-      object-fit: cover;
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 10px;
+        object-fit: cover;
     }
     #summary > h1 {
-      margin-top: 8px;
-      margin-bottom: 0px;
-      text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.6);
+        margin-top: 8px;
+        margin-bottom: 0px;
+        text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.6);
     }
     #summary > table {
-      width: 86%;
-      color: #FCFAF2;
+        width: 86%;
+        color: #FCFAF2;
     }
     #summary > table td.value {
-      text-align: right;
+        text-align: right;
     }
     #summary > table td.value a {
-      color: #0F0;
-      font-size: 100%;
+        color: #0F0;
+        font-size: 100%;
     }
 
-    table td._state {
-        text-align: center;
+    #progrid {
+        display: grid;
+        font-size: 130%;
+        grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+        border: 1px solid gray;
+        overflow: hidden;
+    }
+
+    a.topcoder {
+        font-weight: bolder;
+    }
+
+    a._state {
+        display: flex;
+        padding: 8px 4px;
+        margin-bottom: -1px;
+        justify-content: center;
+        border-bottom: 1px solid gray;
     }
 
     a._state-1 {
@@ -125,27 +141,18 @@
         </form>
     </div>
     <div class="col-lg-9">
-        <table class="table" style="font-size: 130%;" border="1px" bordercolor="gray">
-            <tbody>
-                {% for chunk in prolist %}
-                    <tr>
-                        {% for cnt, pro in enumerate(chunk, start=1) %}
-                            {% if pro['state'] == ChalConst.STATE_NOTSTARTED or pro['state'] is None %}
-                                <td class="_state"><a class="_state-4" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
-                            {% elif pro['state'] == ChalConst.STATE_AC %}
-                                <td class="_state"><a class="_state-1" {% if pro['is_topcoder'] %}style="font-weight: bolder;"{% end %} href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
-                            {% elif pro['state'] in (ChalConst.STATE_PC, ChalConst.STATE_WA) and pro['score'] > 0 %}
-                                <td class="_state"><a class="_state-2" {% if pro['is_topcoder'] %}style="font-weight: bolder;"{% end %} href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
-                            {% else %}
-                                <td class="_state"><a class="_state-3" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a></td>
-                            {% end %}
-                        {% end %}
-                        {% for _ in range(10 - len(chunk)) %}
-                            <td></td>
-                        {% end %}
-                    </tr>
+        <div id="progrid">
+            {% for pro in prolist %}
+                {% if pro['state'] == ChalConst.STATE_NOTSTARTED or pro['state'] is None %}
+                    <a class="_state _state-4" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a>
+                {% elif pro['state'] == ChalConst.STATE_AC %}
+                    <a class="_state _state-1 {% if pro['is_topcoder'] %}topcoder{% end %}" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a>
+                {% elif pro['state'] in (ChalConst.STATE_PC, ChalConst.STATE_WA) and pro['score'] > 0 %}
+                    <a class="_state _state-2 {% if pro['is_topcoder'] %}topcoder{% end %}" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a>
+                {% else %}
+                    <a class="_state _state-3" href="{{ url(f'/pro/{ pro['pro_id'] }/') }}">{{pro['pro_id']}}</a>
                 {% end %}
-            </tbody>
-       </table>
+            {% end %}
+        </div>
     </div>
 </div>
