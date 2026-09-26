@@ -4,7 +4,7 @@ until pg_isready -h ${DB_CONTAINER_NAME} -p 5432; do
 done
 
 should_install_first_problem=false
-PROBLEM_COUNT=$(PGPASSWORD=ntoj psql -h ${DB_CONTAINER_NAME} -U ntoj -d ntoj -tAc "SELECT count(*) FROM problem" 2>/dev/null || echo "0")
+PROBLEM_COUNT=$(PGPASSWORD="$(sed -n 's/^DB_PASSWORD=//p' scripts/.docker-init.env)" psql -h "${DB_CONTAINER_NAME}" -U ntoj -d ntoj -tAc "SELECT count(*) FROM problem" 2>/dev/null || echo "0")
 PROB_COUNT=$(echo "$PROB_COUNT" | xargs)
 
 if [[ -f docker-dev || -f docker-release ]] && [ -d static-tmp ] && [ "$PROBLEM_COUNT" -eq 0 ]; then
