@@ -41,9 +41,21 @@
     #progrid {
         display: grid;
         font-size: 130%;
-        grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
         border: 1px solid gray;
         overflow: hidden;
+    }
+
+    @media (min-width: 768px) {
+        #progrid {
+            grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+        }
+    }
+
+    @media (min-width: 992px) {
+        #progrid {
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+        }
     }
 
     a.topcoder {
