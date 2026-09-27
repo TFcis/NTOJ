@@ -7,7 +7,7 @@ import asyncio
 
 from redis import asyncio as aioredis
 
-from services.pro import ProService
+from services.pro import ProService, ProConst
 from services.pack import PackService
 from services.rate import RateService
 import config
@@ -16,6 +16,13 @@ async def main():
     db = await asyncpg.create_pool(database=config.DBNAME_OJ, user=config.DBUSER_OJ, password=config.DBPW_OJ, host=config.DBHOST_OJ)
     rs = aioredis.Redis(host=config.REDIS_HOST, port=6379, db=config.REDIS_DB)
     pro_service = ProService(db, rs)
+
+    _, prolist = await pro_service.list_pro([ProConst.STATUS_ONLINE, ProConst.STATUS_CONTEST, ProConst.STATUS_HIDDEN])
+    if len(prolist) != 0:
+        print("Skip HelloTOJ installation")
+
+        return
+
     pack_service = PackService(db, rs)
     _ = RateService(db, rs)
 
