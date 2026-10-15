@@ -22,7 +22,7 @@
                 type: 'button',
                 class: 'btn btn-outline-danger remove-challenge-source-file',
                 title: 'Delete source file',
-            }).append($('<i>', {class: 'bi bi-trash'}));
+            }).text('Delete');
             row.append($('<td>').append(input));
             row.append($('<td>', {class: 'text-end'}).append(remove));
             judge_form.find('#challengeSourceFiles tbody').append(row);
