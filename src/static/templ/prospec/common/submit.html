@@ -114,11 +114,6 @@
     <div class="col-lg-2"></div>
     <div id="submit" class="col-lg-8">
         <h3>{{ pro.pro_id }} / {{ pro.name }}</h3>
-
-        <div class="alert alert-info" role="alert">
-            <strong>{{ problem_name }} Problem</strong> - Submit your source code for judging
-        </div>
-
         <form>
             <div class="mb-3">
                 <label for="compilerList" class="form-label">Compiler</label>
@@ -149,7 +144,7 @@
                         <div class="accordion-body">
                             <textarea class="code form-control font-monospace mb-3"
                                       data-submission-format="{{ filename }}"
-                                      placeholder="Paste source code here..." rows="18"></textarea>
+                                      placeholder="Paste source code here..." rows="12"></textarea>
                             <input type="file" class="file form-control">
                             <div class="form-text">Select a file to fill this source and collapse it automatically.</div>
                         </div>
@@ -160,7 +155,7 @@
             {% else %}
             <div class="mb-3">
                 <label for="codeArea" class="form-label">Source Code</label>
-                <textarea id="codeArea" class="code form-control font-monospace" placeholder="Paste your code here..." rows="20"></textarea>
+                <textarea id="codeArea" class="code form-control font-monospace" placeholder="Paste your code here..." rows="12"></textarea>
                 <div class="form-text">Or use the file upload below to load code from a file</div>
             </div>
 
