@@ -290,14 +290,22 @@ var index = new function() {
             }
         });
 
-        $(window).on('popstate', function(a) {
-            update(false);
-        });
-
         acct_id = $('#indexjs').attr('acct_id');
         contest_id = $('#indexjs').attr('contest_id');
         that.base_url = $('#indexjs').attr('base_url');
         that.base_url_slash_count = that.base_url.split('/').length - 1;
+
+        $(window).on('popstate', function(e) {
+            const url_contest_id = location.pathname.match(/\/contests\/(\d+)(?:\/|$)/)?.[1] ?? '0';
+
+            if (contest_id !== url_contest_id) {
+                location.reload();
+
+                return;
+            }
+
+            update(false);
+        });
 
         j_navlist.find('li.leave').on('click', function(e) {
             $.post(`${that.base_url}/be/sign`, {
