@@ -414,7 +414,7 @@
                 </thead>
                 <tbody>
                 {% for pro in prolist %}
-                    <tr>
+                    <tr class="align-middle">
                         {% set pro_id = pro.pro_id %}
                         <td class="id">{{ pro_id }}</td>
                         {% if score_map[pro_id]['state'] is None %}
@@ -436,7 +436,7 @@
                                 </a>
                             </td>
                         {% else %}
-                            <td></td>
+                            <td><img height="30" /></td>
                         {% end %}
 
                         {% set rate = score_map[pro_id]['rate_data'] %}
