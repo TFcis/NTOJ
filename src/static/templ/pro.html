@@ -183,45 +183,58 @@ a {
             PDFJS.getDocument(pdf_url).promise.then(function(pdf) {
                 j_cont.empty();
                 for (let i = 1; i <= pdf.numPages; i++) {
-                    let j_page = $('<div id="pdf-page-' + i + '"></div>');
+                    let j_page = $('<div id="pdf-page-' + i + '" class="position-relative"></div>');
                     j_cont.append(j_page)
                 }
 
                 for (let i = 0; i < pdf.numPages; i++) {
-                    pdf.getPage(i + 1).then(function(idx){return function(page) {
-                        let j_page = $('#pdf-page-' + idx);
-                        let j_canvas = $('<canvas style="width:100%; margin: 0; display:block;"></canvas>');
+                    pdf.getPage(i + 1).then(function(idx) {
+                        return function(page) {
+                            let j_page = $('#pdf-page-' + idx);
+                            let j_canvas = $('<canvas style="width:100%; margin: 0; display:block;"></canvas>');
 
-                        j_page.append(j_canvas);
+                            j_page.append(j_canvas);
 
-                        let j_div = $('<div></div>');
-                        let ctx = j_canvas[0].getContext('2d');
-                        let offset = j_canvas[0].getBoundingClientRect();
-                        let viewport;
+                            let j_div = $('<div></div>');
+                            let ctx = j_canvas[0].getContext('2d');
+                            let offset = j_canvas[0].getBoundingClientRect();
+                            let viewport;
 
 
-                        scale = j_canvas.width() / page.getViewport({scale: 1}).width;
-                        viewport = page.getViewport({scale: scale});
+                            let dpr = window.devicePixelRatio || 1;
+                            let scale = j_canvas.width() / page.getViewport({scale: 1}).width;
+                            viewport = page.getViewport({scale: scale * dpr});
 
-                        j_canvas.attr('width', viewport.width);
-                        j_canvas.attr('height', viewport.height);
-                        j_div.addClass('textLayer');
-                        j_div.offset({'top': offset.top + window.scrollY, 'left': offset.left + window.scrollX});
-                        j_div[0].style.setProperty('--scale-factor', viewport.scale);
+                            j_canvas.attr('width', viewport.width);
+                            j_canvas.attr('height', viewport.height);
 
-                        j_page.append(j_div);
+                            j_canvas.css('width', (viewport.width / dpr) + 'px');
+                            j_canvas.css('height', (viewport.height / dpr) + 'px');
 
-                        page.render({canvasContext: ctx, viewport: viewport}).promise.then(function () {
-                            return page.getTextContent();
-                        }).then(function (text) {
-                            const textLayer = new PDFJS.TextLayer({
-                                textContentSource: text,
-                                container: j_div[0],
-                                viewport: viewport,
+                            j_div.addClass('textLayer');
+                            j_div.css({
+                                'position': 'absolute',
+                                'left': 0,
+                                'top': 0,
+                                'width': (viewport.width / dpr) + 'px',
+                                'height': (viewport.height / dpr) + 'px'
                             });
-                            textLayer.render();
-                        });
-                    };}(i + 1));
+                            j_div[0].style.setProperty('--scale-factor', scale);
+
+                            j_page.append(j_div);
+
+                            page.render({canvasContext: ctx, viewport: viewport}).promise.then(function () {
+                                return page.getTextContent();
+                            }).then(function (text) {
+                                const textLayer = new PDFJS.TextLayer({
+                                    textContentSource: text,
+                                    container: j_div[0],
+                                    viewport: page.getViewport({scale: scale}),
+                                });
+                                textLayer.render();
+                            });
+                        };
+                    }(i + 1));
                 }
             });
         }
