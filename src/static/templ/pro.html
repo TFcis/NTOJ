@@ -161,8 +161,9 @@ a {
                     $('#pdfbtn').show();
                     $('#switchviewer').show();
 
-                    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                    if (/Android/i.test(navigator.userAgent)) {
                         _load_pdf_js();
+                        viewer = 1;
                     } else {
                         _load_pdf_embed();
                         viewer = 2;
