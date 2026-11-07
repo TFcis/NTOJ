@@ -271,6 +271,7 @@ a {
 
         function _load_pdf_embed() {
             j_cont.empty();
+            lastRecordedWidth = 0;
             _resize_pdf_embed_viewer();
             var embed = $(`<embed width="100%" height="100%" src="${pdf_url}#view=FitH" type="application/pdf">`);
             j_cont.append(embed);
