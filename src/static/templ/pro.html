@@ -183,12 +183,12 @@ a {
             j_cont.load(html_url, function(res, status, xhr) {
                 if (status == 'error') {
                     $('#pdfbtn').show();
-                    $('#switchviewer').show();
 
-                    if (/Android/i.test(navigator.userAgent)) {
+                    if (!navigator.pdfViewerEnabled) {
                         _load_pdf_js();
                         viewer = 1;
                     } else {
+                        $('#switchviewer').show();
                         _load_pdf_embed();
                         viewer = 2;
                     }
