@@ -20,6 +20,13 @@ input {
 .btn-con.btn-sm.submit {
   border-radius: 8px;
 }
+
+tr td.acct {
+  max-width: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 </style>
 
 <script type="text/javascript">
@@ -286,7 +293,7 @@ input {
                             <td><a href="{{ url(f'/contests/{ chal.contest_id }/pro/{ chal.pro_id }/') }}">{{ chal.pro_id }}</a></td>
                         {% end %}
 
-                        <td><a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a></td>
+                        <td class="acct"><a href="{{ url(f'/acct/{ chal.acct_id }/') }}">{{ chal.acct_name }}</a></td>
                         <td class="state state-{{ chal.total_result.state }} state-text-{{ chal.total_result.state }}"></td>
                         <td id="time">{{ chal.total_result.time }}</td>
                         <td id="memory">{{ chal.total_result.memory }}</td>
