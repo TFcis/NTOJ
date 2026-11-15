@@ -32,6 +32,16 @@ a {
     var renderGen = 0;
     var activeRenderTasks = [];
 
+    function _cancel_pdf_rendering() {
+        renderGen++;
+        activeRenderTasks.forEach(function(task) {
+            try {
+                task.cancel();
+            } catch (e) {}
+        });
+        activeRenderTasks = [];
+    }
+
     function init() {
         let PDFJS = pdfjsLib;
         PDFJS.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.mjs';
@@ -107,8 +117,13 @@ a {
 
         let currentHeight = 0;
         let lastRecordedWidth = 0;
-        function _resize_pdf_embed_viewer() {
+        let lastIsDesktop = null;
+
+        function _resize_pdf_embed_viewer(force = false) {
             const isDesktop = window.matchMedia('(min-width: 992px)').matches;
+
+            const modeChanged = (lastIsDesktop !== null && lastIsDesktop !== isDesktop);
+            lastIsDesktop = isDesktop;
 
             if (isDesktop) {
                 let top = j_cont[0].getBoundingClientRect().top;
@@ -116,18 +131,19 @@ a {
 
                 let targetHeight = Math.max(600, window.innerHeight - top - footerH);
 
-                if (Math.abs(targetHeight - currentHeight) > 2) {
+                if (force || modeChanged || Math.abs(targetHeight - currentHeight) > 2) {
                     currentHeight = targetHeight;
                     j_cont.css('height', `${ currentHeight }px`);
                     j_side.css('height', `${ currentHeight }px`);
                 }
             } else {
-                if (Math.abs(window.innerWidth - lastRecordedWidth) > 10) {
+                j_side.css('height', 'auto');
+
+                if (force || modeChanged || Math.abs(window.innerWidth - lastRecordedWidth) > 10) {
                     lastRecordedWidth = window.innerWidth;
                     let targetHeight = Math.max(500, window.innerHeight * 0.75);
 
                     j_cont.css('height', `${ targetHeight }px`);
-                    j_side.css('height', `auto`);
                     currentHeight = 0;
                 }
             }
@@ -161,14 +177,8 @@ a {
         function _render_pdf_pages(pdf) {
             if (!pdf) return;
 
-            activeRenderTasks.forEach(function(task) {
-                try {
-                    task.cancel();
-                } catch (e) {}
-            });
-            activeRenderTasks = [];
-
-            const gen = ++renderGen;
+            _cancel_pdf_rendering();
+            const gen = renderGen;
 
             j_cont.empty();
 
@@ -216,24 +226,35 @@ a {
                         const renderTask = page.render({canvasContext: ctx, viewport: viewport});
                         activeRenderTasks.push(renderTask);
 
-                        renderTask.promise.then(function () {
-                            if (gen !== renderGen) return;
-                            
-                            return page.getTextContent();
-                        }).then(function (text) {
-                            if (gen !== renderGen || !text) return;
+                        renderTask.promise
+                            .finally(function() {
+                                const index = activeRenderTasks.indexOf(renderTask);
+                                if (index !== -1) {
+                                    activeRenderTasks.splice(index, 1);
+                                }
+                            })
+                            .then(function () {
+                                if (gen !== renderGen) return;
+                                return page.getTextContent();
+                            })
+                            .then(function (text) {
+                                if (gen !== renderGen || !text) return;
 
-                            const textLayer = new PDFJS.TextLayer({
-                                textContentSource: text,
-                                container: j_div[0],
-                                viewport: page.getViewport({scale: scale}),
+                                const textLayer = new PDFJS.TextLayer({
+                                    textContentSource: text,
+                                    container: j_div[0],
+                                    viewport: page.getViewport({scale: scale}),
+                                });
+                                textLayer.render().catch(function(err) {
+                                    if (gen !== renderGen) return;
+                                    console.error(`PDF failed to render text layer for page ${idx}:`, err);
+                                });
+                            })
+                            .catch(function (err) {
+                                if (err?.name !== 'RenderingCancelledException') {
+                                    console.error(`PDF failed to render page ${idx}:`, err);
+                                }
                             });
-                            textLayer.render();
-                        }).catch(function (err) {
-                            if (err?.name !== 'RenderingCancelledException') {
-                                console.error(`Failed to load the page ${idx}: `, err);
-                            }
-                        });
                     };
                 }(i + 1));
             }
@@ -246,29 +267,36 @@ a {
                 currentPdf = pdf;
                 _render_pdf_pages(currentPdf);
             }).catch(function(err) {
-                console.error("Failed to load pdf: ", err);
-                j_cont.html('<strong>Failed to load PDF.<br />Please reload the page.</strong>');
+                console.error("PDF failed to load:", err);
+                j_cont.html('<strong>Could not load PDF file. Either reload the page or contact the administrator.</strong>');
             });
         }
 
         function _load_pdf_embed() {
+            _cancel_pdf_rendering();
             j_cont.empty();
+            currentHeight = 0;
             lastRecordedWidth = 0;
-            _resize_pdf_embed_viewer();
+            _resize_pdf_embed_viewer(true);
             var embed = $(`<embed width="100%" height="100%" src="${pdf_url}#view=FitH" type="application/pdf">`);
             j_cont.append(embed);
         }
 
         function _listen_dpr_change() {
-            var dpr = window.devicePixelRatio || 1;
+            const dpr = window.devicePixelRatio || 1;
             const mq = window.matchMedia(`(resolution: ${dpr}dppx)`);
-            mq.addEventListener('change', function() {
+            const handler = function() {
                 if (viewer === 1 && currentPdf) {
                     _render_pdf_pages(currentPdf);
                 }
-
                 _listen_dpr_change();
-            }, { once: true });
+            };
+
+            if (mq.addEventListener) {
+                mq.addEventListener('change', handler, { once: true });
+            } else if (mq.addListener) {
+                mq.addListener(handler);
+            }
         }
         _listen_dpr_change();
 
