@@ -10,42 +10,6 @@
   background: rgba(0, 0, 255, 0.3);
 }
 
-.textlayer {
-  position: absolute !important;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  color: #000;
-  font-family: sans-serif;
-  overflow: hidden;
-}
-.textlayer > span {
-  color: transparent;
-  position: absolute !important;
-  line-height: 1;
-  white-space: pre;
-  cursor: text;
-}
-.textlayer .highlight {
-  margin: -1px;
-  padding: 1px;
-  background-color: rgba(180, 0, 170, 0.2);
-  border-radius: 4px;
-}
-.textlayer .highlight.begin {
-  border-radius: 4px 0px 0px 4px;
-}
-.textlayer .highlight.end {
-  border-radius: 0px 4px 4px 0px;
-}
-.textlayer .highlight.middle {
-  border-radius: 0px;
-}
-.textlayer .highlight.selected {
-  background-color: rgba(0, 100, 0, 0.2);
-}
-
 a {
   border-radius: 10px;
 }
@@ -64,6 +28,19 @@ a {
     {% end %}
 
     var onResize = null;
+    var currentPdf = null;
+    var renderGen = 0;
+    var activeRenderTasks = [];
+
+    function _cancel_pdf_rendering() {
+        renderGen++;
+        activeRenderTasks.forEach(function(task) {
+            try {
+                task.cancel();
+            } catch (e) {}
+        });
+        activeRenderTasks = [];
+    }
 
     function init() {
         let PDFJS = pdfjsLib;
@@ -77,7 +54,6 @@ a {
         $('#tags').focusout(function(event) {
             var tags = event.target.value;
             if (tags.search(/^[a-zA-Z0-9-_, ]+$/) != -1 || tags.length == 0) {
-                // valid
                 $('#tags-invalid').hide();
                 $.post(`{{ url('/be/set-tags') }}`, {
                     'pro_id': {{ pro.pro_id }},
@@ -86,7 +62,6 @@ a {
                     $('#tags-done').show();
                 });
             } else {
-                // invalid
                 event.target.focus();
                 $('#tags-invalid').show();
             }
@@ -113,15 +88,27 @@ a {
             }
         });
 
-        let resizeRaf = null;
-        onResize = function() {
-            if (viewer != 2 || resizeRaf)
-                return;
+        let resizeTimer = null;
+        let lastWindowWidth = window.innerWidth;
+        let lastWindowHeight = window.innerHeight;
 
-            resizeRaf = requestAnimationFrame(function() {
-                resizeRaf = null;
+        onResize = function() {
+            if (window.innerWidth === lastWindowWidth && window.innerHeight === lastWindowHeight) return;
+
+            let widthChanged = window.innerWidth !== lastWindowWidth;
+            lastWindowWidth = window.innerWidth;
+            lastWindowHeight = window.innerHeight;
+
+            if (viewer == 1) {
+                if (widthChanged) {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(function() {
+                        _render_pdf_pages(currentPdf);
+                    }, 200);
+                }
+            } else if (viewer == 2) {
                 _resize_pdf_embed_viewer();
-            });
+            }
         };
         $(window).on('resize', onResize);
 
@@ -129,8 +116,14 @@ a {
         let j_side = $('#side');
 
         let currentHeight = 0;
-        function _resize_pdf_embed_viewer() {
+        let lastRecordedWidth = 0;
+        let lastIsDesktop = null;
+
+        function _resize_pdf_embed_viewer(force = false) {
             const isDesktop = window.matchMedia('(min-width: 992px)').matches;
+
+            const modeChanged = (lastIsDesktop !== null && lastIsDesktop !== isDesktop);
+            lastIsDesktop = isDesktop;
 
             if (isDesktop) {
                 let top = j_cont[0].getBoundingClientRect().top;
@@ -138,18 +131,21 @@ a {
 
                 let targetHeight = Math.max(600, window.innerHeight - top - footerH);
 
-                if (Math.abs(targetHeight - currentHeight) > 10) {
+                if (force || modeChanged || Math.abs(targetHeight - currentHeight) > 2) {
                     currentHeight = targetHeight;
                     j_cont.css('height', `${ currentHeight }px`);
                     j_side.css('height', `${ currentHeight }px`);
                 }
             } else {
-                let targetHeight = Math.max(500, window.innerHeight * 0.75);
+                j_side.css('height', 'auto');
 
-                j_cont.css('height', `${ targetHeight }px`);
-                j_side.css('height', `auto`);
+                if (force || modeChanged || Math.abs(window.innerWidth - lastRecordedWidth) > 10) {
+                    lastRecordedWidth = window.innerWidth;
+                    let targetHeight = Math.max(500, window.innerHeight * 0.75);
 
-                currentHeight = 0;
+                    j_cont.css('height', `${ targetHeight }px`);
+                    currentHeight = 0;
+                }
             }
         }
 
@@ -159,11 +155,12 @@ a {
             j_cont.load(html_url, function(res, status, xhr) {
                 if (status == 'error') {
                     $('#pdfbtn').show();
-                    $('#switchviewer').show();
 
-                    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                    if (!navigator.pdfViewerEnabled) {
                         _load_pdf_js();
+                        viewer = 1;
                     } else {
+                        $('#switchviewer').show();
                         _load_pdf_embed();
                         viewer = 2;
                     }
@@ -177,61 +174,132 @@ a {
             });
         }
 
-        function _load_pdf_js() {
-            j_cont.css('height', 'auto');
-            j_side.css('height', `auto`);
-            PDFJS.getDocument(pdf_url).promise.then(function(pdf) {
-                j_cont.empty();
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    let j_page = $('<div id="pdf-page-' + i + '"></div>');
-                    j_cont.append(j_page)
-                }
+        function _render_pdf_pages(pdf) {
+            if (!pdf) return;
 
-                for (let i = 0; i < pdf.numPages; i++) {
-                    pdf.getPage(i + 1).then(function(idx){return function(page) {
+            _cancel_pdf_rendering();
+            const gen = renderGen;
+
+            j_cont.empty();
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                let j_page = $('<div id="pdf-page-' + i + '" class="position-relative"></div>');
+                j_cont.append(j_page);
+            }
+
+            let dpr = window.devicePixelRatio || 1;
+
+            for (let i = 0; i < pdf.numPages; i++) {
+                pdf.getPage(i + 1).then(function(idx) {
+                    return function(page) {
+                        if (gen !== renderGen) return;
+
                         let j_page = $('#pdf-page-' + idx);
-                        let j_canvas = $('<canvas style="width:100%; margin: 0; display:block;"></canvas>');
+                        let j_canvas = $('<canvas style="margin: 0; display:block;"></canvas>');
 
                         j_page.append(j_canvas);
 
                         let j_div = $('<div></div>');
                         let ctx = j_canvas[0].getContext('2d');
-                        let offset = j_canvas[0].getBoundingClientRect();
                         let viewport;
 
-
-                        scale = j_canvas.width() / page.getViewport({scale: 1}).width;
-                        viewport = page.getViewport({scale: scale});
+                        let scale = j_page.width() / page.getViewport({scale: 1}).width;
+                        viewport = page.getViewport({scale: scale * dpr});
 
                         j_canvas.attr('width', viewport.width);
                         j_canvas.attr('height', viewport.height);
+                        j_canvas.css('width', (viewport.width / dpr) + 'px');
+                        j_canvas.css('height', (viewport.height / dpr) + 'px');
+
                         j_div.addClass('textLayer');
-                        j_div.offset({'top': offset.top + window.scrollY, 'left': offset.left + window.scrollX});
-                        j_div[0].style.setProperty('--scale-factor', viewport.scale);
+                        j_div.css({
+                            'position': 'absolute',
+                            'left': 0,
+                            'top': 0,
+                            'width': (viewport.width / dpr) + 'px',
+                            'height': (viewport.height / dpr) + 'px'
+                        });
+                        j_div[0].style.setProperty('--scale-factor', scale);
 
                         j_page.append(j_div);
 
-                        page.render({canvasContext: ctx, viewport: viewport}).promise.then(function () {
-                            return page.getTextContent();
-                        }).then(function (text) {
-                            const textLayer = new PDFJS.TextLayer({
-                                textContentSource: text,
-                                container: j_div[0],
-                                viewport: viewport,
+                        const renderTask = page.render({canvasContext: ctx, viewport: viewport});
+                        activeRenderTasks.push(renderTask);
+
+                        renderTask.promise
+                            .finally(function() {
+                                const index = activeRenderTasks.indexOf(renderTask);
+                                if (index !== -1) {
+                                    activeRenderTasks.splice(index, 1);
+                                }
+                            })
+                            .then(function () {
+                                if (gen !== renderGen) return;
+                                return page.getTextContent();
+                            })
+                            .then(function (text) {
+                                if (gen !== renderGen || !text) return;
+
+                                const textLayer = new PDFJS.TextLayer({
+                                    textContentSource: text,
+                                    container: j_div[0],
+                                    viewport: page.getViewport({scale: scale}),
+                                });
+                                textLayer.render().catch(function(err) {
+                                    if (gen !== renderGen) return;
+                                    console.error(`PDF failed to render text layer for page ${idx}:`, err);
+                                });
+                            })
+                            .catch(function (err) {
+                                if (err?.name !== 'RenderingCancelledException') {
+                                    console.error(`PDF failed to render page ${idx}:`, err);
+                                }
                             });
-                            textLayer.render();
-                        });
-                    };}(i + 1));
-                }
+                    };
+                }(i + 1));
+            }
+        }
+
+        function _load_pdf_js() {
+            j_cont.css('height', 'auto');
+            j_side.css('height', `auto`);
+            PDFJS.getDocument(pdf_url).promise.then(function(pdf) {
+                currentPdf = pdf;
+                _render_pdf_pages(currentPdf);
+            }).catch(function(err) {
+                console.error("PDF failed to load:", err);
+                j_cont.html('<strong>Could not load PDF file. Either reload the page or contact the administrator.</strong>');
             });
         }
 
         function _load_pdf_embed() {
+            _cancel_pdf_rendering();
             j_cont.empty();
-            _resize_pdf_embed_viewer();
-            var embed = $(`<embed width="100%" height="100%" src="${pdf_url}" type="application/pdf">`);
+            currentHeight = 0;
+            lastRecordedWidth = 0;
+            _resize_pdf_embed_viewer(true);
+            var embed = $(`<embed width="100%" height="100%" src="${pdf_url}#view=FitH" type="application/pdf">`);
             j_cont.append(embed);
         }
+
+        function _listen_dpr_change() {
+            const dpr = window.devicePixelRatio || 1;
+            const mq = window.matchMedia(`(resolution: ${dpr}dppx)`);
+            const handler = function() {
+                if (viewer === 1 && currentPdf) {
+                    _render_pdf_pages(currentPdf);
+                }
+                _listen_dpr_change();
+            };
+
+            if (mq.addEventListener) {
+                mq.addEventListener('change', handler, { once: true });
+            } else if (mq.addListener) {
+                mq.addListener(handler);
+            }
+        }
+        _listen_dpr_change();
+
         _load_html();
     }
 
@@ -243,7 +311,7 @@ a {
     }
 </script>
 <div class="row">
-    <div id="side" class="col-lg-2 col-12 pt-lg-2" style="overflow-y: scroll;">
+    <div id="side" class="col-lg-2 col-12 pt-lg-2 pb-3 pb-lg-0 pb-xl-0" style="overflow-y: scroll;">
         <h3>{{ pro.pro_id}} / {{ pro.name }}</h3>
         {% if can_submit and pro.allow_submit %}
             {% if contest and not contest_session.is_ended() %}
