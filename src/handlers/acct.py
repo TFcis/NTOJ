@@ -110,7 +110,7 @@ class AcctConfigHandler(RequestHandler):
 
         await self.render(
             "acct/acct-config",
-            f"{self.acct.name}'s Account Config",
+            f"{acct.name}'s Account Config",
             acct=acct,
             session_keys=session_keys,
             current_session_key=current_session_key,
