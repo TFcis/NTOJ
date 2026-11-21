@@ -1,9 +1,5 @@
 {% import datetime %}
 
-{% if acct.acct_id != user.acct_id and not user.is_kernel() %}
-    You don't have permission.
-{% else %}
-
 <script id="contjs" type="text/javascript">
     function init() {
         let j_profile = $('#profile');
@@ -221,5 +217,3 @@
         {% end %}
     </div>
 </div>
-
-{% end %}

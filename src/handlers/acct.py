@@ -105,6 +105,8 @@ class AcctConfigHandler(RequestHandler):
             ).items():
                 session_key = hashlib.md5(session_key).hexdigest()
                 session_keys[session_key] = unpackb(v)
+        elif not self.acct.is_kernel():
+            return self.error(PERMISSION_DENIED_ERROR)
 
         await self.render(
             "acct/acct-config",
